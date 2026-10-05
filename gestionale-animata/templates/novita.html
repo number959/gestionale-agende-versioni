@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titolo %}Aiuto · Novità{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-aiuto pagina-novita">
+  <p class="sotto"><a href="{{ url_for('guida.indice') }}">Come fare…</a> · Novità</p>
+  {% for v, voci in recenti %}
+  <h1>{% if loop.first %}Novità della versione {{ v }}{% else %}Versione {{ v }}{% endif %}</h1>
+  {% if loop.first %}<p class="in-breve">Il programma è alla versione {{ versione }}. Ecco cosa c'è di nuovo; ogni novità ha il suo video.</p>{% endif %}
+  <ul class="elenco-novita">
+    {% for x in voci %}
+    {% set vid = video_guida(x.guida) if x.guida else none %}
+    <li class="novita">
+      <b>{{ x.titolo }}</b>
+      <p>{{ x.testo }}</p>
+      {% if x.guida %}
+      <p class="azioni-novita">
+        {% if vid %}<a class="bottone primario guarda-video" href="{{ vid.url }}" data-video="{{ x.titolo }}"><span class="triangolo" aria-hidden="true"></span>Guarda il video{% if vid.durata %} <small>{{ vid.durata }}</small>{% endif %}</a>{% endif %}
+        <a class="bottone" href="{{ url_for('guida.articolo', slug=x.guida) }}">La guida passo per passo</a>
+      </p>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endfor %}
+  {% if altre %}
+  <h2 class="sezione">Versioni precedenti</h2>
+  {% for v, voci in altre %}
+  <details class="versione-precedente">
+    <summary>Versione {{ v }}: {{ voci|length }} novità</summary>
+    <ul class="elenco-novita compatto">
+      {% for x in voci %}
+      {% set vid = video_guida(x.guida) if x.guida else none %}
+      <li><b>{{ x.titolo }}.</b> {{ x.testo }}{% if x.guida %} <a href="{{ url_for('guida.articolo', slug=x.guida) }}">La guida{% if vid %}, con il video{% endif %}</a>{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endfor %}
+  {% endif %}
+  <p class="novita-piede">Gli aggiornamenti arrivano dal programma: <a href="{{ url_for('aggiornamenti.pagina') }}">Configura → Aggiornamenti</a>.</p>
+</div>
+{% endblock %}

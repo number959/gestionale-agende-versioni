@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block titolo %}Moduli da stampare{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Moduli da stampare</h1>
+  <p class="sotto">Testi che si stampano dall'appuntamento con i dati del paziente già scritti: istruzioni di preparazione con le date calcolate, consensi, dichiarazioni. <a href="{{ url_for('viste.impostazioni') }}">Torna alle impostazioni</a></p>
+  <p>
+    <a class="bottone primario" href="{{ url_for('documenti.modulo') }}">Nuovo modulo</a>
+    <form method="post" action="{{ url_for('documenti.modulo') }}" class="in-linea"><input type="hidden" name="azione" value="esempio"><button class="bottone" type="submit">Crea un modulo di esempio</button></form>
+  </p>
+  {% if moduli %}
+  <table class="elenco">
+    <tr><th>Nome</th><th>Per</th><th>Firme</th></tr>
+    {% for m in moduli %}
+    <tr><td><a href="{{ url_for('documenti.modulo', mid=m.id) }}">{{ m.nome }}</a></td><td>{{ m.prestazione.nome if m.prestazione else 'tutte le prestazioni' }}</td><td>{{ 'sì' if m.firma else 'no' }}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Nessun modulo ancora.</p>
+  {% endif %}
+</div>
+{% endblock %}

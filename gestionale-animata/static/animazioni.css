@@ -1,0 +1,194 @@
+/* Animazioni della versione "animata" del gestionale.
+ *
+ * Regole: si muovono solo opacita' e trasformazioni (niente ricalcolo della
+ * pagina, anche su un PC modesto); durate brevi, perche' la segreteria usa il
+ * programma tutto il giorno; nessun elemento parte invisibile fuori da un
+ * @keyframes, cosi' senza animazioni (stampa, "movimento ridotto" di Windows,
+ * interruttore in Impostazioni) la pagina e' identica all'originale.
+ */
+:root {
+  --curva-uscita: cubic-bezier(.22, 1, .36, 1);     /* frena in fondo */
+  --curva-molla: cubic-bezier(.34, 1.56, .64, 1);   /* supera un poco e torna */
+  --durata: .32s;
+}
+
+/* ------------------------------------------------------------ keyframes */
+@keyframes a-sale { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes a-scende { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes a-appare { from { opacity: 0; } to { opacity: 1; } }
+@keyframes a-pop { 0% { opacity: 0; transform: scale(.86); } 100% { opacity: 1; transform: none; } }
+@keyframes a-da-destra { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes a-da-sinistra { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@keyframes a-notifica { 0% { opacity: 0; transform: translateX(110%) scale(.96); } 70% { opacity: 1; transform: translateX(-6px); } 100% { transform: none; } }
+@keyframes a-sbiadisce { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes a-cresce { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes a-battito { 0%, 100% { box-shadow: 0 0 0 0 rgba(200, 112, 42, .55); } 60% { box-shadow: 0 0 0 6px rgba(200, 112, 42, 0); } }
+@keyframes a-rimbalzo { 0% { transform: scale(0); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes a-onda { to { transform: scale(2.6); opacity: 0; } }
+@keyframes a-punto { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.6); opacity: .55; } }
+@keyframes a-caricamento { 0% { transform: scaleX(0); } 40% { transform: scaleX(.55); } 100% { transform: scaleX(.92); } }
+@keyframes a-spunta { to { stroke-dashoffset: 0; } }
+@keyframes a-luccichio { 0% { background-position: -160% 0; } 100% { background-position: 260% 0; } }
+@keyframes a-evidenzia { 0% { background-color: #FFF3C4; } 100% { background-color: transparent; } }
+
+/* -------------------------------------------------------- entrata pagina */
+.anim .pagina, .anim .barra, .anim .telaio { animation: a-sale var(--durata) var(--curva-uscita) both; }
+.anim .telaio { animation-delay: .05s; }
+.anim .avvio, .anim .nota-giorno, .anim .appunti-giorno { animation: a-scende .3s var(--curva-uscita) both; }
+
+/* il giorno dopo arriva da destra, quello prima da sinistra */
+.anim.verso-destra .telaio, .anim.verso-destra .barra .giorno { animation: a-da-destra .3s var(--curva-uscita) both; }
+.anim.verso-sinistra .telaio, .anim.verso-sinistra .barra .giorno { animation: a-da-sinistra .3s var(--curva-uscita) both; }
+
+/* ------------------------------------------------------ barra di caricamento */
+.caricamento { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 9999; pointer-events: none;
+  transform-origin: left; transform: scaleX(0); background: linear-gradient(90deg, var(--primario-chiaro, #6FA0D8), #FFFFFF 50%, var(--primario-chiaro, #6FA0D8));
+  box-shadow: 0 0 8px rgba(255, 255, 255, .7); }
+.caricamento.in-corso { animation: a-caricamento 2.4s var(--curva-uscita) forwards; }
+
+/* ------------------------------------------------------------------ menu */
+.anim .menu a { position: relative; border-bottom-color: transparent !important; transition: background-color .15s, opacity .15s; }
+.anim .menu a::after { content: ''; position: absolute; left: 6px; right: 6px; bottom: 0; height: 3px; background: #FFFFFF;
+  transform: scaleX(0); transform-origin: center; transition: transform .25s var(--curva-uscita); }
+.anim .menu a:hover::after { transform: scaleX(.5); }
+.anim .menu a.attivo::after { transform: scaleX(1); }
+.anim .menu .tendina a::after { display: none; }
+.anim .menu .gruppo .apri-gruppo { transition: background-color .15s, opacity .15s; }
+.anim .menu .tendina, .anim .gruppo-comandi .tendina { animation: a-scende .18s var(--curva-uscita) both; }
+.anim .scheda-guida { animation: a-sale .3s var(--curva-uscita) both; animation-delay: calc(var(--i, 0) * 35ms);
+  transition: transform .15s var(--curva-uscita), box-shadow .15s, background-color .15s; }
+.anim .scheda-guida:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(22, 38, 63, .14); }
+.anim ol.passi-guida li { animation: a-da-sinistra .3s var(--curva-uscita) both; animation-delay: calc(.1s + var(--i, 0) * 45ms); }
+.anim .giro-fumetto { animation: a-pop .22s var(--curva-molla) both; }
+.anim .giro-riflettore { transition: left .3s var(--curva-uscita), top .3s var(--curva-uscita), width .3s var(--curva-uscita), height .3s var(--curva-uscita); }
+.anim .giro-invito { animation: a-sale .4s var(--curva-molla) .6s both; }
+.anim .menu .contatore { animation: a-rimbalzo .5s var(--curva-molla) .3s both, a-battito 2.2s ease-out 1s 3; }
+
+/* -------------------------------------------------------------- pulsanti */
+.anim .bottone, .anim .passo { position: relative; overflow: hidden; transition: transform .12s, box-shadow .2s, background-color .15s; }
+.anim .bottone:hover, .anim .passo:hover { box-shadow: 0 2px 6px rgba(22, 38, 63, .18); }
+.anim .bottone:active, .anim .passo:active { transform: scale(.96); }
+.anim .onda { position: absolute; border-radius: 50%; pointer-events: none; width: 24px; height: 24px; margin: -12px 0 0 -12px;
+  background: rgba(255, 255, 255, .45); animation: a-onda .55s ease-out forwards; }
+.anim .bottone:not(.primario) .onda, .anim .passo .onda { background: rgba(21, 67, 129, .18); }
+
+/* ---------------------------------------------------------------- griglia */
+.anim .voce { transition: transform .18s var(--curva-uscita), box-shadow .18s; animation: a-pop .34s var(--curva-uscita) both;
+  animation-delay: calc(var(--i, 0) * 22ms); }
+.anim .voce:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 6px 14px rgba(22, 38, 63, .18); position: relative; z-index: 3; }
+.anim td.aperta { transition: background-color .15s; }
+.anim td.aperta a.posa { transition: transform .18s var(--curva-uscita), color .15s, letter-spacing .18s; }
+.anim td.aperta:hover a.posa { transform: scale(1.06); letter-spacing: .03em; }
+.anim table.griglia thead th { animation: a-scende .3s var(--curva-uscita) both; animation-delay: calc(var(--i, 0) * 30ms); }
+
+/* la linea dell'ora attuale, nella giornata di oggi */
+.telaio { position: relative; }
+.adesso { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid #D0342C; z-index: 4; pointer-events: none;
+  transition: top 1s linear; }
+.adesso::before { content: ''; position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: #D0342C; }
+.anim .adesso::before { animation: a-punto 2s ease-in-out infinite; }
+.adesso span { position: absolute; left: -58px; top: -9px; font: 600 11px/16px var(--testo); color: #FFFFFF; background: #D0342C;
+  text-align: center; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+.anim .adesso { animation: a-cresce .6s var(--curva-uscita) .3s both; transform-origin: left; }
+
+/* settimana e mese */
+.anim a.cella-sett, .anim a.giorno-mese { transition: transform .15s var(--curva-uscita), box-shadow .15s; }
+.anim a.cella-sett:hover, .anim a.giorno-mese:hover { transform: scale(1.03); box-shadow: 0 4px 10px rgba(22, 38, 63, .14); position: relative; z-index: 2; }
+.anim table.mese td, .anim table.settimana td { animation: a-appare .3s ease-out both; animation-delay: calc(var(--i, 0) * 12ms); }
+
+/* ----------------------------------------------------------------- elenchi */
+.anim table.elenco tr.entra td { animation: a-sale .3s var(--curva-uscita) both; animation-delay: calc(var(--i, 0) * 18ms); }
+.anim table.elenco tbody tr, .anim table.elenco tr { transition: background-color .15s; }
+.anim table.elenco tr:hover td { background-color: rgba(21, 67, 129, .04); }
+.anim .appunti-giorno li { animation: a-da-sinistra .3s var(--curva-uscita) both; animation-delay: calc(.15s + var(--i, 0) * 40ms); }
+.anim .appunti-giorno .bottone.piccolo, .anim td.azione a.bottone.primario[href*="appunto="] {
+  background-image: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .55) 50%, transparent 70%);
+  background-size: 250% 100%; background-repeat: no-repeat; animation: a-luccichio 2.6s ease-in-out 1s 2; }
+
+/* numeri grandi (statistiche, anteprima dell'importazione, cassa) */
+.anim ul.numeri li { animation: a-pop .4s var(--curva-molla) both; animation-delay: calc(var(--i, 0) * 60ms); }
+/* barre delle statistiche */
+.anim .barra-dato span { transform-origin: left; animation: a-cresce .8s var(--curva-uscita) both; animation-delay: calc(.1s + var(--i, 0) * 25ms); }
+
+/* riquadri che si aprono */
+.anim details[open] > *:not(summary) { animation: a-scende .25s var(--curva-uscita) both; }
+.anim details > summary { transition: color .15s; }
+
+/* ------------------------------------------- 1.4.3: Oggi e sala operatoria */
+.anim .scheda-oggi { animation: a-sale .35s var(--curva-uscita) both; animation-delay: calc(var(--i, 0) * 60ms); }
+.anim ul.righe-oggi li { animation: a-da-sinistra .3s var(--curva-uscita) both; animation-delay: calc(.2s + var(--i, 0) * 35ms); }
+.anim .barra-letti span { transform-origin: left; animation: a-cresce .7s var(--curva-uscita) both; animation-delay: calc(.1s + var(--i, 0) * 20ms); }
+.anim .conto-checklist, .anim .checklist-voce { transition: background-color .25s, color .25s; }
+.anim .conto-checklist.appena { animation: a-rimbalzo .45s var(--curva-molla) both; }
+.anim .conto-checklist.appena.completa { animation: a-rimbalzo .45s var(--curva-molla) both, a-battito-verde 1.4s ease-out .2s 1; }
+@keyframes a-battito-verde { 0%, 100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, .5); } 60% { box-shadow: 0 0 0 7px rgba(46, 125, 50, 0); } }
+.anim .numero-grande { animation: a-pop .4s var(--curva-molla) .15s both; }
+
+/* ------------------------------------------ icone animate (Lottie) e attesa */
+.icona-animata { display: inline-block; vertical-align: middle; opacity: 0; transition: opacity .25s; --colore-icona: #6A7A84; }
+.icona-animata.pronta { opacity: 1; }
+.icona-animata svg { display: block; }
+.icona-animata path[stroke] { stroke: var(--colore-icona) !important; }
+.icona-animata path[fill]:not([fill="none"]) { fill: var(--colore-icona) !important; }
+.icona-animata.grande { width: 34px; height: 34px; margin: -6px 10px -6px 0; }
+p.vuoto.con-icona { line-height: 34px; }
+.icona-animata.titolo { width: 40px; height: 40px; margin: -6px 8px 0 -4px; --colore-icona: #2E7D32; }
+.icona-animata.spunta-checklist { width: 26px; height: 26px; margin: -4px 0 -4px 2px; --colore-icona: #2E7D32; }
+.icona-animata.spunta-checklist.via { opacity: 0; }
+.icona-animata.avviso-notifica { width: 20px; height: 20px; margin: -4px 5px 0 -2px; --colore-icona: #B3261E; }
+html.scuro .icona-animata { --colore-icona: #9FB0BC; }
+html.scuro .icona-animata.titolo, html.scuro .icona-animata.spunta-checklist { --colore-icona: #7BC47F; }
+html.scuro .icona-animata.avviso-notifica { --colore-icona: #F28B82; }
+
+.attesa-lunga { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center;
+  background: rgba(22, 38, 63, .28); opacity: 0; pointer-events: none; transition: opacity .25s; }
+.attesa-lunga.visibile { opacity: 1; pointer-events: auto; }
+.riquadro-attesa { background: #FFFFFF; color: #16263F; border-top: 3px solid var(--primario); padding: 18px 26px; min-width: 260px;
+  display: grid; grid-template-columns: auto 1fr; column-gap: 14px; align-items: center; box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+  transform: translateY(8px) scale(.97); transition: transform .3s var(--curva-molla); }
+.attesa-lunga.visibile .riquadro-attesa { transform: none; }
+.riquadro-attesa .giro { grid-row: span 2; width: 34px; height: 34px; color: var(--primario); }
+.riquadro-attesa .giro svg { width: 100%; height: 100%; display: block; }
+.riquadro-attesa b { font-size: 15px; }
+.riquadro-attesa span:last-child { font-size: 13px; color: #5B6B75; }
+html.scuro .riquadro-attesa { background: #1F2833; color: #E3E8EC; }
+html.scuro .riquadro-attesa span:last-child { color: #9FB0BC; }
+html.scuro .riquadro-attesa .giro { color: #9DB8E0; }
+
+/* ---------------------------------------------------------------- messaggi */
+.anim .avvisi .avviso { animation: a-scende .35s var(--curva-molla) both; animation-delay: calc(var(--i, 0) * 70ms); }
+.anim .avviso.fatto { position: relative; padding-left: 38px; }
+.spunta-animata { position: absolute; left: 10px; top: 50%; width: 20px; height: 20px; margin-top: -10px; }
+.spunta-animata circle { fill: none; stroke: #2E7D32; stroke-width: 2; stroke-dasharray: 60; stroke-dashoffset: 60; }
+.spunta-animata path { fill: none; stroke: #2E7D32; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 20; stroke-dashoffset: 20; }
+.anim .spunta-animata circle { animation: a-spunta .45s ease-out .15s forwards; }
+.anim .spunta-animata path { animation: a-spunta .3s ease-out .5s forwards; }
+html:not(.anim) .spunta-animata circle, html:not(.anim) .spunta-animata path { stroke-dashoffset: 0; }
+.anim .appena-salvato { animation: a-evidenzia 2.4s ease-out .3s both; }
+
+/* ---------------------------------------------------------------- notifiche */
+.anim .notifica { animation: a-notifica .55s var(--curva-uscita) both; overflow: hidden; }
+.anim .notifica:nth-child(2) { animation-delay: .12s; }
+.anim .notifica:nth-child(3) { animation-delay: .24s; }
+.anim .notifica:nth-child(4) { animation-delay: .36s; }
+.anim .notifica.uscita { opacity: 0; transform: translateX(110%); transition: opacity .35s, transform .35s var(--curva-uscita); }
+.tempo-notifica { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--primario); opacity: .35;
+  transform-origin: left; }
+.anim .tempo-notifica { animation: a-sbiadisce 15s linear forwards; }
+.anim .notifica:hover .tempo-notifica { animation-play-state: paused; }
+html:not(.anim) .tempo-notifica { display: none; }
+
+/* suggerimenti, ricerca rapida, tasti */
+.anim .suggerimenti:not([hidden]), .anim .risultati-rapidi:not([hidden]) { animation: a-scende .18s var(--curva-uscita) both; }
+.anim .aiuto-tasti:not([hidden]) { animation: a-pop .25s var(--curva-molla) both; }
+.anim .campo input, .anim .campo select, .anim .campo textarea { transition: border-color .15s, box-shadow .2s; }
+.anim .campo input:focus, .anim .campo select:focus, .anim .campo textarea:focus { box-shadow: 0 0 0 3px rgba(21, 67, 129, .15); }
+
+/* --------------------------------------------------------- mai in stampa */
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .adesso, .caricamento, .tempo-notifica, .spunta-animata, .icona-animata, .attesa-lunga { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .adesso::before { animation: none !important; }
+}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block titolo %}Cose da fare{% endblock %}
+{% macro riga(x, torna) %}
+<tr>
+  <td>{{ giorno_breve(x.per_il) }}</td>
+  <td>{{ x.testo }}{% if x.paziente %}<div class="nota-riga"><a href="{{ url_for('pazienti.scheda', pid=x.paziente_id) }}">{{ x.paziente.etichetta }}</a>{% if x.paziente.telefono %} · {{ x.paziente.telefono }}{% endif %}</div>{% endif %}</td>
+  <td class="azione">
+    {% if not x.fatto_il %}
+    <form method="post" action="{{ url_for('segreteria.cosa_fatta', xid=x.id, azione='fatto') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo stato-arrivato" type="submit">Fatto</button></form>
+    <form method="post" action="{{ url_for('segreteria.cosa_fatta', xid=x.id, azione='rimanda') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit">Domani</button></form>
+    {% else %}
+    <span class="nota-riga">fatto il {{ x.fatto_il.strftime('%d/%m %H:%M') }}</span>
+    <form method="post" action="{{ url_for('segreteria.cosa_fatta', xid=x.id, azione='riapri') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit">Riapri</button></form>
+    {% endif %}
+    <form method="post" action="{{ url_for('segreteria.cosa_fatta', xid=x.id, azione='elimina') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo stato-disdetto" type="submit" onclick="return confirm('Eliminare?')">Elimina</button></form>
+  </td>
+</tr>
+{% endmacro %}
+{% block corpo %}
+{%- set torna = url_for('segreteria.cose_da_fare') -%}
+<div class="pagina larga">
+  <h1>Cose da fare</h1>
+  <p class="sotto">Richiamare un paziente, sollecitare un referto, ordinare qualcosa. Nel giorno indicato compaiono come notifica in basso a destra.</p>
+  <form method="post" class="filtri">
+    <label style="flex:1">Cosa<br><input type="text" name="testo" maxlength="300" required style="width:100%" placeholder="Richiamare per il referto"></label>
+    <label>Per il<br><input type="date" name="per_il" value="{{ oggi.isoformat() }}"></label>
+    <button class="bottone primario" type="submit">Aggiungi</button>
+  </form>
+  {% if scadute %}<h2 class="sezione">Rimaste indietro</h2><table class="elenco">{% for x in scadute %}{{ riga(x, torna) }}{% endfor %}</table>{% endif %}
+  <h2 class="sezione">Oggi</h2>
+  {% if di_oggi %}<table class="elenco">{% for x in di_oggi %}{{ riga(x, torna) }}{% endfor %}</table>{% else %}<p class="vuoto">Niente per oggi.</p>{% endif %}
+  {% if prossime %}<h2 class="sezione">Prossimi giorni</h2><table class="elenco">{% for x in prossime %}{{ riga(x, torna) }}{% endfor %}</table>{% endif %}
+  {% if fatte %}<details><summary>Fatte di recente</summary><table class="elenco">{% for x in fatte %}{{ riga(x, torna) }}{% endfor %}</table></details>{% endif %}
+</div>
+{% endblock %}

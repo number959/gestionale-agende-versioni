@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block titolo %}Statistiche{% endblock %}
+{# ore con un decimale, arrotondate a meta' per eccesso: 75 minuti = 1,3 #}
+{% macro ore(m) %}{% set d = ((m|int) + 3) // 6 %}{{ d // 10 }},{{ d % 10 }}{% endmacro %}
+{% macro euro(c) %}{% if c %}{{ '{:,.2f}'.format(c / 100.0).replace(',', 'x').replace('.', ',').replace('x', '.') }}{% else %}—{% endif %}{% endmacro %}
+{% macro perc(x, cifre=0) %}{{ ('%.' ~ cifre ~ 'f')|format(x)|replace('.', ',') }}%{% endmacro %}
+{% macro barra(valore, massimo) %}<span class="barra-dato"><span style="width: {{ [100, (100.0 * valore / massimo) if massimo else 0]|min|round(1) }}%"></span></span>{% endmacro %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Statistiche · {{ st.nome }}</h1>
+  <p class="sotto">Dal {{ dal.strftime('%d/%m/%Y') }} al {{ al.strftime('%d/%m/%Y') }}.
+    {% for nome, da, a in scorciatoie %}<a href="{{ url_for('viste.statistiche', struttura=sid, dal=da.isoformat(), al=a.isoformat()) }}">{{ nome }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+  <form method="get" class="filtri">
+    {% if strutture|length > 1 %}
+    <label>Struttura <select name="struttura">{% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}</select></label>
+    {% else %}<input type="hidden" name="struttura" value="{{ sid }}">{% endif %}
+    <label>Dal <input type="date" name="dal" value="{{ dal.isoformat() }}"></label>
+    <label>Al <input type="date" name="al" value="{{ al.isoformat() }}"></label>
+    <button class="bottone primario" type="submit">Aggiorna</button>
+    <a class="bottone" href="{{ url_for('viste.statistiche_excel', struttura=sid, dal=dal.isoformat(), al=al.isoformat()) }}">Scarica in Excel</a>
+    <a class="bottone" href="{{ url_for('cruscotto.riepilogo', aaaamm=dal.strftime('%Y-%m'), struttura=sid if strutture|length > 1 else none) }}">Riepilogo del mese per medico</a>
+  </form>
+
+  <ul class="numeri grandi">
+    <li><b>{{ dati.appuntamenti }}</b> appuntamenti</li>
+    <li><b>{{ ore(dati.prenotati) }}</b> ore prenotate su <b>{{ ore(dati.capacita) }}</b> di turno{% if dati.capacita %} ({{ perc(100.0 * dati.prenotati / dati.capacita) }}){% endif %}</li>
+    <li><b>{{ dati.disdetti }}</b> disdetti</li>
+    <li{% if dati.tasso_assenze and dati.tasso_assenze > 10 %} class="allarme"{% endif %}><b>{{ dati.non_presentati }}</b> non presentati{% if dati.tasso_assenze is not none %} ({{ perc(dati.tasso_assenze, 1) }}){% endif %}</li>
+    <li><b>{{ dati.pazienti_nuovi }}</b> pazienti nuovi</li>
+    {% if dati.importo_cent %}<li><b>{{ euro(dati.importo_cent) }}</b> euro indicati</li>{% endif %}
+    {% if dati.incassato_cent %}<li><b>{{ euro(dati.incassato_cent) }}</b> euro incassati</li>{% endif %}
+  </ul>
+
+  <h2 class="sezione">Saturazione delle stanze</h2>
+  <p class="nota">Ore prenotate sulle ore di turno, tolte assenze, chiusure e festivi chiusi. Sopra il 100% ci sono appuntamenti fuori turno.</p>
+  <table class="elenco">
+    <tr><th>Stanza</th><th>Ore di turno</th><th>Ore prenotate</th><th>Appuntamenti</th><th class="largo">Saturazione</th></tr>
+    {% for x in dati.per_stanza %}
+    <tr><td>{{ x.risorsa.nome }}</td><td>{{ ore(x.capacita) }}</td><td>{{ ore(x.prenotati) }}</td><td>{{ x.appuntamenti }}</td>
+      <td>{% if x.saturazione is not none %}{{ barra(x.saturazione, 100) }} {{ perc(x.saturazione) }}{% else %}<span class="senza">nessun turno</span>{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2 class="sezione">Medici</h2>
+  {% if dati.per_medico %}
+  {% set massimo = dati.per_medico|map(attribute='appuntamenti')|max %}
+  <table class="elenco">
+    <tr><th>Medico</th><th class="largo">Appuntamenti</th><th>Ore</th><th>Ore di turno</th><th>Disdetti</th><th>Non presentati</th><th>Importi</th></tr>
+    {% for m in dati.per_medico %}
+    <tr><td>{{ m.operatore.etichetta }}</td><td>{{ barra(m.appuntamenti, massimo) }} {{ m.appuntamenti }}</td>
+      <td>{{ ore(m.minuti) }}</td><td>{{ ore(m.turno_minuti) }}</td><td>{{ m.disdetti }}</td>
+      <td>{{ m.assenti }}{% if m.tasso_assenze is not none and m.assenti %} ({{ perc(m.tasso_assenze) }}){% endif %}</td><td>{{ euro(m.importo_cent) }}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="vuoto">Nessun appuntamento nel periodo.</p>{% endif %}
+
+  <h2 class="sezione">Prestazioni</h2>
+  {% if dati.per_prestazione %}
+  {% set massimo = dati.per_prestazione|map(attribute='appuntamenti')|max %}
+  <table class="elenco">
+    <tr><th>Prestazione</th><th class="largo">Appuntamenti</th><th>Ore</th><th>Importi</th></tr>
+    {% for p in dati.per_prestazione %}
+    <tr><td>{{ p.nome }}</td><td>{{ barra(p.appuntamenti, massimo) }} {{ p.appuntamenti }}</td><td>{{ ore(p.minuti) }}</td><td>{{ euro(p.importo_cent) }}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="vuoto">Nessun appuntamento nel periodo.</p>{% endif %}
+
+  <div class="due-colonne">
+    <div>
+      <h2 class="sezione">Giorni della settimana</h2>
+      {% set massimo = dati.per_giorno_settimana|max %}
+      <table class="elenco">
+        {% for n in dati.per_giorno_settimana %}<tr><td>{{ giorni_nomi[loop.index0] }}</td><td class="largo">{{ barra(n, massimo) }} {{ n }}</td></tr>{% endfor %}
+      </table>
+    </div>
+    <div>
+      <h2 class="sezione">Tipo di visita</h2>
+      <table class="elenco">
+        {% for nome, n in dati.per_tipo %}<tr><td>{{ nome }}</td><td>{{ n }}</td></tr>{% else %}<tr><td class="senza">nessun dato</td></tr>{% endfor %}
+      </table>
+      <h2 class="sezione">Pazienti nuovi: come ci hanno conosciuto</h2>
+      <table class="elenco">
+        {% for nome, n in dati.per_provenienza %}<tr><td>{{ nome }}</td><td>{{ n }}</td></tr>{% else %}<tr><td class="senza">nessun paziente nuovo</td></tr>{% endfor %}
+      </table>
+      {% if dati.inviati %}
+      <h2 class="sezione">Chi li manda</h2>
+      <table class="elenco">{% for nome, n in dati.inviati %}<tr><td>{{ nome }}</td><td>{{ n }}</td></tr>{% endfor %}</table>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

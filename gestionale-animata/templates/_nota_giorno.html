@@ -1,0 +1,21 @@
+{#- nota del giorno della struttura: si legge sempre, si modifica aprendola -#}
+<details class="nota-giorno"{% if nota %} open{% endif %}>
+  <summary>{% if nota %}Nota del giorno{% else %}Aggiungi una nota per questo giorno{% endif %}</summary>
+  <form method="post" action="{{ url_for('segreteria.salva_nota') }}">
+    <input type="hidden" name="struttura" value="{{ sid }}"><input type="hidden" name="data" value="{{ g.isoformat() }}">
+    <input type="hidden" name="torna" value="{{ torna }}">
+    <textarea name="testo" rows="{{ [nota.count('\n') + 1, 1]|max if nota else 1 }}" maxlength="1000" placeholder="Per esempio: Lippiello arriva alle 10, ambulatorio 3 chiuso per manutenzione">{{ nota }}</textarea>
+    <button class="bottone piccolo" type="submit">Salva</button>
+  </form>
+</details>
+{% if appunti %}
+<div class="appunti-giorno">
+  <b>Da confermare per questo giorno ({{ appunti|length }})</b> · <a href="{{ url_for('segreteria.da_confermare') }}">tutti gli appunti</a>
+  <ul>
+  {% for x in appunti %}
+    <li>{% if x.ora %}<b>{{ x.ora.strftime('%H:%M') }}</b> {% endif %}{% if x.operatore %}{{ x.operatore.etichetta }} · {% endif %}{% if x.chi %}{{ x.chi }}{% if x.recapito %} ({{ x.recapito }}){% endif %} · {% endif %}{% if x.prestazione %}{{ x.prestazione.nome }} · {% endif %}{% if x.note %}{{ x.note }} · {% endif %}<span class="nota-riga" style="display:inline">{{ x.testo }}</span>
+      <a class="bottone piccolo" href="{{ indirizzo_prenota(x) }}">Prenota</a></li>
+  {% endfor %}
+  </ul>
+</div>
+{% endif %}

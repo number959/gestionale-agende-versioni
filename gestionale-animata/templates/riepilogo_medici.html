@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% set foglio_carta = true %}
+{% block titolo %}Riepilogo dei medici · {{ mese }}{% endblock %}
+{% block classe_body %} class="pagina-stampa"{% endblock %}
+{% block menu %}{% endblock %}
+{% block corpo %}
+<div class="comandi-stampa solo-schermo">
+  <button class="bottone primario" type="button" onclick="window.print()">Stampa</button>
+  <a class="passo" data-tasto="precedente" href="{{ url_for('cruscotto.riepilogo', aaaamm=precedente, medico=scelto.id if scelto else none, struttura=sid) }}" title="Mese precedente">&lsaquo;</a>
+  <a class="passo" data-tasto="successivo" href="{{ url_for('cruscotto.riepilogo', aaaamm=successivo, medico=scelto.id if scelto else none, struttura=sid) }}" title="Mese successivo">&rsaquo;</a>
+  <form method="get" style="display:inline">
+    <select name="medico" onchange="this.form.submit()">
+      <option value="">tutti i medici del mese, uno per foglio</option>
+      {% for o in medici %}<option value="{{ o.id }}"{% if scelto and o.id == scelto.id %} selected{% endif %}>{{ o.etichetta }}{% if not o.attivo %} (non attivo){% endif %}</option>{% endfor %}
+    </select>
+    {% if piu_strutture %}<select name="struttura" onchange="this.form.submit()">
+      <option value="">tutte le strutture</option>
+      {% for x in strutture %}<option value="{{ x.id }}"{% if st and x.id == st.id %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+    </select>{% endif %}
+  </form>
+  <a class="bottone" href="{{ url_for('cruscotto.riepilogo_excel', aaaamm=aaaamm, medico=scelto.id if scelto else none, struttura=sid) }}">Scarica in Excel</a>
+  <a class="bottone" href="{{ url_for('viste.statistiche', struttura=sid) }}">Torna alle statistiche</a>
+</div>
+{% for f in fogli %}{% set c = f.conteggio %}
+<div class="foglio foglio-medico">
+  <header class="testata-stampa">
+    <div class="logo-stampa">{% include "_marchio.html" %}</div>
+    <div class="dati-stampa"><div class="nome-struttura">{{ f.operatore.etichetta }}</div>{% if f.operatore.specialita %}<div>{{ f.operatore.specialita }}</div>{% endif %}</div>
+    <div class="data-stampa"><div class="giorno-stampa">Riepilogo di {{ mese }}</div><div>{% if st %}{{ st.nome }} · {% endif %}{{ f.apps|length }} appuntament{{ 'o' if f.apps|length == 1 else 'i' }} in {{ f.giorni }} giorn{{ 'o' if f.giorni == 1 else 'i' }}</div></div>
+  </header>
+  {% if f.mail %}<p class="solo-schermo"><a class="bottone" href="{{ f.mail }}">Manda per email a {{ f.operatore.email }}</a> <span class="nota">Il messaggio si apre già scritto; il file Excel si può allegare a mano.</span></p>
+  {% elif not f.operatore.email %}<p class="solo-schermo nota">Per mandarlo per email, scrivere l'indirizzo del medico in <a href="{{ url_for('anagrafiche.medico', oid=f.operatore.id) }}">Anagrafiche</a>.</p>{% endif %}
+  <div class="riepilogo-numeri">
+    <div><b>{{ c.get('ARRIVATO', 0) }}</b> arrivati</div>
+    <div><b>{{ c.get('PRENOTATO', 0) + c.get('CONFERMATO', 0) }}</b> prenotati o confermati</div>
+    <div><b>{{ c.get('NON_PRESENTATO', 0) }}</b> non presentati</div>
+    <div><b>{{ c.get('DISDETTO', 0) }}</b> disdetti</div>
+    {% if f.previsto %}<div><b>{{ f.previsto|euro }} €</b> importi previsti</div>{% endif %}
+    {% if f.incassato %}<div><b>{{ f.incassato|euro }} €</b> incassati</div>{% endif %}
+  </div>
+  {% if f.prestazioni %}<p class="per-prestazione">{% for nome, n in f.prestazioni %}{{ nome }}: <b>{{ n }}</b>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+  <table class="tabella-stampa">
+    <thead><tr><th>Giorno</th><th class="c-ora">Ora</th><th>Stanza</th><th>Paziente</th><th>Prestazione</th><th>Convenzione</th><th class="c-importo">Importo</th><th>Stato</th></tr></thead>
+    <tbody>
+    {% for a in f.apps %}
+      <tr class="stato-{{ a.stato|lower }}">
+        <td>{{ a.inizio.strftime('%d/%m') }}</td>
+        <td class="c-ora">{{ a.inizio.strftime('%H:%M') }}</td>
+        <td>{{ a.risorsa.nome }}{% if piu_strutture and not st %} <small>{{ a.risorsa.struttura.nome }}</small>{% endif %}</td>
+        <td class="c-paziente">{{ a.paziente.etichetta if a.paziente else '' }}</td>
+        <td>{{ a.prestazione.nome if a.prestazione else '' }}</td>
+        <td>{{ a.convenzione or '' }}</td>
+        <td class="c-importo">{{ a.importo_testo }}{% if a.pagato %}<br><small>pagati {{ a.pagato_testo }}</small>{% endif %}</td>
+        <td>{{ etichette[a.stato] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="piede-stampa">stampato il {{ adesso.strftime('%d/%m/%Y alle %H:%M') }}</div>
+</div>
+{% else %}
+<div class="foglio"><p>Nessun appuntamento {% if scelto %}di {{ scelto.etichetta }} {% endif %}in {{ mese }}.</p></div>
+{% endfor %}
+{% endblock %}

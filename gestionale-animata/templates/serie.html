@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block titolo %}Serie di appuntamenti{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Serie di {{ apps|length }} appuntamenti</h1>
+  <p class="sotto">{% if apps[0].paziente %}<a href="{{ url_for('pazienti.scheda', pid=apps[0].paziente_id) }}">{{ apps[0].paziente.etichetta }}</a> · {% endif %}{{ apps[0].prestazione.nome if apps[0].prestazione else '' }} · {{ apps[0].operatore.etichetta }}</p>
+  <table class="elenco">
+    <tr><th>Giorno</th><th>Ora</th><th>Stanza</th><th>Stato</th><th></th></tr>
+    {% for a in apps %}
+    <tr class="stato-{{ a.stato|lower }}">
+      <td><a href="{{ url_for('appuntamento', aid=a.id) }}">{{ giorno_breve(a.inizio.date()) }} {{ a.inizio.year }}</a></td>
+      <td class="ora-lista">{{ a.inizio.strftime('%H:%M') }}</td>
+      <td>{{ a.risorsa.nome }}</td>
+      <td>{{ a.etichetta_stato }}</td>
+      <td class="azione">{% if a.attivo and a.inizio > adesso %}<form method="post" class="in-linea" onsubmit="return confirm('Disdire questo e tutti i successivi della serie?')">
+        <input type="hidden" name="azione" value="disdici"><input type="hidden" name="dal" value="{{ a.id }}">
+        <button class="bottone piccolo stato-disdetto" type="submit">Disdici da qui in poi</button></form>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

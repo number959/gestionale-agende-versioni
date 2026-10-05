@@ -1,0 +1,7 @@
+{#- logo della struttura in uso; senza logo, il suo nome -#}
+{%- set m = marchio_di(sid if sid is defined else none) -%}
+{%- if m.logo_url -%}
+<img src="{{ m.logo_url }}" alt="{{ m.nome }}">
+{%- else -%}
+<span class="marchio-nome">{{ m.nome }}</span>
+{%- endif -%}

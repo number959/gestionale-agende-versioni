@@ -1,0 +1,19 @@
+{#- pulsanti per cambiare stato senza aprire il modulo -#}
+{% macro pulsanti(a, torna, quali) -%}
+<span class="pulsanti-stato">
+{%- for codice, etichetta in quali if codice != a.stato %}
+<form method="post" action="{{ url_for('cambia_stato', aid=a.id) }}" class="in-linea">
+  <input type="hidden" name="stato" value="{{ codice }}"><input type="hidden" name="torna" value="{{ torna }}">
+  <button class="bottone piccolo stato-{{ codice|lower }}" type="submit">{{ etichetta }}</button>
+</form>
+{%- endfor %}
+</span>
+{%- endmacro %}
+
+{% macro contatti(c) -%}
+<span class="contatti-rapidi">
+{%- if c.tel %}<a href="{{ c.tel }}" title="Chiama">Chiama</a>{% endif -%}
+{%- if c.whatsapp %}<a href="{{ c.whatsapp }}" target="_blank" title="WhatsApp con il messaggio già scritto">WhatsApp</a>{% endif -%}
+{%- if c.email %}<a href="{{ c.email }}" title="Email con il messaggio già scritto">Email</a>{% endif -%}
+</span>
+{%- endmacro %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block titolo %}Controllo dei codici fiscali{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-codici">
+  <h1>Controllo dei codici fiscali</h1>
+  <p class="sotto"><a href="{{ url_for('pazienti.elenco') }}">Torna ai pazienti</a> · {{ r.totale }} pazienti in anagrafica, {{ r.validi }} con il codice fiscale valido.</p>
+  <p>Qui si controllano tutti insieme i codici fiscali già in archivio. Da adesso un codice sbagliato non si può più salvare, e uno che manca si calcola da solo appena nella scheda ci sono sesso, data e luogo di nascita. Ogni nome apre la scheda del paziente, dove il codice si corregge e si vede subito se va.</p>
+  {% if not r.da_vedere %}
+  <p class="riquadro tutto-bene" data-guida="codici-riepilogo"><b>Nessun codice fiscale da correggere.</b>{% if r.senza_totale %} Restano {{ r.senza_totale }} pazienti senza codice: si completano alla prossima visita.{% endif %}</p>
+  {% else %}
+  <p class="riquadro da-vedere" data-guida="codici-riepilogo"><b>{{ r.da_vedere }} da vedere</b>: {{ r.non_validi|length }} non validi, {{ r.non_coerenti|length }} che non corrispondono ai dati, {{ r.doppi|length }} su più schede, {{ r.calcolabili|length }} da calcolare.</p>
+  {% endif %}
+
+  <section data-guida="codici-non-validi">
+    <h2 class="sezione">Non validi <small>({{ r.non_validi|length }})</small></h2>
+    {% if r.non_validi %}
+    <table class="elenco">
+      <tr><th>Paziente</th><th>Codice scritto</th><th>Cosa non va</th></tr>
+      {% for p, motivo in r.non_validi %}
+      <tr><td><a href="{{ url_for('pazienti.scheda', pid=p.id) }}">{{ p.etichetta }}</a></td><td><code>{{ p.codice_fiscale }}</code></td><td>{{ motivo }}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="vuoto">Nessuno.</p>{% endif %}
+  </section>
+
+  <section data-guida="codici-non-coerenti">
+    <h2 class="sezione">Non corrispondono ai dati della scheda <small>({{ r.non_coerenti|length }})</small></h2>
+    {% if r.non_coerenti %}
+    <p class="nota-riga">Il codice è valido ma dice un'altra cosa rispetto a cognome, nome, data, sesso o luogo di nascita: è sbagliato uno dei due. Può anche essere un codice assegnato così dall'Agenzia delle Entrate: fa fede la tessera sanitaria.</p>
+    <table class="elenco">
+      <tr><th>Paziente</th><th>Codice fiscale</th><th>Cosa non torna</th></tr>
+      {% for p, avvisi in r.non_coerenti %}
+      <tr><td><a href="{{ url_for('pazienti.scheda', pid=p.id) }}">{{ p.etichetta }}</a></td><td><code>{{ p.codice_fiscale }}</code></td><td>{{ avvisi|join(' ') }}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="vuoto">Nessuno.</p>{% endif %}
+  </section>
+
+  <section data-guida="codici-doppi">
+    <h2 class="sezione">Lo stesso codice su più schede <small>({{ r.doppi|length }})</small></h2>
+    {% if r.doppi %}
+    <p class="nota-riga">Di solito è la stessa persona inserita due volte: le schede si uniscono, con gli appuntamenti di tutte e due.</p>
+    <table class="elenco">
+      <tr><th>Codice fiscale</th><th>Schede</th><th></th></tr>
+      {% for gruppo in r.doppi %}
+      <tr><td><code>{{ gruppo[0].codice_fiscale }}</code></td>
+        <td>{% for p in gruppo %}<a href="{{ url_for('pazienti.scheda', pid=p.id) }}">{{ p.etichetta }}</a>{% if p.telefono %} ({{ p.telefono }}){% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</td>
+        <td class="azione"><a href="{{ url_for('pazienti.unisci_pagina', pid=gruppo[0].id) }}">Unisci</a></td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="vuoto">Nessuno.</p>{% endif %}
+  </section>
+
+  <section data-guida="codici-calcolabili">
+    <h2 class="sezione">Da calcolare <small>({{ r.calcolabili|length }})</small></h2>
+    {% if r.calcolabili %}
+    <p class="nota-riga">Nella scheda ci sono cognome, nome, sesso, data e luogo di nascita, ma non il codice: si può calcolare. Va poi controllato sulla tessera sanitaria, perché in rari casi (omocodia) quello vero è diverso.</p>
+    <table class="elenco">
+      <tr><th>Paziente</th><th>Nato</th><th>Codice calcolato</th></tr>
+      {% for p, codice in r.calcolabili %}
+      <tr><td><a href="{{ url_for('pazienti.scheda', pid=p.id) }}">{{ p.etichetta }}</a></td>
+        <td>{{ p.data_nascita.strftime('%d/%m/%Y') }} a {{ testo_luogo(p) }}</td><td><code>{{ codice }}</code></td></tr>
+      {% endfor %}
+    </table>
+    <form method="post" class="in-linea">
+      <input type="hidden" name="azione" value="calcola">
+      <button class="bottone primario" type="submit">Calcola e salva {{ 'il codice' if r.calcolabili|length == 1 else 'i ' ~ r.calcolabili|length ~ ' codici' }}</button>
+      <span class="nota-riga">Prima il programma fa una copia di sicurezza dei dati.</span>
+    </form>
+    {% else %}<p class="vuoto">Nessuno.</p>{% endif %}
+  </section>
+
+  <section data-guida="codici-senza">
+    <h2 class="sezione">Senza codice fiscale <small>({{ r.senza_totale }})</small></h2>
+    {% if r.senza %}
+    <p class="nota-riga">Per calcolarlo mancano dei dati: si chiedono al paziente, meglio alla prossima visita (questi sono in ordine di appuntamento{% if r.senza_totale > r.senza|length %}; qui i primi {{ r.senza|length }}{% endif %}). Con il codice della tessera sanitaria i dati si riempiono da soli.</p>
+    <table class="elenco">
+      <tr><th>Paziente</th><th>Prossimo appuntamento</th><th>Manca</th></tr>
+      {% for p, mancano in r.senza %}
+      {% set pr = r.prossimi.get(p.id) %}
+      <tr><td><a href="{{ url_for('pazienti.scheda', pid=p.id) }}">{{ p.etichetta }}</a></td>
+        <td>{{ pr.strftime('%d/%m/%Y %H:%M') if pr else '' }}</td><td>{{ mancano|join(', ') }}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="vuoto">Nessuno.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

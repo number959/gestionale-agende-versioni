@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% from "_stato.html" import pulsanti %}
+{% block titolo %}Oggi · {{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">Oggi · {{ titolo }}</h1>
+  <span class="conteggio">{{ q.totale }} appuntament{{ 'o' if q.totale == 1 else 'i' }}{% if q.totale %} · {{ q.arrivati }} arrivat{{ 'o' if q.arrivati == 1 else 'i' }}{% endif %}</span>
+  <div class="comandi">
+    <a class="bottone primario" href="{{ url_for('giorno', iso=q.oggi.isoformat(), struttura=sid) }}">Apri la giornata</a>
+    <a class="bottone" data-tasto="nuovo" href="{{ url_for('appuntamento', data=q.oggi.isoformat(), struttura=sid) }}">Nuovo appuntamento</a>
+    {% if strutture|length > 1 %}
+    <form method="get" style="display:inline"><select name="struttura" onchange="this.form.submit()">
+      {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+    </select></form>
+    {% endif %}
+  </div>
+</div>
+<div class="contenuto">
+{% if q.allarme %}<div class="avvio errore-backup">{{ q.allarme }} <a href="{{ url_for('viste.impostazioni') }}#backup">Impostazioni</a></div>{% endif %}
+{% if q.nota %}<div class="avvio nota-oggi"><b>Nota del giorno:</b> {{ q.nota }}</div>{% endif %}
+<div class="cruscotto">
+
+  <section class="scheda-oggi larga">
+    <h2>Adesso e nelle prossime due ore <small>{{ q.adesso.strftime('%H:%M') }}</small></h2>
+    {% if q.in_ritardo or q.tra_poco %}
+    <table class="elenco compatta">
+      {% for a in q.in_ritardo + q.tra_poco %}
+      <tr class="stato-{{ a.stato|lower }}{{ ' in-ritardo' if a in q.in_ritardo }}">
+        <td class="ora-lista"><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}">{{ a.inizio.strftime('%H:%M') }}</a>{% if a in q.in_ritardo %}<div class="nota-riga">non ancora arrivato</div>{% endif %}</td>
+        <td>{% if a.paziente %}<a href="{{ url_for('pazienti.scheda', pid=a.paziente.id) }}">{{ a.paziente.etichetta }}</a><div class="nota-riga">{{ a.paziente.telefono or '' }}</div>{% else %}<span class="senza">senza paziente</span>{% endif %}</td>
+        <td>{{ a.prestazione.nome if a.prestazione else '' }}<div class="nota-riga">{{ a.operatore.cognome }} · {{ a.risorsa.nome }}</div></td>
+        <td class="azione">{{ pulsanti(a, torna, [('ARRIVATO', 'Arrivato')] + ([('NON_PRESENTATO', 'Non presentato')] if a in q.in_ritardo else [('CONFERMATO', 'Confermato')] if a.stato == 'PRENOTATO' else [])) }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% elif q.totale %}
+    <p class="vuoto">Nessuno da aspettare nelle prossime due ore.{% if q.ultimo and q.ultimo.inizio > q.adesso %} L'ultimo appuntamento è alle {{ q.ultimo.inizio.strftime('%H:%M') }}.{% endif %}</p>
+    {% else %}
+    <p class="vuoto">Nessun appuntamento oggi.</p>
+    {% endif %}
+    {% if q.in_struttura %}<p class="nota-riga">In struttura adesso: {% for a in q.in_struttura %}{{ a.paziente.etichetta if a.paziente else a.operatore.cognome }} ({{ a.risorsa.nome }}){% if not loop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
+  </section>
+
+  {% if q.chirurghi is not none %}
+  <section class="scheda-oggi">
+    <h2>Sala operatoria <small><a href="{{ url_for('sala.giornata', iso=q.oggi.isoformat(), struttura=sid) }}">apri</a></small></h2>
+    {% if q.interventi %}
+    <ul class="righe-oggi">
+      {% for a in q.interventi %}{% set c = stato_checklist(a, q.voci) %}
+      <li><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}#checklist">{{ a.inizio.strftime('%H:%M') }} {{ a.paziente.etichetta if a.paziente else 'senza paziente' }}</a>
+        <span class="nota-riga">{{ a.operatore.cognome }} · {{ a.risorsa.nome }}{% if a.degenza %} · {{ a.etichetta_degenza|lower }}{% endif %}</span>
+        {% if c %}<span class="conto-checklist {{ 'completa' if c.completa else 'incompleta' }}" title="{{ ('manca ' ~ c.mancanti|join(', ')) if c.mancanti else 'checklist completa' }}">{{ c.fatte }}/{{ c.totale }}</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vuoto">Nessun intervento oggi.</p>{% endif %}
+    {% if q.prossimo_sala %}
+    <p>{{ giorno_breve(q.prossimo_sala)|capitalize }}: <a href="{{ url_for('sala.giornata', iso=q.prossimo_sala.isoformat(), struttura=sid) }}">{{ q.interventi_poi|length }} intervent{{ 'o' if q.interventi_poi|length == 1 else 'i' }}</a>{% if q.incompleti_poi %}, <b class="da-completare">{{ q.incompleti_poi|length }} con la checklist da completare</b>{% elif q.voci %}, checklist completa{% endif %}.</p>
+    {% endif %}
+    {% if q.chirurghi.disponibili %}<p class="nota-riga">Operano di solito oggi e sono liberi: {% for o in q.chirurghi.disponibili %}{{ o.cognome }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
+    <p>Letti stanotte: <a href="{{ url_for('sala.posti_letto', struttura=sid) }}" class="{{ 'oltre' if q.posti and q.letti > q.posti }}"><b>{{ q.letti }}</b>{% if q.posti %} su {{ q.posti }}{% endif %}</a>
+      {%- if q.letti_oltre %} · <b class="oltre">non bastano la notte del {{ q.letti_oltre[0][0].strftime('%d/%m') }}{% if q.letti_oltre|length > 1 %} (e altre {{ q.letti_oltre|length - 1 }}){% endif %}</b>{% endif %}</p>
+  </section>
+  {% endif %}
+
+  <section class="scheda-oggi">
+    <h2>Da fare</h2>
+    {% if q.cose %}
+    <ul class="righe-oggi">
+      {% for x in q.cose %}
+      <li>{{ x.testo }}{% if x.paziente %} — <a href="{{ url_for('pazienti.scheda', pid=x.paziente_id) }}">{{ x.paziente.etichetta }}</a>{% endif %}{% if x.per_il < q.oggi %} <span class="nota-riga">dal {{ x.per_il.strftime('%d/%m') }}</span>{% endif %}
+        <form method="post" action="{{ url_for('segreteria.cosa_fatta', xid=x.id, azione='fatto') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit">Fatto</button></form></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vuoto">Niente in scadenza.</p>{% endif %}
+    <p><a href="{{ url_for('segreteria.cose_da_fare', struttura=sid) }}">Tutte le cose da fare</a></p>
+  </section>
+
+  <section class="scheda-oggi">
+    <h2>Da confermare <small>appunti</small></h2>
+    {% if q.appunti %}
+    <ul class="righe-oggi">
+      {% for x in q.appunti[:6] %}
+      <li><a href="{{ url_for('segreteria.da_confermare', struttura=sid) }}">{{ x.giorno.strftime('%d/%m') }}{% if x.ora %} {{ x.ora.strftime('%H:%M') }}{% endif %} {{ x.chi or '' }}</a> <span class="nota-riga riga-corta" title="{{ x.testo }}">{{ x.testo }}</span></li>
+      {% endfor %}
+      {% if q.appunti|length > 6 %}<li class="nota-riga">e altri {{ q.appunti|length - 6 }} fino a domani</li>{% endif %}
+    </ul>
+    {% else %}<p class="vuoto">Nessun appunto per oggi o domani.</p>{% endif %}
+    {% if q.appunti_tutti %}<p><a href="{{ url_for('segreteria.da_confermare', struttura=sid) }}">{{ q.appunti_tutti }} appunt{{ 'o' if q.appunti_tutti == 1 else 'i' }} aperti in tutto</a></p>{% endif %}
+  </section>
+
+  <section class="scheda-oggi">
+    <h2>Telefonate</h2>
+    {% if q.prossimo > q.oggi %}
+    <p>{{ giorno_breve(q.prossimo)|capitalize }}: {{ q.n_prossimo }} appuntament{{ 'o' if q.n_prossimo == 1 else 'i' }},
+      {% if q.da_confermare %}<a href="{{ url_for('viste.conferme', data=q.prossimo.isoformat(), struttura=sid) }}"><b>{{ q.da_confermare|length }} da confermare</b></a>{% else %}tutti confermati{% endif %}.</p>
+    {% endif %}
+    {% if q.arretrati %}
+    <p><a href="{{ url_for('segreteria.chiusura', iso=(q.arretrati|list|first).isoformat(), struttura=sid) }}">{{ q.arretrati.values()|sum }} appuntament{{ 'o' if q.arretrati.values()|sum == 1 else 'i' }} dei giorni scorsi da chiudere</a> <span class="nota-riga">(arrivato o non presentato)</span></p>
+    {% endif %}
+    {% if q.annullati %}<p class="nota-riga">Oggi {{ q.annullati|length }} disdett{{ 'o' if q.annullati|length == 1 else 'i' }} o non presentat{{ 'o' if q.annullati|length == 1 else 'i' }}: <a href="{{ url_for('segreteria.attesa', struttura=sid) }}">lista d'attesa</a>.</p>{% endif %}
+    {% if not (q.prossimo > q.oggi) and not q.arretrati %}<p class="vuoto">Nessuna telefonata in sospeso.</p>{% endif %}
+  </section>
+
+  <section class="scheda-oggi">
+    <h2>Cassa di oggi</h2>
+    <p class="numero-grande">{{ q.incassato|euro }} €</p>
+    <p class="nota-riga">{{ q.n_pagati }} pagament{{ 'o' if q.n_pagati == 1 else 'i' }}{% if q.da_incassare %} · {{ q.da_incassare|length }} arrivat{{ 'o' if q.da_incassare|length == 1 else 'i' }} ancora da incassare{% endif %}</p>
+    <p><a href="{{ url_for('cassa.cassa_giorno', iso=q.oggi.isoformat(), struttura=sid) }}">Apri la cassa</a></p>
+  </section>
+
+</div>
+</div>
+{% endblock %}

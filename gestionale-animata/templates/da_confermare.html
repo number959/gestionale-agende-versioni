@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block titolo %}Da confermare{% endblock %}
+{% macro riga(x, torna, scegli=True) %}
+<tr>
+  {% if scegli %}<td class="spunta-riga">{% if x.aperto %}<input type="checkbox" name="scelti" value="{{ x.id }}" form="prenota-insieme" aria-label="Scegli">{% endif %}</td>{% endif %}
+  <td style="white-space:nowrap">{% if x.giorno %}{{ giorno_breve(x.giorno)[:3] }} {{ x.giorno.strftime('%d/%m/%Y') }}{% if x.ora %}<br><b>{{ x.ora.strftime('%H:%M') }}</b>{% endif %}{% else %}<span class="nota-riga">senza giorno</span>{% endif %}</td>
+  <td>{% if x.operatore %}{{ x.operatore.etichetta }}{% else %}<span class="nota-riga">medico da scegliere</span>{% endif %}
+      <div class="nota-riga">{% if x.risorsa %}{{ x.risorsa.nome }}{% else %}stanza da assegnare{% endif %}</div></td>
+  <td>{% if x.paziente %}<a href="{{ url_for('pazienti.scheda', pid=x.paziente_id) }}">{{ x.chi }}</a>{% else %}{{ x.chi or '—' }}{% endif %}
+      {% if x.recapito %}<div class="nota-riga">{{ x.recapito }}</div>{% endif %}</td>
+  <td>{% if x.prestazione %}{{ x.prestazione.nome }}{% endif %}
+      {% if x.note %}<div class="nota-riga">{{ x.note }}</div>{% endif %}</td>
+  <td><b>{{ x.testo }}</b>{% if x.origine %}<div class="nota-riga">{{ x.origine }}</div>{% endif %}</td>
+  <td class="azione">
+    {% if x.aperto %}
+    <a class="bottone piccolo primario" href="{{ indirizzo_prenota(x) }}">Prenota</a>
+    <form method="post" action="{{ url_for('segreteria.appunto_azione', xid=x.id, azione='chiudi') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit" title="Non serve più: resta fra quelli chiusi">Chiudi</button></form>
+    {% else %}
+    <span class="nota-riga">{{ 'prenotato' if x.esito == 'PRENOTATO' else 'chiuso' }} il {{ x.chiuso_il.strftime('%d/%m %H:%M') }}</span>
+    {% if x.appuntamento_id %}<a class="bottone piccolo" href="{{ url_for('appuntamento', aid=x.appuntamento_id) }}">Appuntamento</a>{% endif %}
+    {% if x.esito != 'PRENOTATO' %}<form method="post" action="{{ url_for('segreteria.appunto_azione', xid=x.id, azione='riapri') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit">Riapri</button></form>{% endif %}
+    {% endif %}
+    <form method="post" action="{{ url_for('segreteria.appunto_azione', xid=x.id, azione='elimina') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo stato-disdetto" type="submit" onclick="return confirm('Eliminare l\'appunto?')">Elimina</button></form>
+  </td>
+</tr>
+{% endmacro %}
+{% macro tabella(elenco, torna) %}
+<table class="elenco">
+  <tr><th></th><th>Quando</th><th>Medico e stanza</th><th>Paziente</th><th>Prestazione e note</th><th>Da confermare</th><th></th></tr>
+  {% for x in elenco %}{{ riga(x, torna) }}{% endfor %}
+</table>
+{% endmacro %}
+{% block corpo %}
+{%- set torna = url_for('segreteria.da_confermare') -%}
+<div class="pagina larga">
+  <h1>Da confermare</h1>
+  <p class="sotto">Prenotazioni che non si possono ancora mettere in agenda: la stanza non si sa, la sala è già occupata, il paziente deve richiamare. Compaiono anche in cima alla giornata. <b>Prenota</b> apre il modulo già compilato; salvando, l'appunto si chiude.</p>
+
+  <details class="riquadro"{% if not aperti %} open{% endif %}>
+    <summary><b>Nuovo appunto</b></summary>
+    <form method="post" style="margin-top:10px">
+      <input type="hidden" name="torna" value="{{ torna }}">
+      <div class="filtri">
+        <label style="flex:1;min-width:260px">Cosa c'è da confermare<br><input type="text" name="testo" maxlength="1000" required style="width:100%" placeholder="Richiama per confermare l'orario; stanza da decidere"></label>
+        <label>Giorno<br><input type="date" name="giorno"></label>
+        <label>Ora<br><input type="time" name="ora" step="300"></label>
+      </div>
+      <div class="filtri">
+        <label>Medico<br><select name="operatore"><option value="">—</option>{% for o in medici %}<option value="{{ o.id }}">{{ o.etichetta }}</option>{% endfor %}</select></label>
+        <label>Stanza<br><select name="risorsa"><option value="">da assegnare</option>{% for r in stanze %}<option value="{{ r.id }}">{{ r.nome }}</option>{% endfor %}</select></label>
+        <label>Prestazione<br><select name="prestazione"><option value="">—</option>{% for p in prestazioni %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}</select></label>
+        <label>Cognome<br><input type="text" name="cognome" maxlength="60"></label>
+        <label>Nome<br><input type="text" name="nome" maxlength="60"></label>
+        <label>Telefono<br><input type="tel" name="telefono" maxlength="30"></label>
+        <input type="hidden" name="struttura" value="{{ sid or '' }}">
+        <button class="bottone primario" type="submit">Aggiungi</button>
+      </div>
+    </form>
+  </details>
+
+  {% if aperti %}
+  <form method="post" id="prenota-insieme" action="{{ url_for('segreteria.prenota_appunti') }}" class="filtri riquadro">
+    <input type="hidden" name="torna" value="{{ torna }}">
+    <span>Quelli spuntati, in agenda insieme</span>
+    <label>nella stanza<br><select name="risorsa"><option value="">la loro, se indicata</option>{% for r in stanze %}<option value="{{ r.id }}">{{ r.nome }}</option>{% endfor %}</select></label>
+    <button class="bottone primario" type="submit">Prenota i selezionati</button>
+    <label class="spunta-tutti"><input type="checkbox" data-seleziona-tutti="scelti"> seleziona tutti</label>
+  </form>
+  {% endif %}
+
+  {% if passati %}<h2 class="sezione">Giorni passati</h2>{{ tabella(passati, torna) }}{% endif %}
+  <h2 class="sezione">Da oggi in poi</h2>
+  {% if prossimi %}{{ tabella(prossimi, torna) }}{% else %}<p class="vuoto">Niente da confermare.</p>{% endif %}
+  {% if senza_giorno %}<h2 class="sezione">Senza giorno</h2>{{ tabella(senza_giorno, torna) }}{% endif %}
+  {% if chiusi %}<details><summary>Chiusi di recente</summary>{{ tabella(chiusi, torna) }}</details>{% endif %}
+</div>
+{% endblock %}

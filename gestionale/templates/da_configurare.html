@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block titolo %}Da configurare{% endblock %}
+{% block corpo %}
+<div class="pagina">
+  <p class="marchio" style="border:0;margin-bottom:16px">{% include "_marchio.html" %}</p>
+  <h1>Nessuna stanza configurata</h1>
+  <p class="sotto">Il programma funziona, ma non sa ancora su quali stanze lavorare.</p>
+  <p>Non risulta nessuna struttura attiva. Se l'archivio è stato svuotato per errore,
+     chiudere e riaprire il programma: con il database vuoto la configurazione di
+     partenza viene ricreata.</p>
+  <p><a href="{{ url_for('anagrafiche.struttura') }}">Aggiungi una struttura</a> oppure
+     <a href="{{ url_for('anagrafiche.elenco') }}">vedi cosa risulta configurato</a>.</p>
+</div>
+{% endblock %}

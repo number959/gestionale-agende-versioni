@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block titolo %}Aggiornamenti{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-aggiornamenti">
+  <h1>Aggiornamenti</h1>
+  <p class="sotto">Quando esce una versione nuova il programma lo dice da solo, e <b>Aggiorna adesso</b> la installa in circa un minuto. Appuntamenti, pazienti e impostazioni restano dove sono.</p>
+
+  {% if fallito %}
+  <div class="avviso errore">L'aggiornamento alla versione {{ fallito.a }} non è riuscito: il programma è rimasto alla {{ versione }}, con tutti i dati.{% if fallito.log %} Dettagli per l'assistenza in <code>{{ fallito.log }}</code>.{% endif %} Si può riprovare qui sotto, oppure avviare il Setup nuovo a mano.</div>
+  {% endif %}
+
+  <section class="riquadro stato-aggiornamento" id="stato-aggiornamento" data-guida="aggiornamento-stato"
+           data-in-corso="{{ 1 if stato.in_corso else 0 }}" data-indirizzo="{{ url_for('aggiornamenti.stato_json') }}">
+    <p class="versione-installata">Versione installata: <b>{{ versione }}</b>{% if variante == 'animata' %} (con animazioni){% endif %}</p>
+    {% if not base %}
+      <p>Gli aggiornamenti automatici sono <b>spenti</b>: manca l'indirizzo da cui prenderli (qui sotto, <i>Da dove arrivano</i>).{% if predefinito %} <i>Rimetti l'indirizzo predefinito</i> li riaccende.{% endif %} Intanto si aggiorna a mano, con il Setup nuovo.</p>
+    {% elif stato.in_corso %}
+      <p class="in-corso" role="status">Controllo in corso… <span id="avanzamento">{% if m and stato.totale %}scaricamento della versione {{ m.versione }}: {{ '%.1f'|format(stato.scaricati / 1048576) }} MB su {{ '%.1f'|format(stato.totale / 1048576) }}{% endif %}</span></p>
+    {% elif m and pronto %}
+      <h2 class="pronta">È pronta la versione {{ m.versione }}</h2>
+      {% if novita_nuove %}
+      <div class="novita-in-arrivo">
+        {% for v in novita_nuove %}
+        {% if novita_nuove|length > 1 %}<h3>Versione {{ v.versione }}</h3>{% endif %}
+        <ul>{% for x in v.voci %}<li><b>{{ x.titolo }}.</b> {{ x.testo }}</li>{% endfor %}</ul>
+        {% endfor %}
+        <p class="nota-riga">Dopo l'aggiornamento ogni novità ha il suo video, in Aiuto → Novità.</p>
+      </div>
+      {% endif %}
+      <form method="post" action="{{ url_for('aggiornamenti.aggiorna') }}" class="aggiorna-adesso" data-guida="aggiorna-adesso">
+        <button class="bottone primario grande" type="submit">Aggiorna adesso</button>
+        <p class="nota-riga">Prima il programma fa una copia di sicurezza dei dati; poi si chiude, si aggiorna e si riapre da solo, in circa un minuto. Meglio farlo quando non si sta prenotando.</p>
+      </form>
+    {% elif m %}
+      <h2>È uscita la versione {{ m.versione }}</h2>
+      <p>Non è ancora stata scaricata{% if stato.errore %}: <span class="errore-testo">{{ stato.errore }}</span>{% endif %}. Il programma riprova da solo; oppure <i>Controlla adesso</i>.</p>
+    {% elif stato.errore %}
+      <p class="errore-testo">Ultimo controllo non riuscito ({{ stato.errore_il.strftime('%d/%m alle %H:%M') if stato.errore_il else '' }}): {{ stato.errore }}.</p>
+      <p class="nota-riga">Il programma riprova da solo ogni sei ore.</p>
+    {% elif stato.controllato_il %}
+      <p>Il programma è aggiornato: non c'è una versione più nuova (controllato il {{ stato.controllato_il.strftime('%d/%m alle %H:%M') }}).</p>
+    {% else %}
+      <p>Il programma controlla da solo poco dopo l'avvio, poi ogni sei ore.</p>
+    {% endif %}
+    {% if base and not stato.in_corso %}
+    <form method="post" class="in-linea controlla-adesso"><input type="hidden" name="azione" value="controlla"><button class="bottone" type="submit">Controlla adesso</button></form>
+    {% endif %}
+  </section>
+
+  <h2 class="sezione" id="indirizzo">Da dove arrivano</h2>
+  <form method="post" class="riquadro indirizzo-aggiornamenti" data-guida="aggiornamenti-indirizzo">
+    <input type="hidden" name="azione" value="indirizzo">
+    <div class="campo"><label for="indirizzo-aggiornamenti">Indirizzo degli aggiornamenti</label>
+      <input id="indirizzo-aggiornamenti" name="indirizzo" value="{{ scritto }}" maxlength="400" spellcheck="false" autocomplete="off"
+             placeholder="https://github.com/utente/progetto   oppure   \\server\aggiornamenti"></div>
+    {% if usa_predefinito %}<p class="nota-riga predefinito-in-uso"><b>È l'indirizzo predefinito</b>, le versioni del Gestionale Agende su GitHub: non serve cambiarlo.</p>{% endif %}
+    <p class="nota-riga">Si può scrivere la pagina delle versioni di un progetto GitHub (basta l'indirizzo del progetto: il programma prende sempre l'ultima versione pubblicata), un altro indirizzo https, oppure una cartella condivisa. Lì il programma cerca il file <code>{{ manifesto }}</code>, pubblicato insieme al Setup. Vuoto: aggiornamenti automatici spenti.</p>
+    <div class="azioni"><button class="bottone primario" type="submit">Salva l'indirizzo</button>
+      {% if predefinito and not usa_predefinito %}<button class="bottone" type="submit" form="rimetti-predefinito" data-guida="rimetti-predefinito">Rimetti l'indirizzo predefinito</button>{% endif %}</div>
+  </form>
+  {% if predefinito and not usa_predefinito %}
+  <form method="post" id="rimetti-predefinito" hidden><input type="hidden" name="azione" value="predefinito"></form>
+  {% endif %}
+
+  <h2 class="sezione">Aggiornare a mano</h2>
+  <p>Senza internet, o su un altro PC: doppio clic sul Setup nuovo (<code>{{ nome_setup }}</code>), poi <b>Avanti</b> e <b>Fine</b>. Non serve disinstallare: il Setup dice quale versione c'è e quale arriva, e i dati restano.</p>
+  <p class="collegamenti-aggiornamenti"><a href="{{ url_for('aggiornamenti.novita_pagina') }}">Le novità di questa versione</a> · <a href="{{ url_for('guida.articolo', slug='aggiornare') }}">La guida, con il video</a></p>
+</div>
+<script>
+/* mentre controlla o scarica, la pagina segue l'avanzamento e si ricarica alla fine */
+(function () {
+  var box = document.getElementById('stato-aggiornamento');
+  if (!box || box.getAttribute('data-in-corso') !== '1') { return; }
+  var mb = function (n) { return (n / 1048576).toFixed(1); };
+  var giro = function () {
+    fetch(box.getAttribute('data-indirizzo'), { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.in_corso) { window.location.reload(); return; }
+        var a = document.getElementById('avanzamento');
+        if (a && d.disponibile && d.totale) {
+          a.textContent = 'scaricamento della versione ' + d.disponibile + ': ' + mb(d.scaricati) + ' MB su ' + mb(d.totale);
+        }
+        setTimeout(giro, 1000);
+      })
+      .catch(function () { setTimeout(giro, 3000); });
+  };
+  setTimeout(giro, 800);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titolo %}{{ m.nome if m else 'Nuovo modulo' }}{% endblock %}
+{% block corpo %}
+{%- macro val(chiave, esistente='') -%}{% if modulo %}{{ modulo.get(chiave, '') }}{% else %}{{ esistente if esistente is not none else '' }}{% endif %}{%- endmacro -%}
+<div class="pagina larga">
+  <h1>{{ m.nome if m else 'Nuovo modulo' }}</h1>
+  <p class="sotto"><a href="{{ url_for('documenti.moduli') }}">Torna ai moduli</a></p>
+  <form method="post">
+    <div class="campo meta"><label for="nome">Nome</label><input type="text" id="nome" name="nome" maxlength="80" required value="{{ val('nome', m.nome if m else '') }}"></div>
+    <div class="campo meta"><label for="prestazione">Per la prestazione</label>
+      <select id="prestazione" name="prestazione"><option value="">tutte le prestazioni</option>
+        {% for p in prestazioni %}<option value="{{ p.id }}"{% if (modulo and modulo.get('prestazione') == p.id|string) or (not modulo and m and m.prestazione_id == p.id) %} selected{% endif %}>{{ p.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="campo"><label for="testo">Testo</label>
+      <textarea id="testo" name="testo" rows="18" maxlength="20000" required>{{ val('testo', m.testo if m else '') }}</textarea>
+      <p class="aiuto">Segnaposto: {% for x in segnaposto %}<code>{{ '{' ~ x ~ '}' }}</code>{% if not loop.last %} {% endif %}{% endfor %}.
+        Le date relative all'appuntamento: <code>{data-3}</code> è la data tre giorni prima ("28/09/2026"), <code>{giorno-1}</code> il giorno prima per esteso ("domenica 27 settembre"), <code>{data+7}</code> una settimana dopo.</p></div>
+    <div class="campo spunta"><label><input type="checkbox" name="firma" value="1"{% if (modulo and modulo.get('firma')) or (not modulo and (not m or m.firma)) %} checked{% endif %}> Righe per le firme in fondo (paziente e struttura)</label></div>
+    <div class="azioni">
+      <button class="bottone primario" type="submit">Salva modulo</button>
+      {% if m %}<button class="bottone elimina" type="submit" name="azione" value="elimina" onclick="return confirm('Eliminare il modulo?')">Elimina</button>{% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

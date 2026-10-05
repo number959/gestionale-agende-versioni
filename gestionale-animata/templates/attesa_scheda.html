@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block titolo %}{{ 'Richiesta in lista d\'attesa' if x else 'Aggiungi alla lista d\'attesa' }}{% endblock %}
+{% block corpo %}
+{%- macro val(chiave, esistente='') -%}{% if modulo %}{{ modulo.get(chiave, '') }}{% else %}{{ esistente if esistente is not none else '' }}{% endif %}{%- endmacro -%}
+{%- set p = x.paziente if x else paziente_scelto -%}
+<div class="pagina">
+  <h1>{{ 'Richiesta in lista d\'attesa' if x else 'Aggiungi alla lista d\'attesa' }}</h1>
+  <p class="sotto"><a href="{{ url_for('segreteria.attesa') }}">Torna alla lista</a>{% if p %} · <a href="{{ url_for('pazienti.scheda', pid=p.id) }}">Scheda di {{ p.etichetta }}</a>{% endif %}</p>
+  <form method="post" autocomplete="off">
+    {% if x %}
+    <p class="campo">Paziente: <b>{{ x.paziente.etichetta }}</b>{% if x.paziente.telefono %}, tel. {{ x.paziente.telefono }}{% endif %}</p>
+    {% else %}
+    <div class="campo cerca-paziente">
+      <label for="cerca_paziente">Cerca in anagrafica</label>
+      <input type="search" id="cerca_paziente" placeholder="cognome, nome o telefono"
+             data-indirizzo="{{ url_for('pazienti.cerca_json') }}" data-scheda="{{ url_for('pazienti.scheda', pid=0) }}">
+      <div class="suggerimenti" id="suggerimenti" hidden></div>
+      <p class="aiuto" id="paziente-scelto">{% if p %}Paziente in anagrafica: <a href="{{ url_for('pazienti.scheda', pid=p.id) }}">{{ p.etichetta }}</a>{% else %}Se non è in anagrafica, basta scrivere cognome e telefono.{% endif %}</p>
+    </div>
+    <input type="hidden" name="paziente_id" id="paziente_id" value="{% if modulo %}{{ modulo.get('paziente_id', '') }}{% elif p %}{{ p.id }}{% endif %}">
+    <div class="campo meta"><label for="paziente">Cognome</label><input type="text" id="paziente" name="paziente" maxlength="60" value="{{ val('paziente', p.cognome if p else '') }}"></div>
+    <div class="campo meta"><label for="nome_paziente">Nome</label><input type="text" id="nome_paziente" name="nome_paziente" maxlength="60" value="{{ val('nome_paziente', p.nome if p else '') }}"></div>
+    <div class="campo meta"><label for="telefono">Telefono</label><input type="tel" id="telefono" name="telefono" maxlength="30" value="{{ val('telefono', p.telefono if p else '') }}"></div>
+    <div class="campo meta"><label for="email_paziente">Email</label><input type="email" id="email_paziente" name="email_paziente" maxlength="120" value="{{ val('email_paziente', p.email if p else '') }}"></div>
+    {% endif %}
+    <div class="campo meta"><label for="operatore">Medico</label>
+      <select id="operatore" name="operatore"><option value="">qualsiasi medico</option>
+        {% for o in medici %}<option value="{{ o.id }}"{% if (modulo and modulo.get('operatore') == o.id|string) or (not modulo and x and x.operatore_id == o.id) or (not modulo and not x and proposto_medico == o.id) %} selected{% endif %}>{{ o.etichetta }}</option>{% endfor %}
+      </select></div>
+    <div class="campo meta"><label for="prestazione">Prestazione</label>
+      <select id="prestazione" name="prestazione"><option value="">qualsiasi prestazione</option>
+        {% for pr in prestazioni %}<option value="{{ pr.id }}"{% if (modulo and modulo.get('prestazione') == pr.id|string) or (not modulo and x and x.prestazione_id == pr.id) or (not modulo and not x and proposta_prestazione == pr.id) %} selected{% endif %}>{{ pr.nome }}</option>{% endfor %}
+      </select></div>
+    {% if strutture|length > 1 %}
+    <div class="campo meta"><label for="struttura_attesa">Struttura</label>
+      <select id="struttura_attesa" name="struttura"><option value="">qualsiasi struttura</option>
+        {% for st_ in strutture %}<option value="{{ st_.id }}"{% if (modulo and modulo.get('struttura') == st_.id|string) or (not modulo and x and x.struttura_id == st_.id) %} selected{% endif %}>{{ st_.nome }}</option>{% endfor %}
+      </select></div>
+    {% endif %}
+    <div class="campo meta"><label for="fascia">Orario</label>
+      <select id="fascia" name="fascia">{% for codice, etichetta in fasce %}<option value="{{ codice }}"{% if (modulo and modulo.get('fascia') == codice) or (not modulo and x and (x.fascia or '') == codice) %} selected{% endif %}>{{ etichetta }}</option>{% endfor %}</select></div>
+    <div class="campo meta"><label for="dal">Disponibile dal</label><input type="date" id="dal" name="dal" value="{{ val('dal', x.dal.isoformat() if x and x.dal else '') }}"></div>
+    <div class="campo meta"><label for="entro">Il posto serve entro</label><input type="date" id="entro" name="entro" value="{{ val('entro', x.entro.isoformat() if x and x.entro else '') }}"></div>
+    <div class="campo"><label for="note">Note</label><textarea id="note" name="note" rows="2" maxlength="1000">{{ val('note', x.note if x else '') }}</textarea></div>
+    <div class="azioni">
+      <button class="bottone primario" type="submit">Salva</button>
+      {% if x %}
+        {% if x.aperta %}<button class="bottone" type="submit" name="azione" value="rinuncia">Non serve più</button>
+        {% else %}<button class="bottone" type="submit" name="azione" value="riapri">Riapri</button>{% endif %}
+        <button class="bottone elimina" type="submit" name="azione" value="elimina" onclick="return confirm('Togliere la richiesta dalla lista?')">Elimina</button>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

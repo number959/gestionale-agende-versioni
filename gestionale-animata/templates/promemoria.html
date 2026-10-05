@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% set foglio_carta = true %}
+{% block titolo %}Promemoria {{ a.paziente.etichetta if a.paziente else '' }}{% endblock %}
+{% block classe_body %} class="pagina-stampa"{% endblock %}
+{% block menu %}{% endblock %}
+{% block corpo %}
+<div class="comandi-stampa solo-schermo">
+  <button class="bottone primario" type="button" onclick="window.print()">Stampa</button>
+  <a class="bottone" href="{{ url_for('appuntamento', aid=a.id) }}">Torna all'appuntamento</a>
+</div>
+<div class="promemoria">
+  <div class="logo-promemoria">{% include "_marchio.html" %}</div>
+  <h1>Promemoria appuntamento</h1>
+  {% if a.paziente %}<p class="per">per <b>{{ a.paziente.etichetta }}</b></p>{% endif %}
+  <table class="dati-promemoria">
+    <tr><th>Giorno</th><td>{{ giorno }}</td></tr>
+    <tr><th>Ora</th><td>{{ a.inizio.strftime('%H:%M') }}</td></tr>
+    {% if a.prestazione %}<tr><th>Prestazione</th><td>{{ a.prestazione.nome }}</td></tr>{% endif %}
+    <tr><th>Medico</th><td>{{ a.operatore.etichetta }}</td></tr>
+    {% if st %}<tr><th>Dove</th><td>{{ st.nome }}{% if st.indirizzo %}, {{ st.indirizzo }}{% endif %}</td></tr>{% endif %}
+  </table>
+  {% if a.prestazione and a.prestazione.preparazione %}
+  <div class="preparazione"><h2>Come prepararsi</h2><p>{{ a.prestazione.preparazione }}</p></div>
+  {% endif %}
+  <p class="avvertenza">In caso di impedimento la preghiamo di avvisarci{% if st and st.telefono %} al numero <b>{{ st.telefono }}</b>{% endif %}{% if st and st.email %} o scrivendo a {{ st.email }}{% endif %}, così il posto può andare a un altro paziente.</p>
+</div>
+{% endblock %}

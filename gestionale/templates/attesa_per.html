@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titolo %}Chi chiamare per il posto libero{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Posto libero: chi chiamare</h1>
+  <p class="sotto">{{ giorno|capitalize }} alle <b>{{ a.inizio.strftime('%H:%M') }}</b>, {{ a.operatore.etichetta }}, {{ a.risorsa.nome }}{% if a.prestazione %}, {{ a.prestazione.nome }}{% endif %} ({{ a.durata_min }} minuti).
+    <a href="{{ url_for('giorno', iso=a.inizio.date().isoformat(), struttura=sid) }}">Torna alla giornata</a></p>
+  {% if not libera %}
+  <div class="avviso avviso-giallo">La fascia risulta già occupata da un altro appuntamento.</div>
+  {% endif %}
+  {% if candidati %}
+  <p class="nota">In ordine di arrivo in lista. WhatsApp apre il messaggio già scritto; chi accetta si prenota con un clic.</p>
+  <table class="elenco">
+    <tr><th>In lista dal</th><th>Paziente</th><th>Contatta</th><th>Richiesta</th><th></th></tr>
+    {% for x in candidati %}
+    <tr>
+      <td>{{ x.creato_il.strftime('%d/%m/%Y') }}</td>
+      <td><a href="{{ url_for('pazienti.scheda', pid=x.paziente_id) }}">{{ x.paziente.etichetta }}</a><div class="nota-riga">{{ x.paziente.telefono or '' }}</div></td>
+      <td class="contatti">{% set c = contatti[x.id] %}{% if c.tel %}<a href="{{ c.tel }}">Chiama</a>{% endif %}{% if c.whatsapp %}<a href="{{ c.whatsapp }}" target="_blank">WhatsApp</a>{% endif %}</td>
+      <td>{{ x.prestazione.nome if x.prestazione else 'qualsiasi prestazione' }} · {{ x.operatore.etichetta if x.operatore else 'qualsiasi medico' }}{% if x.note %}<div class="nota-riga">{{ x.note }}</div>{% endif %}</td>
+      <td class="azione">{% if libera %}<a class="bottone piccolo primario" href="{{ url_for('appuntamento', data=a.inizio.date().isoformat(), ora=a.inizio.strftime('%H:%M'), risorsa=a.risorsa_id, medico=a.operatore_id, prestazione=a.prestazione_id or x.prestazione_id, durata=a.durata_min, paziente_id=x.paziente_id, attesa=x.id, struttura=sid) }}">Prenota</a>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Nessuno in lista d'attesa va bene per questa fascia.</p>
+  {% endif %}
+</div>
+{% endblock %}

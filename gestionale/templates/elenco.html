@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_stato.html" import pulsanti, contatti as link_contatti %}
+{% block titolo %}Elenco del {{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">{{ titolo }}</h1>
+  {%- set n_attivi = apps|selectattr('attivo')|list|length %}
+  <span class="conteggio">{{ n_attivi }} appuntament{{ 'o' if n_attivi == 1 else 'i' }}{% if conteggi.ARRIVATO %} · {{ conteggi.ARRIVATO }} arrivat{{ 'o' if conteggi.ARRIVATO == 1 else 'i' }}{% endif %}{% if conteggi.DISDETTO %} · {{ conteggi.DISDETTO }} disdett{{ 'o' if conteggi.DISDETTO == 1 else 'i' }}{% endif %}{% if conteggi.NON_PRESENTATO %} · {{ conteggi.NON_PRESENTATO }} non presentat{{ 'o' if conteggi.NON_PRESENTATO == 1 else 'i' }}{% endif %}</span>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('viste.elenco_giorno', iso=ieri, struttura=sid) }}" title="Giorno precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('viste.elenco_giorno', iso=domani, struttura=sid) }}" title="Giorno successivo">&rsaquo;</a>
+    <span class="separa"></span>
+    <a class="bottone" data-tasto="oggi" href="{{ url_for('viste.elenco_giorno', iso=oggi_iso, struttura=sid) }}">Oggi</a>
+    {% if strutture|length > 1 %}
+    <form method="get" style="display:inline"><select name="struttura" onchange="this.form.submit()">
+      {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+    </select></form>
+    {% endif %}
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">Griglia</a>
+    <a class="bottone" href="{{ url_for('viste.stampa', iso=g.isoformat(), struttura=sid, per='ora') }}" target="_blank">Stampa</a>
+    <a class="bottone" href="{{ url_for('segreteria.chiusura', iso=g.isoformat(), struttura=sid) }}">Chiudi la giornata</a>
+  </div>
+</div>
+{% include "_nota_giorno.html" %}
+<div class="contenuto">
+{% if apps %}
+<table class="elenco lista-giorno">
+  <tr><th>Ora</th><th>Paziente</th><th>Telefono</th><th>Prestazione</th><th>Medico · stanza</th><th>Stato</th><th></th></tr>
+  {% for a in apps %}
+  <tr class="stato-{{ a.stato|lower }}">
+    <td class="ora-lista"><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}">{{ a.inizio.strftime('%H:%M') }}</a></td>
+    <td>{% if a.paziente %}<a href="{{ url_for('pazienti.scheda', pid=a.paziente.id) }}">{{ a.paziente.etichetta }}</a>{% else %}<span class="senza">senza paziente</span>{% endif %}
+      {%- if a.note %}<div class="nota-riga">{{ a.note }}</div>{% endif %}</td>
+    <td>{% if a.paziente %}{{ a.paziente.telefono or '' }}{% if a.paziente.telefono2 %}<br>{{ a.paziente.telefono2 }}{% endif %}<br>{{ link_contatti(contatti[a.id]) }}{% endif %}</td>
+    <td>{{ a.prestazione.nome if a.prestazione else '' }}{% if a.tipo %}<div class="nota-riga">{{ a.etichetta_tipo }}{% if a.convenzione %} · {{ a.convenzione }}{% endif %}</div>{% elif a.convenzione %}<div class="nota-riga">{{ a.convenzione }}</div>{% endif %}
+      {%- for k, v in a.valori_extra.items() %}<div class="nota-riga">{{ k }}: {{ v }}</div>{% endfor %}</td>
+    <td>{{ a.operatore.etichetta }}<div class="nota-riga">{{ a.risorsa.nome }}</div></td>
+    <td><b>{{ a.etichetta_stato }}</b>{% if a.id in chi_chiamare %}<div class="nota-riga"><a href="{{ url_for('segreteria.attesa_per', aid=a.id) }}">{{ chi_chiamare[a.id] }} in lista d'attesa</a></div>{% endif %}{% if a.id in attesa %}<div class="nota-riga">in attesa da {{ attesa[a.id] }} min</div>{% elif a.stato == 'ARRIVATO' and a.arrivato_alle %}<div class="nota-riga">alle {{ a.arrivato_alle.strftime('%H:%M') }}</div>{% endif %}</td>
+    <td class="azione">{{ pulsanti(a, torna, [('ARRIVATO', 'Arrivato'), ('NON_PRESENTATO', 'Non presentato'), ('DISDETTO', 'Disdetto'), ('PRENOTATO', 'Annulla')] if a.stato != 'PRENOTATO' and a.stato != 'CONFERMATO' else [('ARRIVATO', 'Arrivato'), ('CONFERMATO', 'Confermato'), ('NON_PRESENTATO', 'Non presentato'), ('DISDETTO', 'Disdetto')]) }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="vuoto">Nessun appuntamento in questo giorno.</p>
+{% endif %}
+</div>
+{% endblock %}

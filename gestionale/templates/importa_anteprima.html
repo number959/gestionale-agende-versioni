@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block titolo %}Anteprima dell'importazione{% endblock %}
+{% block corpo %}
+{%- set c = piano.conteggi -%}
+<div class="pagina larga" style="max-width:1200px">
+  <h1>Anteprima: {{ meta.nome }}</h1>
+  <p class="sotto">Controllare le colonne e le righe segnalate, poi confermare. <a href="{{ url_for('importa.carica') }}">Carica un altro file</a></p>
+  {% for n in analisi.note %}<div class="avviso avviso-giallo">{{ n }}</div>{% endfor %}
+
+  <form method="post">
+    <input type="hidden" name="tipo_precedente" value="{{ analisi.tipo }}"><input type="hidden" name="foglio_precedente" value="{{ indice_foglio }}">
+    <div class="riquadro">
+      <div class="filtri" style="margin:0">
+        {% if fogli|length > 1 %}
+        <label>Foglio<br><select name="foglio" onchange="this.form.submit()">{% for f in fogli %}<option value="{{ loop.index0 }}"{% if loop.index0 == indice_foglio %} selected{% endif %}>{{ f.nome }} ({{ f.righe|length }} righe)</option>{% endfor %}</select></label>
+        {% else %}<input type="hidden" name="foglio" value="0">{% endif %}
+        <label>Contenuto<br><select name="tipo" onchange="this.form.submit()">
+          <option value="pazienti"{% if analisi.tipo == 'pazienti' %} selected{% endif %}>rubrica di pazienti</option>
+          <option value="appuntamenti"{% if analisi.tipo == 'appuntamenti' %} selected{% endif %}>agenda di appuntamenti</option>
+        </select></label>
+        {% if analisi.tipo == 'appuntamenti' %}
+        <label>Nella struttura<br><select name="struttura">{% for st_ in strutture %}<option value="{{ st_.id }}"{% if piano.struttura and st_.id == piano.struttura.id %} selected{% endif %}>{{ st_.nome }}</option>{% endfor %}</select></label>
+        <label>Durata se non scritta<br><input type="number" name="durata" min="5" max="600" step="5" value="{{ opzioni.durata }}" style="width:80px"> min</label>
+        <label>Appuntamenti già passati<br><select name="passati">
+          <option value="ARRIVATO"{% if opzioni.passati == 'ARRIVATO' %} selected{% endif %}>importa come avvenuti (arrivati)</option>
+          <option value="PRENOTATO"{% if opzioni.passati == 'PRENOTATO' %} selected{% endif %}>importa come prenotati</option>
+          <option value="salta"{% if opzioni.passati == 'salta' %} selected{% endif %}>non importare</option>
+        </select></label>
+        {% if not analisi.campi.values()|select('equalto', 'medico')|list %}
+        <label>Medico di tutto il file<br><select name="medico_file">
+          <option value="">—</option>
+          {% if piano.medico_titolo_nuovo %}<option value="titolo" selected>{{ piano.medico_titolo_nuovo }} (dal titolo, da creare)</option>{% endif %}
+          {% for o in medici %}<option value="{{ o.id }}"{% if piano.medico_file and o.id == piano.medico_file.id %} selected{% endif %}>{{ o.etichetta }}</option>{% endfor %}
+        </select></label>
+        {% endif %}
+        {% if not analisi.campi.values()|select('equalto', 'data')|list %}
+        <label>Giorno (il file non ha la data)<br><input type="date" name="data" value="{{ opzioni.data.isoformat() if opzioni.data else '' }}"></label>
+        {% endif %}
+        {% endif %}
+      </div>
+      <div class="filtri" style="margin:10px 0 0">
+        <input type="hidden" name="maiuscole" value="0"><label><input type="checkbox" name="maiuscole" value="1"{% if opzioni.maiuscole %} checked{% endif %}> nomi scritti tutti in maiuscolo con le iniziali maiuscole (DE FALCO → De Falco)</label>
+        {% if analisi.tipo == 'appuntamenti' %}
+        <input type="hidden" name="crea_medici" value="0"><label><input type="checkbox" name="crea_medici" value="1"{% if opzioni.crea_medici %} checked{% endif %}> crea i medici che mancano</label>
+        <input type="hidden" name="crea_prestazioni" value="0"><label><input type="checkbox" name="crea_prestazioni" value="1"{% if opzioni.crea_prestazioni %} checked{% endif %}> crea le prestazioni che mancano</label>
+        <input type="hidden" name="unisci_simili" value="0"><label><input type="checkbox" name="unisci_simili" value="1"{% if opzioni.unisci_simili %} checked{% endif %}> unisci i nomi quasi uguali (errori di battitura)</label>
+        <input type="hidden" name="appunti" value="0"><label><input type="checkbox" name="appunti" value="1"{% if opzioni.appunti %} checked{% endif %}> le righe in conflitto o incomplete vanno fra i <b>da confermare</b></label>
+        {% endif %}
+      </div>
+    </div>
+
+    <h2 class="sezione">Colonne{% if analisi.gruppi|length > 1 %} (valgono per tutti i blocchi: {{ analisi.gruppi|map(attribute='nome')|join(', ') }}){% endif %}</h2>
+    <table class="elenco mappa-colonne">
+      <tr><th>Colonna</th><th>Nome nel file</th><th>Esempi</th><th>Diventa</th></tr>
+      {% for col in colonne %}
+      <tr><td class="lettera">{{ col.lettera }}{% if col.pos.startswith('g') and analisi.gruppi|length > 1 %} <span class="nota-riga">blocco</span>{% endif %}</td><td>{{ col.intestazione }}</td>
+        <td class="campione-colonna">{{ col.campione|join(' · ') }}</td>
+        <td><select name="campo_{{ col.pos }}">{% for codice, etichetta in campi %}<option value="{{ codice }}"{% if codice == col.campo %} selected{% endif %}>{{ etichetta }}</option>{% endfor %}</select></td></tr>
+      {% endfor %}
+    </table>
+
+    {% if analisi.tipo == 'appuntamenti' %}
+    <h2 class="sezione">Stanze</h2>
+    <table class="elenco" style="max-width:640px">
+      <tr><th>Nel file</th><th>Nel gestionale</th></tr>
+      {% for g in analisi.gruppi %}{% set k = loop.index0|string %}
+      <tr><td>{{ g.nome or 'tutto il file' }}</td><td><select name="stanza_{{ k }}">
+        <option value="">{% if g.nome %}trovala per nome o creala: "{{ g.nome }}"{% elif 'stanza' in analisi.campi.values() %}dalla colonna Stanza{% else %}— scegliere la stanza —{% endif %}</option>
+        {% for r in stanze %}<option value="{{ r.id }}"{% if opzioni.stanze.get(k) == r.id|string or (not opzioni.stanze.get(k) and piano.stanze_scelte.get(k|int) == r.id) %} selected{% endif %}>{{ r.nome }}</option>{% endfor %}
+      </select></td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
+    <div class="azioni">
+      <button class="bottone" type="submit" name="azione" value="anteprima">Aggiorna l'anteprima</button>
+    </div>
+
+    <h2 class="sezione">Cosa succederà</h2>
+    <ul class="numeri grandi">
+      {% if analisi.tipo == 'appuntamenti' %}
+      <li><b>{{ c.get('nuovo', 0) }}</b> appuntamenti da importare</li>
+      {% if c.get('presente') %}<li><b>{{ c.presente }}</b> già in agenda</li>{% endif %}
+      {% if c.get('conflitto') %}<li class="allarme"><b>{{ c.conflitto }}</b> in conflitto{% if opzioni.appunti %} (vanno fra i da confermare){% endif %}</li>{% endif %}
+      {% if c.get('saltato') %}<li><b>{{ c.saltato }}</b> passati, saltati</li>{% endif %}
+      {% else %}
+      <li><b>{{ c.get('nuovo', 0) }}</b> pazienti nuovi</li>
+      <li><b>{{ c.get('esistente', 0) }}</b> già in anagrafica (si completano)</li>
+      {% if c.get('doppio') %}<li><b>{{ c.doppio }}</b> righe doppie nel file</li>{% endif %}
+      {% endif %}
+      {% if c.get('scartato') %}<li class="allarme"><b>{{ c.scartato }}</b> scartate{% if analisi.tipo == 'appuntamenti' and opzioni.appunti %} (con giorno e ora vanno fra i da confermare){% endif %}</li>{% endif %}
+      {% if c.dubbi %}<li><b>{{ c.dubbi }}</b> da controllare</li>{% endif %}
+    </ul>
+    {% if analisi.tipo == 'appuntamenti' and not c.get('nuovo') and not c.get('presente') and fogli|length > 1 %}<div class="avviso avviso-giallo">In questo foglio non ci sono appuntamenti da importare: il file ha altri fogli, si sceglie in alto da <b>Foglio</b>.</div>{% endif %}
+    {% if piano.nuovi_medici %}<p><b>Medici nuovi ({{ piano.nuovi_medici|length }}):</b> {% for m in piano.nuovi_medici %}{{ m.cognome }}{% if m.nome %} {{ m.nome }}{% endif %} <span class="nota-riga" style="display:inline">({{ m.righe }})</span>{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    {% if piano.nuove_prestazioni %}<p><b>Prestazioni nuove ({{ piano.nuove_prestazioni|length }}):</b> {% for p in piano.nuove_prestazioni %}{{ p.nome }}{% if not loop.last %}, {% endif %}{% endfor %}. Durata e prezzo si sistemano dopo, da Prestazioni e Listino.</p>{% endif %}
+    {% if piano.unioni %}<p><b>Nomi riuniti:</b> {% for da, a_, n in piano.unioni %}"{{ da }}" → {{ a_ }} ({{ n }}){% if not loop.last %}; {% endif %}{% endfor %}</p>{% endif %}
+    {% if piano.nuove_stanze %}<p><b>Stanze nuove:</b> {{ piano.nuove_stanze|join(', ') }}</p>{% endif %}
+    {% if piano.note_giorno %}<p><b>Note del giorno trovate nel file:</b> {{ piano.note_giorno|length }}, finiranno in cima alla griglia di quei giorni.</p>{% endif %}
+    {% if piano.senza_pazienti and analisi.tipo == 'appuntamenti' %}<div class="avviso avviso-giallo">Il file non ha una colonna dei pazienti: sembra un planning delle stanze (quale medico occupa quale stanza) più che un'agenda di appuntamenti. Chi occupa le stanze si inserisce meglio come turni, in Anagrafiche; importandolo, ogni cella scritta diventa un appuntamento senza paziente.</div>{% endif %}
+    {% if piano.medici_doppi %}<div class="avviso avviso-giallo">{{ piano.medici_doppi }} appuntament{{ 'o ha' if piano.medici_doppi == 1 else 'i hanno' }} lo stesso medico in due stanze alla stessa ora: si importano come nel file, ma vanno controllati.</div>{% endif %}
+
+    <h2 class="sezione">Righe (prima quelle da controllare{% if piano.righe|length > righe|length %}, {{ righe|length }} di {{ piano.righe|length }}{% endif %})</h2>
+    <table class="elenco lista-giorno">
+      {% if analisi.tipo == 'appuntamenti' %}
+      <tr><th>Riga</th><th>Quando</th><th>Stanza</th><th>Medico</th><th>Prestazione</th><th>Paziente</th><th>Altro</th><th>Esito</th></tr>
+      {% for r in righe %}
+      <tr{% if r.avvisi %} class="riga-dubbia"{% endif %}>
+        <td class="lettera">{{ r.n }}</td>
+        <td>{% if r.inizio %}{{ r.inizio.strftime('%d/%m/%Y') }}<div class="nota-riga">{{ r.inizio.strftime('%H:%M') }}{% if r.fine %}–{{ r.fine.strftime('%H:%M') }}{% endif %}</div>{% endif %}</td>
+        <td>{{ r.stanza.nome if r.stanza else (r.stanza_nuova or '') }}{% if r.stanza_nuova %} <span class="nota-riga" style="display:inline">(nuova)</span>{% endif %}</td>
+        <td>{{ r.medico.etichetta if r.medico else (r.medico_testo or '') }}{% if r.medico_chiave %} <span class="nota-riga" style="display:inline">(nuovo)</span>{% endif %}</td>
+        <td>{{ r.prestazione.nome if r.prestazione else (r.prestazione_testo or '') }}</td>
+        <td>{% if r.paziente and r.paziente.cognome %}<b>{{ r.paziente.cognome }}</b> {{ r.paziente.nome }}{% if r.esistente %}<div class="nota-riga">già in anagrafica</div>{% endif %}{% else %}<span class="senza">—</span>{% endif %}</td>
+        <td>{% if r.convenzione %}{{ r.convenzione }}<br>{% endif %}{% if r.importo %}{{ importo_in_testo(r.importo) }} €<br>{% endif %}{% if r.extra %}<span class="nota-riga">{% for k, v in r.extra.items() %}{{ k }}: {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}</span><br>{% endif %}{% if r.degenza %}<span class="nota-riga">Degenza: {{ {'DH': 'DH', 'NOTTE': 'notte', 'RICOVERO': 'ricovero'}[r.degenza] }}{% if r.notti %}, {{ r.notti }} notti{% endif %}</span><br>{% endif %}{% if r.stato %}<span class="nota-riga">{{ etichetta_stato[r.stato] }}</span>{% endif %}</td>
+        <td><b class="esito-{{ r.esito }}">{{ {'nuovo': 'si importa', 'scartato': 'scartata', 'conflitto': 'conflitto', 'presente': 'già in agenda', 'saltato': 'saltata'}[r.esito] }}</b>{% if r.motivo %}<div class="nota-riga">{{ r.motivo }}</div>{% endif %}{% for x in r.avvisi %}<div class="nota-riga">{{ x }}</div>{% endfor %}</td>
+      </tr>
+      {% endfor %}
+      {% else %}
+      <tr><th>Riga</th><th>Cognome</th><th>Nome</th><th>Telefono</th><th>Email</th><th>Codice fiscale</th><th>Nascita</th><th>Indirizzo</th><th>Esito</th></tr>
+      {% for r in righe %}{% set p = r.paziente %}
+      <tr{% if r.avvisi %} class="riga-dubbia"{% endif %}>
+        <td class="lettera">{{ r.n }}</td><td><b>{{ p.cognome }}</b></td><td>{{ p.nome }}</td><td>{{ p.telefono }}{% if p.telefono2 %}<br>{{ p.telefono2 }}{% endif %}</td>
+        <td>{{ p.email }}</td><td>{{ p.codice_fiscale }}</td><td>{{ p.data_nascita.strftime('%d/%m/%Y') if p.data_nascita else '' }}</td>
+        <td>{{ p.indirizzo }}</td>
+        <td><b class="esito-{{ r.esito }}">{{ {'nuovo': 'nuovo', 'esistente': 'già presente: si completa', 'scartato': 'scartata', 'doppio': 'doppia'}[r.esito] }}</b>{% if r.esistente %}<div class="nota-riga">{{ r.esistente.etichetta }}</div>{% endif %}{% if r.motivo %}<div class="nota-riga">{{ r.motivo }}</div>{% endif %}{% for x in r.avvisi %}<div class="nota-riga">{{ x }}</div>{% endfor %}</td>
+      </tr>
+      {% endfor %}
+      {% endif %}
+    </table>
+
+    <div class="azioni">
+      <button class="bottone primario" type="submit" name="azione" value="importa" onclick="return confirm('Importare adesso? Prima viene fatto un backup del database.')">Importa</button>
+      <button class="bottone" type="submit" name="azione" value="anteprima">Aggiorna l'anteprima</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

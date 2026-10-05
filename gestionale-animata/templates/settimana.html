@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">{{ titolo }}</h1>
+  <span class="conteggio">{% if medico %}{{ medico.etichetta }}: {{ vista.totale }} appuntament{{ 'o' if vista.totale == 1 else 'i' }}{% else %}{{ vista.totali.values()|sum }} appuntamenti{% endif %}</span>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('viste.settimana', iso=prima, struttura=sid, medico=medico.id if medico else none) }}" title="Settimana precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('viste.settimana', iso=dopo, struttura=sid, medico=medico.id if medico else none) }}" title="Settimana successiva">&rsaquo;</a>
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('viste.settimana', iso=oggi.isoformat(), struttura=sid, medico=medico.id if medico else none) }}">Questa settimana</a>
+    <span class="separa"></span>
+    <form method="get" style="display:inline">
+      {% if strutture|length > 1 %}
+      <select name="struttura" onchange="this.form.submit()">
+        {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+      </select>
+      {% else %}<input type="hidden" name="struttura" value="{{ sid }}">{% endif %}
+      <select name="medico" onchange="this.form.submit()">
+        <option value="">Tutte le stanze</option>
+        {% for o in medici %}<option value="{{ o.id }}"{% if medico and o.id == medico.id %} selected{% endif %}>Agenda di {{ o.etichetta }}</option>{% endfor %}
+      </select>
+    </form>
+    <span class="separa"></span>
+    <button class="bottone" type="button" onclick="window.print()">Stampa</button>
+  </div>
+</div>
+
+<div class="telaio">
+{% if not medico %}
+{# ---------------------------------------------------- per stanza #}
+{% if vista.righe %}
+<table class="settimana">
+  <thead>
+    <tr><th class="stanza-sett"></th>
+      {% for g in vista.giorni %}{% set i = vista.info[g] %}
+      <th class="{% if g == oggi %}oggi{% endif %}{% if i.chiusura or i.festivo %} festivo{% endif %}">
+        <a href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">{{ giorni_nomi[g.weekday()] }} {{ g.day }}/{{ g.month }}</a>
+        <span class="sotto">{% if i.chiusura %}chiusa: {{ i.chiusura }}{% elif i.festivo %}{{ i.festivo }}{% else %}{{ vista.totali[g] }} app.{% endif %}</span>
+      </th>{% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for riga in vista.righe %}
+    <tr>
+      <th class="stanza-sett">{{ riga.risorsa.nome }}</th>
+      {% for c in riga.celle %}
+      <td class="{% if c.turni %}con-turno{% else %}senza-turno{% endif %}">
+        <a class="cella-sett" href="{{ url_for('giorno', iso=c.data.isoformat(), struttura=sid) }}">
+          {% for t in c.turni %}<span class="turno-sett" style="border-left-color: {{ t.operatore.colore_sicuro }}">{{ t.operatore.cognome }} <small>{{ t.ora_inizio.strftime('%H:%M') }}–{{ t.ora_fine.strftime('%H:%M') }}</small></span>{% endfor %}
+          {% for o, motivo in c.assenti %}<span class="turno-sett assente">{{ o.cognome }} <small>assente{% if motivo %}: {{ motivo|lower }}{% endif %}</small></span>{% endfor %}
+          {% set libere = c.libere if c.data >= oggi else 0 %}
+          {% if c.occupate or libere %}<span class="conti">{% if c.occupate %}{{ c.occupate }} app.{% endif %}{% if c.occupate and libere %} · {% endif %}{% if libere %}<span class="liberi">{{ libere }} liber{{ 'a' if libere == 1 else 'e' }}</span>{% endif %}</span>{% endif %}
+        </a>
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="nota">In ogni casella: chi è di turno, quanti appuntamenti ci sono e quante fasce sono ancora libere. Un clic apre il giorno.</p>
+{% else %}
+<p class="vuoto">Questa struttura non ha stanze attive.</p>
+{% endif %}
+{% else %}
+{# ---------------------------------------------------- agenda del medico #}
+<table class="griglia agenda-medico">
+  <thead>
+    <tr><th class="ora"></th>
+      {% for g in vista.giorni %}{% set i = vista.info[g] %}
+      <th class="{% if g == oggi %}oggi{% endif %}">
+        <a href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">{{ giorni_nomi[g.weekday()] }} {{ g.day }}/{{ g.month }}</a>
+        <span class="sotto">{% if medico.id in i.assenze %}assente: {{ i.assenze[medico.id] }}{% elif i.chiusura %}chiusa: {{ i.chiusura }}{% elif i.festivo %}{{ i.festivo }}{% elif vista.turni[g] %}{% for t in vista.turni[g] %}{{ t.risorsa.nome }} {{ t.ora_inizio.strftime('%H:%M') }}–{{ t.ora_fine.strftime('%H:%M') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}nessun turno{% endif %}</span>
+      </th>{% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for riga in vista.righe %}
+    <tr{% if riga.ora.minute %} class="mezzora"{% endif %}>
+      <th class="ora">{{ '%02d:%02d' % (riga.ora.hour, riga.ora.minute) }}</th>
+      {% for c in riga.celle %}
+        {% if c.apps %}
+        <td class="occupata">{% for a in c.apps %}<a class="voce stato-{{ a.stato|lower }}" style="border-left-color: {{ medico.colore_sicuro }}" href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}"><span class="medico">{{ a.inizio.strftime('%H:%M') }} {{ a.paziente.etichetta if a.paziente else '' }}</span><span class="dettaglio">{{ a.prestazione.nome if a.prestazione else '' }} · {{ a.risorsa.nome }}</span></a>{% endfor %}</td>
+        {% elif c.copre %}
+        <td class="occupata" title="Occupato: appuntamento delle {{ c.copre.inizio.strftime('%H:%M') }} fino alle {{ c.copre.fine.strftime('%H:%M') }}"></td>
+        {% elif c.turno %}
+        <td class="aperta"><a class="posa" href="{{ url_for('appuntamento', data=c.data.isoformat(), ora='%02d:%02d' % (c.ora.hour, c.ora.minute), risorsa=c.turno.risorsa_id, struttura=sid, medico=medico.id) }}">libero</a></td>
+        {% else %}
+        <td class="chiusa"></td>
+        {% endif %}
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block titolo %}Anagrafiche: stanze, medici e turni{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <p class="marchio" style="border:0;margin-bottom:16px">{% include "_marchio.html" %}</p>
+  <h1>Anagrafiche <small class="sotto-titolo">stanze, medici e turni</small></h1>
+  <p class="sotto"><a href="{{ url_for('giorno', iso=oggi_iso) }}">Torna alla giornata</a></p>
+
+  {% set medici_attivi = operatori|selectattr('attivo')|list %}
+  {% set prima = strutture[0] if strutture else none %}
+  {% set personalizzata = prima and (prima.nome != nome_iniziale or prima.ha_logo) %}
+  {% set ci_sono_turni = turni or turni_giorno %}
+  {% if not medici_attivi or not ci_sono_turni or not personalizzata %}
+  <div class="guida">
+    <h2>Per cominciare</h2>
+    <ol>
+      <li{% if personalizzata %} class="fatto"{% endif %}>Dare il nome alla struttura e caricare il logo.{% if prima and not personalizzata %} <a href="{{ url_for('anagrafiche.struttura', sid=prima.id) }}">Nome, logo e colori</a>{% endif %}</li>
+      <li{% if medici_attivi %} class="fatto"{% endif %}>Inserire i medici.{% if not medici_attivi %} <a href="{{ url_for('anagrafiche.medico') }}">Aggiungi un medico</a>{% endif %}</li>
+      <li{% if ci_sono_turni %} class="fatto"{% endif %}>Inserire i turni: giorno, stanza e orario di ciascun medico. Sono i turni a far comparire libere le fasce nella griglia.{% if medici_attivi and not ci_sono_turni %} <a href="{{ url_for('anagrafiche.turno') }}">Aggiungi un turno</a>{% endif %}</li>
+      <li>Controllare nomi e numero delle stanze qui sotto, e rinominarle se serve.</li>
+    </ol>
+  </div>
+  {% endif %}
+
+  <h2 class="sezione">{% if strutture|length > 1 %}Strutture{% else %}Struttura{% endif %} <a class="bottone aggiungi" href="{{ url_for('anagrafiche.struttura') }}">Aggiungi struttura</a></h2>
+  <table class="elenco">
+    <tr><th>Logo</th><th>Nome</th><th>Società</th><th>Orario</th><th>Colore</th><th></th></tr>
+    {% for st in strutture %}
+    <tr>
+      <td class="logo">{% if st.ha_logo %}<img src="{{ url_for('logo', sid=st.id, v=st.versione_logo) }}" alt="{{ st.nome }}">{% else %}<span class="senza">nessuno</span>{% endif %}</td>
+      <td>{{ st.nome }}</td>
+      <td>{{ st.societa }}</td>
+      <td>{{ st.apertura.strftime('%H:%M') }}–{{ st.chiusura.strftime('%H:%M') }}, fasce da {{ st.passo_min }}'</td>
+      <td><span class="campione" style="background:{{ st.colore_sicuro }}"></span></td>
+      <td class="azione"><a href="{{ url_for('anagrafiche.struttura', sid=st.id) }}">Nome, logo e colori</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2 class="sezione">Medici <a class="bottone aggiungi" href="{{ url_for('anagrafiche.medico') }}">Aggiungi medico</a></h2>
+  {% if operatori %}
+  <table class="elenco">
+    <tr><th>Cognome e nome</th><th>Specialità</th><th>Colore</th><th>Stato</th><th></th></tr>
+    {% for o in operatori %}
+    <tr{% if not o.attivo %} class="spento"{% endif %}>
+      <td>{{ o.etichetta }}</td>
+      <td>{{ o.specialita }}</td>
+      <td><span class="campione" style="background:{{ o.colore_sicuro }}"></span></td>
+      <td>{{ 'attivo' if o.attivo else 'non attivo' }}</td>
+      <td class="azione"><a href="{{ url_for('anagrafiche.medico', oid=o.id) }}">Modifica</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Nessun medico inserito.</p>
+  {% endif %}
+
+  <h2 class="sezione">Turni ricorrenti
+    {% if medici_attivi %}<a class="bottone aggiungi" href="{{ url_for('anagrafiche.turno') }}">Aggiungi turno</a>{% endif %}</h2>
+  {% if turni %}
+  <table class="elenco">
+    <tr><th>Giorno</th><th>Orario</th><th>Medico</th><th>Stanza</th><th>Validità</th><th></th></tr>
+    {% for t in turni %}
+    {% set scaduto = t.valido_a and t.valido_a < oggi %}
+    <tr{% if scaduto %} class="spento"{% endif %}>
+      <td>{{ giorni[t.giorno_settimana] }}</td>
+      <td>{{ t.ora_inizio.strftime('%H:%M') }}–{{ t.ora_fine.strftime('%H:%M') }}</td>
+      <td>{{ t.operatore.etichetta }}</td>
+      <td>{{ t.risorsa.nome }}</td>
+      <td>{% if scaduto %}scaduto il {{ t.valido_a.strftime('%d/%m/%Y') }}
+          {%- elif t.valido_da > oggi %}dal {{ t.valido_da.strftime('%d/%m/%Y') }}{% if t.valido_a %} al {{ t.valido_a.strftime('%d/%m/%Y') }}{% endif %}
+          {%- elif t.valido_a %}fino al {{ t.valido_a.strftime('%d/%m/%Y') }}
+          {%- else %}sempre{% endif %}</td>
+      <td class="azione"><a href="{{ url_for('anagrafiche.turno', tid=t.id) }}">Modifica</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% elif medici_attivi %}
+  <p class="vuoto">Nessun turno: finché non se ne inserisce uno, la griglia resta tutta chiusa.</p>
+  {% else %}
+  <p class="vuoto">I turni si inseriscono dopo aver aggiunto almeno un medico.</p>
+  {% endif %}
+
+  <h2 class="sezione">Turni di un giorno
+    {% if medici_attivi %}<a class="bottone aggiungi" href="{{ url_for('anagrafiche.turno', ripetizione='giorno') }}">Aggiungi turno di un giorno</a>{% endif %}</h2>
+  {% if turni_giorno %}
+  <table class="elenco">
+    <tr><th>Giorno</th><th>Orario</th><th>Medico</th><th>Stanza</th><th></th></tr>
+    {% for t in turni_giorno %}
+    <tr{% if t.valido_da < oggi %} class="spento"{% endif %}>
+      <td>{{ giorni[t.giorno_settimana] }} {{ t.valido_da.strftime('%d/%m/%Y') }}</td>
+      <td>{{ t.ora_inizio.strftime('%H:%M') }}–{{ t.ora_fine.strftime('%H:%M') }}</td>
+      <td>{{ t.operatore.etichetta }}</td>
+      <td>{{ t.risorsa.nome }}</td>
+      <td class="azione"><a href="{{ url_for('anagrafiche.turno', tid=t.id) }}">Modifica</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Per chi viene senza giorno fisso, o per una sostituzione: il turno vale solo il giorno indicato.</p>
+  {% endif %}
+
+  <h2 class="sezione">Assenze dei medici
+    {% if medici_attivi %}<a class="bottone aggiungi" href="{{ url_for('anagrafiche.assenza') }}">Aggiungi assenza</a>{% endif %}</h2>
+  {% if assenze %}
+  <table class="elenco">
+    <tr><th>Medico</th><th>Periodo</th><th>Motivo</th><th></th></tr>
+    {% for x in assenze %}
+    <tr{% if x.al < oggi %} class="spento"{% endif %}>
+      <td>{{ x.operatore.etichetta }}</td>
+      <td>{% if x.dal == x.al %}{{ x.dal.strftime('%d/%m/%Y') }}{% else %}dal {{ x.dal.strftime('%d/%m/%Y') }} al {{ x.al.strftime('%d/%m/%Y') }}{% endif %}</td>
+      <td>{{ x.motivo }}</td>
+      <td class="azione"><a href="{{ url_for('anagrafiche.assenza', xid=x.id) }}">Modifica</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Ferie, malattia, congressi: nei giorni di assenza i turni del medico non aprono fasce.</p>
+  {% endif %}
+
+  <h2 class="sezione">Chiusure <a class="bottone aggiungi" href="{{ url_for('anagrafiche.chiusura') }}">Aggiungi chiusura</a></h2>
+  {% if chiusure %}
+  <table class="elenco">
+    <tr>{% if strutture|length > 1 %}<th>Struttura</th>{% endif %}<th>Periodo</th><th>Motivo</th><th></th></tr>
+    {% for x in chiusure %}
+    <tr{% if x.al < oggi %} class="spento"{% endif %}>
+      {% if strutture|length > 1 %}<td>{{ x.struttura.nome }}</td>{% endif %}
+      <td>{% if x.dal == x.al %}{{ x.dal.strftime('%d/%m/%Y') }}{% else %}dal {{ x.dal.strftime('%d/%m/%Y') }} al {{ x.al.strftime('%d/%m/%Y') }}{% endif %}</td>
+      <td>{{ x.motivo }}</td>
+      <td class="azione"><a href="{{ url_for('anagrafiche.chiusura', xid=x.id) }}">Modifica</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Chiusura estiva, ponti, lavori. Le festività nazionali sono già segnate nella griglia; per chiudere in tutti i festivi c'è l'opzione in "Nome, logo e colori".</p>
+  {% endif %}
+
+  <h2 class="sezione">Stanze <a class="bottone aggiungi" href="{{ url_for('anagrafiche.stanza') }}">Aggiungi stanza</a></h2>
+  <table class="elenco">
+    <tr><th>Posizione</th><th>Nome</th><th>Tipo</th>{% if strutture|length > 1 %}<th>Struttura</th>{% endif %}<th>Stato</th><th></th></tr>
+    {% for r in risorse %}
+    <tr{% if not r.attiva %} class="spento"{% endif %}>
+      <td>{{ r.ordine }}</td>
+      <td>{{ r.nome }}</td>
+      <td>{{ tipi.get(r.tipo, r.tipo|lower) }}</td>
+      {% if strutture|length > 1 %}<td>{{ r.struttura.nome }}</td>{% endif %}
+      <td>{{ 'attiva' if r.attiva else 'non attiva' }}</td>
+      <td class="azione"><a href="{{ url_for('anagrafiche.stanza', rid=r.id) }}">Modifica</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2 class="sezione">Prestazioni <a class="bottone aggiungi" href="{{ url_for('anagrafiche.prestazione') }}">Aggiungi prestazione</a></h2>
+  <table class="elenco">
+    <tr><th>Nome</th><th>Durata abituale</th><th>Campi in più</th><th></th></tr>
+    {% for p in prestazioni %}
+    <tr>
+      <td>{{ p.nome }}</td>
+      <td>{{ p.durata_min }} min</td>
+      <td>{{ p.campi_extra or '' }}</td>
+      <td class="azione"><a href="{{ url_for('anagrafiche.prestazione', pid=p.id) }}">Modifica</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

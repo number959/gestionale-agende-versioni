@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% set foglio_carta = true %}
+{% block titolo %}{{ m.nome }}{% endblock %}
+{% block classe_body %} class="pagina-stampa"{% endblock %}
+{% block menu %}{% endblock %}
+{% block corpo %}
+<div class="comandi-stampa solo-schermo">
+  <button class="bottone primario" type="button" onclick="window.print()">Stampa</button>
+  <a class="bottone" href="{{ url_for('appuntamento', aid=a.id) }}">Torna all'appuntamento</a>
+  <a class="bottone" href="{{ url_for('documenti.modulo', mid=m.id) }}">Modifica il testo</a>
+</div>
+<div class="modulo-stampa">
+  <header class="testata-stampa">
+    <div class="logo-stampa">{% include "_marchio.html" %}</div>
+    <div class="dati-stampa">{% if st %}<div class="nome-struttura">{{ st.nome }}</div>{% if st.indirizzo or st.telefono or st.email %}<div>{{ [st.indirizzo, ('tel. ' ~ st.telefono) if st.telefono else '', st.email]|select|join(' · ') }}</div>{% endif %}{% endif %}</div>
+  </header>
+  <h1 class="giorno-stampa" style="text-transform:none">{{ m.nome }}</h1>
+  <div class="testo-modulo">{{ testo }}</div>
+  {% if m.firma %}
+  <div class="firme"><div>Firma del paziente</div><div>Per la struttura</div></div>
+  {% endif %}
+</div>
+{% endblock %}

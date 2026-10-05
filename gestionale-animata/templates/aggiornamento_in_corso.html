@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block titolo %}Aggiornamento in corso{% endblock %}
+{% block corpo %}
+<div class="pagina pagina-aggiornamenti aggiornamento-in-corso" id="attesa-aggiornamento"
+     data-avviato="{{ avviato }}" data-da="{{ da }}" data-a="{{ a }}"
+     data-stato="{{ url_for('aggiornamenti.stato_json') }}" data-novita="{{ url_for('aggiornamenti.novita_pagina') }}"
+     data-pagina="{{ url_for('aggiornamenti.pagina') }}">
+  <h1>Aggiornamento alla versione {{ a }}</h1>
+  <p class="sotto">Copia di sicurezza fatta ({{ copia }}). Adesso il programma si chiude, si aggiorna e si riapre da solo: circa un minuto.</p>
+  <div class="riquadro">
+    <p class="passo-attesa" id="messaggio-attesa" role="status"><span class="rotella" aria-hidden="true"></span>Aggiornamento in corso: non serve fare niente. Può comparire per qualche secondo la finestra del Setup con la barra di avanzamento.</p>
+    <p class="nota-riga">Questa pagina resta aperta e, appena il programma è tornato, mostra le novità della versione {{ a }} con i loro video.</p>
+  </div>
+  <p class="nota-riga" id="se-non-torna" hidden>Il programma non si è ancora riaperto. Se tra un minuto è ancora così: doppio clic sull'icona <b>Agende</b> sul desktop. Gli appuntamenti sono al sicuro, e c'è anche la copia fatta prima di aggiornare.</p>
+</div>
+<script>
+/* aspetta che il programma si riapra (cambia "avviato") e poi va alle novita' */
+(function () {
+  var box = document.getElementById('attesa-aggiornamento');
+  if (!box) { return; }
+  var prima = box.getAttribute('data-avviato'), arrivo = box.getAttribute('data-a'), inizio = Date.now(), chiuso = false;
+  var scrivi = function (t, fermo) {
+    var p = document.getElementById('messaggio-attesa');
+    p.lastChild.textContent = t;
+    if (fermo && p.firstChild.className === 'rotella') { p.removeChild(p.firstChild); }
+  };
+  var giro = function () {
+    fetch(box.getAttribute('data-stato') + '?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
+      .then(function (d) {
+        if (d.avviato !== prima) {               // e' un programma nuovo: aggiornato (o di nuovo il vecchio)
+          window.location.href = d.versione === arrivo ? box.getAttribute('data-novita') : box.getAttribute('data-pagina');
+          return;
+        }
+        if (!d.partito && d.errore) {            // il Setup non e' nemmeno partito
+          scrivi('Il Setup non è partito: ' + d.errore + '. Il programma è rimasto com\'era.', true);
+          return;
+        }
+        if (chiuso) { scrivi('Il programma si sta riaprendo…'); }
+        setTimeout(giro, 1500);
+      })
+      .catch(function () {
+        chiuso = true;
+        scrivi('Il programma si è chiuso per aggiornarsi: tra poco si riapre da solo.');
+        setTimeout(giro, 2000);
+      });
+    if (Date.now() - inizio > 3 * 60 * 1000) { document.getElementById('se-non-torna').hidden = false; }
+  };
+  setTimeout(giro, 2500);
+})();
+</script>
+{% endblock %}

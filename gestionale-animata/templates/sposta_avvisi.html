@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titolo %}Pazienti da avvisare{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Pazienti da avvisare</h1>
+  <p class="sotto">Gli appuntamenti appena spostati, con la data nuova. WhatsApp ed Email aprono il messaggio già scritto.</p>
+  {% if apps %}
+  <table class="elenco">
+    <tr><th>Nuova data</th><th>Paziente</th><th>Medico · stanza</th><th>Contatta</th></tr>
+    {% for a in apps %}
+    <tr>
+      <td><a href="{{ url_for('appuntamento', aid=a.id) }}">{{ giorno_breve(a.inizio.date()) }} {{ a.inizio.strftime('%H:%M') }}</a></td>
+      <td>{{ a.paziente.etichetta if a.paziente else '' }}<div class="nota-riga">{{ a.paziente.telefono if a.paziente and a.paziente.telefono else '' }}</div></td>
+      <td>{{ a.operatore.etichetta }}<div class="nota-riga">{{ a.risorsa.nome }}</div></td>
+      <td class="contatti">{% set c = contatti.get(a.id, {}) %}{% if c.tel %}<a href="{{ c.tel }}">Chiama</a>{% endif %}{% if c.whatsapp %}<a href="{{ c.whatsapp }}" target="_blank">WhatsApp</a>{% endif %}{% if c.email %}<a href="{{ c.email }}">Email</a>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Nessun appuntamento spostato.</p>
+  {% endif %}
+  <p><a href="{{ url_for('segreteria.sposta_blocco') }}">Sposta altri appuntamenti</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block titolo %}Chiusura del {{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">Chiusura · {{ titolo }}</h1>
+  <span class="conteggio">{{ aperti|length }} da chiudere</span>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('segreteria.chiusura', iso=ieri, struttura=sid) }}" title="Giorno precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('segreteria.chiusura', iso=domani, struttura=sid) }}" title="Giorno successivo">&rsaquo;</a>
+    <span class="separa"></span>
+    <a class="bottone" data-tasto="oggi" href="{{ url_for('segreteria.chiusura', iso=oggi_iso, struttura=sid) }}">Oggi</a>
+    {% if strutture|length > 1 %}
+    <form method="get" style="display:inline"><select name="struttura" onchange="this.form.submit()">
+      {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+    </select></form>
+    {% endif %}
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('viste.elenco_giorno', iso=g.isoformat(), struttura=sid) }}">Elenco</a>
+    <a class="bottone" href="{{ url_for('cassa.cassa_giorno', iso=g.isoformat(), struttura=sid) }}">Cassa del giorno</a>
+  </div>
+</div>
+<div class="contenuto">
+  <ul class="numeri">
+    <li><b>{{ conteggi.ARRIVATO }}</b> arrivat{{ 'o' if conteggi.ARRIVATO == 1 else 'i' }}</li>
+    <li{% if conteggi.NON_PRESENTATO %} class="allarme"{% endif %}><b>{{ conteggi.NON_PRESENTATO }}</b> non presentat{{ 'o' if conteggi.NON_PRESENTATO == 1 else 'i' }}</li>
+    <li><b>{{ conteggi.DISDETTO }}</b> disdett{{ 'o' if conteggi.DISDETTO == 1 else 'i' }}</li>
+    <li><b>{{ aperti|length }}</b> ancora da segnare</li>
+    {% if ancora_da_venire %}<li><b>{{ ancora_da_venire }}</b> non ancora finit{{ 'o' if ancora_da_venire == 1 else 'i' }}</li>{% endif %}
+  </ul>
+
+  {% if futuro %}
+  <p class="vuoto">È un giorno futuro: si chiude quando è passato.</p>
+  {% elif aperti %}
+  <p class="nota">Appuntamenti già finiti e ancora <b>prenotati</b> o <b>confermati</b>: vanno segnati come arrivati o non presentati, altrimenti le statistiche sulle mancate presenze non tornano.{% if g != oggi_iso %}{% endif %}</p>
+  <form method="post">
+    <input type="hidden" name="struttura" value="{{ sid }}">
+    <table class="elenco lista-giorno">
+      <tr><th><input type="checkbox" checked data-seleziona-tutti="scelti" aria-label="Seleziona tutti"></th><th>Ora</th><th>Paziente</th><th>Prestazione</th><th>Medico · stanza</th><th>Stato</th></tr>
+      {% for a in aperti %}
+      <tr>
+        <td><input type="checkbox" name="scelti" value="{{ a.id }}" checked aria-label="Seleziona"></td>
+        <td class="ora-lista"><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}">{{ a.inizio.strftime('%H:%M') }}</a></td>
+        <td>{% if a.paziente %}<a href="{{ url_for('pazienti.scheda', pid=a.paziente.id) }}">{{ a.paziente.etichetta }}</a>{% else %}<span class="senza">senza paziente</span>{% endif %}</td>
+        <td>{{ a.prestazione.nome if a.prestazione else '' }}</td>
+        <td>{{ a.operatore.etichetta }}<div class="nota-riga">{{ a.risorsa.nome }}</div></td>
+        <td>{{ a.etichetta_stato }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <div class="azioni">
+      <button class="bottone primario" type="submit" name="azione" value="arrivati">Segna i selezionati come arrivati</button>
+      <button class="bottone stato-non_presentato" type="submit" name="azione" value="non_presentati">Segna i selezionati come non presentati</button>
+    </div>
+  </form>
+  {% else %}
+  <p class="vuoto">Niente da chiudere: tutti gli appuntamenti finiti hanno già uno stato.</p>
+  {% endif %}
+
+  {% if da_incassare %}
+  <div class="riquadro-elenco">
+    <h2>Arrivati con un importo e non ancora incassati</h2>
+    <ul>{% for a in da_incassare %}<li><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}#incasso">{{ a.inizio.strftime('%H:%M') }} {{ a.paziente.etichetta if a.paziente else '' }}</a> — {{ a.importo_testo }} €</li>{% endfor %}</ul>
+    <p><a href="{{ url_for('cassa.cassa_giorno', iso=g.isoformat(), struttura=sid) }}">Apri la cassa del giorno</a></p>
+  </div>
+  {% endif %}
+
+  {% if arretrati %}
+  <div class="riquadro-elenco">
+    <h2>Altri giorni ancora da chiudere</h2>
+    <ul>{% for giorno, n in arretrati.items() %}<li><a href="{{ url_for('segreteria.chiusura', iso=giorno.isoformat(), struttura=sid) }}">{{ giorno_breve(giorno) }}</a>: {{ n }} appuntament{{ 'o' if n == 1 else 'i' }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

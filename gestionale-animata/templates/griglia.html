@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">{{ titolo }}</h1>
+  <span class="conteggio">{{ totale }} appuntament{% if totale == 1 %}o{% else %}i{% endif %} in agenda</span>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('giorno', iso=ieri, struttura=sid) }}" title="Giorno precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('giorno', iso=domani, struttura=sid) }}" title="Giorno successivo">&rsaquo;</a>
+    <span class="separa"></span>
+    <a class="bottone" data-tasto="oggi" href="{{ url_for('giorno', iso=oggi, struttura=sid) }}">Vai a oggi</a>
+    <span class="separa"></span>
+    <form method="get" action="{{ url_for('giorno', iso=g.isoformat()) }}" style="display:inline">
+      <select name="struttura" onchange="this.form.submit()">
+        {% for s in strutture %}
+          <option value="{{ s.id }}"{% if s.id == sid %} selected{% endif %}>{{ s.nome }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <span class="separa"></span>
+    <a class="bottone primario" data-tasto="nuovo" data-guida="giorno-nuovo" href="{{ url_for('appuntamento', data=g.isoformat(), struttura=sid) }}">Nuovo appuntamento</a>
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('viste.elenco_giorno', iso=g.isoformat(), struttura=sid) }}" data-guida="giorno-elenco">Elenco</a>
+    <div class="gruppo-comandi" data-guida="giorno-stampa">
+      <button type="button" class="bottone apri-gruppo" aria-haspopup="true" aria-expanded="false">Stampa e scarica<span class="freccia" aria-hidden="true"></span></button>
+      <div class="tendina" role="menu">
+        <a href="{{ url_for('viste.stampa', iso=g.isoformat(), struttura=sid) }}" target="_blank"><b>Stampa del giorno</b><small>il foglio per l'accettazione</small></a>
+        <a href="{{ url_for('segreteria.agenda_medico', iso=g.isoformat(), struttura=sid) }}" target="_blank"><b>Agenda dei medici</b><small>un foglio per medico, anche per email</small></a>
+        {% if sala_giorno and sala_giorno.interventi %}<a href="{{ url_for('sala.lista_operatoria', iso=g.isoformat(), struttura=sid) }}" target="_blank"><b>Lista operatoria</b><small>gli interventi, una tabella per sala</small></a>{% endif %}
+        <a href="{{ url_for('esporta', iso=g.isoformat(), struttura=sid) }}"><b>Scarica in Excel</b><small>il planning del giorno</small></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include "_nota_giorno.html" %}
+{% if sala_giorno and (sala_giorno.interventi or sala_giorno.chirurghi.disponibili or sala_giorno.letti) %}{% set ch = sala_giorno.chirurghi %}
+<div class="avvio sala-giorno">
+  <b>Sala operatoria:</b> <a href="{{ url_for('sala.giornata', iso=g.isoformat(), struttura=sid) }}">{{ sala_giorno.interventi }} intervent{{ 'o' if sala_giorno.interventi == 1 else 'i' }}</a>
+  {%- if sala_giorno.incomplete %}, <span class="da-completare">{{ sala_giorno.incomplete }} con la checklist da completare</span>{% endif %}
+  {%- if sala_giorno.letti or sala_giorno.posti %} · <a href="{{ url_for('sala.posti_letto', dal=g.isoformat(), struttura=sid) }}" class="{{ 'oltre' if sala_giorno.oltre }}">letti la notte {{ sala_giorno.letti }}{% if sala_giorno.posti %}/{{ sala_giorno.posti }}{% endif %}</a>{% endif %}
+  {%- if ch.in_sala %} · in sala {% for o, n in ch.in_sala %}{{ o.cognome }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
+  {%- if ch.disponibili %} · <span title="Operano di solito in questo giorno della settimana e non hanno ancora interventi">liberi {% for o in ch.disponibili %}{{ o.cognome }}{% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}
+  {%- if sala_giorno.interventi %} · <a href="{{ url_for('sala.lista_operatoria', iso=g.isoformat(), struttura=sid) }}" target="_blank">Lista operatoria</a>{% endif %}
+</div>
+{% endif %}
+{% if allarme %}<div class="avvio errore-backup">{{ allarme }} <a href="{{ url_for('viste.impostazioni') }}">Impostazioni</a></div>{% endif %}
+{% if info.chiusura %}
+<div class="avvio chiusura">Struttura chiusa: {{ info.chiusura }}. Le fasce restano chiuse.</div>
+{% elif info.festivo %}
+<div class="avvio festivo">Festivo: {{ info.festivo }}.{% if info.chiude_festivo %} La struttura è chiusa nei festivi: si aprono solo i turni di un giorno.{% endif %}</div>
+{% endif %}
+
+{% if nessun_medico or nessun_turno %}
+<div class="avvio">
+  {% if nessun_medico %}Per cominciare vanno inseriti i medici e i loro turni:
+  {%- else %}Mancano i turni dei medici: finché non se ne inserisce uno le fasce restano tutte chiuse.
+  {%- endif %}
+  <a href="{{ url_for('anagrafiche.elenco') }}">apri Anagrafiche</a>.
+</div>
+{% endif %}
+
+{% if not colonne %}
+{# struttura appena creata: senza stanze la griglia sarebbe una fascia vuota #}
+<div class="avvio">
+  Questa struttura non ha ancora stanze attive: ogni stanza è una colonna della griglia.
+  <a href="{{ url_for('anagrafiche.stanza', struttura=sid) }}">Aggiungi una stanza</a>.
+</div>
+{% else %}
+<div class="telaio">
+<table class="griglia" data-giorno="{{ g.isoformat() }}">
+  <thead>
+    <tr>
+      <th class="ora"></th>
+      {% for col in colonne %}
+      <th>{{ col.risorsa.nome }}
+        <span class="sotto">
+          {%- if col.turni -%}
+            {{ col.turni | map(attribute='operatore') | map(attribute='cognome') | unique | join(', ') }}
+          {%- elif not col.assenti -%}nessun turno{%- endif -%}
+          {%- for o, motivo in col.assenti %}{% if loop.first and col.turni %} · {% elif not loop.first %}, {% endif %}<span class="assente">{{ o.cognome }} assente</span>{% endfor -%}
+        </span>
+      </th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for f in fasce %}{% set idx = loop.index0 %}
+    <tr{% if f.minute %} class="mezzora"{% endif %}>
+      <th class="ora">{{ '%02d:%02d' % (f.hour, f.minute) }}</th>
+      {% for col in colonne %}
+        {% set cella = col.celle[idx] %}
+        {% if cella.stato == 'coperta' %}
+        {% elif cella.stato == 'occupata' %}
+          <td class="occupata" rowspan="{{ cella.righe }}">
+            {% for a in cella.apps %}
+            <a class="voce stato-{{ a.stato|lower }}" style="border-left-color: {{ a.operatore.colore_sicuro }}"
+               href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}"
+               title="{{ a.etichetta_stato }}{% if a.paziente and a.paziente.telefono %} · {{ a.paziente.telefono }}{% endif %}">
+              <span class="medico">{{ a.operatore.cognome }}{% if a.inizio.time() != cella.ora %} <b class="scarto">{{ a.inizio.strftime('%H:%M') }}</b>{% endif %}
+                {%- if a.stato == 'CONFERMATO' %} <i class="segno confermato" title="Confermato">✓</i>
+                {%- elif a.stato == 'ARRIVATO' %} <i class="segno arrivato" title="Arrivato">arrivato{% if a.arrivato_alle %} {{ a.arrivato_alle.strftime('%H:%M') }}{% endif %}</i>{% endif %}</span>
+              {% if a.paziente %}<span class="paziente">{{ a.paziente.etichetta }}</span>{% endif %}
+              {%- set ck = checklist_di(a) %}
+              {%- if ck or a.notti_letto %}<span class="segni-sala">
+                {%- if ck %}<span class="checklist-voce {{ 'completa' if ck.completa else 'incompleta' }}" title="Checklist: {{ ('manca ' ~ ck.mancanti|join(', ')) if ck.mancanti else 'completa' }}">{{ '✓' if ck.completa else ck.fatte ~ '/' ~ ck.totale }}</span>{% endif %}
+                {%- if a.notti_letto %} <span class="degenza-voce" title="{{ a.etichetta_degenza }}">{{ a.etichetta_degenza|lower }}</span>{% endif %}</span>{% endif %}
+              {% if cella.righe > 1 and cella.apps|length == 1 and a.prestazione %}<span class="dettaglio">{{ a.prestazione.nome }}</span>{% endif %}
+            </a>
+            {% endfor %}
+          </td>
+        {% elif cella.stato == 'aperta' %}
+          <td class="aperta"><a class="posa"
+             href="{{ url_for('appuntamento', data=g.isoformat(), ora='%02d:%02d' % (f.hour, f.minute), risorsa=col.risorsa.id, struttura=sid) }}">libero</a></td>
+        {% else %}
+          <td class="chiusa"></td>
+        {% endif %}
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if annullati %}
+<div class="annullati">
+  <b>Disdetti e non presentati:</b>
+  {% for a in annullati %}
+  <a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}" class="stato-{{ a.stato|lower }}">{{ a.inizio.strftime('%H:%M') }} {{ a.paziente.etichetta if a.paziente else a.operatore.cognome }} ({{ a.etichetta_stato|lower }})</a>{% if a.stato == 'DISDETTO' and a.inizio > adesso %} <a href="{{ url_for('segreteria.attesa_per', aid=a.id) }}" class="nota-riga" style="display:inline">chi chiamare?</a>{% endif %}{% if not loop.last %}, {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+</div>
+{% endif %}
+{% endblock %}

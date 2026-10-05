@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titolo %}Agende{% endblock %}</title>
+<link rel="preload" href="{{ url_for('static', filename='fonts/inter-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="{{ url_for('static', filename='fonts/manrope-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{{ url_for('static', filename='stile.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='animazioni.css') }}">
+<script>try { if (localStorage.getItem('gestionale-animazioni') !== 'spente') { document.documentElement.classList.add('anim'); } } catch (e) { document.documentElement.classList.add('anim'); }</script>
+<link rel="stylesheet" href="{{ url_for('static', filename='tema-scuro.css') }}">
+{#- i fogli da stampare restano chiari anche a schermo: sono l'anteprima della carta #}
+<script>(function () { if ({{ 'true' if foglio_carta is defined and foglio_carta else 'false' }}) { return; } var t = null; try { t = localStorage.getItem('gestionale-tema'); } catch (e) {}
+  if (t === 'scuro' || (t === 'sistema' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.classList.add('scuro'); } })();</script>
+{%- set tema = marchio_di(sid if sid is defined else none).tema %}
+<style>:root { --primario: {{ tema.primario }}; --primario-scuro: {{ tema.scuro }}; --primario-tenue: {{ tema.tenue }}; --primario-chiaro: {{ tema.chiaro }}; --primario-fuoco: {{ tema.fuoco }}; }</style>
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='icona.png') }}">
+</head>
+<body{% block classe_body %}{% endblock %} data-pagina="{{ request.endpoint or '' }}" data-aiuto="{{ url_for('guida.indice') }}" data-guide="{{ guide_della_pagina() if guide_della_pagina is defined else '[]' }}">
+{% block menu %}{% include "_menu.html" %}{% endblock %}
+{% with messaggi = get_flashed_messages(with_categories=true) %}
+  {% if messaggi %}
+  <div class="avvisi">
+    {% for categoria, testo in messaggi %}
+      <div class="avviso {% if categoria == 'errore' %}errore{% elif categoria == 'avviso' %}avviso-giallo{% endif %}">{{ testo }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+{% block corpo %}{% endblock %}
+<script src="{{ url_for('static', filename='gestionale.js') }}"></script>
+<script src="{{ url_for('static', filename='animazioni.js') }}"></script>
+<script src="{{ url_for('static', filename='guida.js') }}"></script>
+</body>
+</html>

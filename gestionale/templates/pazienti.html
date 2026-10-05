@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block titolo %}Pazienti{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Pazienti</h1>
+  <p class="sotto">{{ totale }} in anagrafica. La ricerca non bada a maiuscole, accenti e apostrofi; un numero si cerca nei telefoni.</p>
+  <form method="get" class="ricerca">
+    <input type="search" name="q" value="{{ q }}" placeholder="cognome, nome, telefono, email o codice fiscale" autofocus>
+    <button class="bottone primario" type="submit">Cerca</button>
+    <a class="bottone" href="{{ url_for('pazienti.scheda') }}">Nuovo paziente</a>
+    <a class="bottone" href="{{ url_for('pazienti.codici_fiscali') }}" data-guida="controllo-codici">Controllo dei codici fiscali</a>
+  </form>
+  {% if q and not risultati %}
+  <p class="vuoto">Nessun paziente trovato per «{{ q }}». <a href="{{ url_for('pazienti.scheda') }}">Aggiungilo</a>.</p>
+  {% elif risultati %}
+  {% if not q %}<h2 class="sezione">Ultimi inseriti</h2>{% endif %}
+  <table class="elenco">
+    <tr><th>Paziente</th><th>Nato il</th><th>Telefono</th><th>Email</th><th>Prossimo appuntamento</th><th></th></tr>
+    {% for p in risultati %}
+    {% set pr = prossimi.get(p.id) %}
+    <tr>
+      <td><a href="{{ url_for('pazienti.scheda', pid=p.id) }}">{{ p.etichetta }}</a></td>
+      <td>{{ p.data_nascita.strftime('%d/%m/%Y') if p.data_nascita else '' }}</td>
+      <td>{{ p.telefono or '' }}</td>
+      <td>{{ p.email or '' }}</td>
+      <td>{% if pr %}<a href="{{ url_for('appuntamento', aid=pr.id) }}">{{ pr.inizio.strftime('%d/%m/%Y %H:%M') }}</a> · {{ pr.operatore.cognome }}{% endif %}</td>
+      <td class="azione"><a href="{{ url_for('appuntamento', paziente_id=p.id) }}">Prenota</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Nessun paziente ancora: le schede si creano da sole prenotando, oppure da «Nuovo paziente».</p>
+  {% endif %}
+</div>
+{% endblock %}

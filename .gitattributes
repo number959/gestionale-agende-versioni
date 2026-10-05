@@ -1,0 +1,5 @@
+# A capo: i file per Windows restano come sono (CRLF; installer.iss anche con il BOM),
+# gli script per Linux sempre LF, anche se il repository si apre su Windows.
+*.bat -text
+*.iss -text
+*.sh text eol=lf

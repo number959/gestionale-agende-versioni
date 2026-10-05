@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block titolo %}Lista d'attesa{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Lista d'attesa</h1>
+  <p class="sotto">Pazienti che aspettano un posto. Quando un appuntamento adatto viene disdetto, il programma lo dice e propone chi chiamare, dal primo in lista.</p>
+  <form method="get" class="filtri">
+    <label>Medico<br><select name="medico" onchange="this.form.submit()">
+      <option value="">tutti</option>
+      {% for o in medici %}<option value="{{ o.id }}"{% if medico and o.id == medico.id %} selected{% endif %}>{{ o.etichetta }}</option>{% endfor %}
+    </select></label>
+    <label><input type="checkbox" name="chiuse" value="1"{% if tutte %} checked{% endif %} onchange="this.form.submit()"> anche le richieste chiuse</label>
+    <a class="bottone primario" href="{{ url_for('segreteria.attesa_scheda', struttura=sid) }}">Aggiungi alla lista</a>
+  </form>
+  {% if richieste %}
+  <table class="elenco">
+    <tr><th>Dal</th><th>Paziente</th><th>Per</th><th>Quando</th><th>Note</th><th></th></tr>
+    {% for x in richieste %}
+    <tr{% if not x.aperta %} class="spento"{% endif %}>
+      <td>{{ x.creato_il.strftime('%d/%m/%Y') }}<div class="nota-riga">{{ (oggi - x.creato_il.date()).days }} giorni</div></td>
+      <td><a href="{{ url_for('pazienti.scheda', pid=x.paziente_id) }}">{{ x.paziente.etichetta }}</a><div class="nota-riga">{{ x.paziente.telefono or '' }}</div></td>
+      <td>{{ x.prestazione.nome if x.prestazione else 'qualsiasi prestazione' }}<div class="nota-riga">{{ x.operatore.etichetta if x.operatore else 'qualsiasi medico' }}{% if x.struttura %} · {{ x.struttura.nome }}{% endif %}</div></td>
+      <td>{% if x.dal %}dal {{ x.dal.strftime('%d/%m') }} {% endif %}{% if x.entro %}entro il {{ x.entro.strftime('%d/%m') }}{% endif %}{% if not x.dal and not x.entro %}appena possibile{% endif %}
+        <div class="nota-riga">{{ fasce[x.fascia or ''] }}</div></td>
+      <td>{{ x.note or '' }}{% if not x.aperta %}<div class="nota-riga">{{ 'prenotato' if x.esito == 'PRENOTATO' else 'non serve più' }} il {{ x.chiusa_il.strftime('%d/%m') }}</div>{% endif %}</td>
+      <td class="azione">
+        <a class="bottone piccolo" href="{{ url_for('segreteria.attesa_scheda', xid=x.id) }}">Apri</a>
+        {% if x.aperta %}<a class="bottone piccolo" href="{{ url_for('viste.disponibilita', medico=x.operatore_id, prestazione=x.prestazione_id, paziente_id=x.paziente_id, attesa=x.id) }}">Cerca posto</a>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Nessuno in lista d'attesa.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titolo %}Cassa del {{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">Cassa · {{ titolo }}</h1>
+  <span class="conteggio">incassati {{ totale|euro }} €</span>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('cassa.cassa_giorno', iso=ieri, struttura=sid) }}" title="Giorno precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('cassa.cassa_giorno', iso=domani, struttura=sid) }}" title="Giorno successivo">&rsaquo;</a>
+    <span class="separa"></span>
+    <a class="bottone" data-tasto="oggi" href="{{ url_for('cassa.cassa_giorno', iso=oggi_iso, struttura=sid) }}">Oggi</a>
+    {% if strutture|length > 1 %}
+    <form method="get" style="display:inline"><select name="struttura" onchange="this.form.submit()">
+      {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+    </select></form>
+    {% endif %}
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('cassa.cassa_mese', aaaamm=g.strftime('%Y-%m'), struttura=sid) }}">Mese</a>
+    <a class="bottone" href="{{ url_for('cassa.listino', struttura=sid) }}">Listino</a>
+    <button class="bottone" type="button" onclick="window.print()">Stampa la chiusura di cassa</button>
+  </div>
+</div>
+<div class="contenuto">
+  <h2 class="sezione">Incassi del giorno</h2>
+  <table class="elenco" style="max-width:520px">
+    {% for codice, etichetta in metodi %}<tr><td>{{ etichetta }}</td><td class="numero">{{ per_metodo[codice]|euro }} €</td></tr>{% endfor %}
+    <tr class="totale"><td>Totale ({{ pagati|length }} pagament{{ 'o' if pagati|length == 1 else 'i' }})</td><td class="numero">{{ totale|euro }} €</td></tr>
+  </table>
+  {% if pagati %}
+  <table class="elenco lista-giorno">
+    <tr><th>Ora</th><th>Paziente</th><th>Prestazione · medico</th><th>Appuntamento</th><th>Metodo</th><th class="numero">Importo</th><th class="solo-schermo"></th></tr>
+    {% for a in pagati %}
+    <tr><td>{{ a.pagato_il.strftime('%H:%M') }}</td><td>{{ a.paziente.etichetta if a.paziente else '' }}</td>
+      <td>{{ a.prestazione.nome if a.prestazione else '' }}<div class="nota-riga">{{ a.operatore.etichetta }}{% if a.convenzione %} · {{ a.convenzione }}{% endif %}</div></td>
+      <td><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}">{{ a.inizio.strftime('%d/%m %H:%M') }}</a></td>
+      <td>{{ etichette.get(a.pagamento, a.pagamento) }}</td><td class="numero">{{ a.pagato_testo }} €</td>
+      <td class="azione solo-schermo"><form method="post" action="{{ url_for('cassa.pagamento', aid=a.id) }}" class="in-linea"><input type="hidden" name="azione" value="annulla"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit" onclick="return confirm('Annullare il pagamento?')">Annulla</button></form></td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <h2 class="sezione solo-schermo">Appuntamenti del giorno da incassare</h2>
+  {% if da_incassare %}
+  <table class="elenco lista-giorno solo-schermo">
+    <tr><th>Ora</th><th>Paziente</th><th>Prestazione</th><th>Stato</th><th class="numero">Importo</th><th>Incassa</th></tr>
+    {% for a in da_incassare %}
+    <tr><td class="ora-lista"><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}#incasso">{{ a.inizio.strftime('%H:%M') }}</a></td>
+      <td>{{ a.paziente.etichetta if a.paziente else '' }}</td>
+      <td>{{ a.prestazione.nome if a.prestazione else '' }}{% if a.convenzione %}<div class="nota-riga">{{ a.convenzione }}</div>{% endif %}</td>
+      <td>{{ a.etichetta_stato }}</td>
+      <td class="numero">{% if a.importo_cent %}{{ a.importo_testo }} €{% else %}<span class="senza">non indicato</span>{% endif %}</td>
+      <td class="azione">{% if a.importo_cent %}{% for codice, etichetta in metodi[:2] %}<form method="post" action="{{ url_for('cassa.pagamento', aid=a.id) }}" class="in-linea"><input type="hidden" name="metodo" value="{{ codice }}"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit">{{ etichetta }}</button></form> {% endfor %}{% endif %}
+        <a class="bottone piccolo" href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}#incasso">Altro…</a></td></tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto solo-schermo">Niente da incassare.</p>
+  {% endif %}
+  <p class="piede-stampa">{{ st.nome }}{% if st.societa %} — {{ st.societa }}{% endif %} · stampato il {{ adesso.strftime('%d/%m/%Y alle %H:%M') }}</p>
+</div>
+{% endblock %}

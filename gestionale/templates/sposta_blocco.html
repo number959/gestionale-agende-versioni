@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block titolo %}Sposta gli appuntamenti di un medico{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Sposta gli appuntamenti di un medico</h1>
+  <p class="sotto">Per ferie, malattia o un congresso: si sceglie il periodo e il programma propone una nuova collocazione per ciascun appuntamento. Si conferma solo quello che si spunta.</p>
+  <form method="get" class="filtri">
+    <label>Medico<br><select name="medico" required>
+      <option value="">scegliere…</option>
+      {% for o in medici %}<option value="{{ o.id }}"{% if medico and o.id == medico.id %} selected{% endif %}>{{ o.etichetta }}{% if not o.attivo %} (non attivo){% endif %}</option>{% endfor %}
+    </select></label>
+    <label>Dal<br><input type="date" name="dal" value="{{ dal.isoformat() }}"></label>
+    <label>Al<br><input type="date" name="al" value="{{ al.isoformat() }}"></label>
+    <label>Come<br><select name="modo">
+      <option value="dopo"{% if modo == 'dopo' %} selected{% endif %}>stesso medico, primo posto libero dopo il periodo</option>
+      <option value="sostituto"{% if modo == 'sostituto' %} selected{% endif %}>stesso giorno e ora, con un altro medico</option>
+    </select></label>
+    <label>Sostituto<br><select name="sostituto">
+      <option value="">—</option>
+      {% for o in medici if o.attivo and (not medico or o.id != medico.id) %}<option value="{{ o.id }}"{% if sostituto and o.id == sostituto.id %} selected{% endif %}>{{ o.etichetta }}</option>{% endfor %}
+    </select></label>
+    <button class="bottone" type="submit">Proponi</button>
+  </form>
+
+  {% if medico %}
+    {% if proposte %}
+    <form method="post">
+      <input type="hidden" name="medico" value="{{ medico.id }}"><input type="hidden" name="dal" value="{{ dal.isoformat() }}">
+      <input type="hidden" name="al" value="{{ al.isoformat() }}"><input type="hidden" name="modo" value="{{ modo }}">
+      {% if sostituto %}<input type="hidden" name="sostituto" value="{{ sostituto.id }}">{% endif %}
+      <table class="elenco">
+        <tr><th><input type="checkbox" checked data-seleziona-tutti="scelti" aria-label="Seleziona tutti"></th><th>Oggi</th><th>Paziente</th><th>Prestazione</th><th>Nuova collocazione</th></tr>
+        {% for x in proposte %}{% set a = x.a %}
+        <tr>
+          <td>{% if x.proposta %}<input type="checkbox" name="scelti" value="{{ a.id }}" checked aria-label="Sposta">
+            <input type="hidden" name="p_{{ a.id }}" value="{{ x.proposta[0].strftime('%Y-%m-%dT%H:%M') }}|{{ x.proposta[1] }}|{{ x.proposta[2] }}">{% endif %}</td>
+          <td><a href="{{ url_for('appuntamento', aid=a.id) }}">{{ giorno_breve(a.inizio.date()) }} {{ a.inizio.strftime('%H:%M') }}</a><div class="nota-riga">{{ a.risorsa.nome }}</div></td>
+          <td>{{ a.paziente.etichetta if a.paziente else '' }}<div class="nota-riga">{{ a.paziente.telefono if a.paziente and a.paziente.telefono else '' }}</div></td>
+          <td>{{ a.prestazione.nome if a.prestazione else '' }}</td>
+          <td>{% if x.proposta %}<span class="proposta-libera">{{ giorno_breve(x.proposta[0].date()) }} alle {{ x.proposta[0].strftime('%H:%M') }}</span>{% if modo == 'sostituto' %} con {{ sostituto.etichetta }}{% endif %}
+              {% else %}<span class="proposta-assente">nessuna proposta: {{ x.motivo }}</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </table>
+      <div class="azioni"><button class="bottone primario" type="submit" onclick="return confirm('Spostare gli appuntamenti selezionati?')">Sposta i selezionati</button></div>
+    </form>
+    <p class="nota">Dopo lo spostamento si apre l'elenco dei pazienti da avvisare, con WhatsApp già scritto.</p>
+    {% else %}
+    <p class="vuoto">{{ medico.etichetta }} non ha appuntamenti da spostare in questo periodo.</p>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

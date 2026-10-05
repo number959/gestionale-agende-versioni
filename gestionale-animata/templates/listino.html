@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block titolo %}Listino{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Listino</h1>
+  <p class="sotto">Il prezzo scritto qui si propone da solo nel modulo di prenotazione; si può sempre cambiare. Con una convenzione vale la sua tariffa, se c'è. <a href="{{ url_for('cassa.cassa_giorno', iso=oggi_iso, struttura=sid) }}">Cassa del giorno</a></p>
+  <form method="post">
+    <input type="hidden" name="azione" value="listino">
+    <table class="elenco">
+      <tr><th>Prestazione</th><th>Durata</th><th class="numero">Prezzo di listino (€)</th></tr>
+      {% for p in prestazioni %}
+      <tr><td>{{ p.nome }}</td><td>{{ p.durata_min }} min</td>
+        <td class="numero"><input type="text" name="tariffa_{{ p.id }}" value="{{ p.tariffa_testo }}" inputmode="decimal" maxlength="12" size="9" placeholder="—" aria-label="Prezzo di {{ p.nome }}"></td></tr>
+      {% endfor %}
+    </table>
+    <div class="azioni"><button class="bottone primario" type="submit">Salva il listino</button></div>
+  </form>
+
+  <h2 class="sezione">Tariffe per convenzione o assicurazione</h2>
+  {% if tariffe %}
+  <table class="elenco">
+    <tr><th>Prestazione</th><th>Convenzione</th><th class="numero">Prezzo (€)</th><th></th></tr>
+    {% for t in tariffe %}
+    <tr><td>{{ t.prestazione.nome }}</td><td>{{ t.convenzione }}</td><td class="numero">{{ t.importo_testo }}</td>
+      <td class="azione"><form method="post" class="in-linea"><input type="hidden" name="azione" value="elimina"><input type="hidden" name="tariffa" value="{{ t.id }}"><button class="bottone piccolo stato-disdetto" type="submit">Togli</button></form></td></tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Nessuna tariffa particolare: vale il listino per tutti.</p>
+  {% endif %}
+  <form method="post" class="filtri">
+    <input type="hidden" name="azione" value="aggiungi">
+    <label>Prestazione<br><select name="prestazione" required>{% for p in prestazioni %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}</select></label>
+    <label>Convenzione<br><input type="text" name="convenzione" list="lista_convenzioni" maxlength="80" required></label>
+    <datalist id="lista_convenzioni">{% for c in convenzioni %}<option value="{{ c }}">{% endfor %}</datalist>
+    <label>Prezzo (€)<br><input type="text" name="importo" inputmode="decimal" maxlength="12" size="9" required></label>
+    <button class="bottone" type="submit">Aggiungi tariffa</button>
+  </form>
+</div>
+{% endblock %}

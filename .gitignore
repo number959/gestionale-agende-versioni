@@ -1,0 +1,15 @@
+# quello che si rigenera o che contiene dati: mai nel repository
+__pycache__/
+*.pyc
+*.db
+*.db-wal
+*.db-shm
+*.log
+*.conflitto
+.venv/
+build/
+dist/
+Output/
+*_tmp/
+prove_animazioni_foto/
+campagna-progresso.txt

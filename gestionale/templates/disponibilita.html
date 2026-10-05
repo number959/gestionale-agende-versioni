@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block titolo %}Prima disponibilità{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Prima disponibilità</h1>
+  <p class="sotto">I primi posti liberi di un medico nei suoi turni, per la durata che serve.{% if paziente %} Per <a href="{{ url_for('pazienti.scheda', pid=paziente.id) }}">{{ paziente.etichetta }}</a>.{% endif %}</p>
+  <form method="get" class="filtri">
+    {% if paziente %}<input type="hidden" name="paziente_id" value="{{ paziente.id }}">{% endif %}
+    {% if sid %}<input type="hidden" name="struttura" value="{{ sid }}">{% endif %}
+    {% if attesa %}<input type="hidden" name="attesa" value="{{ attesa }}">{% endif %}
+    <label>Medico <select name="medico" required>
+      <option value="">scegliere…</option>
+      {% for o in medici %}<option value="{{ o.id }}"{% if medico and o.id == medico.id %} selected{% endif %}>{{ o.etichetta }}{% if o.specialita %} — {{ o.specialita }}{% endif %}</option>{% endfor %}
+    </select></label>
+    <label>Prestazione <select name="prestazione">
+      <option value="">—</option>
+      {% for p in prestazioni %}<option value="{{ p.id }}"{% if prest and p.id == prest.id %} selected{% endif %}>{{ p.nome }} ({{ p.durata_min }} min)</option>{% endfor %}
+    </select></label>
+    <label>Durata <input type="number" name="durata" value="{{ durata }}" min="5" max="480" step="5" style="width:80px"> min</label>
+    <label>Dal <input type="date" name="dal" value="{{ dal.isoformat() }}"></label>
+    <label>Fascia <select name="fascia">
+      <option value=""{% if not fascia %} selected{% endif %}>tutto il giorno</option>
+      <option value="mattina"{% if fascia == 'mattina' %} selected{% endif %}>mattina (prima delle 13)</option>
+      <option value="pomeriggio"{% if fascia == 'pomeriggio' %} selected{% endif %}>pomeriggio</option>
+    </select></label>
+    {% if strutture|length > 1 %}<label><input type="checkbox" name="tutte" value="1"{% if tutte %} checked{% endif %}> tutte le strutture</label>{% endif %}
+    <button class="bottone primario" type="submit">Cerca</button>
+  </form>
+
+  {% if risultati is not none %}
+    {% if risultati %}
+    <table class="elenco">
+      <tr><th>Giorno</th><th>Ora</th><th>Stanza</th>{% if strutture|length > 1 %}<th>Struttura</th>{% endif %}<th></th></tr>
+      {% for r in risultati %}
+      <tr>
+        <td>{{ giorni_nomi[r.inizio.weekday()] }} {{ r.inizio.day }} {{ mesi[r.inizio.month - 1] }}</td>
+        <td>{{ r.inizio.strftime('%H:%M') }}–{{ r.fine.strftime('%H:%M') }}</td>
+        <td>{{ r.risorsa.nome }}</td>
+        {% if strutture|length > 1 %}<td>{{ r.struttura.nome }}</td>{% endif %}
+        <td class="azione"><a class="bottone piccolo primario" href="{{ url_for('appuntamento', data=r.inizio.date().isoformat(), ora=r.inizio.strftime('%H:%M'), risorsa=r.risorsa.id, struttura=r.struttura.id, medico=medico.id, prestazione=prest.id if prest else none, durata=durata, paziente_id=paziente.id if paziente else none, attesa=attesa) }}">Prenota</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="vuoto">Nessun posto libero nei prossimi 90 giorni con questi criteri. Controllare i turni di {{ medico.etichetta }} in Anagrafiche.</p>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

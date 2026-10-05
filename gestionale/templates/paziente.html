@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block titolo %}{{ p.etichetta if p else 'Nuovo paziente' }}{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>{{ p.etichetta if p else 'Nuovo paziente' }}</h1>
+  <p class="sotto"><a href="{{ url_for('pazienti.elenco') }}">Torna ai pazienti</a>
+    {%- if p %} · <a href="{{ url_for('appuntamento', paziente_id=p.id) }}">Prenota un appuntamento</a>
+    · <a href="{{ url_for('viste.disponibilita', paziente_id=p.id) }}">Cerca il primo posto libero</a>
+    · <a href="{{ url_for('pazienti.unisci_pagina', pid=p.id) }}">Unisci un doppione</a>{% endif %}</p>
+
+  {% if p and collegamenti %}
+  <p class="contatti">Contatta:
+    {% if collegamenti.tel %}<a href="{{ collegamenti.tel }}">Chiama {{ collegamenti.tel_numero }}</a>{% endif %}
+    {% if collegamenti.whatsapp %}<a href="{{ collegamenti.whatsapp }}" target="_blank">WhatsApp</a>{% endif %}
+    {% if collegamenti.email %}<a href="{{ collegamenti.email }}">Email</a>{% endif %}
+  </p>
+  {% endif %}
+
+  {% if possibili %}
+  <div class="guida">
+    <h2>Potrebbe essere già in anagrafica</h2>
+    <ul>
+      {% for x in possibili %}
+      <li><a href="{{ url_for('pazienti.scheda', pid=x.id) }}">{{ x.etichetta }}</a>{% if x.data_nascita %}, nato il {{ x.data_nascita.strftime('%d/%m/%Y') }}{% endif %}{% if x.telefono %}, tel. {{ x.telefono }}{% endif %}{% if x.email %}, {{ x.email }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+    <p>Se è un'altra persona, spuntare la casella in fondo e salvare di nuovo.</p>
+  </div>
+  {% endif %}
+
+  <div class="due-colonne">
+  <form method="post" class="modulo-paziente">
+    <input type="hidden" name="torna" value="{{ torna }}">
+    <div class="campo meta"><label for="cognome">Cognome</label>
+      <input type="text" id="cognome" name="cognome" value="{{ campi.cognome }}" maxlength="60" required></div>
+    <div class="campo meta"><label for="nome">Nome</label>
+      <input type="text" id="nome" name="nome" value="{{ campi.nome }}" maxlength="60"></div>
+    <div class="campo meta"><label for="sesso">Sesso</label>
+      <select id="sesso" name="sesso">
+        <option value="">—</option>
+        <option value="F"{% if campi.sesso == 'F' %} selected{% endif %}>Femmina</option>
+        <option value="M"{% if campi.sesso == 'M' %} selected{% endif %}>Maschio</option>
+      </select></div>
+    <div class="campo meta"><label for="data_nascita">Data di nascita</label>
+      <input type="date" id="data_nascita" name="data_nascita" value="{{ campi.data_nascita }}" min="1900-01-01" max="{{ oggi.isoformat() }}"></div>
+    <div class="campo meta luogo-nascita" data-guida="luogo-nascita"><label for="luogo_nascita_testo">Luogo di nascita</label>
+      <input type="text" id="luogo_nascita_testo" name="luogo_nascita_testo" value="{{ campi.luogo_nascita_testo }}" maxlength="80"
+             autocomplete="off" spellcheck="false" placeholder="comune o stato estero" data-indirizzo="{{ url_for('pazienti.luoghi_json') }}">
+      <input type="hidden" id="luogo_nascita" name="luogo_nascita" value="{{ campi.luogo_nascita }}">
+      <div class="suggerimenti" id="suggerimenti-luogo" hidden></div></div>
+    <div class="campo meta campo-cf" data-guida="codice-fiscale"><label for="codice_fiscale">Codice fiscale</label>
+      <input type="text" id="codice_fiscale" name="codice_fiscale" value="{{ campi.codice_fiscale }}" maxlength="20" spellcheck="false"
+             autocapitalize="characters" autocomplete="off" style="text-transform:uppercase" data-controllo="{{ url_for('pazienti.codice_fiscale_json') }}">
+      <p class="esito-cf" id="esito-cf" role="status" aria-live="polite"></p></div>
+    <div class="campo meta"><label for="telefono">Cellulare / telefono</label>
+      <input type="tel" id="telefono" name="telefono" value="{{ campi.telefono }}" maxlength="30"></div>
+    <div class="campo meta"><label for="telefono2">Altro telefono</label>
+      <input type="tel" id="telefono2" name="telefono2" value="{{ campi.telefono2 }}" maxlength="30"></div>
+    <div class="campo"><label for="email">Email</label>
+      <input type="email" id="email" name="email" value="{{ campi.email }}" maxlength="120"></div>
+    <div class="campo"><label for="indirizzo">Indirizzo</label>
+      <input type="text" id="indirizzo" name="indirizzo" value="{{ campi.indirizzo }}" maxlength="200" placeholder="via e numero civico, CAP, città"></div>
+    <div class="campo meta"><label for="canale">Per i promemoria preferisce</label>
+      <select id="canale" name="canale">
+        {% for codice, etichetta in canali %}<option value="{{ codice }}"{% if campi.canale == codice %} selected{% endif %}>{{ etichetta }}</option>{% endfor %}
+      </select></div>
+    <div class="campo meta spunta allinea-basso"><label><input type="checkbox" name="promemoria" value="1"{% if campi.promemoria %} checked{% endif %}> Accetta i promemoria</label></div>
+    <div class="campo meta"><label for="provenienza">Come ci ha conosciuto</label>
+      <select id="provenienza" name="provenienza">
+        {% for codice, etichetta in provenienze %}<option value="{{ codice }}"{% if campi.provenienza == codice %} selected{% endif %}>{{ etichetta }}</option>{% endfor %}
+      </select></div>
+    <div class="campo meta"><label for="inviato_da">Inviato da</label>
+      <input type="text" id="inviato_da" name="inviato_da" value="{{ campi.inviato_da }}" maxlength="80" placeholder="medico o persona che lo manda"></div>
+    <div class="campo"><label for="note">Note</label>
+      <textarea id="note" name="note" rows="3" maxlength="2000">{{ campi.note }}</textarea></div>
+    {% if possibili %}
+    <div class="campo spunta"><label><input type="checkbox" name="doppione_confermato" value="1"> È un'altra persona: salva comunque</label></div>
+    {% endif %}
+    <div class="azioni">
+      <button class="bottone primario" type="submit">Salva scheda</button>
+      {% if p and not appuntamenti %}
+      <button class="bottone elimina" type="submit" name="azione" value="elimina" formnovalidate
+              onclick="return confirm('Eliminare questa scheda?')">Elimina</button>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if p %}
+  <div class="riepilogo-paziente">
+    <h2>In breve</h2>
+    <ul class="numeri">
+      <li><b>{{ riepilogo.visite }}</b> {{ 'visita' if riepilogo.visite == 1 else 'visite' }}</li>
+      <li><b>{{ riepilogo.futuri|length }}</b> in programma</li>
+      <li><b>{{ riepilogo.disdetti }}</b> {{ 'disdetto' if riepilogo.disdetti == 1 else 'disdetti' }}</li>
+      <li{% if riepilogo.assenze_anno >= 2 %} class="allarme"{% endif %}><b>{{ riepilogo.assenze_anno }}</b> {{ 'assenza' if riepilogo.assenze_anno == 1 else 'assenze' }} nell'ultimo anno</li>
+    </ul>
+    {% if p.eta is not none %}<p>{{ p.eta }} anni.</p>{% endif %}
+    {% if riepilogo.prossimo %}<p>Prossimo: <a href="{{ url_for('appuntamento', aid=riepilogo.prossimo.id) }}">{{ riepilogo.prossimo.inizio.strftime('%d/%m/%Y alle %H:%M') }}</a>, {{ riepilogo.prossimo.operatore.etichetta }}.</p>{% endif %}
+    {% if riepilogo.ultimo %}<p>Ultima volta: {{ riepilogo.ultimo.inizio.strftime('%d/%m/%Y') }}{% if riepilogo.ultimo.prestazione %}, {{ riepilogo.ultimo.prestazione.nome }}{% endif %}.</p>{% endif %}
+    {% for x in attese %}<p>In lista d'attesa dal {{ x.creato_il.strftime('%d/%m') }}{% if x.prestazione %} per {{ x.prestazione.nome }}{% endif %}. <a href="{{ url_for('segreteria.attesa_scheda', xid=x.id) }}">Apri</a></p>{% endfor %}
+    <p><a href="{{ url_for('segreteria.attesa_scheda', paziente_id=p.id) }}">Metti in lista d'attesa</a></p>
+    {% if cose %}<h2>Da fare</h2><ul>{% for x in cose %}<li>{{ x.per_il.strftime('%d/%m') }}: {{ x.testo }}</li>{% endfor %}</ul>{% endif %}
+    <form method="post" action="{{ url_for('segreteria.cose_da_fare') }}">
+      <input type="hidden" name="paziente_id" value="{{ p.id }}"><input type="hidden" name="torna" value="{{ url_for('pazienti.scheda', pid=p.id) }}">
+      <div class="campo"><label for="cosa">Ricordami di…</label><input type="text" id="cosa" name="testo" maxlength="300" required placeholder="richiamare per il referto"></div>
+      <div class="campo"><input type="date" name="per_il" value="{{ oggi.isoformat() }}" aria-label="Il giorno"> <button class="bottone piccolo" type="submit">Aggiungi</button></div>
+    </form>
+  </div>
+  {% endif %}
+  </div>
+
+  {% if p %}
+  <h2 class="sezione">Appuntamenti</h2>
+  {% if appuntamenti %}
+  <table class="elenco">
+    <tr><th>Quando</th><th>Medico</th><th>Prestazione</th><th>Stanza</th><th>Stato</th><th>Note</th></tr>
+    {% for a in appuntamenti %}
+    <tr class="stato-{{ a.stato|lower }}">
+      <td><a href="{{ url_for('appuntamento', aid=a.id) }}">{{ a.inizio.strftime('%d/%m/%Y %H:%M') }}</a></td>
+      <td>{{ a.operatore.etichetta }}</td>
+      <td>{{ a.prestazione.nome if a.prestazione else '' }}{% if a.tipo %} · {{ a.etichetta_tipo }}{% endif %}</td>
+      <td>{{ a.risorsa.nome }}</td>
+      <td>{{ a.etichetta_stato }}</td>
+      <td>{{ a.note or '' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Nessun appuntamento.</p>
+  {% endif %}
+
+  <h2 class="sezione" id="documenti">Documenti</h2>
+  {% if documenti %}
+  <table class="elenco">
+    <tr><th>Documento</th><th>Descrizione</th><th>Caricato il</th><th></th></tr>
+    {% for d in documenti %}
+    <tr><td><span class="documento-tipo">{{ 'PDF' if d.tipo == 'application/pdf' else 'foto' }}</span><a href="{{ url_for('documenti.mostra_documento', did=d.id) }}" target="_blank">{{ d.nome }}</a> <span class="nota-riga" style="display:inline">{{ (d.dimensione / 1024)|round|int }} KB</span></td>
+      <td>{{ d.descrizione or '' }}</td><td>{{ d.caricato_il.strftime('%d/%m/%Y') }}</td>
+      <td class="azione"><a class="bottone piccolo" href="{{ url_for('documenti.mostra_documento', did=d.id, scarica='1') }}">Scarica</a>
+        <form method="post" action="{{ url_for('documenti.elimina_documento', did=d.id) }}" class="in-linea"><button class="bottone piccolo stato-disdetto" type="submit" onclick="return confirm('Eliminare il documento?')">Elimina</button></form></td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+  <form method="post" action="{{ url_for('documenti.carica_documento', pid=p.id) }}" enctype="multipart/form-data" class="filtri">
+    <label>File (PDF, JPG o PNG, al massimo 10 MB)<br><input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required></label>
+    <label style="flex:1">Descrizione<br><input type="text" name="descrizione" maxlength="200" style="width:100%" placeholder="impegnativa, referto, consenso firmato…"></label>
+    <button class="bottone" type="submit">Allega</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

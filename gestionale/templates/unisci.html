@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titolo %}Unisci schede{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Unisci a {{ p.etichetta }}</h1>
+  <p class="sotto"><a href="{{ url_for('pazienti.scheda', pid=p.id) }}">Torna alla scheda</a></p>
+  <p>Quando la stessa persona ha due schede: gli appuntamenti dell'altra scheda passano a
+     <b>{{ p.etichetta }}</b>, i dati mancanti vengono completati e l'altra scheda viene eliminata.</p>
+
+  {% if altro %}
+  <div class="guida">
+    <h2>{{ altro.etichetta }}{% if altro.data_nascita %}, nato il {{ altro.data_nascita.strftime('%d/%m/%Y') }}{% endif %}</h2>
+    <p>Telefono {{ altro.telefono or '—' }} · email {{ altro.email or '—' }} · {{ appuntamenti_altro|length }} appuntament{{ 'o' if appuntamenti_altro|length == 1 else 'i' }}.</p>
+    <form method="post">
+      <input type="hidden" name="altro" value="{{ altro.id }}">
+      <label><input type="checkbox" name="conferma" value="1" required> Sono la stessa persona</label>
+      <button class="bottone primario" type="submit">Unisci le schede</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <form method="get" class="ricerca">
+    <input type="search" name="q" value="{{ q }}" placeholder="cerca l'altra scheda">
+    <button class="bottone" type="submit">Cerca</button>
+  </form>
+  {% if candidati %}
+  <table class="elenco">
+    <tr><th>{{ 'Risultati' if q else 'Possibili doppioni' }}</th><th>Nato il</th><th>Telefono</th><th>Email</th><th></th></tr>
+    {% for x in candidati %}
+    <tr>
+      <td>{{ x.etichetta }}</td><td>{{ x.data_nascita.strftime('%d/%m/%Y') if x.data_nascita else '' }}</td>
+      <td>{{ x.telefono or '' }}</td><td>{{ x.email or '' }}</td>
+      <td class="azione"><a href="{{ url_for('pazienti.unisci_pagina', pid=p.id, altro=x.id) }}">Scegli</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">{{ 'Nessun risultato.' if q else 'Nessun possibile doppione trovato: cercare l\'altra scheda per nome o telefono.' }}</p>
+  {% endif %}
+</div>
+{% endblock %}

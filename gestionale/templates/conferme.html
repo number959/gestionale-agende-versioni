@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_stato.html" import pulsanti, contatti as link_contatti %}
+{% block titolo %}Conferme del {{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">Conferme · {{ titolo }}</h1>
+  <span class="conteggio">{{ da_confermare }} da confermare su {{ apps|length }}</span>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('viste.conferme', data=ieri, struttura=sid) }}" title="Giorno precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('viste.conferme', data=domani, struttura=sid) }}" title="Giorno successivo">&rsaquo;</a>
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('viste.conferme', struttura=sid) }}">Prossimo giorno di lavoro</a>
+    {% if strutture|length > 1 %}
+    <form method="get" style="display:inline"><input type="hidden" name="data" value="{{ g.isoformat() }}"><select name="struttura" onchange="this.form.submit()">
+      {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+    </select></form>
+    {% endif %}
+  </div>
+</div>
+<div class="contenuto">
+<p class="nota">WhatsApp ed Email aprono il messaggio già scritto: resta solo da inviarlo. Il testo si cambia in <a href="{{ url_for('viste.impostazioni') }}#messaggi">Impostazioni</a>.
+  {%- if promemoria_attivi %} I promemoria automatici partono ogni giorno alle {{ ora_promemoria }}: la colonna Promemoria dice cosa è partito.{% else %} I promemoria automatici si accendono in <a href="{{ url_for('invii.pagina') }}#promemoria">Configura → Email e WhatsApp</a>.{% endif %}</p>
+{% if apps %}
+<table class="elenco lista-giorno">
+  <tr><th>Ora</th><th>Paziente</th><th>Telefono</th><th>Prestazione · medico</th><th>Stato</th><th>Promemoria</th><th>Contatta</th><th></th></tr>
+  {% for a in apps %}
+  <tr class="stato-{{ a.stato|lower }}">
+    <td class="ora-lista"><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}">{{ a.inizio.strftime('%H:%M') }}</a></td>
+    <td>{% if a.paziente %}<a href="{{ url_for('pazienti.scheda', pid=a.paziente.id) }}">{{ a.paziente.etichetta }}</a>
+      {%- if not a.paziente.promemoria %}<div class="nota-riga">non vuole promemoria</div>{% endif %}{% else %}<span class="senza">senza paziente</span>{% endif %}</td>
+    <td>{% if a.paziente %}{{ a.paziente.telefono or '' }}{% if a.paziente.telefono2 %}<br>{{ a.paziente.telefono2 }}{% endif %}{% endif %}</td>
+    <td>{{ a.prestazione.nome if a.prestazione else '' }}<div class="nota-riga">{{ a.operatore.etichetta }} · {{ a.risorsa.nome }}</div></td>
+    <td><b>{{ a.etichetta_stato }}</b></td>
+    <td class="promemoria-conferme">{% set x = promemoria.get(a.id) %}
+      {%- if x %}<span class="stato-invio stato-invio-{{ x.stato|lower }}" title="{{ x.errore or '' }}">{{ canali_invio.get(x.canale, x.canale) }}: {{ stati_invio.get(x.stato, x.stato) }}{% if x.stato == 'INVIATO' and x.inviato_il %} {{ x.inviato_il.strftime('%d/%m %H:%M') }}{% endif %}</span>{% endif %}
+      {%- if a.paziente and canale.get(a.id) and (not x or x.stato in ('ERRORE', 'ANNULLATO')) %}
+      <form method="post" action="{{ url_for('invii.appuntamento', aid=a.id) }}" class="in-linea" data-attesa="…">
+        <input type="hidden" name="azione" value="promemoria"><input type="hidden" name="torna" value="{{ torna }}">
+        <button class="bottone piccolo" type="submit" title="Manda adesso il promemoria con {{ canali_invio.get(canale[a.id]) }}">Manda</button>
+      </form>
+      {%- elif a.paziente and not x %}<span class="senza">da chiamare</span>{% endif %}</td>
+    <td>{% if a.paziente %}{{ link_contatti(contatti[a.id]) }}{% endif %}</td>
+    <td class="azione">{{ pulsanti(a, torna, [('CONFERMATO', 'Confermato'), ('DISDETTO', 'Disdetto')]) }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="vuoto">Nessun appuntamento da confermare in questo giorno.</p>
+{% endif %}
+</div>
+{% endblock %}

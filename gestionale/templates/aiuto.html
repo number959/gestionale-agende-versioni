@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block titolo %}Aiuto · Come fare{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-aiuto">
+  <h1>Come fare…</h1>
+  <p class="sotto">Ogni guida spiega una cosa, passo per passo, con un'immagine e un video. <b>Guarda il video</b> la mostra in un minuto; <b>Mostrami sullo schermo</b> apre la pagina giusta e indica dove cliccare.</p>
+  <p class="novita-in-aiuto"><a href="{{ url_for('aggiornamenti.novita_pagina') }}" data-guida="novita">Novità della versione {{ versione_programma }}</a>: cosa c'è di nuovo, con i video.</p>
+  <form method="get" class="ricerca cerca-guida">
+    <input type="search" name="q" value="{{ q }}" placeholder="Cosa vuoi fare? Per esempio: spostare, conferme, backup" autofocus>
+    <button class="bottone primario" type="submit">Cerca</button>
+    {% if q %}<a class="bottone" href="{{ url_for('guida.indice') }}">Tutte</a>{% endif %}
+    <a class="bottone" href="{{ url_for('guida.stampa') }}" target="_blank">Stampa la guida</a>
+  </form>
+  {% if q and not n %}<p class="vuoto">Nessuna guida parla di «{{ q }}». Provare con un'altra parola, o sfogliare l'elenco.</p>{% endif %}
+  {% for gruppo, articoli in gruppi %}
+  <h2 class="sezione">{{ gruppo }}</h2>
+  <div class="schede-guida">
+    {% for a in articoli %}
+    <a class="scheda-guida" href="{{ url_for('guida.articolo', slug=a.slug) }}">
+      <b>{{ a.titolo }}</b>
+      <span>{{ a.in_breve }}</span>
+      {% set vid = video_guida(a.slug) %}
+      <small>{{ a.passi|length }} passi{% if vid %} · <span class="con-video">video{% if vid.durata %} {{ vid.durata }}{% endif %}</span>{% endif %}</small>
+    </a>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  <p class="nota">In ogni pagina, <b>Aiuto → Guida di questa pagina</b> fa il giro della pagina che si ha davanti. Il tasto <b>?</b> mostra i tasti rapidi.</p>
+  <p class="nota-riga versione-programma">Gestionale Agende, versione {{ versione_programma }}. Gli aggiornamenti arrivano dal programma, in <a href="{{ url_for('aggiornamenti.pagina') }}">Configura → Aggiornamenti</a>; senza internet basta avviare il Setup nuovo: <a href="{{ url_for('guida.articolo', slug='aggiornare') }}">come si fa</a>.</p>
+</div>
+{% endblock %}

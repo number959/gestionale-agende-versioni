@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+{% block titolo %}{% if a %}Modifica appuntamento{% else %}Nuovo appuntamento{% endif %}{% endblock %}
+{% block corpo %}
+{#- valori del modulo: rimandato indietro (modulo), appuntamento esistente (a) o nuovo -#}
+{%- set p = a.paziente if a and a.paziente else paziente_scelto -%}
+{%- macro val(chiave, esistente='') -%}{% if modulo %}{{ modulo.get(chiave, '') }}{% else %}{{ esistente if esistente is not none else '' }}{% endif %}{%- endmacro -%}
+<div class="pagina">
+  <p class="marchio" style="border:0;margin-bottom:16px">{% include "_marchio.html" %}</p>
+  <h1>{% if a %}Modifica appuntamento{% else %}Nuovo appuntamento{% endif %}</h1>
+  <p class="sotto"><a href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">Torna alla giornata</a>
+    {%- if a %} · <a href="{{ url_for('viste.promemoria', aid=a.id) }}" target="_blank">Stampa promemoria per il paziente</a>
+    · <a href="{{ url_for('segreteria.sposta', aid=a.id) }}">Sposta</a>{% endif %}
+    {%- if serie|length > 1 %} · <a href="{{ url_for('segreteria.serie', codice=a.serie) }}">Serie di {{ serie|length }}</a>{% endif %}
+    {%- if p %} · <a href="{{ url_for('pazienti.scheda', pid=p.id) }}">Scheda di {{ p.etichetta }}</a>{% endif %}</p>
+
+  {% if a %}
+  <div class="barra-stato">
+    <span>Stato: <b class="stato-{{ a.stato|lower }}">{{ a.etichetta_stato }}</b>{% if a.stato == 'ARRIVATO' and a.arrivato_alle %} alle {{ a.arrivato_alle.strftime('%H:%M') }}{% endif %}</span>
+    {% for codice, etichetta in [('CONFERMATO', 'Confermato'), ('ARRIVATO', 'Arrivato'), ('NON_PRESENTATO', 'Non presentato'), ('DISDETTO', 'Disdetto'), ('PRENOTATO', 'Rimetti prenotato')] %}
+      {% if codice != a.stato %}
+      <form method="post" action="{{ url_for('cambia_stato', aid=a.id) }}" class="in-linea">
+        <input type="hidden" name="stato" value="{{ codice }}">
+        <input type="hidden" name="torna" value="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}">
+        <button class="bottone piccolo stato-{{ codice|lower }}" type="submit">{{ etichetta }}</button>
+      </form>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if candidati_attesa %}
+  <div class="avviso avviso-giallo">La fascia è libera e {{ candidati_attesa|length }} in lista d'attesa va bene per questo posto: <a href="{{ url_for('segreteria.attesa_per', aid=a.id) }}">chi chiamare</a>.</div>
+  {% endif %}
+  {% if collegamenti %}
+  <p class="contatti">Contatta:
+    {% if collegamenti.tel %}<a href="{{ collegamenti.tel }}">Chiama</a>{% endif %}
+    {% if collegamenti.whatsapp %}<a href="{{ collegamenti.whatsapp }}" target="_blank">WhatsApp</a>{% endif %}
+    {% if collegamenti.email %}<a href="{{ collegamenti.email }}">Email</a>{% endif %}
+  </p>
+  {% endif %}
+  {% endif %}
+
+  {% if not operatori and not a %}
+  <div class="guida">
+    <h2>Manca ancora un medico</h2>
+    <p>Per prenotare va inserito almeno un medico, con i suoi turni.
+       <a href="{{ url_for('anagrafiche.medico') }}">Aggiungi un medico</a></p>
+  </div>
+  {% else %}
+  <form method="post" id="modulo-appuntamento" autocomplete="off">
+    <input type="hidden" name="struttura" value="{{ sid }}">
+    {% if attesa and not a %}<input type="hidden" name="attesa" value="{{ attesa }}">{% endif %}
+    {% if appunto and not a %}<input type="hidden" name="appunto" value="{{ appunto }}"><div class="avviso">Dagli appunti da confermare: salvando, l'appunto si chiude.</div>{% endif %}
+
+    <div class="titolo-sezione"><h2>Paziente</h2></div>
+    <div class="campo cerca-paziente">
+      <label for="cerca_paziente">Cerca in anagrafica</label>
+      <input type="search" id="cerca_paziente" placeholder="cognome, nome o telefono"
+             data-indirizzo="{{ url_for('pazienti.cerca_json') }}" data-scheda="{{ url_for('pazienti.scheda', pid=0) }}">
+      <div class="suggerimenti" id="suggerimenti" hidden></div>
+      <p class="aiuto" id="paziente-scelto">{% if p %}Paziente in anagrafica: <a href="{{ url_for('pazienti.scheda', pid=p.id) }}">{{ p.etichetta }}</a>{% else %}Se non è in anagrafica, basta scrivere cognome e telefono: la scheda si crea da sola.{% endif %}</p>
+    </div>
+    <input type="hidden" name="paziente_id" id="paziente_id" value="{% if modulo %}{{ modulo.get('paziente_id', '') }}{% elif p %}{{ p.id }}{% endif %}">
+    <div class="campo meta">
+      <label for="paziente">Cognome</label>
+      <input type="text" id="paziente" name="paziente" maxlength="60"
+             value="{{ val('paziente', p.cognome if p else '') }}" placeholder="cognome">
+    </div>
+    <div class="campo meta">
+      <label for="nome_paziente">Nome</label>
+      <input type="text" id="nome_paziente" name="nome_paziente" maxlength="60"
+             value="{{ val('nome_paziente', p.nome if p else '') }}">
+    </div>
+    <div class="campo meta">
+      <label for="telefono">Telefono</label>
+      <input type="tel" id="telefono" name="telefono" maxlength="30"
+             value="{{ val('telefono', p.telefono if p else '') }}">
+    </div>
+    <div class="campo meta">
+      <label for="email_paziente">Email</label>
+      <input type="email" id="email_paziente" name="email_paziente" maxlength="120"
+             value="{{ val('email_paziente', p.email if p else '') }}">
+    </div>
+    {%- set _sesso = (modulo.get('sesso', '') if modulo else (p.sesso if p else '')) or '' %}
+    <div class="campo meta">
+      <label for="sesso">Sesso</label>
+      <select id="sesso" name="sesso">
+        <option value="">—</option>
+        <option value="F"{% if _sesso == 'F' %} selected{% endif %}>Femmina</option>
+        <option value="M"{% if _sesso == 'M' %} selected{% endif %}>Maschio</option>
+      </select>
+    </div>
+    <div class="campo meta">
+      <label for="data_nascita">Data di nascita</label>
+      <input type="date" id="data_nascita" name="data_nascita" min="1900-01-01" max="{{ oggi_iso }}"
+             value="{{ val('data_nascita', p.data_nascita.isoformat() if p and p.data_nascita else '') }}">
+    </div>
+    <div class="campo meta luogo-nascita" data-guida="luogo-nascita">
+      <label for="luogo_nascita_testo">Luogo di nascita</label>
+      <input type="text" id="luogo_nascita_testo" name="luogo_nascita_testo" maxlength="80" autocomplete="off" spellcheck="false"
+             placeholder="comune o stato estero" data-indirizzo="{{ url_for('pazienti.luoghi_json') }}"
+             value="{{ val('luogo_nascita_testo', testo_luogo_paziente(p) if p else '') }}">
+      <input type="hidden" id="luogo_nascita" name="luogo_nascita" value="{{ val('luogo_nascita', (p.luogo_nascita or '') if p else '') }}">
+      <div class="suggerimenti" id="suggerimenti-luogo" hidden></div>
+    </div>
+    <div class="campo meta campo-cf" data-guida="codice-fiscale">
+      <label for="codice_fiscale">Codice fiscale</label>
+      <input type="text" id="codice_fiscale" name="codice_fiscale" maxlength="20" spellcheck="false" autocapitalize="characters"
+             autocomplete="off" style="text-transform:uppercase" value="{{ val('codice_fiscale', p.codice_fiscale if p else '') }}"
+             data-controllo="{{ url_for('pazienti.codice_fiscale_json') }}">
+      <p class="esito-cf" id="esito-cf" role="status" aria-live="polite"></p>
+    </div>
+    <div class="campo">
+      <label for="indirizzo_paziente">Indirizzo</label>
+      <input type="text" id="indirizzo_paziente" name="indirizzo_paziente" maxlength="200"
+             placeholder="via e numero civico, CAP, città" value="{{ val('indirizzo_paziente', p.indirizzo if p else '') }}">
+    </div>
+    {% if not a %}
+    <div class="campo meta">
+      <label for="provenienza">Come ci ha conosciuto <small>(pazienti nuovi)</small></label>
+      <select id="provenienza" name="provenienza">
+        {% for codice, etichetta in provenienze %}<option value="{{ codice }}"{% if modulo and modulo.get('provenienza') == codice %} selected{% endif %}>{{ etichetta }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+
+    <div class="titolo-sezione"><h2>Appuntamento</h2></div>
+    <div class="campo">
+      <label for="risorsa">Stanza</label>
+      <select id="risorsa" name="risorsa" required>
+        {% if gruppi_stanze|length > 1 %}
+          {# piu' strutture: stanze raggruppate, quelle di questa struttura per prime #}
+          {% for st, stanze in gruppi_stanze %}
+          <optgroup label="{{ st.nome if st else 'Senza struttura' }}">
+            {% for r in stanze %}
+            <option value="{{ r.id }}" data-tipo="{{ r.tipo }}"{% if r.id == rid %} selected{% endif %}>{{ r.nome }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        {% else %}
+          {% for r in risorse %}
+          <option value="{{ r.id }}" data-tipo="{{ r.tipo }}"{% if r.id == rid %} selected{% endif %}>{{ r.nome }}</option>
+          {% endfor %}
+        {% endif %}
+      </select>
+    </div>
+
+    <div class="campo">
+      <label for="operatore">Medico</label>
+      <select id="operatore" name="operatore" required>
+        {% for o in operatori %}
+        <option value="{{ o.id }}"{% if (modulo and o.id|string == modulo.operatore) or (not modulo and a and o.id == a.operatore_id) or (not modulo and not a and o.id == proposto) %} selected{% endif %}>{{ o.etichetta }}{% if o.specialita %} — {{ o.specialita }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="campo">
+      <label for="prestazione">Prestazione</label>
+      <select id="prestazione" name="prestazione" required>
+        {% for pr in prestazioni %}
+        <option value="{{ pr.id }}" data-durata="{{ pr.durata_min }}"{% if (modulo and pr.id|string == modulo.prestazione) or (not modulo and a and pr.id == a.prestazione_id) or (not modulo and not a and pr.id == prestazione_proposta) %} selected{% endif %}>{{ pr.nome }} ({{ pr.durata_min }} min)</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="campo meta">
+      <label for="data">Giorno</label>
+      <input type="date" id="data" name="data" value="{{ g.isoformat() }}" required>
+    </div>
+    <div class="campo meta">
+      <label for="ora">Ora</label>
+      <input type="time" id="ora" name="ora" value="{{ ora }}" step="300" required>
+    </div>
+
+    <div class="campo meta">
+      <label for="durata">Durata in minuti</label>
+      <input type="number" id="durata" name="durata" min="5" step="5"
+             value="{% if modulo %}{{ modulo.durata }}{% elif a %}{{ a.durata_min }}{% elif durata_proposta %}{{ durata_proposta }}{% endif %}" placeholder="dalla prestazione">
+    </div>
+    <div class="campo meta">
+      <label for="tipo">Tipo</label>
+      <select id="tipo" name="tipo">
+        {% for codice, etichetta in tipi %}
+        <option value="{{ codice }}"{% if (modulo and modulo.get('tipo') == codice) or (not modulo and a and (a.tipo or '') == codice) %} selected{% endif %}>{{ etichetta }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="campo meta">
+      <label for="convenzione">Convenzione / assicurazione</label>
+      <input type="text" id="convenzione" name="convenzione" maxlength="80" list="lista_convenzioni"
+             value="{{ val('convenzione', a.convenzione if a else '') }}" placeholder="Privato">
+      <datalist id="lista_convenzioni"><option value="Privato">{% for c in convenzioni %}{% if c != 'Privato' %}<option value="{{ c }}">{% endif %}{% endfor %}</datalist>
+    </div>
+    <div class="campo meta">
+      <label for="importo">Importo in euro</label>
+      <input type="text" id="importo" name="importo" inputmode="decimal" maxlength="12"
+             value="{{ val('importo', a.importo_testo if a else '') }}" placeholder="0,00" data-tariffe="{{ tariffe }}">
+    </div>
+
+    {% for pr in prestazioni if pr.elenco_campi_extra %}
+    <div class="campi-extra" data-prestazione="{{ pr.id }}">
+      {% set salvati = a.valori_extra if a and a.prestazione_id == pr.id else {} %}
+      {% for etichetta, si_no in pr.elenco_campi_extra %}
+        {% set nome = 'extra_%d_%d' % (pr.id, loop.index0) %}
+        {% if si_no %}
+        <div class="campo spunta"><label><input type="checkbox" name="{{ nome }}" value="1"
+          {%- if (modulo and modulo.get(nome) in ('1', 'on')) or (not modulo and salvati.get(etichetta) == 'Sì') %} checked{% endif %}> {{ etichetta }}</label></div>
+        {% else %}
+        <div class="campo meta"><label for="{{ nome }}">{{ etichetta }}</label>
+          <input type="text" id="{{ nome }}" name="{{ nome }}" maxlength="80"
+                 value="{% if modulo %}{{ modulo.get(nome, '') }}{% else %}{{ salvati.get(etichetta, '') }}{% endif %}"></div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+    {%- set deg = modulo.get('degenza', '') if modulo else (a.degenza if a else '') %}
+    <div class="campi-degenza" id="campi-degenza" data-sempre="{{ '1' if deg else '' }}">
+      <div class="campo meta">
+        <label for="degenza">Degenza <small>(interventi)</small></label>
+        <select id="degenza" name="degenza">
+          {% for codice, etichetta in degenze %}<option value="{{ codice }}"{% if (deg or '') == codice %} selected{% endif %}>{{ etichetta }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="campo meta solo-ricovero">
+        <label for="notti">Notti di ricovero</label>
+        <input type="number" id="notti" name="notti" min="1" max="60" value="{{ val('notti', a.notti if a else '') }}" placeholder="1">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="note">Note</label>
+      <textarea id="note" name="note" rows="2">{% if modulo %}{{ modulo.note }}{% elif a %}{{ a.note }}{% endif %}</textarea>
+    </div>
+
+    {% if not a %}
+    <div class="riquadro-modulo">
+      <div class="campo spunta"><label><input type="checkbox" id="ripeti" name="ripeti" value="1"{% if modulo and modulo.get('ripeti') %} checked{% endif %}> Ripeti l'appuntamento (cicli di sedute, controlli periodici)</label></div>
+      <div class="righe solo-ripeti">
+        <div class="campo"><label for="ripeti_ogni">Ogni</label><input type="number" id="ripeti_ogni" name="ripeti_ogni" min="1" max="52" value="{{ modulo.get('ripeti_ogni', '1') if modulo else '1' }}"></div>
+        <div class="campo"><label for="ripeti_unita">&nbsp;</label><select id="ripeti_unita" name="ripeti_unita">
+          {% for u, e in [('settimane', 'settimane'), ('giorni', 'giorni'), ('mesi', 'mesi')] %}<option value="{{ u }}"{% if modulo and modulo.get('ripeti_unita') == u %} selected{% endif %}>{{ e }}</option>{% endfor %}
+        </select></div>
+        <div class="campo"><label for="ripeti_volte">Volte in tutto</label><input type="number" id="ripeti_volte" name="ripeti_volte" min="2" max="52" value="{{ modulo.get('ripeti_volte', '4') if modulo else '4' }}"></div>
+        <p class="aiuto">Stessa ora, stanza e medico. Le date in conflitto non si prenotano e vengono elencate.</p>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="azioni">
+      <button class="bottone primario" type="submit">Salva appuntamento</button>
+      {% if a %}
+      <button class="bottone elimina" type="submit" name="azione" value="elimina"
+              onclick="return confirm('Eliminare questo appuntamento? Se il paziente ha disdetto, meglio segnarlo come Disdetto: resta nello storico.')">Elimina</button>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if a %}
+  {% if checklist %}
+  <div class="riquadro-modulo" id="checklist">
+    <h2>Checklist pre-operatoria <span class="conto-checklist {{ 'completa' if checklist.completa else 'incompleta' }}" id="conto-checklist">{{ checklist.fatte }}/{{ checklist.totale }}</span></h2>
+    <form method="post" action="{{ url_for('sala.checklist', aid=a.id) }}" class="checklist in-colonna" data-auto="1">
+      <input type="hidden" name="torna" value="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}#checklist">
+      {% for v in voci_checklist %}
+      <label><input type="checkbox" name="spunte" value="{{ v }}"{% if v in checklist.spunte %} checked{% endif %}> {{ v }}{% if v in checklist.spunte %} <small class="nota-riga">{{ checklist.spunte[v][8:10] }}/{{ checklist.spunte[v][5:7] }} {{ checklist.spunte[v][11:] }}</small>{% endif %}</label>
+      {% endfor %}
+      <noscript><button class="bottone piccolo" type="submit">Salva la checklist</button></noscript>
+    </form>
+    <p class="aiuto">Le caselle si salvano da sole. <a href="{{ url_for('sala.giornata', iso=a.inizio.date().isoformat(), struttura=sid) }}">Sala operatoria del giorno</a> · le voci si cambiano in <a href="{{ url_for('viste.impostazioni') }}#checklist">Impostazioni</a>.</p>
+  </div>
+  {% endif %}
+
+  <div class="riquadro-modulo" id="incasso">
+    <h2>Incasso</h2>
+    {% if a.pagato %}
+    <p><span class="pagato">Pagati {{ a.pagato_testo }} € ({{ a.etichetta_pagamento }})</span> il {{ a.pagato_il.strftime('%d/%m/%Y alle %H:%M') }}.
+      <form method="post" action="{{ url_for('cassa.pagamento', aid=a.id) }}" class="in-linea"><input type="hidden" name="azione" value="annulla"><button class="bottone piccolo" type="submit" onclick="return confirm('Annullare il pagamento?')">Annulla il pagamento</button></form></p>
+    {% else %}
+    <form method="post" action="{{ url_for('cassa.pagamento', aid=a.id) }}" class="righe" style="display:flex">
+      <div class="campo"><label for="importo_pagato">Importo (€)</label><input type="text" id="importo_pagato" name="importo" inputmode="decimal" maxlength="12" size="9" value="{{ a.importo_testo }}" placeholder="0,00"></div>
+      <div class="campo"><label for="metodo">Metodo</label><select id="metodo" name="metodo">{% for codice, etichetta in metodi %}<option value="{{ codice }}">{{ etichetta }}</option>{% endfor %}</select></div>
+      <div class="campo"><button class="bottone primario" type="submit">Registra il pagamento</button></div>
+    </form>
+    {% endif %}
+  </div>
+
+
+  <div class="riquadro-modulo">
+    <h2>Stampe e documenti</h2>
+    {% if moduli %}
+    <ul class="link-moduli">{% for m in moduli %}<li><a href="{{ url_for('documenti.stampa_modulo', aid=a.id, mid=m.id) }}" target="_blank">{{ m.nome }}</a></li>{% endfor %}</ul>
+    {% else %}
+    <p class="aiuto">Nessun modulo per questa prestazione. <a href="{{ url_for('documenti.moduli') }}">Moduli da stampare</a></p>
+    {% endif %}
+    {% if a.paziente %}<p>{{ documenti|length }} document{{ 'o' if documenti|length == 1 else 'i' }} nella scheda del paziente. <a href="{{ url_for('pazienti.scheda', pid=a.paziente_id) }}#documenti">Allega o apri</a></p>{% endif %}
+  </div>
+
+  {% if messaggi %}{% set m = messaggi %}
+  <div class="riquadro-modulo" id="messaggi">
+    <h2>Email e WhatsApp al paziente</h2>
+    {% if m.invii %}
+    <table class="elenco messaggi-appuntamento">
+      {% for x in m.invii %}
+      <tr>
+        <td>{{ x.creato_il.strftime('%d/%m %H:%M') if x.creato_il else '' }}</td>
+        <td>{{ m.canali.get(x.canale, x.canale) }} · {{ x.regola.nome if x.regola else m.motivi.get(x.motivo, x.motivo) }}{% if x.a_mano %} <span class="senza">(a mano)</span>{% endif %}</td>
+        <td>{{ x.destinatario }}</td>
+        <td class="stato-invio stato-invio-{{ x.stato|lower }}"><b>{{ m.stati.get(x.stato, x.stato) }}</b>{% if x.stato == 'INVIATO' and x.inviato_il %} {{ x.inviato_il.strftime('%d/%m %H:%M') }}{% endif %}{% if x.errore %}<div class="nota-riga">{{ x.errore }}</div>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="aiuto">Nessun messaggio per questo appuntamento.</p>
+    {% endif %}
+    {% if a.paziente and m.attivo %}
+    <div class="comandi-messaggi">
+      {% if m.regole %}
+      <form method="post" action="{{ url_for('invii.appuntamento', aid=a.id) }}" class="in-linea" data-attesa="Invio in corso…">
+        <input type="hidden" name="azione" value="regola">
+        <select name="regola" aria-label="Email da mandare">{% for r in m.regole %}<option value="{{ r.id }}">{{ r.nome }}{% if m.perche[r.id] %} ({{ m.perche[r.id] }}){% endif %}</option>{% endfor %}</select>
+        <button class="bottone" type="submit"{% if not m.email_pronta or not m.email_paziente %} disabled{% endif %}>Manda l'email</button>
+      </form>
+      {% endif %}
+      {% if not m.passato %}
+      <form method="post" action="{{ url_for('invii.appuntamento', aid=a.id) }}" class="in-linea" data-attesa="Invio in corso…">
+        <input type="hidden" name="azione" value="promemoria">
+        <button class="bottone" type="submit"{% if not m.canale %} disabled{% endif %}>Manda il promemoria adesso{% if m.canale %} ({{ m.canali[m.canale] }}){% endif %}</button>
+      </form>
+      {% endif %}
+    </div>
+    {% if m.regole and not m.email_pronta %}<p class="aiuto">Email: l'invio non è configurato (<a href="{{ url_for('invii.pagina') }}#email">Configura → Email e WhatsApp</a>).</p>
+    {% elif m.regole and not m.email_paziente %}<p class="aiuto">Email: il paziente non ha un indirizzo; aggiungerlo sopra e salvare.</p>{% endif %}
+    {% if not m.canale and not m.passato %}<p class="aiuto">Promemoria: {{ m.motivo_promemoria }}.</p>{% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="riquadro-modulo">
+    <h2>Ricordami di…</h2>
+    <form method="post" action="{{ url_for('segreteria.cose_da_fare') }}" class="righe" style="display:flex">
+      <input type="hidden" name="appuntamento_id" value="{{ a.id }}"><input type="hidden" name="paziente_id" value="{{ a.paziente_id or '' }}">
+      <input type="hidden" name="torna" value="{{ url_for('appuntamento', aid=a.id) }}">
+      <div class="campo" style="flex:1"><label for="cosa">Cosa</label><input type="text" id="cosa" name="testo" maxlength="300" required style="width:100%" placeholder="Richiamare per il referto"></div>
+      <div class="campo"><label for="per_il">Il giorno</label><input type="date" id="per_il" name="per_il" value="{{ oggi_iso }}"></div>
+      <div class="campo"><button class="bottone" type="submit">Aggiungi</button></div>
+    </form>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

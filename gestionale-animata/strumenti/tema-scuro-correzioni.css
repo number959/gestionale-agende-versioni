@@ -1,0 +1,47 @@
+/* --------------------------------------------- correzioni a mano, solo schermo */
+@media screen {
+  html.scuro { color-scheme: dark;
+    --primario-scuro: color-mix(in srgb, var(--primario) 45%, #FFFFFF);
+    --primario-tenue: color-mix(in srgb, var(--primario) 38%, #1B232C);
+    --primario-fuoco: color-mix(in srgb, var(--primario) 55%, #FFFFFF); }
+  html.scuro body { background: #141A21; color: #E1E7ED; }
+  html.scuro a { color: var(--primario-scuro); }
+  html.scuro .menu, html.scuro table.griglia thead th, html.scuro table.elenco th, html.scuro table.settimana thead th,
+  html.scuro table.mese thead th { background: color-mix(in srgb, var(--primario) 70%, #0B0F14); }
+  html.scuro .menu a, html.scuro table.griglia thead th, html.scuro table.elenco th { color: #F2F5F8; }
+  html.scuro .bottone.primario { background: var(--primario); border-color: color-mix(in srgb, var(--primario) 70%, #FFFFFF); color: #FFFFFF; }
+  html.scuro .bottone.primario:hover { background: color-mix(in srgb, var(--primario) 80%, #FFFFFF); color: #FFFFFF; }
+  html.scuro input, html.scuro select, html.scuro textarea { background: #1B232C; color: #E1E7ED; border-color: #45525F; }
+  html.scuro input::placeholder, html.scuro textarea::placeholder { color: #7D8A96; }
+  html.scuro .ricerca-rapida input { background: rgba(255, 255, 255, .10); color: #FFFFFF; }
+  html.scuro .ricerca-rapida input:focus { background: #1B232C; color: #E1E7ED; }
+  html.scuro .voce { color: #E1E7ED; }
+  html.scuro td.chiusa { background: #11161C; }
+  html.scuro td.aperta { background: #1E2833; }
+  html.scuro td.aperta:hover { background: var(--primario-tenue); }
+  html.scuro .marchio img, html.scuro .logo-stampa img { background: #F4F5F3; padding: 3px 6px; border-radius: 3px; }
+  html.scuro img.anteprima-logo, html.scuro table.elenco td.logo img { background: #F4F5F3; }
+  html.scuro code { background: #232C36; color: #E1E7ED; }
+  html.scuro .notifica { background: #1E2731; color: #E1E7ED; box-shadow: 0 6px 22px rgba(0, 0, 0, .55); }
+  html.scuro .notifica a { color: #E1E7ED; }
+  html.scuro .aiuto-tasti, html.scuro .suggerimenti, html.scuro .risultati-rapidi { background: #1E2731; color: #E1E7ED;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, .6); }
+  html.scuro ::-webkit-scrollbar { width: 12px; height: 12px; }
+  html.scuro ::-webkit-scrollbar-thumb { background: #3A4652; border-radius: 6px; border: 3px solid #141A21; }
+  html.scuro ::-webkit-scrollbar-track { background: #141A21; }
+  /* le animazioni della versione animata */
+  html.scuro .anim .bottone:not(.primario) .onda, html.scuro .anim .passo .onda { background: rgba(255, 255, 255, .18); }
+  html.scuro .adesso { border-top-color: #FF5A4E; }
+  html.scuro .adesso::before, html.scuro .adesso span { background: #FF5A4E; }
+}
+@media screen {
+  html.scuro ul.numeri b, html.scuro .barra-dato span, html.scuro .numero-grande { color: var(--primario-scuro); }
+  html.scuro .barra-dato span { background: var(--primario-scuro); }
+  html.scuro .barra-dato { background: #2A3440; }
+  /* 1.5: la "sala libera" nel mese resta solo tratteggiata */
+  html.scuro .sala-mese.libera { background: transparent; }
+  /* 1.6: la finestra dei video e' gia' scura, uguale nei due temi; la rotella gira nel colore del programma */
+  html.scuro dialog.finestra-video { background: #0E1A2E; }
+  html.scuro .finestra-video video { background: #000000; }
+  html.scuro .rotella { border-top-color: var(--primario-chiaro); }
+}

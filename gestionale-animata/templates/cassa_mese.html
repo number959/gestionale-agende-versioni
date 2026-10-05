@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titolo %}Incassi di {{ titolo }}{% endblock %}
+{% macro euro(c) %}{{ '{:,.2f}'.format(c / 100.0).replace(',', 'x').replace('.', ',').replace('x', '.') }}{% endmacro %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">Incassi · {{ titolo }}</h1>
+  <span class="conteggio">{{ euro(r.totale) }} € in {{ r.n }} pagament{{ 'o' if r.n == 1 else 'i' }}</span>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('cassa.cassa_mese', aaaamm=prima, struttura=sid) }}" title="Mese precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('cassa.cassa_mese', aaaamm=dopo, struttura=sid) }}" title="Mese successivo">&rsaquo;</a>
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('cassa.cassa_mese_excel', aaaamm=aaaamm, struttura=sid) }}">Scarica in Excel</a>
+    <button class="bottone" type="button" onclick="window.print()">Stampa</button>
+  </div>
+</div>
+<div class="contenuto">
+  <table class="elenco">
+    <tr><th>Giorno</th><th class="numero">Pagamenti</th>{% for codice, etichetta in metodi %}<th class="numero">{{ etichetta }}</th>{% endfor %}<th class="numero">Totale</th></tr>
+    {% for x in r.giorni if x.n %}
+    <tr><td><a href="{{ url_for('cassa.cassa_giorno', iso=x.data.isoformat(), struttura=sid) }}">{{ giorni_brevi[x.data.weekday()] }} {{ x.data.strftime('%d/%m') }}</a></td><td class="numero">{{ x.n }}</td>
+      {% for codice, _ in metodi %}<td class="numero">{{ euro(x.per_metodo[codice]) if x.per_metodo[codice] else '' }}</td>{% endfor %}<td class="numero"><b>{{ euro(x.totale) }}</b></td></tr>
+    {% else %}
+    <tr><td colspan="{{ metodi|length + 3 }}" class="senza">Nessun incasso registrato in questo mese.</td></tr>
+    {% endfor %}
+    <tr class="totale"><td>Totale</td><td class="numero">{{ r.n }}</td>{% for codice, _ in metodi %}<td class="numero">{{ euro(r.per_metodo[codice]) }}</td>{% endfor %}<td class="numero">{{ euro(r.totale) }}</td></tr>
+  </table>
+</div>
+{% endblock %}

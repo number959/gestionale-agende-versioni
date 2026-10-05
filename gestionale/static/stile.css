@@ -1,0 +1,891 @@
+/* Gestionale agende - la griglia e' tutta l'interfaccia.
+   Il colore principale e' quello della struttura, scelto nella pagina
+   "Nome, logo e colori": base.html ridefinisce le variabili qui sotto.
+   I valori di :root valgono se una pagina non le ridefinisce.
+   Font: quelli del sito della clinica (casadicuraposillipo.it, Gruppo
+   NefroCenter): Manrope per titoli, orari e stanze, Inter per il resto.
+   Sono dentro il programma (static/fonts, licenza SIL OFL 1.1): niente
+   internet, uguali su ogni PC. Se mancassero, Segoe UI di Windows. */
+
+@font-face {
+  font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: block;
+  src: url('fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+                 U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: block;
+  src: url('fonts/inter-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+                 U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Manrope'; font-style: normal; font-weight: 200 800; font-display: block;
+  src: url('fonts/manrope-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+                 U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Manrope'; font-style: normal; font-weight: 200 800; font-display: block;
+  src: url('fonts/manrope-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+                 U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  --testo: 'Inter', 'Segoe UI', -apple-system, Arial, sans-serif;
+  --titoli: 'Manrope', 'Inter', 'Segoe UI', Arial, sans-serif;
+  --primario: #154381;
+  --primario-scuro: #0f3260;
+  --primario-tenue: #eef3fa;
+  --primario-chiaro: #afc4e2;
+  --primario-fuoco: #2c6fb5;
+}
+
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #F4F5F3;
+  color: #16263F;
+  font: 14px/1.45 var(--testo);
+}
+
+a { color: var(--primario-scuro); }
+/* i titoli come sul sito: Manrope */
+h1, h2, h3 { font-family: var(--titoli); }
+
+/* ---------------------------------------------------------- barra alta */
+.barra {
+  background: #FFFFFF;
+  border-bottom: 2px solid var(--primario);
+  padding: 10px 18px 0;
+}
+
+.marchio {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 14px 4px 0;
+  padding-right: 14px;
+  border-right: 1px solid #C9D2DE;
+}
+.marchio img { height: 27px; display: block; }
+
+.giorno {
+  vertical-align: middle;
+  font-family: var(--titoli);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  margin: 0 0 2px;
+  display: inline-block;
+}
+
+.conteggio {
+  color: #5B6B75;
+  font-size: 13px;
+  margin-left: 10px;
+}
+
+.comandi { padding: 8px 0 10px; }
+.comandi > * { vertical-align: middle; }
+
+.passo, .bottone, .comandi select {
+  font: 13px var(--testo);
+  color: #16263F;
+  background: #FFFFFF;
+  border: 1px solid #B8C0C4;
+  padding: 5px 11px;
+  text-decoration: none;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.passo { font-family: var(--titoli); font-size: 15px; padding: 4px 12px; }
+.bottone:hover, .passo:hover { border-color: var(--primario); color: var(--primario-scuro); }
+
+.bottone.primario {
+  background: var(--primario);
+  border-color: var(--primario);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+.bottone.primario:hover { background: var(--primario-scuro); color: #FFFFFF; }
+
+.separa { display: inline-block; width: 14px; }
+
+/* ------------------------------------------------------------- avvisi */
+.avvisi { padding: 8px 18px 0; }
+.avviso {
+  border-left: 4px solid var(--primario);
+  background: #FFFFFF;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+}
+.avviso.errore { border-left-color: #B3261E; color: #8A1C16; }
+.avviso.avviso-giallo { border-left-color: #C89B21; }
+
+/* ------------------------------------------------------------ griglia */
+.telaio { padding: 14px 18px 40px; overflow-x: auto; }
+
+table.griglia {
+  border-collapse: collapse;
+  width: 100%;
+  background: #FFFFFF;
+}
+
+table.griglia th, table.griglia td {
+  border: 1px solid #CFD5D8;
+  padding: 0;
+}
+
+table.griglia thead th {
+  background: var(--primario);
+  color: #FFFFFF;
+  font-family: var(--titoli);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: .3px;
+  padding: 9px 6px 8px;
+  position: sticky;
+  top: 0;
+}
+
+table.griglia thead th .sotto {
+  display: block;
+  font-family: var(--testo);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--primario-chiaro);
+  letter-spacing: 0;
+}
+
+th.ora {
+  width: 62px;
+  background: #F4F5F3;
+  color: #46596A;
+  font-family: var(--titoli);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  padding: 0 8px 0 0;
+  border-right: 2px solid var(--primario);
+}
+
+tr.mezzora th.ora { color: #93A3AE; font-weight: 400; }
+tr.mezzora td { border-top-style: dotted; }
+
+/* stati della cella */
+td.chiusa { background: #E9EAE7; }
+td.aperta { background: #FFFFFF; }
+td.aperta:hover { background: var(--primario-tenue); }
+
+table.griglia tbody tr { height: 36px; }
+
+td.aperta a.posa {
+  display: block;
+  height: 34px;
+  text-decoration: none;
+  color: transparent;
+  font-size: 12px;
+  text-align: center;
+  line-height: 34px;
+}
+td.aperta:hover a.posa { color: var(--primario); }
+
+td.occupata { background: #DFEBDA; }
+
+.voce {
+  padding: 3px 8px 4px;
+  border-left: 4px solid var(--primario);
+  display: block;
+  text-decoration: none;
+  color: #16263F;
+  overflow: hidden;
+}
+.voce span {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.voce .medico { font-weight: 600; font-size: 13px; line-height: 1.2; }
+.voce .scarto { font-weight: 400; color: #8A1C16; }
+.voce + .voce { border-top: 1px solid #C3D4BC; }
+.voce .paziente { font-size: 12px; line-height: 1.2; }
+.voce .dettaglio { font-size: 11.5px; color: #4B606D; line-height: 1.2; }
+
+/* -------------------------------------------------------------- form */
+.pagina { max-width: 620px; margin: 26px auto 60px; padding: 0 18px; }
+.pagina h1 {
+  font-family: var(--titoli);
+  font-size: 26px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+.pagina p.sotto { margin: 0 0 20px; color: #5B6B75; }
+
+.campo { margin-bottom: 14px; }
+.campo label { display: block; font-size: 13px; color: #46596A; margin-bottom: 3px; }
+.campo input, .campo select, .campo textarea {
+  width: 100%;
+  font: 14px var(--testo);
+  color: #16263F;
+  padding: 7px 9px;
+  border: 1px solid #B8C0C4;
+  background: #FFFFFF;
+}
+.campo input:focus, .campo select:focus, .campo textarea:focus {
+  outline: 2px solid var(--primario-fuoco);
+  outline-offset: -1px;
+  border-color: var(--primario);
+}
+/* moduli su due colonne: i campi .meta si affiancano a coppie, gli altri
+   occupano tutta la riga. Con inline-block e un margine su ".meta + .meta"
+   dal terzo campo in poi la fila si spezzava e i campi finivano sfalsati. */
+.pagina form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 22px;
+}
+.pagina form > * { grid-column: 1 / -1; }
+.pagina form > .campo.meta { grid-column: auto; }
+
+.azioni { margin-top: 22px; }
+.azioni .elimina { float: right; border-color: #D9A6A2; color: #B3261E; }
+
+/* ------------------------------------------------------- anagrafiche */
+table.elenco { border-collapse: collapse; width: 100%; background: #FFFFFF; margin-bottom: 26px; }
+table.elenco th, table.elenco td { border: 1px solid #CFD5D8; padding: 6px 9px; text-align: left; }
+table.elenco th { background: var(--primario); color: #FFFFFF; font-weight: 600; font-size: 13px; }
+h2.sezione {
+  font-family: var(--titoli);
+  font-size: 19px;
+  font-weight: 600;
+  margin: 26px 0 8px;
+}
+
+/* ----------------------------------------------- stanze, medici e turni */
+.pagina.larga { max-width: 960px; }
+
+.guida {
+  background: #FFFFFF;
+  border-left: 4px solid #C89B21;
+  padding: 10px 16px 6px;
+  margin: 0 0 18px;
+}
+.guida h2 {
+  font-family: var(--titoli);
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+.guida ol { margin: 0 0 6px; padding-left: 20px; }
+.guida li { margin-bottom: 4px; }
+.guida li.fatto { color: #7A8790; text-decoration: line-through; }
+
+p.struttura { margin: 0 0 4px; color: #46596A; }
+p.struttura a { margin-left: 8px; font-size: 13px; }
+
+h2.sezione .bottone.aggiungi {
+  float: right;
+  font-family: var(--testo);
+  font-size: 13px;
+  font-weight: 400;
+  padding: 3px 10px;
+}
+
+table.elenco td.azione { width: 1%; white-space: nowrap; }
+table.elenco tr.spento td { color: #8C979E; }
+.campione {
+  display: inline-block;
+  width: 26px;
+  height: 12px;
+  vertical-align: middle;
+  border: 1px solid rgba(0, 0, 0, .15);
+}
+p.vuoto { color: #5B6B75; margin: 0 0 26px; }
+
+.pagina p.nota { color: #46596A; margin: -8px 0 18px; }
+.campo p.aiuto { margin: 3px 0 0; font-size: 12px; color: #6A7A84; }
+.campo.spunta label { display: inline; font-size: 14px; color: #16263F; }
+.campo.spunta input { width: auto; margin-right: 6px; vertical-align: -1px; }
+.campo input[type="color"] { height: 36px; padding: 2px; max-width: 90px; }
+
+.avvio {
+  margin: 10px 18px 0;
+  background: #FFFFFF;
+  border-left: 4px solid #C89B21;
+  padding: 8px 12px;
+}
+
+/* ------------------------------------------------ marchio della struttura */
+.marchio-nome {
+  font-family: var(--titoli);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--primario);
+  white-space: nowrap;
+}
+.campo span.etichetta { display: block; font-size: 13px; color: #46596A; margin-bottom: 3px; }
+img.anteprima-logo {
+  display: block;
+  max-height: 64px;
+  max-width: 100%;
+  padding: 8px 10px;
+  background: #FFFFFF;
+  border: 1px solid #CFD5D8;
+}
+table.elenco td.logo { width: 1%; white-space: nowrap; }
+table.elenco td.logo img { display: block; max-height: 28px; max-width: 180px; }
+table.elenco td.logo .senza { color: #8C979E; font-size: 13px; }
+
+[hidden] { display: none !important; }
+
+/* ------------------------------------------------------------- menu */
+.menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 1px;
+  background: var(--primario);
+  padding: 0 10px;
+  font-size: 13px;
+}
+.menu a {
+  color: #FFFFFF;
+  text-decoration: none;
+  padding: 7px 6px 6px;
+  border-bottom: 3px solid transparent;
+  opacity: .88;
+}
+.menu a:hover { opacity: 1; background: rgba(255, 255, 255, .10); }
+.menu a.attivo { opacity: 1; font-weight: 600; border-bottom-color: #FFFFFF; }
+.menu .separatore { width: 1px; background: rgba(255, 255, 255, .28); margin: 6px 4px; }
+.menu .spinta { flex: 1; }
+/* tendine dei comandi (Stampa e scarica) */
+.gruppo-comandi { position: relative; display: inline-block; }
+.gruppo-comandi .apri-gruppo { display: inline-flex; align-items: center; }
+.gruppo-comandi .freccia { width: 0; height: 0; margin-left: 7px; border: 4px solid transparent; border-top-color: currentColor; border-bottom: 0; }
+.gruppo-comandi .tendina { display: none; position: absolute; top: 100%; right: 0; z-index: 40; min-width: 260px; background: #FFFFFF;
+  border: 1px solid #CFD5D8; border-top: 3px solid var(--primario); box-shadow: 0 8px 24px rgba(22, 38, 63, .18); padding: 4px 0; text-align: left; }
+.gruppo-comandi:hover .tendina, .gruppo-comandi:focus-within .tendina, .gruppo-comandi.aperto .tendina { display: block; }
+.gruppo-comandi.chiuso .tendina { display: none; }
+.gruppo-comandi .tendina a { display: block; color: #16263F; text-decoration: none; padding: 7px 14px; }
+.gruppo-comandi .tendina a b { display: block; font-weight: 600; font-size: 13.5px; }
+.gruppo-comandi .tendina a small { display: block; color: #5B6B75; font-size: 12px; margin-top: 1px; }
+.gruppo-comandi .tendina a:hover, .gruppo-comandi .tendina a:focus { background: var(--primario-tenue); outline: none; }
+/* gruppi del menu: si aprono passandoci sopra, con un clic o da tastiera */
+.menu .gruppo { position: relative; display: flex; }
+.menu .apri-gruppo { font: inherit; color: #FFFFFF; background: none; border: 0; border-bottom: 3px solid transparent;
+  padding: 7px 8px 6px; opacity: .88; cursor: pointer; display: flex; align-items: center; }
+.menu .gruppo:hover .apri-gruppo, .menu .gruppo:focus-within .apri-gruppo { opacity: 1; background: rgba(255, 255, 255, .10); }
+.menu .gruppo.attivo .apri-gruppo { opacity: 1; font-weight: 600; border-bottom-color: #FFFFFF; }
+.menu .freccia { width: 0; height: 0; margin-left: 6px; border: 4px solid transparent; border-top-color: currentColor; border-bottom: 0; }
+.menu .tendina { display: none; position: absolute; top: 100%; left: 0; z-index: 50; min-width: 270px; background: #FFFFFF;
+  border: 1px solid #CFD5D8; border-top: 3px solid var(--primario); box-shadow: 0 8px 24px rgba(22, 38, 63, .18); padding: 4px 0; }
+.menu .gruppo.a-destra .tendina { left: auto; right: 0; }
+.menu .gruppo:hover .tendina, .menu .gruppo:focus-within .tendina, .menu .gruppo.aperto .tendina { display: block; }
+.menu .gruppo.chiuso .tendina { display: none; }
+.menu .tendina a { display: block; color: #16263F; opacity: 1; padding: 7px 14px; border: 0; }
+.menu .tendina a b { display: block; font-weight: 600; font-size: 13.5px; }
+.menu .tendina a small { display: block; color: #5B6B75; font-size: 12px; margin-top: 1px; }
+.menu .tendina a:hover, .menu .tendina a:focus { background: var(--primario-tenue); outline: none; }
+.menu .tendina a.attivo { background: var(--primario-tenue); box-shadow: inset 3px 0 0 var(--primario); }
+
+/* ------------------------------------------------------ avvisi del giorno */
+.avvio.festivo { border-left-color: #D9822B; }
+.avvio.chiusura { border-left-color: #B3261E; }
+.avvio.errore-backup { border-left-color: #B3261E; color: #8A1C16; }
+.assente { color: #FFD7A8; font-style: italic; }
+.annullati { margin-top: 10px; font-size: 13px; color: #46596A; }
+.annullati a { color: #6A7A84; }
+
+/* ------------------------------------------------------- stati */
+.segno { font-style: normal; font-weight: 600; font-size: 11px; margin-left: 4px; }
+.segno.confermato { color: #2E7D32; }
+.segno.arrivato { color: #FFFFFF; background: #2E7D32; padding: 0 4px; border-radius: 2px; }
+.voce.stato-arrivato { background: #CFE6C8; }
+.voce.stato-disdetto, a.stato-disdetto, b.stato-disdetto, tr.stato-disdetto td { color: #8C979E; text-decoration: line-through; }
+tr.stato-disdetto td.azione, tr.stato-disdetto td.azione * { text-decoration: none; }
+a.stato-non_presentato, b.stato-non_presentato, tr.stato-non_presentato td { color: #9C4A1A; }
+b.stato-confermato, .bottone.stato-confermato { color: #2E7D32; }
+b.stato-arrivato { color: #1B5E20; }
+.bottone.stato-arrivato { border-color: #2E7D32; color: #1B5E20; }
+.bottone.stato-disdetto, .bottone.stato-non_presentato { color: #8A1C16; }
+.bottone.piccolo { padding: 2px 8px; font-size: 12px; }
+form.in-linea { display: inline; margin: 0; }
+.barra-stato {
+  background: #FFFFFF;
+  border: 1px solid #CFD5D8;
+  padding: 8px 10px;
+  margin: 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.barra-stato > span { margin-right: 8px; }
+.contatti a, .contatti-rapidi a { margin-right: 10px; }
+.contatti-rapidi { font-size: 12px; white-space: nowrap; }
+.pulsanti-stato { display: inline-flex; flex-wrap: nowrap; gap: 4px; }
+
+/* ------------------------------------------------- modulo di prenotazione */
+.titolo-sezione { margin: 8px 0 6px; border-bottom: 1px solid #CFD5D8; }
+.titolo-sezione h2 {
+  font-family: var(--titoli);
+  font-size: 16px; font-weight: 600; margin: 0 0 4px; color: #46596A;
+}
+.titolo-sezione p.aiuto { margin: 0 0 6px; font-size: 12px; color: #6A7A84; }
+.cerca-paziente { position: relative; }
+.suggerimenti {
+  position: absolute; z-index: 5; left: 0; right: 0; top: 58px;
+  background: #FFFFFF; border: 1px solid var(--primario); box-shadow: 0 6px 16px rgba(0, 0, 0, .12);
+}
+.suggerimenti button {
+  display: block; width: 100%; text-align: left; background: none; border: 0;
+  border-bottom: 1px solid #E4E8EA; padding: 7px 10px; font: 13px var(--testo); cursor: pointer;
+}
+.suggerimenti button span { color: #5B6B75; }
+.suggerimenti button.attiva, .suggerimenti button:hover { background: var(--primario-tenue); }
+.suggerimenti .nessuno { padding: 8px 10px; color: #5B6B75; font-size: 13px; }
+/* codice fiscale: l'esito sotto il campo, i suggerimenti del luogo di nascita */
+.luogo-nascita { position: relative; }
+.esito-cf { margin: 4px 0 0; min-height: 17px; font-size: 12.5px; line-height: 1.4; color: #5B6B75; }
+.esito-cf span { display: block; }
+.esito-cf.ok { color: #2E7D32; }
+.esito-cf.errore { color: #B3261E; }
+.esito-cf.avviso { color: #2E7D32; }
+.esito-cf .avviso-cf { color: #8A5A00; }
+.esito-cf.calcolato { color: #1F4E8C; }
+.pagina-codici .riquadro.tutto-bene { border-left: 4px solid #2E7D32; }
+.pagina-codici .riquadro.da-vedere { border-left: 4px solid #C8702A; }
+.pagina-codici h2.sezione small { font-weight: 400; color: #5B6B75; }
+.pagina-codici form.in-linea { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 0 0 18px; }
+.campi-extra { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px;
+               background: #FFFFFF; border: 1px dashed #B8C0C4; padding: 10px 12px 0; margin-bottom: 14px; }
+.campi-extra .campo.spunta { grid-column: auto; }
+.campi-degenza { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; }
+.campo.giorni label { display: inline-block; margin-right: 12px; font-size: 14px; color: #16263F; }
+.campo.giorni input { width: auto; margin-right: 4px; }
+.campo.allinea-basso { align-self: end; }
+.riquadro-elenco { background: #FFFFFF; border-left: 4px solid #D9822B; padding: 10px 16px; margin-top: 24px; }
+.riquadro-elenco h2 { font-size: 16px; margin: 0 0 6px; }
+.riquadro-elenco li { margin-bottom: 4px; }
+.telefono { color: #46596A; margin-left: 6px; }
+
+/* -------------------------------------------------------- pagine elenco */
+.contenuto { padding: 14px 18px 40px; }
+table.lista-giorno td { vertical-align: top; }
+td.ora-lista { font-family: var(--titoli); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.nota-riga { font-size: 12px; color: #5B6B75; }
+.senza { color: #8C979E; }
+form.ricerca, form.filtri { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; margin: 0 0 18px; }
+form.ricerca input[type="search"] { flex: 1; min-width: 260px; font: 15px var(--testo); padding: 7px 10px; border: 1px solid #B8C0C4; }
+form.filtri label { font-size: 13px; color: #46596A; }
+form.filtri select, form.filtri input { font: 13px var(--testo); padding: 5px 7px; border: 1px solid #B8C0C4; background: #FFFFFF; }
+.pagina.larga form.ricerca, .pagina.larga form.filtri { display: flex; }
+.due-colonne { display: grid; grid-template-columns: 3fr 2fr; gap: 26px; align-items: start; }
+.due-colonne > form { display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; }
+.riepilogo-paziente { background: #FFFFFF; border: 1px solid #CFD5D8; padding: 12px 16px; }
+.riepilogo-paziente h2 { font-size: 16px; margin: 0 0 8px; }
+ul.numeri { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+ul.numeri b { font-family: var(--titoli); font-size: 20px; color: var(--primario); margin-right: 3px; }
+ul.numeri.grandi b { font-size: 26px; }
+ul.numeri li.allarme b, ul.numeri li.allarme { color: #B3261E; }
+.riquadro { background: #FFFFFF; border: 1px solid #CFD5D8; padding: 10px 14px; margin: 0 0 16px; }
+.errore-testo { color: #8A1C16; }
+code { font: 12px Consolas, monospace; background: #EEF0EE; padding: 1px 4px; }
+.bottone.elimina-testo { color: #B3261E; border-color: #D9A6A2; }
+
+/* ------------------------------------------------------ settimana e mese */
+table.settimana, table.mese { border-collapse: collapse; width: 100%; background: #FFFFFF; table-layout: fixed; }
+table.settimana th, table.settimana td, table.mese th, table.mese td { border: 1px solid #CFD5D8; vertical-align: top; }
+table.settimana thead th, table.mese thead th {
+  background: var(--primario); color: #FFFFFF; font-family: var(--titoli); font-weight: 600;
+  font-size: 14px; padding: 7px 6px;
+}
+table.settimana thead th a, table.agenda-medico thead th a { color: #FFFFFF; text-decoration: none; }
+table.settimana thead th .sotto { display: block; font: 11px var(--testo); color: var(--primario-chiaro); }
+table.settimana thead th.festivo, table.agenda-medico thead th.festivo { background: #B35F16; }
+table.settimana thead th.oggi, table.agenda-medico thead th.oggi { box-shadow: inset 0 -4px 0 #FFFFFF; }
+th.stanza-sett { width: 140px; background: #F4F5F3; text-align: left; padding: 8px; font-family: var(--titoli); font-size: 14px; }
+table.settimana td.senza-turno { background: #F0F1EE; }
+a.cella-sett { display: block; min-height: 64px; padding: 6px 7px; text-decoration: none; color: #16263F; }
+a.cella-sett:hover { background: var(--primario-tenue); }
+.turno-sett { display: block; border-left: 4px solid var(--primario); padding-left: 5px; margin-bottom: 3px; font-weight: 600; font-size: 13px; }
+.turno-sett small { font-weight: 400; color: #5B6B75; }
+.turno-sett.assente { border-left-color: #D9822B; color: #9C4A1A; font-weight: 400; }
+.conti { display: block; font-size: 12px; color: #46596A; margin-top: 3px; }
+.liberi { color: #2E7D32; font-weight: 600; }
+table.mese td { height: 108px; }
+table.mese td.fuori { background: #F0F1EE; }
+table.mese td.fuori a { opacity: .55; }
+table.mese td.festivo { background: #FFF3E6; }
+table.mese td.chiuso-di-solito:not(.festivo) { background: #F4F5F3; }
+table.mese td.oggi { box-shadow: inset 0 0 0 2px var(--primario); }
+a.giorno-mese { display: block; height: 100%; padding: 5px 6px; text-decoration: none; color: #16263F; font-size: 12px; }
+a.giorno-mese:hover { background: var(--primario-tenue); }
+a.giorno-mese .numero { font-family: var(--titoli); font-size: 18px; font-weight: 600; display: block; }
+.etichetta-giorno { display: block; color: #B35F16; font-weight: 600; }
+.quanti { font-weight: 600; margin-right: 6px; }
+.medico-mese { display: block; border-left: 3px solid var(--primario); padding-left: 4px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.medico-mese.assente { border-left-color: #D9822B; color: #9C4A1A; font-style: italic; }
+/* 1.5: la sala operatoria nel mese */
+.sala-mese { display: block; margin-top: 3px; padding: 1px 4px; border-radius: 3px; background: #EFE9F7; color: #4B3474; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sala-mese.libera { background: transparent; border: 1px dashed #A792C9; font-weight: 400; color: #5D4A82; }
+table.agenda-medico thead th .sotto { font-size: 10.5px; }
+
+/* ---------------------------------------------------------- statistiche */
+.barra-dato { display: inline-block; width: 160px; height: 10px; background: #E4E8EA; vertical-align: middle; margin-right: 6px; }
+td:has(> .barra-dato) { white-space: nowrap; }
+.due-colonne .barra-dato { width: 110px; }
+.barra-dato span { display: block; height: 100%; background: var(--primario); }
+table.elenco th.largo, table.elenco td.largo { width: 36%; }
+
+/* -------------------------------------------------------------- stampa */
+body.pagina-stampa { background: #FFFFFF; }
+.comandi-stampa { padding: 12px 18px; background: #F4F5F3; border-bottom: 1px solid #CFD5D8; display: flex; gap: 8px; flex-wrap: wrap; }
+.foglio { padding: 16px 22px; }
+@media screen { .foglio.foglio-verticale { max-width: 210mm; margin: 0 auto; background: #FFFFFF; } }
+.testata-stampa { display: flex; align-items: center; gap: 18px; border-bottom: 2px solid var(--primario); padding-bottom: 8px; margin-bottom: 10px; }
+.logo-stampa img { height: 40px; display: block; }
+.dati-stampa { flex: 1; font-size: 12px; color: #46596A; }
+.nome-struttura { font-weight: 600; font-size: 15px; color: #16263F; }
+.data-stampa { text-align: right; font-size: 12px; }
+/* foglio verticale: la data va sotto, su tutta la larghezza, e il nome della struttura ha spazio */
+.foglio-verticale .testata-stampa { flex-wrap: wrap; row-gap: 6px; }
+.foglio-verticale .data-stampa { flex-basis: 100%; display: flex; justify-content: space-between; align-items: baseline; text-align: left; }
+.giorno-stampa { font-family: var(--titoli); font-size: 20px; font-weight: 600; }
+.giorno-stampa::first-letter { text-transform: uppercase; }
+.blocco-stampa h2 { font-family: var(--titoli); font-size: 15px; margin: 12px 0 4px; }
+table.tabella-stampa { border-collapse: collapse; width: 100%; font-size: 11.5px; }
+table.tabella-stampa th, table.tabella-stampa td { border: 1px solid #9AA5AB; padding: 3px 5px; text-align: left; vertical-align: top; }
+table.tabella-stampa th { background: #E8ECEF; }
+table.tabella-stampa td.c-ora { white-space: nowrap; font-weight: 600; }
+table.tabella-stampa td.c-paziente { font-weight: 600; }
+table.tabella-stampa .c-importo { text-align: right; white-space: nowrap; }
+.piede-stampa { margin-top: 12px; font-size: 10.5px; color: #6A7A84; }
+.promemoria { max-width: 620px; margin: 20px auto; padding: 22px 26px; border: 1px solid #9AA5AB; }
+.logo-promemoria img { height: 44px; }
+.promemoria h1 { font-family: var(--titoli); font-size: 22px; margin: 12px 0 4px; }
+.promemoria .per { margin: 0 0 12px; }
+table.dati-promemoria { border-collapse: collapse; width: 100%; margin-bottom: 14px; }
+table.dati-promemoria th { text-align: left; width: 120px; color: #46596A; font-weight: 400; padding: 5px 0; border-bottom: 1px solid #E4E8EA; }
+table.dati-promemoria td { font-size: 16px; font-weight: 600; padding: 5px 0; border-bottom: 1px solid #E4E8EA; }
+.preparazione { background: #F4F5F3; padding: 8px 12px; margin-bottom: 12px; }
+.preparazione h2 { font-size: 14px; margin: 0 0 4px; }
+.avvertenza { font-size: 13px; color: #46596A; }
+
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  .menu, .avvisi, .comandi, .solo-schermo, .comandi-stampa, .barra .comandi { display: none !important; }
+  body { background: #FFFFFF; font-size: 11px; }
+  .telaio, .contenuto { padding: 0; overflow: visible; }
+  table.griglia thead th, table.settimana thead th, table.mese thead th, table.elenco th {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  td.occupata, td.chiusa, .voce, table.mese td, .barra-dato span {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  tr, .voce { break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+  .promemoria { border: 0; margin: 0 auto; }
+}
+body.pagina-stampa .promemoria ~ * { display: none; }
+
+
+/* ----------------------------------------------------------------- 1.4 */
+/* ricerca rapida nel menu */
+.ricerca-rapida { position: relative; align-self: center; margin: 3px 6px; }
+.ricerca-rapida input { width: 160px; font: 13px var(--testo); padding: 4px 8px; border: 1px solid rgba(255,255,255,.4);
+  background: rgba(255,255,255,.14); color: #FFFFFF; border-radius: 2px; }
+.ricerca-rapida input::placeholder { color: rgba(255,255,255,.75); }
+.ricerca-rapida input:focus { background: #FFFFFF; color: #16263F; outline: none; }
+.risultati-rapidi { position: absolute; right: 0; top: 100%; width: 340px; background: #FFFFFF; border: 1px solid #B8C0C4;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18); z-index: 50; max-height: 70vh; overflow: auto; }
+.risultati-rapidi a.voce-rapida { display: block; padding: 7px 10px; color: #16263F; text-decoration: none; font-size: 13px;
+  border-bottom: 1px solid #EEF1F2; opacity: 1; }
+.risultati-rapidi a.voce-rapida span { color: #5B6B75; }
+.risultati-rapidi a.voce-rapida[data-gruppo="giorno"] { background: #F4F7FB; }
+.risultati-rapidi a.voce-rapida.attiva, .risultati-rapidi a.voce-rapida:hover { background: var(--primario-tenue); }
+.risultati-rapidi .nessuno { padding: 8px 10px; color: #5B6B75; font-size: 13px; }
+
+/* notifiche a scomparsa, in basso a destra */
+.notifiche { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: flex; flex-direction: column; gap: 8px;
+  width: 320px; pointer-events: none; }
+.notifica { pointer-events: auto; background: #FFFFFF; border-left: 4px solid var(--primario); box-shadow: 0 6px 20px rgba(0,0,0,.2);
+  padding: 9px 30px 10px 12px; font-size: 13px; position: relative; animation: entrata .3s ease-out; }
+.notifica.errore { border-left-color: #B3261E; }
+.notifica b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #46596A; margin-bottom: 2px; }
+.notifica a { color: #16263F; text-decoration: none; display: block; }
+.notifica a:hover { text-decoration: underline; }
+.notifica .chiudi-notifica { position: absolute; top: 4px; right: 6px; border: 0; background: none; font-size: 18px; line-height: 1;
+  color: #6A7A84; cursor: pointer; padding: 2px 4px; }
+.notifica .azioni-notifica { margin-top: 6px; display: flex; gap: 6px; }
+.notifica.uscita { opacity: 0; transform: translateX(30px); transition: opacity .3s, transform .3s; }
+@keyframes entrata { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* riquadro dei tasti rapidi */
+.aiuto-tasti { position: fixed; left: 50%; top: 80px; transform: translateX(-50%); z-index: 70; background: #FFFFFF;
+  border: 1px solid #B8C0C4; box-shadow: 0 10px 30px rgba(0,0,0,.25); padding: 14px 20px; width: 520px; max-width: 92vw; }
+.aiuto-tasti h2 { font-size: 16px; margin: 0 0 8px; }
+.aiuto-tasti th { text-align: left; font-family: Consolas, monospace; padding: 3px 14px 3px 0; white-space: nowrap; color: var(--primario-scuro); }
+.aiuto-tasti td { padding: 3px 0; font-size: 13px; }
+
+/* nota del giorno */
+.nota-giorno { margin: 10px 18px 0; background: #FFFBEA; border-left: 4px solid #C89B21; padding: 7px 12px; font-size: 14px; }
+.nota-giorno form { display: flex; gap: 8px; align-items: flex-start; }
+.nota-giorno textarea { flex: 1; font: 14px var(--testo); padding: 5px 7px; border: 1px solid #D8C58A; min-height: 34px; background: #FFFFFF; }
+details.nota-giorno summary { cursor: pointer; color: #6B5510; font-size: 13px; }
+details.nota-giorno[open] summary { margin-bottom: 6px; }
+.appunti-giorno { margin: 8px 18px 0; background: #FDF1E7; border-left: 4px solid #C8702A; padding: 7px 12px; font-size: 14px; }
+.appunti-giorno ul { margin: 6px 0 0; padding-left: 18px; }
+.appunti-giorno li { margin: 3px 0; }
+.appunti-giorno .bottone.piccolo { margin-left: 6px; }
+.menu .contatore { display: inline-block; min-width: 16px; padding: 0 5px; margin-left: 3px; border-radius: 8px; background: #C8702A; color: #FFFFFF; font-size: 11px; line-height: 16px; text-align: center; }
+.nota-stampa { border: 1px solid #C89B21; background: #FFFBEA; padding: 5px 8px; margin: 0 0 8px; font-size: 12px; white-space: pre-line;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+/* sezioni del modulo di prenotazione */
+.riquadro-modulo { grid-column: 1 / -1; background: #FFFFFF; border: 1px solid #CFD5D8; padding: 10px 14px; margin: 4px 0 14px; }
+.riquadro-modulo h2 { font-size: 15px; margin: 0 0 8px; }
+.riquadro-modulo .righe { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end; }
+.riquadro-modulo .righe .campo { margin: 0; }
+.riquadro-modulo .righe .campo input, .riquadro-modulo .righe .campo select { width: auto; min-width: 90px; }
+.pagato { color: #1B5E20; font-weight: 600; }
+.da-pagare { color: #9C4A1A; }
+ul.link-moduli { margin: 0; padding-left: 18px; }
+table.elenco td.numero, table.elenco th.numero { text-align: right; white-space: nowrap; }
+table.elenco tr.totale td { font-weight: 700; background: #F4F5F3; }
+.esito-nuovo { color: #1B5E20; }
+.esito-esistente, .esito-presente, .esito-doppio { color: #46596A; }
+.esito-scartato, .esito-conflitto { color: #8A1C16; }
+.esito-saltato { color: #8C979E; }
+tr.riga-dubbia td { background: #FFFBEA; }
+.mappa-colonne td select { font: 13px var(--testo); padding: 3px 5px; max-width: 250px; }
+.mappa-colonne td.campione-colonna { font-size: 12px; color: #5B6B75; max-width: 320px; }
+.lettera { font-family: Consolas, monospace; color: #6A7A84; font-size: 12px; }
+.proposta-libera { color: #2E7D32; }
+.proposta-assente { color: #8A1C16; }
+.documento-tipo { font-size: 11px; background: #E8ECEF; padding: 1px 5px; border-radius: 2px; margin-right: 6px; }
+.modulo-stampa { max-width: 700px; margin: 20px auto; padding: 22px 30px; }
+.modulo-stampa .testo-modulo { white-space: pre-line; font-size: 14.5px; line-height: 1.55; }
+.firme { display: flex; justify-content: space-between; gap: 40px; margin-top: 50px; font-size: 13px; }
+.firme div { flex: 1; border-top: 1px solid #16263F; padding-top: 4px; }
+.foglio-medico { break-after: page; }
+.foglio-medico:last-child { break-after: auto; }
+@media print {
+  .notifiche, .aiuto-tasti, .ricerca-rapida, details.nota-giorno:not([open]) { display: none !important; }
+  .nota-giorno textarea, .nota-giorno button { display: none; }
+  .modulo-stampa { margin: 0 auto; }
+}
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+.azioni + p.nota { margin-top: 12px; }
+.pagina .azioni + p.nota { margin-top: 12px; }
+div.filtri { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+div.filtri > label { font-size: 13px; color: #46596A; }
+div.filtri select, div.filtri input[type="number"], div.filtri input[type="date"] {
+  font: 13px var(--testo); padding: 5px 7px; border: 1px solid #B8C0C4; background: #FFFFFF; margin-top: 2px; }
+div.filtri label:has(> input[type="checkbox"]) { color: #16263F; font-size: 13.5px; }
+.pagina form > div.riquadro { grid-column: 1 / -1; }
+
+/* ------------------------------------------------ 1.4.3: sala operatoria e Oggi */
+.conto-checklist { display: inline-block; font: 600 11.5px/16px var(--testo); padding: 0 6px; border-radius: 8px;
+  vertical-align: middle; margin-left: 6px; }
+.conto-checklist.completa { background: #E3F1E4; color: #1E5E22; }
+.conto-checklist.incompleta { background: #FDEBD3; color: #8A4A0B; }
+.segni-sala { display: block; margin-top: 1px; }
+.checklist-voce, .degenza-voce { display: inline-block; font: 600 10.5px/14px var(--testo); padding: 0 5px;
+  border-radius: 7px; margin-right: 3px; }
+.checklist-voce.completa { background: #E3F1E4; color: #1E5E22; }
+.checklist-voce.incompleta { background: #FDEBD3; color: #8A4A0B; }
+.degenza-voce { background: #E6E9F4; color: #2E3D73; }
+.voce .segni-sala .checklist-voce, .voce .segni-sala .degenza-voce { display: inline-block; overflow: visible; }
+.sala-giorno { border-left-color: #6B4E9B; }
+.sala-giorno .da-completare, .da-completare { color: #8A4A0B; }
+.oltre, a.oltre { color: #B3261E !important; font-weight: 700; }
+.blocco-sala { margin-bottom: 22px; }
+.blocco-sala h2 { font-size: 17px; margin: 6px 0 6px; color: #16263F; }
+.blocco-sala h2 small { font-size: 13px; font-weight: 400; color: #5B6B75; margin-left: 8px; }
+.chirurghi-giorno { font-size: 13.5px; color: #46596A; margin: 0 0 8px; }
+.chirurghi-giorno .libero { color: #2E7D32; font-weight: 600; }
+form.checklist { display: flex; flex-wrap: wrap; gap: 3px 12px; align-items: center; margin: 0; }
+form.checklist label { font-size: 13px; white-space: nowrap; cursor: pointer; }
+form.checklist label input { margin: 0 4px 0 0; vertical-align: -2px; }
+form.checklist.in-colonna { flex-direction: column; align-items: flex-start; gap: 6px; }
+td.checklist-cella { min-width: 300px; }
+table.letti tr.oltre td { background: #FCE8E6; }
+table.letti th.c-notte { width: 190px; }
+table.letti th.numero { width: 70px; }
+table.letti th.c-barra { width: 26%; }
+table.letti tr.fine-settimana td:first-child { color: #6A7A84; }
+.barra-letti { position: relative; height: 12px; background: #EEF1F2; border-radius: 6px; overflow: visible; }
+.barra-letti span { display: block; height: 100%; background: #6B4E9B; border-radius: 6px; }
+table.letti tr.oltre .barra-letti span { background: #B3261E; }
+.barra-letti i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #16263F; margin-left: -1px; }
+table.giorni-sala td.giorno-sala, table.giorni-sala th.giorno-sala { text-align: center; width: 9%; }
+table.giorni-sala td.giorno-sala.storico { background: #F1EEF7; }
+table.giorni-sala .volte { font-size: 11px; color: #6B4E9B; font-weight: 600; }
+table.giorni-sala label { cursor: pointer; display: block; }
+details.altri-medici { margin: -14px 0 18px; }
+details.altri-medici summary { cursor: pointer; color: var(--primario); padding: 6px 0; }
+.cruscotto { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; align-items: start; }
+.scheda-oggi { background: #FFFFFF; border: 1px solid #D5DADD; border-top: 3px solid var(--primario); padding: 10px 14px 6px; }
+.scheda-oggi.larga { grid-column: 1 / -1; }
+.scheda-oggi h2 { font-size: 15.5px; margin: 0 0 8px; color: #16263F; }
+.scheda-oggi h2 small { font-weight: 400; font-size: 12.5px; color: #5B6B75; margin-left: 6px; }
+.scheda-oggi p { margin: 6px 0 8px; font-size: 14px; }
+.scheda-oggi table.elenco { margin-bottom: 8px; }
+.scheda-oggi table.elenco.compatta td { padding: 4px 8px; }
+table.elenco tr.in-ritardo td:first-child { box-shadow: inset 3px 0 0 #D9822B; }
+ul.righe-oggi { list-style: none; margin: 0 0 6px; padding: 0; }
+ul.righe-oggi li { padding: 5px 0; border-bottom: 1px solid #EEF1F2; font-size: 14px; }
+ul.righe-oggi li:last-child { border-bottom: 0; }
+ul.righe-oggi form.in-linea { float: right; }
+.riga-corta { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.numero-grande { font-family: var(--titoli); font-size: 28px; color: var(--primario); margin: 2px 0 !important; }
+.nota-oggi { border-left-color: #D9822B; }
+.riepilogo-numeri { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 4px 0 8px; font-size: 13.5px; }
+.riepilogo-numeri b { font-family: var(--titoli); font-size: 18px; margin-right: 3px; }
+.per-prestazione { font-size: 13px; margin: 0 0 8px; }
+.lista-operatoria td { vertical-align: top; }
+@media print {
+  .scheda-oggi { break-inside: avoid; }
+}
+.pagina h1 small.sotto-titolo { font-size: 15px; font-weight: 400; color: #5B6B75; margin-left: 8px; }
+
+/* ------------------------------------------------------------- guida */
+.pagina-aiuto .sotto a { color: var(--primario); }
+.cerca-guida { display: flex; gap: 8px; margin-bottom: 8px; }
+.cerca-guida input[type="search"] { flex: 1; font: 15px var(--testo); padding: 8px 12px; border: 1px solid #B8C0C4; }
+.schede-guida { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; margin-bottom: 8px; }
+.scheda-guida { display: block; background: #FFFFFF; border: 1px solid #D5DADD; border-left: 4px solid var(--primario);
+  padding: 10px 14px; text-decoration: none; color: #16263F; }
+.scheda-guida:hover { background: var(--primario-tenue); }
+.scheda-guida b { display: block; font-size: 15px; margin-bottom: 3px; }
+.scheda-guida span { display: block; font-size: 13px; color: #46596A; }
+.scheda-guida small { display: block; font-size: 11.5px; color: #6A7A84; margin-top: 5px; }
+.in-breve { font-size: 16px; color: #46596A; margin: -4px 0 12px; }
+.azioni-guida { display: flex; gap: 8px; margin-bottom: 18px; }
+.articolo-guida { display: grid; gap: 22px; align-items: start; }
+.articolo-guida.con-immagine { grid-template-columns: minmax(280px, 1fr) minmax(0, 1.6fr); }
+ol.passi-guida { list-style: none; counter-reset: passo; margin: 0; padding: 0; }
+ol.passi-guida li { counter-increment: passo; position: relative; padding: 2px 0 12px 40px; font-size: 14.5px; line-height: 1.45; }
+ol.passi-guida li b { display: block; font-size: 15px; color: #16263F; }
+ol.passi-guida li::before { content: counter(passo); position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%;
+  font: 700 13px/24px var(--testo); text-align: center; border: 2px solid #B8C0C4; color: #46596A; background: #FFFFFF; }
+ol.passi-guida li.con-segno::before { background: #D0342C; border-color: #D0342C; color: #FFFFFF; }
+.figura-guida { margin: 0; }
+.figura-guida img { display: block; width: 100%; height: auto; border: 1px solid #CFD5D8; box-shadow: 0 4px 14px rgba(22, 38, 63, .12); }
+.figura-guida figcaption { font-size: 12px; color: #6A7A84; margin-top: 6px; }
+ul.altre-guide { padding-left: 18px; }
+ul.altre-guide li { margin-bottom: 5px; }
+@media (max-width: 900px) { .articolo-guida.con-immagine { grid-template-columns: 1fr; } }
+/* videoguide: il pulsante, il segno "video" nell'indice, la finestra con il video */
+.guarda-video .triangolo { display: inline-block; width: 0; height: 0; border-style: solid; border-width: 5px 0 5px 9px;
+  border-color: transparent transparent transparent currentColor; margin-right: 7px; vertical-align: 0; }
+.guarda-video small { font-size: 11.5px; opacity: .85; margin-left: 3px; }
+.scheda-guida .con-video { color: var(--primario); font-weight: 600; }
+.novita-in-aiuto { background: #FFFFFF; border-left: 4px solid #FFC857; padding: 8px 14px; margin: 0 0 14px; font-size: 14px; }
+.novita-in-aiuto a { color: var(--primario); font-weight: 600; }
+dialog.finestra-video { width: min(1366px, 96vw); max-width: 96vw; max-height: 96vh; padding: 0; border: 0;
+  background: #0E1A2E; color: #FFFFFF; box-shadow: 0 20px 60px rgba(0, 0, 0, .5); overflow: hidden; }
+dialog.finestra-video::backdrop { background: rgba(8, 14, 26, .78); }
+.finestra-video .testa-video { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px 8px 14px; }
+.finestra-video .testa-video b { font-family: var(--titoli); font-size: 15px; font-weight: 600; }
+.finestra-video video { display: block; width: 100%; height: auto; max-height: calc(96vh - 46px); background: #000000; }
+/* aggiornamenti e novita' */
+.stato-aggiornamento { padding: 12px 16px; border-left: 4px solid var(--primario); }
+.stato-aggiornamento h2 { font-family: var(--titoli); font-size: 19px; margin: 8px 0 6px; }
+.stato-aggiornamento h2.pronta { color: #2E7D32; }
+.versione-installata { margin: 0 0 6px; }
+.novita-in-arrivo ul { margin: 4px 0 8px; padding-left: 20px; }
+.novita-in-arrivo li { margin-bottom: 4px; font-size: 14px; }
+.novita-in-arrivo h3 { font-size: 14px; margin: 8px 0 2px; }
+.aggiorna-adesso { margin: 10px 0 8px; }
+.bottone.grande { font-size: 15px; padding: 8px 20px; font-weight: 600; justify-self: start; }
+.in-corso { font-weight: 600; }
+.rotella { display: inline-block; width: 14px; height: 14px; margin: 0 8px -2px 0; border: 2px solid #CFD5D8;
+  border-top-color: var(--primario); border-radius: 50%; animation: rotella 1s linear infinite; }
+@keyframes rotella { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .rotella { animation-duration: 3s; } }
+.indirizzo-aggiornamenti .azioni { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+ul.elenco-novita { list-style: none; margin: 0 0 18px; padding: 0; }
+ul.elenco-novita li.novita { background: #FFFFFF; border: 1px solid #D5DADD; border-left: 4px solid var(--primario);
+  padding: 10px 14px; margin-bottom: 10px; }
+ul.elenco-novita li.novita b { font-family: var(--titoli); font-size: 16px; color: #16263F; }
+ul.elenco-novita li.novita p { margin: 4px 0 0; font-size: 14.5px; line-height: 1.45; }
+ul.elenco-novita .azioni-novita { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px !important; }
+ul.elenco-novita.compatto li { margin-bottom: 6px; font-size: 14px; }
+details.versione-precedente { background: #FFFFFF; border: 1px solid #D5DADD; padding: 8px 14px; margin-bottom: 8px; }
+details.versione-precedente summary { cursor: pointer; font-weight: 600; }
+.pagina p.novita-piede { margin: 18px 0 0; color: #46596A; }
+/* guida da stampare */
+.guida-stampa { max-width: 190mm; margin: 0 auto; }
+.copertina-guida h1 { font-family: var(--titoli); font-size: 30px; margin: 18px 0 6px; color: var(--primario); }
+.indice-guida li { margin-bottom: 4px; }
+.articolo-stampa { break-before: page; padding-top: 4px; }
+.gruppo-stampa { text-transform: uppercase; letter-spacing: .06em; font-size: 11px; color: #6A7A84; margin: 0; }
+.articolo-stampa h2 { font-size: 21px; margin: 2px 0 4px; color: #16263F; }
+.figura-stampa { display: block; max-width: 100%; max-height: 120mm; margin-top: 8px; border: 1px solid #CFD5D8; }
+.articolo-stampa ol.passi-guida li { break-inside: avoid; }
+
+/* ------------------------------------------------ guida sullo schermo */
+.giro-velo { position: fixed; inset: 0; z-index: 10000; }
+.giro-riflettore { position: fixed; z-index: 10001; border-radius: 6px; pointer-events: none;
+  box-shadow: 0 0 0 3px #FFC857, 0 0 0 9999px rgba(12, 22, 38, .58); transition: all .25s ease; }
+.giro-riflettore.al-centro { box-shadow: 0 0 0 9999px rgba(12, 22, 38, .58); width: 0 !important; height: 0 !important; }
+.giro-fumetto { position: fixed; z-index: 10002; width: 340px; max-width: calc(100vw - 24px); background: #FFFFFF; color: #16263F;
+  border-top: 4px solid #FFC857; box-shadow: 0 12px 34px rgba(0, 0, 0, .3); padding: 14px 16px 12px; font-size: 14px; line-height: 1.45; }
+.giro-fumetto h3 { margin: 0 26px 6px 0; font-size: 16px; }
+.giro-fumetto p { margin: 0 0 12px; }
+.giro-fumetto .giro-piede { display: flex; align-items: center; gap: 6px; }
+.giro-fumetto .giro-conto { flex: 1; font-size: 12px; color: #6A7A84; }
+.giro-fumetto .giro-chiudi { position: absolute; top: 8px; right: 8px; border: 0; background: none; font-size: 20px; line-height: 1;
+  color: #6A7A84; cursor: pointer; padding: 2px 6px; }
+.giro-fumetto a.giro-articolo { font-size: 12.5px; color: var(--primario); }
+.giro-invito { position: fixed; left: 16px; bottom: 16px; z-index: 900; background: #FFFFFF; border: 1px solid #D5DADD;
+  border-left: 4px solid #FFC857; box-shadow: 0 6px 18px rgba(22, 38, 63, .18); padding: 9px 12px; font-size: 13.5px;
+  display: flex; align-items: center; gap: 10px; max-width: 420px; }
+.giro-invito button.bottone { white-space: nowrap; }
+.giro-invito .giro-no { border: 0; background: none; color: #6A7A84; cursor: pointer; font-size: 18px; padding: 0 4px; }
+@media print { .giro-velo, .giro-riflettore, .giro-fumetto, .giro-invito { display: none !important; } }
+body.giro-in-corso #notifiche, body.giro-in-corso .giro-invito { display: none !important; }
+
+/* ------------------------------------------------ 1.5: email e WhatsApp ai pazienti */
+.stato-invii { display: flex; flex-wrap: wrap; gap: 8px; }
+.spia { display: inline-block; padding: 4px 11px; border-radius: 13px; font-size: 13px; text-decoration: none; }
+.spia.accesa { background: #E2F0E3; color: #1B5E20; }
+.spia.spenta { background: #F6EFDD; color: #6B5510; }
+.spia.neutra { background: #EEF0EE; color: #46596A; }
+.testo-ok { color: #1B5E20; }
+.stato-invio-inviato { color: #1B5E20; }
+.stato-invio-errore { color: #B3261E; }
+.stato-invio-da_inviare, .stato-invio-in_corso { color: #8A5A00; }
+.stato-invio-annullato { color: #8C979E; }
+pre.modello-wa { white-space: pre-wrap; background: #EEF0EE; padding: 8px 10px; font: 13px Consolas, monospace; margin: 6px 0; }
+fieldset.scelta-prestazioni { border: 1px solid #CFD5D8; padding: 6px 12px 8px; margin: 0 0 14px; }
+fieldset.scelta-prestazioni legend { font-size: 13px; color: #46596A; padding: 0 4px; }
+.colonne-prestazioni { columns: 3 190px; column-gap: 18px; }
+.colonne-prestazioni label { display: block; font-size: 13.5px; color: #16263F; margin: 0 0 3px; break-inside: avoid; }
+.colonne-prestazioni input { width: auto; margin-right: 6px; vertical-align: -1px; }
+ul.allegati-regola { margin: 2px 0 8px; padding-left: 18px; }
+ul.allegati-regola li { margin-bottom: 4px; }
+.comandi-messaggi { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin: 8px 0 6px; }
+.comandi-messaggi select { font: 14px var(--testo); padding: 5px 7px; border: 1px solid #B8C0C4; background: #FFFFFF; max-width: 360px; }
+table.messaggi-appuntamento { margin-bottom: 8px; }
+table.messaggi-appuntamento td { font-size: 13px; }
+td.promemoria-conferme { font-size: 12.5px; }
+td.promemoria-conferme form.in-linea { margin-left: 4px; }
+/* le email automatiche raggruppate per medico */
+.gruppo-regole { margin: 18px 0 8px; }
+.gruppo-regole h3 { font-size: 15.5px; margin: 0 0 6px; padding-bottom: 4px; color: #16263F; border-bottom: 1px solid #E1E5E7; }
+.gruppo-regole table.elenco { margin-bottom: 6px; }
+.gruppo-regole p.azioni-gruppo { margin: 0; }
+.testo-avviso { color: #8A5A00; }
+.riquadro-incroci { background: #FFFFFF; border-left: 4px solid #5B7FA6; padding: 8px 14px; margin: 14px 0; }
+.riquadro-incroci.doppie { border-left-color: #D9822B; }
+.riquadro-incroci h2 { font-size: 15px; margin: 0 0 4px; }
+.riquadro-incroci ul { margin: 4px 0; padding-left: 18px; }
+.riquadro-incroci li { margin-bottom: 3px; font-size: 13.5px; }

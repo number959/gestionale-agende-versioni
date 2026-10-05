@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block titolo %}Aiuto · {{ a.titolo }}{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-aiuto">
+  <p class="sotto"><a href="{{ url_for('guida.indice') }}">Come fare…</a> · {{ a.gruppo }}</p>
+  <h1>{{ a.titolo }}</h1>
+  <p class="in-breve">{{ a.in_breve }}</p>
+  {% set vid = video_guida(a.slug) %}
+  <div class="azioni-guida">
+    {% if vid %}<a class="bottone primario guarda-video" href="{{ vid.url }}" data-video="{{ a.titolo }}" data-guida="guarda-video"><span class="triangolo" aria-hidden="true"></span>Guarda il video{% if vid.durata %} <small>{{ vid.durata }}</small>{% endif %}</a>{% endif %}
+    {% if con_giro %}<a class="bottone{% if not vid %} primario{% endif %}" href="{{ indirizzo_apri(a) }}" data-guida-mostra="{{ a.slug }}">Mostrami sullo schermo</a>{% endif %}
+    <a class="bottone" href="{{ indirizzo_apri(a, guida=False) }}">Apri la pagina</a>
+  </div>
+  {% set img = immagine(a.slug) %}
+  <div class="articolo-guida{% if img %} con-immagine{% endif %}">
+    <ol class="passi-guida">
+      {% for p in a.passi %}
+      <li{% if p.sel %} class="con-segno"{% endif %}><b>{{ p.titolo }}</b> {{ p.testo }}</li>
+      {% endfor %}
+    </ol>
+    {% if img %}
+    <figure class="figura-guida">
+      <a href="{{ img }}" target="_blank" title="Apri l'immagine grande"><img src="{{ img }}" alt="{{ a.titolo }}: i numeri corrispondono ai passi" loading="lazy"></a>
+      <figcaption>I numeri nell'immagine sono quelli dei passi. Dati di prova, inventati.</figcaption>
+    </figure>
+    {% endif %}
+  </div>
+  {% if altri %}
+  <h2 class="sezione">Altre guide: {{ a.gruppo }}</h2>
+  <ul class="altre-guide">{% for x in altri %}<li><a href="{{ url_for('guida.articolo', slug=x.slug) }}">{{ x.titolo }}</a> <span class="nota-riga">{{ x.in_breve }}</span></li>{% endfor %}</ul>
+  {% endif %}
+</div>
+{% endblock %}

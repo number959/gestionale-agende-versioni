@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% set foglio_carta = true %}
+{% block titolo %}Lista operatoria · {{ titolo }}{% endblock %}
+{% block classe_body %} class="pagina-stampa"{% endblock %}
+{% block menu %}{% endblock %}
+{% block corpo %}
+<div class="comandi-stampa solo-schermo">
+  <button class="bottone primario" type="button" onclick="window.print()">Stampa</button>
+  <a class="passo" data-tasto="precedente" href="{{ url_for('sala.lista_operatoria', iso=ieri, struttura=sid) }}" title="Giorno precedente">&lsaquo;</a>
+  <a class="passo" data-tasto="successivo" href="{{ url_for('sala.lista_operatoria', iso=domani, struttura=sid) }}" title="Giorno successivo">&rsaquo;</a>
+  <a class="bottone" href="{{ url_for('sala.giornata', iso=g.isoformat(), struttura=sid) }}">Sala operatoria del giorno</a>
+  <a class="bottone" href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">Torna alla giornata</a>
+</div>
+<div class="foglio foglio-orizzontale">
+  <header class="testata-stampa">
+    <div class="logo-stampa">{% include "_marchio.html" %}</div>
+    <div class="dati-stampa">
+      <div class="nome-struttura">Lista operatoria</div>
+      <div>{{ st.nome }}{% if st.telefono %} · tel. {{ st.telefono }}{% endif %}{% if st.email %} · {{ st.email }}{% endif %}</div>
+    </div>
+    <div class="data-stampa">
+      <div class="giorno-stampa">{{ titolo }}</div>
+      <div>{{ totale }} intervent{{ 'o' if totale == 1 else 'i' }}{% if letti or st.posti_letto %} · letti la notte {{ letti }}{% if st.posti_letto %}/{{ st.posti_letto }}{% endif %}{% endif %}</div>
+    </div>
+  </header>
+  {% for r, apps in gruppi %}
+  <section class="blocco-stampa">
+    {% if r %}<h2>{{ r.nome }}</h2>{% endif %}
+    {% if apps %}
+    <table class="tabella-stampa lista-operatoria">
+      <thead><tr><th class="c-ora">Ora</th><th>Paziente</th><th>Età</th><th>Telefono</th><th>Intervento</th><th>Chirurgo</th><th>Anestesista</th><th>Degenza</th><th>Note</th>{% if voci %}<th>Da completare</th>{% endif %}</tr></thead>
+      <tbody>
+      {% for a in apps %}{% set c = stato_checklist(a, voci) %}
+        <tr class="stato-{{ a.stato|lower }}">
+          <td class="c-ora">{{ a.inizio.strftime('%H:%M') }}–{{ a.fine.strftime('%H:%M') }}</td>
+          <td class="c-paziente">{{ a.paziente.etichetta if a.paziente else '' }}</td>
+          <td>{{ a.paziente.eta if a.paziente and a.paziente.eta is not none else '' }}</td>
+          <td>{{ a.paziente.telefono if a.paziente and a.paziente.telefono else '' }}</td>
+          <td>{{ a.prestazione.nome if a.prestazione else '' }}{% for k, v in altri_extra(a) %}<br><small>{{ k }}: {{ v }}</small>{% endfor %}</td>
+          <td>{{ a.operatore.etichetta }}</td>
+          <td>{{ anestesista(a) }}</td>
+          <td>{{ a.etichetta_degenza }}</td>
+          <td>{{ a.note or '' }}</td>
+          {% if voci %}<td>{% if c and c.mancanti %}{{ c.mancanti|join(', ') }}{% elif c %}✓ completa{% endif %}</td>{% endif %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </section>
+  {% else %}
+  <p>Nessun intervento in questo giorno.</p>
+  {% endfor %}
+  <div class="piede-stampa">stampato il {{ adesso.strftime('%d/%m/%Y alle %H:%M') }}</div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block titolo %}Sala operatoria · {{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">Sala operatoria · {% if giorni == 7 %}7 giorni dal {{ g.strftime('%d/%m') }}{% else %}{{ titolo }}{% endif %}</h1>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('sala.giornata', iso=ieri, struttura=sid, giorni=giorni if giorni == 7 else none) }}" title="Indietro">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('sala.giornata', iso=domani, struttura=sid, giorni=giorni if giorni == 7 else none) }}" title="Avanti">&rsaquo;</a>
+    <a class="bottone" data-tasto="oggi" href="{{ url_for('sala.giornata', iso=oggi_iso, struttura=sid, giorni=giorni if giorni == 7 else none) }}">Oggi</a>
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('sala.giornata', iso=g.isoformat(), struttura=sid, giorni=none if giorni == 7 else 7) }}">{{ 'Un giorno' if giorni == 7 else 'Prossimi 7 giorni' }}</a>
+    {% if strutture|length > 1 %}
+    <form method="get" style="display:inline">{% if giorni == 7 %}<input type="hidden" name="giorni" value="7">{% endif %}<select name="struttura" onchange="this.form.submit()">
+      {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+    </select></form>
+    {% endif %}
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('sala.lista_operatoria', iso=g.isoformat(), struttura=sid) }}" target="_blank">Stampa la lista operatoria</a>
+    <a class="bottone" href="{{ url_for('sala.posti_letto', dal=g.isoformat(), struttura=sid) }}">Posti letto</a>
+    <a class="bottone" href="{{ url_for('sala.chirurghi', struttura=sid) }}">Giorni dei chirurghi</a>
+  </div>
+</div>
+<div class="contenuto">
+{% if not sale %}
+<div class="avvio">Questa struttura non ha stanze di tipo "Sala operatoria": gli interventi sono gli appuntamenti in quelle stanze.
+  Il tipo si sceglie in <a href="{{ url_for('anagrafiche.elenco') }}">Anagrafiche</a>.</div>
+{% endif %}
+<p class="nota">Checklist: {% if voci %}{{ voci|join(' · ') }}. Le caselle si salvano da sole.{% else %}nessuna voce.{% endif %}
+  <a href="{{ url_for('viste.impostazioni') }}#checklist">Cambia le voci</a></p>
+{% for b in blocchi %}
+<section class="blocco-sala">
+  <h2>{{ giorno_breve(b.giorno)|capitalize }}
+    <small>{{ b.apps|length }} intervent{{ 'o' if b.apps|length == 1 else 'i' }}
+    {%- if b.letti or st.posti_letto %} · letti la notte: <b class="{{ 'oltre' if st.posti_letto and b.letti > st.posti_letto }}">{{ b.letti }}{% if st.posti_letto %}/{{ st.posti_letto }}{% endif %}</b>{% endif %}</small></h2>
+  {% set ch = b.chirurghi %}
+  {% if ch.in_sala or ch.disponibili or ch.assenti %}
+  <p class="chirurghi-giorno">
+    {% if ch.in_sala %}In sala: {% for o, n in ch.in_sala %}<b>{{ o.cognome }}</b> ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}
+    {% if ch.disponibili %}Di solito operano {{ ['il lunedì', 'il martedì', 'il mercoledì', 'il giovedì', 'il venerdì', 'il sabato', 'la domenica'][b.giorno.weekday()] }}, liberi: {% for o in ch.disponibili %}<span class="libero">{{ o.cognome }}</span>{% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}
+    {% if ch.assenti %}Assenti: {% for o in ch.assenti %}{{ o.cognome }}{% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}
+  </p>
+  {% endif %}
+  {% if b.apps %}
+  <table class="elenco sala-elenco">
+    <tr><th>Ora</th><th>Sala</th><th>Paziente</th><th>Intervento · chirurgo</th><th>Anestesista</th><th>Degenza</th>{% if voci %}<th>Checklist</th>{% endif %}</tr>
+    {% for a in b.apps %}{% set c = stato_checklist(a, voci) %}
+    <tr class="stato-{{ a.stato|lower }}">
+      <td class="ora-lista"><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}">{{ a.inizio.strftime('%H:%M') }}</a><div class="nota-riga">{{ a.fine.strftime('%H:%M') }}</div></td>
+      <td>{{ a.risorsa.nome }}</td>
+      <td>{% if a.paziente %}<a href="{{ url_for('pazienti.scheda', pid=a.paziente.id) }}">{{ a.paziente.etichetta }}</a><div class="nota-riga">{{ a.paziente.telefono or '' }}</div>{% else %}<span class="senza">senza paziente</span>{% endif %}</td>
+      <td>{{ a.prestazione.nome if a.prestazione else '' }}<div class="nota-riga">{{ a.operatore.etichetta }}</div></td>
+      <td>{{ anestesista(a) }}</td>
+      <td>{{ a.etichetta_degenza }}</td>
+      {% if voci %}
+      <td class="checklist-cella">
+        <form method="post" action="{{ url_for('sala.checklist', aid=a.id) }}" class="checklist" data-auto="1">
+          <input type="hidden" name="torna" value="{{ torna }}">
+          {% for v in voci %}
+          <label title="{{ ('fatto il ' ~ c.spunte[v]) if v in c.spunte else 'da fare' }}"><input type="checkbox" name="spunte" value="{{ v }}"{% if v in c.spunte %} checked{% endif %}> {{ v }}</label>
+          {% endfor %}
+          <span class="conto-checklist {{ 'completa' if c.completa else 'incompleta' }}">{{ c.fatte }}/{{ c.totale }}</span>
+          <noscript><button class="bottone piccolo" type="submit">Salva</button></noscript>
+        </form>
+      </td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Nessun intervento.</p>
+  {% endif %}
+</section>
+{% else %}
+<p class="vuoto">Nessun intervento nei prossimi 7 giorni.</p>
+{% endfor %}
+</div>
+{% endblock %}

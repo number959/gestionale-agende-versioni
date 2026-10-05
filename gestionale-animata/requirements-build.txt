@@ -1,0 +1,4 @@
+# Solo per costruire l'eseguibile (CREA_EXE.bat). Non serve sul PC che lo usa.
+-r requirements.txt
+# 6.16 e' la prima versione che supporta Python 3.14
+pyinstaller>=6.16,<7

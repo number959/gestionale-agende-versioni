@@ -1,0 +1,294 @@
+/* GENERATO da strumenti/genera_tema_scuro.py partendo da stile.css: non modificare a mano
+   la parte generata; le correzioni stanno in fondo. Vale solo sullo schermo. */
+@media screen {
+  html.scuro body { background: #141A21; color: #E1E7ED; }
+  html.scuro .barra { background: #1C242D; }
+  html.scuro .marchio { border-right: 1px solid #34414F; }
+  html.scuro .conteggio { color: #9AA8B4; }
+  html.scuro .passo, html.scuro .bottone, html.scuro .comandi select { color: #E1E7ED; background: #1C242D; border: 1px solid #45525F; }
+  html.scuro .bottone.primario { color: #FFFFFF; }
+  html.scuro .bottone.primario:hover { color: #FFFFFF; }
+  html.scuro .avviso { background: #1C242D; }
+  html.scuro .avviso.errore { border-left-color: #E6716A; color: #E8A8A5; }
+  html.scuro .avviso.avviso-giallo { border-left-color: #E9CC7C; }
+  html.scuro table.griglia { background: #1C242D; }
+  html.scuro table.griglia th, html.scuro table.griglia td { border: 1px solid #2E3843; }
+  html.scuro table.griglia thead th { color: #FFFFFF; }
+  html.scuro th.ora { background: #141A21; color: #A9B7C4; }
+  html.scuro tr.mezzora th.ora { color: #7C8A96; }
+  html.scuro td.chiusa { background: #222B35; }
+  html.scuro td.aperta { background: #1C242D; }
+  html.scuro td.occupata { background: #2A3E22; }
+  html.scuro .voce { color: #E1E7ED; }
+  html.scuro .voce .scarto { color: #E8A8A5; }
+  html.scuro .voce + .voce { border-top: 1px solid #445C3B; }
+  html.scuro .voce .dettaglio { color: #A2B0BC; }
+  html.scuro .pagina p.sotto { color: #9AA8B4; }
+  html.scuro .campo label { color: #A9B7C4; }
+  html.scuro .campo input, html.scuro .campo select, html.scuro .campo textarea { color: #E1E7ED; border: 1px solid #45525F; background: #1C242D; }
+  html.scuro .azioni .elimina { border-color: #633E3B; color: #E49793; }
+  html.scuro table.elenco { background: #1C242D; }
+  html.scuro table.elenco th, html.scuro table.elenco td { border: 1px solid #2E3843; }
+  html.scuro table.elenco th { color: #FFFFFF; }
+  html.scuro .guida { background: #1C242D; border-left: 4px solid #E9CC7C; }
+  html.scuro .guida li.fatto { color: #8795A0; }
+  html.scuro p.struttura { color: #A9B7C4; }
+  html.scuro table.elenco tr.spento td { color: #7F8C97; }
+  html.scuro p.vuoto { color: #9AA8B4; }
+  html.scuro .pagina p.nota { color: #A9B7C4; }
+  html.scuro .campo p.aiuto { color: #8C9AA6; }
+  html.scuro .campo.spunta label { color: #E1E7ED; }
+  html.scuro .avvio { background: #1C242D; border-left: 4px solid #E9CC7C; }
+  html.scuro .campo span.etichetta { color: #A9B7C4; }
+  html.scuro img.anteprima-logo { background: #1C242D; border: 1px solid #2E3843; }
+  html.scuro table.elenco td.logo .senza { color: #7F8C97; }
+  html.scuro .menu a { color: #FFFFFF; }
+  html.scuro .menu a.attivo { border-bottom-color: #FFFFFF; }
+  html.scuro .gruppo-comandi .tendina { background: #1C242D; border: 1px solid #2E3843; }
+  html.scuro .gruppo-comandi .tendina a { color: #E1E7ED; }
+  html.scuro .gruppo-comandi .tendina a small { color: #9AA8B4; }
+  html.scuro .menu .apri-gruppo { color: #FFFFFF; }
+  html.scuro .menu .gruppo.attivo .apri-gruppo { border-bottom-color: #FFFFFF; }
+  html.scuro .menu .tendina { background: #1C242D; border: 1px solid #2E3843; }
+  html.scuro .menu .tendina a { color: #E1E7ED; }
+  html.scuro .menu .tendina a small { color: #9AA8B4; }
+  html.scuro .avvio.festivo { border-left-color: #E8B27D; }
+  html.scuro .avvio.chiusura { border-left-color: #E6716A; }
+  html.scuro .avvio.errore-backup { border-left-color: #E6716A; color: #E8A8A5; }
+  html.scuro .assente { color: #EED6B9; }
+  html.scuro .annullati { color: #A9B7C4; }
+  html.scuro .annullati a { color: #8C9AA6; }
+  html.scuro .segno.confermato { color: #A9DFAC; }
+  html.scuro .segno.arrivato { color: #FFFFFF; background: #29702D; }
+  html.scuro .voce.stato-arrivato { background: #294620; }
+  html.scuro .voce.stato-disdetto, html.scuro a.stato-disdetto, html.scuro b.stato-disdetto, html.scuro tr.stato-disdetto td { color: #7F8C97; }
+  html.scuro a.stato-non_presentato, html.scuro b.stato-non_presentato, html.scuro tr.stato-non_presentato td { color: #E6B89D; }
+  html.scuro b.stato-confermato, html.scuro .bottone.stato-confermato { color: #A9DFAC; }
+  html.scuro b.stato-arrivato { color: #B5EAB9; }
+  html.scuro .bottone.stato-arrivato { border-color: #64C669; color: #B5EAB9; }
+  html.scuro .bottone.stato-disdetto, html.scuro .bottone.stato-non_presentato { color: #E8A8A5; }
+  html.scuro .barra-stato { background: #1C242D; border: 1px solid #2E3843; }
+  html.scuro .titolo-sezione { border-bottom: 1px solid #2E3843; }
+  html.scuro .titolo-sezione h2 { color: #A9B7C4; }
+  html.scuro .titolo-sezione p.aiuto { color: #8C9AA6; }
+  html.scuro .suggerimenti { background: #1C242D; }
+  html.scuro .suggerimenti button { border-bottom: 1px solid #28313B; }
+  html.scuro .suggerimenti button span { color: #9AA8B4; }
+  html.scuro .suggerimenti .nessuno { color: #9AA8B4; }
+  html.scuro .esito-cf { color: #9AA8B4; }
+  html.scuro .esito-cf.ok { color: #A9DFAC; }
+  html.scuro .esito-cf.errore { color: #E49793; }
+  html.scuro .esito-cf.avviso { color: #A9DFAC; }
+  html.scuro .esito-cf .avviso-cf { color: #EAD5AD; }
+  html.scuro .esito-cf.calcolato { color: #A1BFE7; }
+  html.scuro .pagina-codici .riquadro.tutto-bene { border-left: 4px solid #64C669; }
+  html.scuro .pagina-codici .riquadro.da-vedere { border-left: 4px solid #E4AD81; }
+  html.scuro .pagina-codici h2.sezione small { color: #9AA8B4; }
+  html.scuro .campi-extra { background: #1C242D; border: 1px dashed #45525F; }
+  html.scuro .campo.giorni label { color: #E1E7ED; }
+  html.scuro .riquadro-elenco { background: #1C242D; border-left: 4px solid #E8B27D; }
+  html.scuro .telefono { color: #A9B7C4; }
+  html.scuro .nota-riga { color: #9AA8B4; }
+  html.scuro .senza { color: #7F8C97; }
+  html.scuro form.ricerca input[type="search"] { border: 1px solid #45525F; }
+  html.scuro form.filtri label { color: #A9B7C4; }
+  html.scuro form.filtri select, html.scuro form.filtri input { border: 1px solid #45525F; background: #1C242D; }
+  html.scuro .riepilogo-paziente { background: #1C242D; border: 1px solid #2E3843; }
+  html.scuro ul.numeri li.allarme b, html.scuro ul.numeri li.allarme { color: #E49793; }
+  html.scuro .riquadro { background: #1C242D; border: 1px solid #2E3843; }
+  html.scuro .errore-testo { color: #E8A8A5; }
+  html.scuro code { background: #222B35; }
+  html.scuro .bottone.elimina-testo { color: #E49793; border-color: #633E3B; }
+  html.scuro table.settimana, html.scuro table.mese { background: #1C242D; }
+  html.scuro table.settimana th, html.scuro table.settimana td, html.scuro table.mese th, html.scuro table.mese td { border: 1px solid #2E3843; }
+  html.scuro table.settimana thead th, html.scuro table.mese thead th { color: #FFFFFF; }
+  html.scuro table.settimana thead th a, html.scuro table.agenda-medico thead th a { color: #FFFFFF; }
+  html.scuro table.settimana thead th.festivo, html.scuro table.agenda-medico thead th.festivo { background: #A15614; }
+  html.scuro table.settimana thead th.oggi, html.scuro table.agenda-medico thead th.oggi { box-shadow: inset 0 -4px 0 #FFFFFF; }
+  html.scuro th.stanza-sett { background: #141A21; }
+  html.scuro table.settimana td.senza-turno { background: #222B35; }
+  html.scuro a.cella-sett { color: #E1E7ED; }
+  html.scuro .turno-sett small { color: #9AA8B4; }
+  html.scuro .turno-sett.assente { border-left-color: #E8B27D; color: #E6B89D; }
+  html.scuro .conti { color: #A9B7C4; }
+  html.scuro .liberi { color: #A9DFAC; }
+  html.scuro table.mese td.fuori { background: #222B35; }
+  html.scuro table.mese td.festivo { background: #312A22; }
+  html.scuro table.mese td.chiuso-di-solito:not(.festivo) { background: #141A21; }
+  html.scuro a.giorno-mese { color: #E1E7ED; }
+  html.scuro .etichetta-giorno { color: #E5BB96; }
+  html.scuro .medico-mese.assente { border-left-color: #E8B27D; color: #E6B89D; }
+  html.scuro .sala-mese { background: #2B2434; color: #BFAFDB; }
+  html.scuro .sala-mese.libera { border: 1px dashed #503F6A; color: #B7ABCF; }
+  html.scuro .barra-dato { background: #10151B; }
+  html.scuro body.pagina-stampa { background: #1C242D; }
+  html.scuro .comandi-stampa { background: #141A21; border-bottom: 1px solid #2E3843; }
+  @media screen { html.scuro .foglio.foglio-verticale { background: #1C242D; } }
+  html.scuro .dati-stampa { color: #A9B7C4; }
+  html.scuro .nome-struttura { color: #E1E7ED; }
+  html.scuro table.tabella-stampa th, html.scuro table.tabella-stampa td { border: 1px solid #56636F; }
+  html.scuro table.tabella-stampa th { background: #232C36; }
+  html.scuro .piede-stampa { color: #8C9AA6; }
+  html.scuro .promemoria { border: 1px solid #56636F; }
+  html.scuro table.dati-promemoria th { color: #A9B7C4; border-bottom: 1px solid #28313B; }
+  html.scuro table.dati-promemoria td { border-bottom: 1px solid #28313B; }
+  html.scuro .preparazione { background: #141A21; }
+  html.scuro .avvertenza { color: #A9B7C4; }
+  html.scuro .ricerca-rapida input { color: #FFFFFF; }
+  html.scuro .ricerca-rapida input:focus { background: #1C242D; color: #E1E7ED; }
+  html.scuro .risultati-rapidi { background: #1C242D; border: 1px solid #45525F; }
+  html.scuro .risultati-rapidi a.voce-rapida { color: #E1E7ED; border-bottom: 1px solid #354146; }
+  html.scuro .risultati-rapidi a.voce-rapida span { color: #9AA8B4; }
+  html.scuro .risultati-rapidi a.voce-rapida[data-gruppo="giorno"] { background: #202A35; }
+  html.scuro .risultati-rapidi .nessuno { color: #9AA8B4; }
+  html.scuro .notifica { background: #1C242D; }
+  html.scuro .notifica.errore { border-left-color: #E6716A; }
+  html.scuro .notifica b { color: #A9B7C4; }
+  html.scuro .notifica a { color: #E1E7ED; }
+  html.scuro .notifica .chiudi-notifica { color: #8C9AA6; }
+  html.scuro .aiuto-tasti { background: #1C242D; border: 1px solid #45525F; }
+  html.scuro .nota-giorno { background: #2F2D21; border-left: 4px solid #E9CC7C; }
+  html.scuro .nota-giorno textarea { border: 1px solid #685E3F; background: #1C242D; }
+  html.scuro details.nota-giorno summary { color: #ECDEB2; }
+  html.scuro .appunti-giorno { background: #322A23; border-left: 4px solid #E4AD81; }
+  html.scuro .menu .contatore { background: #B46526; color: #FFFFFF; }
+  html.scuro .nota-stampa { border: 1px solid #E9CC7C; background: #2F2D21; }
+  html.scuro .riquadro-modulo { background: #1C242D; border: 1px solid #2E3843; }
+  html.scuro .pagato { color: #B5EAB9; }
+  html.scuro .da-pagare { color: #E6B89D; }
+  html.scuro table.elenco tr.totale td { background: #141A21; }
+  html.scuro .esito-nuovo { color: #B5EAB9; }
+  html.scuro .esito-esistente, html.scuro .esito-presente, html.scuro .esito-doppio { color: #A9B7C4; }
+  html.scuro .esito-scartato, html.scuro .esito-conflitto { color: #E8A8A5; }
+  html.scuro .esito-saltato { color: #7F8C97; }
+  html.scuro tr.riga-dubbia td { background: #2F2D21; }
+  html.scuro .mappa-colonne td.campione-colonna { color: #9AA8B4; }
+  html.scuro .lettera { color: #8C9AA6; }
+  html.scuro .proposta-libera { color: #A9DFAC; }
+  html.scuro .proposta-assente { color: #E8A8A5; }
+  html.scuro .documento-tipo { background: #232C36; }
+  html.scuro .firme div { border-top: 1px solid #375F9E; }
+  html.scuro div.filtri > label { color: #A9B7C4; }
+  html.scuro div.filtri select, html.scuro div.filtri input[type="number"], html.scuro div.filtri input[type="date"] { border: 1px solid #45525F; background: #1C242D; }
+  html.scuro div.filtri label:has(> input[type="checkbox"]) { color: #E1E7ED; }
+  html.scuro .conto-checklist.completa { background: #293A2A; color: #B6E8B9; }
+  html.scuro .conto-checklist.incompleta { background: #3D352A; color: #E9C9A9; }
+  html.scuro .checklist-voce.completa { background: #293A2A; color: #B6E8B9; }
+  html.scuro .checklist-voce.incompleta { background: #3D352A; color: #E9C9A9; }
+  html.scuro .degenza-voce { background: #262A37; color: #AEB9DF; }
+  html.scuro .sala-giorno { border-left-color: #AC99CC; }
+  html.scuro .sala-giorno .da-completare, html.scuro .da-completare { color: #E9C9A9; }
+  html.scuro .oltre, html.scuro a.oltre { color: #E49793 !important; }
+  html.scuro .blocco-sala h2 { color: #E1E7ED; }
+  html.scuro .blocco-sala h2 small { color: #9AA8B4; }
+  html.scuro .chirurghi-giorno { color: #A9B7C4; }
+  html.scuro .chirurghi-giorno .libero { color: #A9DFAC; }
+  html.scuro table.letti tr.oltre td { background: #332523; }
+  html.scuro table.letti tr.fine-settimana td:first-child { color: #8C9AA6; }
+  html.scuro .barra-letti { background: #222B35; }
+  html.scuro .barra-letti span { background: #60468B; }
+  html.scuro table.letti tr.oltre .barra-letti span { background: #A1221B; }
+  html.scuro .barra-letti i { background: #1D3253; }
+  html.scuro table.giorni-sala td.giorno-sala.storico { background: #272231; }
+  html.scuro table.giorni-sala .volte { color: #B2A0CF; }
+  html.scuro .scheda-oggi { background: #1C242D; border: 1px solid #3E474D; }
+  html.scuro .scheda-oggi h2 { color: #E1E7ED; }
+  html.scuro .scheda-oggi h2 small { color: #9AA8B4; }
+  html.scuro table.elenco tr.in-ritardo td:first-child { box-shadow: inset 3px 0 0 #E8B27D; }
+  html.scuro ul.righe-oggi li { border-bottom: 1px solid #354146; }
+  html.scuro .nota-oggi { border-left-color: #E8B27D; }
+  html.scuro .pagina h1 small.sotto-titolo { color: #9AA8B4; }
+  html.scuro .cerca-guida input[type="search"] { border: 1px solid #45525F; }
+  html.scuro .scheda-guida { background: #1C242D; border: 1px solid #3E474D; color: #E1E7ED; }
+  html.scuro .scheda-guida span { color: #A9B7C4; }
+  html.scuro .scheda-guida small { color: #8C9AA6; }
+  html.scuro .in-breve { color: #A9B7C4; }
+  html.scuro ol.passi-guida li b { color: #E1E7ED; }
+  html.scuro ol.passi-guida li::before { border: 2px solid #45525F; color: #A9B7C4; background: #1C242D; }
+  html.scuro ol.passi-guida li.con-segno::before { background: #BB2F28; border-color: #E48681; color: #FFFFFF; }
+  html.scuro .figura-guida img { border: 1px solid #2E3843; }
+  html.scuro .figura-guida figcaption { color: #8C9AA6; }
+  html.scuro .novita-in-aiuto { background: #1C242D; border-left: 4px solid #6B5D40; }
+  html.scuro dialog.finestra-video { background: #1A3156; color: #FFFFFF; }
+  html.scuro .finestra-video video { background: #383838; }
+  html.scuro .stato-aggiornamento h2.pronta { color: #A9DFAC; }
+  html.scuro .rotella { border: 2px solid #2E3843; }
+  html.scuro ul.elenco-novita li.novita { background: #1C242D; border: 1px solid #3E474D; }
+  html.scuro ul.elenco-novita li.novita b { color: #E1E7ED; }
+  html.scuro details.versione-precedente { background: #1C242D; border: 1px solid #3E474D; }
+  html.scuro .pagina p.novita-piede { color: #A9B7C4; }
+  html.scuro .gruppo-stampa { color: #8C9AA6; }
+  html.scuro .articolo-stampa h2 { color: #E1E7ED; }
+  html.scuro .figura-stampa { border: 1px solid #2E3843; }
+  html.scuro .giro-riflettore { box-shadow: 0 0 0 3px #6B5D40, 0 0 0 9999px rgba(12, 22, 38, .58); }
+  html.scuro .giro-fumetto { background: #1C242D; color: #E1E7ED; border-top: 4px solid #6B5D40; }
+  html.scuro .giro-fumetto .giro-conto { color: #8C9AA6; }
+  html.scuro .giro-fumetto .giro-chiudi { color: #8C9AA6; }
+  html.scuro .giro-invito { background: #1C242D; border: 1px solid #3E474D; border-left: 4px solid #6B5D40; }
+  html.scuro .giro-invito .giro-no { color: #8C9AA6; }
+  html.scuro .spia.accesa { background: #293B2B; color: #B5EAB9; }
+  html.scuro .spia.spenta { background: #3B3629; color: #ECDEB2; }
+  html.scuro .spia.neutra { background: #222B35; color: #A9B7C4; }
+  html.scuro .testo-ok { color: #B5EAB9; }
+  html.scuro .stato-invio-inviato { color: #B5EAB9; }
+  html.scuro .stato-invio-errore { color: #E49793; }
+  html.scuro .stato-invio-da_inviare, html.scuro .stato-invio-in_corso { color: #EAD5AD; }
+  html.scuro .stato-invio-annullato { color: #7F8C97; }
+  html.scuro pre.modello-wa { background: #222B35; }
+  html.scuro fieldset.scelta-prestazioni { border: 1px solid #2E3843; }
+  html.scuro fieldset.scelta-prestazioni legend { color: #A9B7C4; }
+  html.scuro .colonne-prestazioni label { color: #E1E7ED; }
+  html.scuro .comandi-messaggi select { border: 1px solid #45525F; background: #1C242D; }
+  html.scuro .gruppo-regole h3 { color: #E1E7ED; border-bottom: 1px solid #3A4449; }
+  html.scuro .testo-avviso { color: #EAD5AD; }
+  html.scuro .riquadro-incroci { background: #1C242D; border-left: 4px solid #9CB2C9; }
+  html.scuro .riquadro-incroci.doppie { border-left-color: #E8B27D; }
+}
+/* --------------------------------------------- correzioni a mano, solo schermo */
+@media screen {
+  html.scuro { color-scheme: dark;
+    --primario-scuro: color-mix(in srgb, var(--primario) 45%, #FFFFFF);
+    --primario-tenue: color-mix(in srgb, var(--primario) 38%, #1B232C);
+    --primario-fuoco: color-mix(in srgb, var(--primario) 55%, #FFFFFF); }
+  html.scuro body { background: #141A21; color: #E1E7ED; }
+  html.scuro a { color: var(--primario-scuro); }
+  html.scuro .menu, html.scuro table.griglia thead th, html.scuro table.elenco th, html.scuro table.settimana thead th,
+  html.scuro table.mese thead th { background: color-mix(in srgb, var(--primario) 70%, #0B0F14); }
+  html.scuro .menu a, html.scuro table.griglia thead th, html.scuro table.elenco th { color: #F2F5F8; }
+  html.scuro .bottone.primario { background: var(--primario); border-color: color-mix(in srgb, var(--primario) 70%, #FFFFFF); color: #FFFFFF; }
+  html.scuro .bottone.primario:hover { background: color-mix(in srgb, var(--primario) 80%, #FFFFFF); color: #FFFFFF; }
+  html.scuro input, html.scuro select, html.scuro textarea { background: #1B232C; color: #E1E7ED; border-color: #45525F; }
+  html.scuro input::placeholder, html.scuro textarea::placeholder { color: #7D8A96; }
+  html.scuro .ricerca-rapida input { background: rgba(255, 255, 255, .10); color: #FFFFFF; }
+  html.scuro .ricerca-rapida input:focus { background: #1B232C; color: #E1E7ED; }
+  html.scuro .voce { color: #E1E7ED; }
+  html.scuro td.chiusa { background: #11161C; }
+  html.scuro td.aperta { background: #1E2833; }
+  html.scuro td.aperta:hover { background: var(--primario-tenue); }
+  html.scuro .marchio img, html.scuro .logo-stampa img { background: #F4F5F3; padding: 3px 6px; border-radius: 3px; }
+  html.scuro img.anteprima-logo, html.scuro table.elenco td.logo img { background: #F4F5F3; }
+  html.scuro code { background: #232C36; color: #E1E7ED; }
+  html.scuro .notifica { background: #1E2731; color: #E1E7ED; box-shadow: 0 6px 22px rgba(0, 0, 0, .55); }
+  html.scuro .notifica a { color: #E1E7ED; }
+  html.scuro .aiuto-tasti, html.scuro .suggerimenti, html.scuro .risultati-rapidi { background: #1E2731; color: #E1E7ED;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, .6); }
+  html.scuro ::-webkit-scrollbar { width: 12px; height: 12px; }
+  html.scuro ::-webkit-scrollbar-thumb { background: #3A4652; border-radius: 6px; border: 3px solid #141A21; }
+  html.scuro ::-webkit-scrollbar-track { background: #141A21; }
+  /* le animazioni della versione animata */
+  html.scuro .anim .bottone:not(.primario) .onda, html.scuro .anim .passo .onda { background: rgba(255, 255, 255, .18); }
+  html.scuro .adesso { border-top-color: #FF5A4E; }
+  html.scuro .adesso::before, html.scuro .adesso span { background: #FF5A4E; }
+}
+@media screen {
+  html.scuro ul.numeri b, html.scuro .barra-dato span, html.scuro .numero-grande { color: var(--primario-scuro); }
+  html.scuro .barra-dato span { background: var(--primario-scuro); }
+  html.scuro .barra-dato { background: #2A3440; }
+  /* 1.5: la "sala libera" nel mese resta solo tratteggiata */
+  html.scuro .sala-mese.libera { background: transparent; }
+  /* 1.6: la finestra dei video e' gia' scura, uguale nei due temi; la rotella gira nel colore del programma */
+  html.scuro dialog.finestra-video { background: #0E1A2E; }
+  html.scuro .finestra-video video { background: #000000; }
+  html.scuro .rotella { border-top-color: var(--primario-chiaro); }
+}
+

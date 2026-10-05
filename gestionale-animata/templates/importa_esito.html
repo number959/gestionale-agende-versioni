@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block titolo %}Importazione completata{% endblock %}
+{% block corpo %}
+<div class="pagina">
+  <h1>Importazione completata</h1>
+  <p class="sotto">{{ meta.nome }}{% if foglio %}, foglio {{ foglio }}{% endif %}. Prima di importare è stato fatto un backup: se qualcosa non va, si torna indietro da Impostazioni con la copia "prima dell'importazione".</p>
+  <ul class="numeri grandi">
+    {% if piano.tipo == 'appuntamenti' %}<li><b>{{ esito.appuntamenti }}</b> appuntamenti</li>{% endif %}
+    <li><b>{{ esito.pazienti_nuovi }}</b> pazienti nuovi</li>
+    <li><b>{{ esito.pazienti_aggiornati }}</b> pazienti completati</li>
+    {% if esito.medici %}<li><b>{{ esito.medici }}</b> medici nuovi</li>{% endif %}
+    {% if esito.prestazioni %}<li><b>{{ esito.prestazioni }}</b> prestazioni nuove</li>{% endif %}
+    {% if esito.stanze %}<li><b>{{ esito.stanze }}</b> stanze nuove</li>{% endif %}
+    {% if esito.get('note') %}<li><b>{{ esito.note }}</b> note del giorno</li>{% endif %}
+    {% if esito.get('appunti') %}<li><b>{{ esito.appunti }}</b> <a href="{{ url_for('segreteria.da_confermare') }}">da confermare</a> (in conflitto o incomplete)</li>{% endif %}
+    {% if esito.scartati %}<li class="allarme"><b>{{ esito.scartati|length }}</b> righe non importate</li>{% endif %}
+  </ul>
+  {% if esito.scartati %}<p><a class="bottone" href="{{ url_for('importa.scarti', token=token) }}">Scarica l'elenco delle righe non importate</a></p>{% endif %}
+  {% if prossimo %}<div class="avviso">Il file ha altri fogli. <a class="bottone" href="{{ url_for('importa.anteprima', token=token, foglio=prossimo[0]) }}">Anteprima del foglio {{ prossimo[1] }}</a> con le stesse colonne: si controlla e si importa come questo.</div>{% endif %}
+  <p>
+    {% if esito.primo_giorno %}<a class="bottone primario" href="{{ url_for('giorno', iso=esito.primo_giorno.isoformat(), struttura=sid) }}">Vai alla prima giornata importata</a>{% endif %}
+    <a class="bottone" href="{{ url_for('pazienti.elenco') }}">Pazienti</a>
+    {% if esito.medici %}<a class="bottone" href="{{ url_for('anagrafiche.elenco') }}">Medici nuovi: aggiungere i turni</a>{% endif %}
+  </p>
+</div>
+{% endblock %}

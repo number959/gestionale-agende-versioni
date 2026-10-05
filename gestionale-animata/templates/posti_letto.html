@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block titolo %}Posti letto{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">Posti letto · notti dal {{ dal.strftime('%d/%m') }}</h1>
+  <span class="conteggio">{% if st.posti_letto %}{{ st.posti_letto }} letti{% else %}numero di letti non indicato{% endif %}</span>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('sala.posti_letto', dal=prima, struttura=sid) }}" title="Quattro settimane prima">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('sala.posti_letto', dal=dopo, struttura=sid) }}" title="Quattro settimane dopo">&rsaquo;</a>
+    <a class="bottone" data-tasto="oggi" href="{{ url_for('sala.posti_letto', struttura=sid) }}">Da stanotte</a>
+    {% if strutture|length > 1 %}
+    <form method="get" style="display:inline"><input type="hidden" name="dal" value="{{ dal.isoformat() }}"><select name="struttura" onchange="this.form.submit()">
+      {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+    </select></form>
+    {% endif %}
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('sala.giornata', iso=dal.isoformat(), struttura=sid) }}">Sala operatoria</a>
+    <a class="bottone" href="{{ url_for('anagrafiche.struttura', sid=sid) }}">Numero di letti…</a>
+  </div>
+</div>
+<div class="contenuto">
+<p class="nota">Contano gli interventi con degenza <b>Una notte</b> o <b>Ricovero</b> (per le notti indicate), non disdetti. La notte del 10 è quella fra il 10 e l'11.
+  {%- if not st.posti_letto %} Per avere l'avviso quando i letti non bastano, indicare quanti sono in <a href="{{ url_for('anagrafiche.struttura', sid=sid) }}">Nome, logo e colori</a>.{% endif %}</p>
+<table class="elenco letti">
+  <tr><th class="c-notte">Notte</th><th class="numero">Letti</th><th class="c-barra">Occupazione</th><th>Chi</th></tr>
+  {% for r in righe %}
+  <tr class="{{ 'oltre' if r.oltre }}{{ ' fine-settimana' if r.notte.weekday() >= 5 }}">
+    <td><a href="{{ url_for('sala.giornata', iso=r.notte.isoformat(), struttura=sid) }}">{{ giorno_breve(r.notte) }}</a></td>
+    <td class="numero"><b>{{ r.n }}</b>{% if st.posti_letto %}/{{ st.posti_letto }}{% endif %}</td>
+    <td><div class="barra-letti"><span style="width: {{ (100 * r.n / massimo)|round|int }}%"></span>{% if st.posti_letto %}<i style="left: {{ (100 * st.posti_letto / massimo)|round|int }}%" title="letti disponibili"></i>{% endif %}</div></td>
+    <td>{% for a in r.apps %}<a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}">{{ a.paziente.etichetta if a.paziente else 'senza paziente' }}</a> <span class="nota-riga">({{ a.etichetta_degenza|lower }}{% if a.inizio.date() != r.notte %}, dal {{ a.inizio.strftime('%d/%m') }}{% endif %})</span>{% if not loop.last %}, {% endif %}{% endfor %}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}

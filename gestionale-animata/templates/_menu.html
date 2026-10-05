@@ -1,0 +1,75 @@
+{#- navigazione fra le pagine: la struttura e il giorno che si stanno guardando
+    passano da una pagina all'altra -#}
+{%- set _sid = sid if sid is defined and sid else none -%}
+{%- set _data = data_menu if data_menu is defined and data_menu else oggi_iso -%}
+{%- set _sez = sezione if sezione is defined else '' -%}
+{#- il menu: le pagine di tutti i giorni in vista, le altre in tre gruppi.
+    I gruppi si aprono passandoci sopra o con un clic (anche da tastiera). -#}
+{%- set _n_conf = n_da_confermare() if n_da_confermare is defined else 0 %}
+{%- set _segreteria = _sez in ('conferme', 'chiusura', 'confermare', 'cose', 'attesa', 'disponibilita', 'elenco') %}
+{%- set _configura = _sez in ('anagrafiche', 'impostazioni', 'importa', 'invii', 'aggiornamenti') %}
+<nav class="menu" aria-label="Pagine">
+  <a href="{{ url_for('cruscotto.oggi', struttura=_sid) }}"{% if _sez == 'oggi' %} class="attivo"{% endif %} data-guida="menu-oggi">Oggi</a>
+  <a data-tasto="g" href="{{ url_for('giorno', iso=_data, struttura=_sid) }}"{% if _sez == 'giorno' %} class="attivo"{% endif %} data-guida="menu-giorno">Giorno</a>
+  <a href="{{ url_for('viste.settimana', iso=_data, struttura=_sid) }}"{% if _sez == 'settimana' %} class="attivo"{% endif %}>Settimana</a>
+  <a href="{{ url_for('viste.mese', aaaamm=_data[:7], struttura=_sid) }}"{% if _sez == 'mese' %} class="attivo"{% endif %} data-guida="menu-mese">Mese</a>
+  {%- if ci_sono_sale is defined and ci_sono_sale() %}
+  <a href="{{ url_for('sala.giornata', iso=_data, struttura=_sid) }}"{% if _sez == 'sala' %} class="attivo"{% endif %} data-guida="menu-sala">Sala</a>{% endif %}
+  <span class="separatore"></span>
+  <a href="{{ url_for('pazienti.elenco') }}"{% if _sez == 'pazienti' %} class="attivo"{% endif %} data-guida="menu-pazienti">Pazienti</a>
+  <div class="gruppo{% if _segreteria %} attivo{% endif %}" data-guida="menu-segreteria">
+    <button type="button" class="apri-gruppo" aria-haspopup="true" aria-expanded="false">Segreteria{% if _n_conf %}<span class="contatore" title="{{ _n_conf }} da confermare">{{ _n_conf }}</span>{% endif %}<span class="freccia" aria-hidden="true"></span></button>
+    <div class="tendina" role="menu">
+      <a data-tasto="c" href="{{ url_for('viste.conferme', struttura=_sid) }}"{% if _sez == 'conferme' %} class="attivo"{% endif %}><b>Conferme</b><small>telefonate per il prossimo giorno</small></a>
+      <a href="{{ url_for('segreteria.da_confermare', struttura=_sid) }}"{% if _sez == 'confermare' %} class="attivo"{% endif %}><b>Da confermare{% if _n_conf %}<span class="contatore">{{ _n_conf }}</span>{% endif %}</b><small>prenotazioni ancora in sospeso</small></a>
+      <a href="{{ url_for('segreteria.chiusura', iso=_data, struttura=_sid) }}"{% if _sez == 'chiusura' %} class="attivo"{% endif %}><b>Chiusura della giornata</b><small>arrivati e non presentati</small></a>
+      <a href="{{ url_for('segreteria.cose_da_fare', struttura=_sid) }}"{% if _sez == 'cose' %} class="attivo"{% endif %}><b>Da fare</b><small>richiamare, sollecitare, ricordare</small></a>
+      <a href="{{ url_for('segreteria.attesa', struttura=_sid) }}"{% if _sez == 'attesa' %} class="attivo"{% endif %}><b>Lista d'attesa</b><small>chi vuole un posto prima</small></a>
+      <a href="{{ url_for('viste.disponibilita', struttura=_sid) }}"{% if _sez == 'disponibilita' %} class="attivo"{% endif %}><b>Prima disponibilità</b><small>il primo posto libero di un medico</small></a>
+      <a data-tasto="e" href="{{ url_for('viste.elenco_giorno', iso=_data, struttura=_sid) }}"{% if _sez == 'elenco' %} class="attivo"{% endif %}><b>Elenco del giorno</b><small>tutti gli appuntamenti in ordine di ora</small></a>
+    </div>
+  </div>
+  <a href="{{ url_for('cassa.cassa_giorno', iso=_data, struttura=_sid) }}"{% if _sez == 'cassa' %} class="attivo"{% endif %}>Cassa</a>
+  <a href="{{ url_for('viste.statistiche', struttura=_sid) }}"{% if _sez == 'statistiche' %} class="attivo"{% endif %}>Statistiche</a>
+  <span class="spinta"></span>
+  <div class="ricerca-rapida" role="search" data-guida="menu-cerca">
+    <input type="search" id="ricerca-rapida" placeholder="Cerca (tasto /)" autocomplete="off"
+           aria-label="Cerca un paziente, un medico o un giorno"
+           data-indirizzo="{{ url_for('segreteria.cerca_tutto', struttura=_sid) }}">
+    <div class="risultati-rapidi" id="risultati-rapidi" hidden></div>
+  </div>
+  <div class="gruppo a-destra{% if _sez == 'aiuto' %} attivo{% endif %}" data-guida="menu-aiuto">
+    <button type="button" class="apri-gruppo" aria-haspopup="true" aria-expanded="false">Aiuto<span class="freccia" aria-hidden="true"></span></button>
+    <div class="tendina" role="menu">
+      <a href="#" class="avvia-guida" data-azione-guida="pagina" hidden><b>Guida di questa pagina</b><small>un giro sullo schermo, passo per passo</small></a>
+      <a href="{{ url_for('guida.indice') }}"><b>Come fare…</b><small>tutte le guide, con immagini e video</small></a>
+      <a href="{{ url_for('aggiornamenti.novita_pagina') }}"><b>Novità</b><small>cosa c'è di nuovo in questa versione</small></a>
+      <a href="#" data-azione-guida="tasti"><b>Tasti rapidi</b><small>anche con il tasto ?</small></a>
+    </div>
+  </div>
+  <div class="gruppo a-destra{% if _configura %} attivo{% endif %}" data-guida="menu-configura">
+    <button type="button" class="apri-gruppo" aria-haspopup="true" aria-expanded="false">Configura<span class="freccia" aria-hidden="true"></span></button>
+    <div class="tendina" role="menu">
+      <a href="{{ url_for('anagrafiche.elenco') }}"{% if _sez == 'anagrafiche' %} class="attivo"{% endif %}><b>Anagrafiche</b><small>stanze, medici, turni, prestazioni, strutture</small></a>
+      <a href="{{ url_for('invii.pagina') }}"{% if _sez == 'invii' %} class="attivo"{% endif %}><b>Email e WhatsApp</b><small>email automatiche, promemoria, registro</small></a>
+      <a href="{{ url_for('importa.carica') }}"{% if _sez == 'importa' %} class="attivo"{% endif %}><b>Importa da Excel</b><small>rubrica e agende dei file vecchi</small></a>
+      <a href="{{ url_for('viste.impostazioni') }}"{% if _sez == 'impostazioni' %} class="attivo"{% endif %}><b>Impostazioni</b><small>backup, messaggi, stampa, tema</small></a>
+      <a href="{{ url_for('aggiornamenti.pagina') }}"{% if _sez == 'aggiornamenti' %} class="attivo"{% endif %}><b>Aggiornamenti</b><small>versione installata, Aggiorna adesso</small></a>
+    </div>
+  </div>
+</nav>
+<div id="notifiche" class="notifiche" aria-live="polite" data-indirizzo="{{ url_for('segreteria.notifiche', struttura=_sid) }}"></div>
+<div id="aiuto-tasti" class="aiuto-tasti" hidden>
+  <h2>Tasti rapidi</h2>
+  <table>
+    <tr><th>/</th><td>cerca un paziente, un medico o un giorno ("domani", "lunedì", "24/9")</td></tr>
+    <tr><th>← →</th><td>giorno precedente e successivo</td></tr>
+    <tr><th>T</th><td>oggi</td></tr>
+    <tr><th>N</th><td>nuovo appuntamento</td></tr>
+    <tr><th>G · E · C</th><td>griglia, elenco, conferme del giorno</td></tr>
+    <tr><th>Ctrl + Invio</th><td>salva il modulo che si sta compilando</td></tr>
+    <tr><th>Esc</th><td>chiude questo riquadro e i suggerimenti</td></tr>
+    <tr><th>?</th><td>mostra questo riquadro</td></tr>
+    <tr><th>Aiuto</th><td>nel menu: la guida sullo schermo di questa pagina e tutte le guide con le immagini</td></tr>
+  </table>
+</div>

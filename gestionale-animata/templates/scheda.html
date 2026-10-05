@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="pagina">
+  <p class="marchio" style="border:0;margin-bottom:16px">{% include "_marchio.html" %}</p>
+  <h1>{{ titolo }}</h1>
+  <p class="sotto"><a href="{{ url_for('anagrafiche.elenco') }}">Torna a stanze, medici e turni</a></p>
+  {% if nota %}<p class="nota">{{ nota }}</p>{% endif %}
+
+  <form method="post"{% if con_file %} enctype="multipart/form-data"{% endif %}>
+    {% for c in campi %}
+      {% if c.tipo == 'nascosto' %}
+      <input type="hidden" name="{{ c.nome }}" value="{{ c.valore }}">
+      {% elif c.tipo == 'titolo' %}
+      <div class="titolo-sezione{% if c.classe %} {{ c.classe }}{% endif %}">
+        <h2>{{ c.etichetta }}</h2>
+        {% if c.aiuto %}<p class="aiuto">{{ c.aiuto }}</p>{% endif %}
+      </div>
+      {% elif c.tipo == 'anteprima' %}
+      <div class="campo">
+        <span class="etichetta">{{ c.etichetta }}</span>
+        <img class="anteprima-logo" src="{{ c.src }}" alt="{{ c.alt }}">
+      </div>
+      {% elif c.tipo == 'file' %}
+      <div class="campo">
+        <label for="{{ c.nome }}">{{ c.etichetta }}</label>
+        <input type="file" id="{{ c.nome }}" name="{{ c.nome }}"{% if c.accetta %} accept="{{ c.accetta }}"{% endif %}>
+        {% if c.aiuto %}<p class="aiuto">{{ c.aiuto }}</p>{% endif %}
+      </div>
+      {% elif c.tipo == 'checkbox' %}
+      <div class="campo spunta{% if c.classe %} {{ c.classe }}{% endif %}">
+        <label><input type="checkbox" name="{{ c.nome }}" value="1"{% if c.valore %} checked{% endif %}> {{ c.etichetta }}</label>
+      </div>
+      {% elif c.tipo == 'giorni' %}
+      <div class="campo giorni">
+        <span class="etichetta">{{ c.etichetta }}</span>
+        {% for e in c.etichette %}
+        <label><input type="checkbox" name="giorno_{{ loop.index0 }}" value="1"{% if loop.index0 in c.valore %} checked{% endif %}> {{ e }}</label>
+        {% endfor %}
+      </div>
+      {% elif c.tipo == 'textarea' %}
+      <div class="campo{% if c.classe %} {{ c.classe }}{% endif %}">
+        <label for="{{ c.nome }}">{{ c.etichetta }}</label>
+        <textarea id="{{ c.nome }}" name="{{ c.nome }}" rows="4"{% if c.massimo %} maxlength="{{ c.massimo }}"{% endif %}>{{ c.valore if c.valore is not none else '' }}</textarea>
+        {% if c.aiuto %}<p class="aiuto">{{ c.aiuto }}</p>{% endif %}
+      </div>
+      {% else %}
+      <div class="campo{% if c.meta %} meta{% endif %}{% if c.classe %} {{ c.classe }}{% endif %}">
+        <label for="{{ c.nome }}">{{ c.etichetta }}</label>
+        {% if c.tipo == 'select' %}
+        <select id="{{ c.nome }}" name="{{ c.nome }}" required>
+          {% for valore, testo in c.opzioni %}
+          <option value="{{ valore }}"{% if valore|string == c.valore|string %} selected{% endif %}>{{ testo }}</option>
+          {% endfor %}
+        </select>
+        {% else %}
+        <input type="{{ c.tipo }}" id="{{ c.nome }}" name="{{ c.nome }}"
+               value="{{ c.valore if c.valore is not none else '' }}"
+               {%- if c.richiesto %} required{% endif %}
+               {%- if c.massimo %} maxlength="{{ c.massimo }}"{% endif %}
+               {%- if c.minimo is defined %} min="{{ c.minimo }}"{% endif %}
+               {%- if c.massimo_n is defined %} max="{{ c.massimo_n }}"{% endif %}
+               {%- if c.suggerimenti %} list="lista_{{ c.nome }}"{% endif %}
+               {%- if c.tipo == 'time' %} step="300"{% endif %}>
+        {% if c.suggerimenti %}
+        <datalist id="lista_{{ c.nome }}">{% for x in c.suggerimenti %}<option value="{{ x }}">{% endfor %}</datalist>
+        {% endif %}
+        {% endif %}
+        {% if c.aiuto %}<p class="aiuto">{{ c.aiuto }}</p>{% endif %}
+      </div>
+      {% endif %}
+    {% endfor %}
+
+    <div class="azioni">
+      <button class="bottone primario" type="submit">{{ etichetta_salva }}</button>
+      {% if eliminabile %}
+      <button class="bottone elimina" type="submit" name="azione" value="elimina"
+              formnovalidate onclick='return confirm({{ conferma_elimina|tojson }})'>Elimina</button>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if elenco_extra %}
+  <div class="riquadro-elenco">
+    <h2>{{ elenco_extra.titolo }}</h2>
+    {% if elenco_extra.nota %}<p class="aiuto">{{ elenco_extra.nota }}</p>{% endif %}
+    {% if elenco_extra.righe %}<ul>
+      {% for r in elenco_extra.righe %}
+      <li><a href="{{ r.url }}">{{ r.testo }}</a>{% if r.telefono %} <span class="telefono">{{ r.telefono }}</span>{% endif %}{% if r.dettaglio %} <span class="senza">({{ r.dettaglio }})</span>{% endif %}</li>
+      {% endfor %}
+    </ul>{% endif %}
+    {% if elenco_extra.azione %}<p><a class="bottone primario" href="{{ elenco_extra.azione.url }}">{{ elenco_extra.azione.testo }}</a></p>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

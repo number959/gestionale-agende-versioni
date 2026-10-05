@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% set foglio_carta = true %}
+{% block titolo %}Guida del Gestionale Agende{% endblock %}
+{% block classe_body %} class="pagina-stampa"{% endblock %}
+{% block menu %}{% endblock %}
+{% block corpo %}
+<style>@media print { @page { size: A4 portrait; margin: 12mm; } }</style>
+<div class="comandi-stampa solo-schermo">
+  <button class="bottone primario" type="button" onclick="window.print()">Stampa (o salva in PDF)</button>
+  <a class="bottone" href="{{ url_for('guida.indice') }}">Torna alla guida</a>
+</div>
+<div class="foglio guida-stampa">
+  <header class="copertina-guida">
+    <div class="logo-stampa">{% include "_marchio.html" %}</div>
+    <h1>Guida del Gestionale Agende</h1>
+    <p>Come fare le cose di tutti i giorni, passo per passo. Le immagini usano dati di prova inventati.</p>
+    <ol class="indice-guida">
+      {% for gruppo, articoli in gruppi %}<li><b>{{ gruppo }}</b>: {% for a in articoli %}{{ a.titolo }}{% if not loop.last %} · {% endif %}{% endfor %}</li>{% endfor %}
+    </ol>
+    <p class="nota-riga">Versione {{ versione_programma }}, aggiornata al {{ oggi.strftime('%d/%m/%Y') }}. Nel programma: menu Aiuto → Come fare…, dove ogni guida ha anche il suo video (<b>Guarda il video</b>) e <b>Mostrami sullo schermo</b> la fa sulla pagina vera.</p>
+  </header>
+  {% for gruppo, articoli in gruppi %}
+  {% for a in articoli %}
+  <section class="articolo-stampa">
+    <p class="gruppo-stampa">{{ gruppo }}</p>
+    <h2>{{ a.titolo }}</h2>
+    <p class="in-breve">{{ a.in_breve }}</p>
+    {% set vid = video_guida(a.slug) %}{% if vid %}<p class="nota-riga video-stampa">Video di {{ vid.durata or 'un minuto' }} nel programma: Aiuto → Come fare… → {{ a.titolo }} → Guarda il video.</p>{% endif %}
+    <ol class="passi-guida">{% for p in a.passi %}<li{% if p.sel %} class="con-segno"{% endif %}><b>{{ p.titolo }}</b> {{ p.testo }}</li>{% endfor %}</ol>
+    {% set img = immagine(a.slug) %}{% if img %}<img class="figura-stampa" src="{{ img }}" alt="{{ a.titolo }}">{% endif %}
+  </section>
+  {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}

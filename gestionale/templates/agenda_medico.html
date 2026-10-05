@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% set foglio_carta = true %}
+{% block titolo %}Agenda dei medici · {{ titolo }}{% endblock %}
+{% block classe_body %} class="pagina-stampa"{% endblock %}
+{% block menu %}{% endblock %}
+{% block corpo %}
+<div class="comandi-stampa solo-schermo">
+  <button class="bottone primario" type="button" onclick="window.print()">Stampa</button>
+  <a class="passo" data-tasto="precedente" href="{{ url_for('segreteria.agenda_medico', iso=ieri, medico=scelto.id if scelto else none, struttura=sid) }}" title="Giorno precedente">&lsaquo;</a>
+  <a class="passo" data-tasto="successivo" href="{{ url_for('segreteria.agenda_medico', iso=domani, medico=scelto.id if scelto else none, struttura=sid) }}" title="Giorno successivo">&rsaquo;</a>
+  <form method="get" style="display:inline"><select name="medico" onchange="this.form.submit()">
+    <option value="">tutti i medici del giorno, uno per foglio</option>
+    {% for o in medici %}<option value="{{ o.id }}"{% if scelto and o.id == scelto.id %} selected{% endif %}>{{ o.etichetta }}</option>{% endfor %}
+  </select><input type="hidden" name="struttura" value="{{ sid }}"></form>
+  <a class="bottone" href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">Torna alla giornata</a>
+</div>
+{% for f in fogli %}
+<div class="foglio foglio-medico">
+  <header class="testata-stampa">
+    <div class="logo-stampa">{% include "_marchio.html" %}</div>
+    <div class="dati-stampa"><div class="nome-struttura">{{ f.operatore.etichetta }}</div>{% if f.operatore.specialita %}<div>{{ f.operatore.specialita }}</div>{% endif %}</div>
+    <div class="data-stampa"><div class="giorno-stampa">{{ titolo }}</div><div>{{ f.apps|length }} appuntament{{ 'o' if f.apps|length == 1 else 'i' }}</div></div>
+  </header>
+  {% if f.mail %}<p class="solo-schermo"><a class="bottone" href="{{ f.mail }}">Manda per email a {{ f.operatore.email }}</a></p>
+  {% elif not f.operatore.email %}<p class="solo-schermo nota">Per mandarla per email, scrivere l'indirizzo del medico in <a href="{{ url_for('anagrafiche.medico', oid=f.operatore.id) }}">Anagrafiche</a>.</p>{% endif %}
+  {% if f.apps %}
+  <table class="tabella-stampa">
+    <thead><tr><th class="c-ora">Ora</th><th>Stanza</th><th>Paziente</th><th>Età</th><th>Telefono</th><th>Prestazione</th><th>Note</th></tr></thead>
+    <tbody>
+    {% for a in f.apps %}
+      <tr><td class="c-ora">{{ a.inizio.strftime('%H:%M') }}–{{ a.fine.strftime('%H:%M') }}</td><td>{{ a.risorsa.nome }}{% if a.risorsa.struttura_id != sid %}<br><small>{{ a.risorsa.struttura.nome }}</small>{% endif %}</td>
+        <td class="c-paziente">{{ a.paziente.etichetta if a.paziente else '' }}</td><td>{{ a.paziente.eta if a.paziente and a.paziente.eta is not none else '' }}</td>
+        <td>{{ a.paziente.telefono if a.paziente and a.paziente.telefono else '' }}</td>
+        <td>{{ a.prestazione.nome if a.prestazione else '' }}{% for k, v in a.valori_extra.items() %}<br><small>{{ k }}: {{ v }}</small>{% endfor %}</td>
+        <td>{{ a.note or '' }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>Nessun appuntamento.</p>
+  {% endif %}
+  <div class="piede-stampa">stampato il {{ adesso.strftime('%d/%m/%Y alle %H:%M') }}</div>
+</div>
+{% else %}
+<div class="foglio"><p>Nessun medico ha appuntamenti in questo giorno.</p></div>
+{% endfor %}
+{% endblock %}

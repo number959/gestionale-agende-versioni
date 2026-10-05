@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">{{ titolo }}</h1>
+  <span class="conteggio">{{ vista.totale }} appuntamenti{% if medico %} di {{ medico.etichetta }}{% endif %}{% if vista.ci_sono_sale %} · {{ vista.interventi }} in sala operatoria{% endif %}</span>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('viste.mese', aaaamm=prima, struttura=sid, medico=medico.id if medico else none) }}" title="Mese precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('viste.mese', aaaamm=dopo, struttura=sid, medico=medico.id if medico else none) }}" title="Mese successivo">&rsaquo;</a>
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('viste.mese', aaaamm=oggi.strftime('%Y-%m'), struttura=sid, medico=medico.id if medico else none) }}">Questo mese</a>
+    <span class="separa"></span>
+    <form method="get" style="display:inline">
+      {% if strutture|length > 1 %}
+      <select name="struttura" onchange="this.form.submit()">
+        {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+      </select>
+      {% else %}<input type="hidden" name="struttura" value="{{ sid }}">{% endif %}
+      <select name="medico" onchange="this.form.submit()">
+        <option value="">Tutti i medici</option>
+        {% for o in medici %}<option value="{{ o.id }}"{% if medico and o.id == medico.id %} selected{% endif %}>{{ o.etichetta }}</option>{% endfor %}
+      </select>
+    </form>
+    <span class="separa"></span>
+    <button class="bottone" type="button" onclick="window.print()">Stampa</button>
+  </div>
+</div>
+<div class="telaio">
+<table class="mese">
+  <thead><tr>{% for n in giorni_brevi %}<th>{{ n }}</th>{% endfor %}</tr></thead>
+  <tbody>
+    {% for sett in vista.settimane %}
+    <tr>
+      {% for g in sett %}{% set d = vista.giorni[g] %}
+      <td class="{% if not d.del_mese %}fuori{% endif %}{% if g == oggi %} oggi{% endif %}{% if d.info.chiusura or d.info.festivo %} festivo{% endif %}{% if not d.info.giorno_di_apertura %} chiuso-di-solito{% endif %}">
+        <a class="giorno-mese" href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">
+          <span class="numero">{{ g.day }}</span>
+          {% if d.info.chiusura %}<span class="etichetta-giorno">chiusa: {{ d.info.chiusura }}</span>
+          {% elif d.info.festivo %}<span class="etichetta-giorno">{{ d.info.festivo }}</span>{% endif %}
+          {% if d.appuntamenti %}<span class="quanti">{{ d.appuntamenti }} app.</span>{% endif %}
+          {% if d.libere and g >= oggi %}<span class="liberi">{{ d.libere }} liber{{ 'a' if d.libere == 1 else 'e' }}</span>{% endif %}
+          {% for o in d.medici %}<span class="medico-mese" style="border-left-color: {{ o.colore_sicuro }}">{{ o.cognome }}</span>{% endfor %}
+          {% for o in d.assenti %}<span class="medico-mese assente">{{ o.cognome }} assente</span>{% endfor %}
+          {%- if d.sala and d.sala.interventi %}<span class="sala-mese" title="Sala operatoria: {{ d.sala.interventi }} intervent{{ 'o' if d.sala.interventi == 1 else 'i' }}">Sala {{ d.sala.interventi }}:{% for o, n in d.sala.chirurghi %} {{ o.cognome }}{% if n > 1 %} ({{ n }}){% endif %}{% if not loop.last %},{% endif %}{% endfor %}</span>{% endif %}
+          {%- if d.sala and d.sala.liberi %}<span class="sala-mese libera" title="Operano di solito in questo giorno della settimana e non hanno ancora interventi">sala libera: {% for o in d.sala.liberi %}{{ o.cognome }}{% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}
+        </a>
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

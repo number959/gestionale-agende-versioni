@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block titolo %}Giorni di sala dei chirurghi{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Giorni di sala dei chirurghi</h1>
+  <p class="sotto">In che giorni della settimana opera di solito ciascun chirurgo. La griglia e la pagina Sala operatoria dicono chi è in sala e chi, pur operando quel giorno, è ancora libero; salvando un intervento in un altro giorno compare un avviso.</p>
+  <p class="nota">Il numero è quante volte ha operato in quel giorno della settimana dal {{ dal.strftime('%d/%m/%Y') }} al {{ al.strftime('%d/%m/%Y') }}.
+    {% if proponi %}<b>Proposta dagli interventi:</b> spuntati i giorni con almeno due interventi. Controllare e salvare. <a href="{{ url_for('sala.chirurghi', struttura=sid) }}">Annulla la proposta</a>
+    {% else %}<a class="bottone piccolo" href="{{ url_for('sala.chirurghi', struttura=sid, proponi=1) }}">Proponi dagli interventi</a>{% endif %}</p>
+  <form method="post" class="libero">
+    <table class="elenco giorni-sala">
+      <tr><th>Chirurgo</th>{% for g in giorni %}<th class="giorno-sala">{{ g }}</th>{% endfor %}</tr>
+      {% for r in chirurghi %}
+      <tr>
+        <td><a href="{{ url_for('anagrafiche.medico', oid=r.o.id) }}">{{ r.o.etichetta }}</a>{% if r.o.specialita %}<div class="nota-riga">{{ r.o.specialita }}</div>{% endif %}<input type="hidden" name="presente_{{ r.o.id }}" value="1"></td>
+        {% for i in range(7) %}
+        <td class="giorno-sala{{ ' storico' if r.storico.get(i) }}"><label><input type="checkbox" name="sala_{{ r.o.id }}_{{ i }}" value="1"{% if i in r.giorni %} checked{% endif %}>{% if r.storico.get(i) %} <span class="volte" title="interventi in giorni diversi">{{ r.storico.get(i) }}</span>{% endif %}</label></td>
+        {% endfor %}
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="vuoto">Nessun chirurgo ha ancora interventi in sala operatoria. Si possono indicare i giorni fra gli altri medici qui sotto.</td></tr>
+      {% endfor %}
+    </table>
+    {% if altri %}
+    <details class="altri-medici"><summary>Altri medici ({{ altri|length }})</summary>
+    <table class="elenco giorni-sala">
+      {% for r in altri %}
+      <tr>
+        <td>{{ r.o.etichetta }}<input type="hidden" name="presente_{{ r.o.id }}" value="1"></td>
+        {% for i in range(7) %}<td class="giorno-sala"><label><input type="checkbox" name="sala_{{ r.o.id }}_{{ i }}" value="1"{% if i in r.giorni %} checked{% endif %}> {{ giorni[i] }}</label></td>{% endfor %}
+      </tr>
+      {% endfor %}
+    </table>
+    </details>
+    {% endif %}
+    <div class="azioni"><button class="bottone primario" type="submit">Salva i giorni di sala</button>
+      <a class="bottone" href="{{ url_for('sala.giornata', iso=oggi_iso, struttura=sid) }}">Sala operatoria</a></div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block titolo %}Sposta appuntamento{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Sposta l'appuntamento</h1>
+  <p class="sotto">{% if a.paziente %}<b>{{ a.paziente.etichetta }}</b>, {% endif %}oggi fissato {{ a.inizio.strftime('%d/%m/%Y alle %H:%M') }}, {{ a.operatore.etichetta }}, {{ a.risorsa.nome }} ({{ a.durata_min }} minuti).
+    <a href="{{ url_for('appuntamento', aid=a.id) }}">Torna all'appuntamento</a></p>
+  <form method="get" class="filtri">
+    <label>Dal<br><input type="date" name="dal" value="{{ dal.isoformat() }}"></label>
+    {% if st %}<label><input type="checkbox" name="tutte" value="1"{% if tutte %} checked{% endif %}> anche nelle altre strutture</label>{% endif %}
+    <button class="bottone" type="submit">Cerca</button>
+  </form>
+  <h2 class="sezione">Primi posti liberi di {{ a.operatore.etichetta }}</h2>
+  {% if proposte %}
+  <table class="elenco">
+    <tr><th>Giorno</th><th>Ora</th><th>Stanza</th><th></th></tr>
+    {% for p in proposte %}
+    <tr>
+      <td>{{ giorni_nomi[p.inizio.weekday()] }} {{ p.inizio.day }} {{ mesi[p.inizio.month - 1] }}</td>
+      <td class="ora-lista">{{ p.inizio.strftime('%H:%M') }}</td>
+      <td>{{ p.risorsa.nome }}{% if tutte %}<div class="nota-riga">{{ p.struttura.nome }}</div>{% endif %}</td>
+      <td class="azione"><form method="post" class="in-linea">
+        <input type="hidden" name="inizio" value="{{ p.inizio.strftime('%Y-%m-%dT%H:%M') }}"><input type="hidden" name="risorsa" value="{{ p.risorsa.id }}">
+        <button class="bottone piccolo primario" type="submit">Sposta qui</button></form></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Nessun posto libero nei turni di {{ a.operatore.etichetta }} nei prossimi 90 giorni.</p>
+  {% endif %}
+  <h2 class="sezione">Oppure scegliere data e ora</h2>
+  <form method="post" class="filtri">
+    <label>Giorno e ora<br><input type="datetime-local" name="inizio" value="{{ a.inizio.strftime('%Y-%m-%dT%H:%M') }}" step="300" required></label>
+    <label>Stanza<br><select name="risorsa">{% for r in a.risorsa.struttura.risorse if r.attiva or r.id == a.risorsa_id %}<option value="{{ r.id }}"{% if r.id == a.risorsa_id %} selected{% endif %}>{{ r.nome }}</option>{% endfor %}</select></label>
+    <button class="bottone primario" type="submit">Sposta</button>
+  </form>
+  <p class="nota">Un appuntamento confermato torna "prenotato": la data nuova va confermata. Lo spostamento resta nello storico dell'appuntamento.</p>
+</div>
+{% endblock %}

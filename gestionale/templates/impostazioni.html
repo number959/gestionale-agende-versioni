@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block titolo %}Impostazioni{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Impostazioni</h1>
+  <div class="riquadro">
+    <a class="bottone" href="{{ url_for('importa.carica') }}">Importa pazienti o agende da Excel</a>
+    <a class="bottone" href="{{ url_for('cassa.listino') }}">Listino e tariffe</a>
+    <a class="bottone" href="{{ url_for('documenti.moduli') }}">Moduli da stampare</a>
+    <a class="bottone" href="{{ url_for('invii.pagina') }}">Email e WhatsApp</a>
+    <a class="bottone" href="{{ url_for('segreteria.sposta_blocco') }}">Sposta gli appuntamenti di un medico</a>
+    <a class="bottone" href="#" onclick="document.getElementById('aiuto-tasti').hidden=false;return false">Tasti rapidi</a>
+  </div>
+
+  <h2 class="sezione" id="aspetto-tema">Aspetto</h2>
+  <div class="riquadro">
+    <div class="filtri">
+      <span>Tema dello schermo</span>
+      <label><input type="radio" name="tema" value="chiaro" checked> chiaro</label>
+      <label><input type="radio" name="tema" value="scuro"> scuro</label>
+      <label><input type="radio" name="tema" value="sistema"> come Windows</label>
+      <span id="stato-tema" class="nota-riga" role="status"></span>
+    </div>
+    <p class="nota-riga" style="margin-bottom:0">Vale per questo PC. "Come Windows" segue Impostazioni → Personalizzazione → Colori → Modalità. Le stampe restano sempre chiare.</p>
+  </div>
+
+  <h2 class="sezione" id="stampa">Foglio del giorno</h2>
+  <p>Cosa esce con <b>Stampa</b> dalla giornata. Ora e paziente ci sono sempre; la stanza, se il foglio è in ordine di ora.</p>
+  <form method="post" class="riquadro">
+    <input type="hidden" name="azione" value="stampa">
+    <div class="filtri">
+      <span>Colonne</span>
+      {% for codice, etichetta in colonne_stampa %}<label><input type="checkbox" name="colonne" value="{{ codice }}"{% if codice in stampa.colonne %} checked{% endif %}> {{ etichetta }}</label>{% endfor %}
+    </div>
+    <div class="filtri" style="margin-top:10px">
+      <span>Foglio</span>
+      <label><input type="radio" name="orientamento" value="orizzontale"{% if stampa.orientamento == 'orizzontale' %} checked{% endif %}> A4 orizzontale</label>
+      <label><input type="radio" name="orientamento" value="verticale"{% if stampa.orientamento == 'verticale' %} checked{% endif %}> A4 verticale</label>
+      <span style="margin-left:18px">Ordine</span>
+      <label><input type="radio" name="ordine" value="stanza"{% if stampa.ordine == 'stanza' %} checked{% endif %}> una tabella per stanza</label>
+      <label><input type="radio" name="ordine" value="ora"{% if stampa.ordine == 'ora' %} checked{% endif %}> tutto in ordine di ora</label>
+    </div>
+    <div class="azioni"><button class="bottone primario" type="submit">Salva il foglio del giorno</button></div>
+  </form>
+
+  <h2 class="sezione" id="checklist">Checklist pre-operatoria</h2>
+  <p>Le voci da spuntare per ogni intervento (appuntamenti nelle stanze di tipo "Sala operatoria"). Nella griglia ogni intervento mostra quante ne mancano; il giorno prima arriva una notifica se qualcuna è ancora da fare.</p>
+  <form method="post" action="{{ url_for('sala.salva_voci') }}" class="riquadro">
+    <div class="campo"><label for="voci">Una voce per riga, al massimo 10. Vuoto: nessuna checklist.</label>
+      <textarea id="voci" name="voci" rows="6" maxlength="700">{{ voci_checklist|join('\n') }}</textarea></div>
+    <div class="azioni"><button class="bottone primario" type="submit">Salva la checklist</button>
+      <a class="bottone" href="{{ url_for('sala.giornata', iso=oggi_iso) }}">Sala operatoria</a></div>
+  </form>
+
+  <h2 class="sezione" id="backup">Backup del database</h2>
+  <p>Il programma fa da solo una copia al giorno, verificata, e tiene le ultime 30 più la prima di ogni mese per un anno.
+     Conviene una cartella su un altro disco: un NAS, una chiavetta, la cartella di Google Drive o OneDrive.</p>
+  {% if not percorso_db %}
+  <p class="avviso errore">Il database non è un file: backup non disponibile.</p>
+  {% else %}
+  <div class="riquadro">
+    <p>Database: <code>{{ percorso_db }}</code></p>
+    <p>Cartella dei backup: <code>{{ cartella }}</code>{% if not scelta %} (predefinita){% endif %}</p>
+    <p>{% if stato.ultimo_ok %}Ultima copia automatica: {{ stato.ultimo_ok.strftime('%d/%m/%Y %H:%M') }}.{% elif copie %}Ultima copia: {{ copie[0].quando.strftime('%d/%m/%Y %H:%M') }}.{% else %}Nessuna copia ancora.{% endif %}
+       {% if stato.ultimo_errore %}<br><span class="errore-testo">Ultimo errore ({{ stato.errore_il.strftime('%d/%m %H:%M') if stato.errore_il else '' }}): {{ stato.ultimo_errore }}</span>{% endif %}</p>
+    <form method="post" class="filtri">
+      <input type="hidden" name="azione" value="cartella">
+      <label class="largo">Cartella <input type="text" name="cartella" value="{{ scelta }}" placeholder="{{ predefinita }}" style="width:420px"></label>
+      <button class="bottone" type="submit">Salva cartella</button>
+    </form>
+    <form method="post" class="in-linea"><input type="hidden" name="azione" value="backup_ora"><button class="bottone primario" type="submit">Fai un backup adesso</button></form>
+  </div>
+
+  {% if copie %}
+  <table class="elenco">
+    <tr><th>Copia</th><th>Dimensione</th><th></th><th>Ripristino</th></tr>
+    {% for c in copie %}
+    <tr>
+      <td>{{ c.quando.strftime('%d/%m/%Y %H:%M') }}{% if c.motivo %} <span class="senza">({{ c.motivo|replace('-', ' ') }})</span>{% endif %}</td>
+      <td>{{ (c.dimensione / 1024)|round|int }} KB</td>
+      <td class="azione"><a href="{{ url_for('viste.scarica_backup', nome=c.nome) }}">Scarica</a></td>
+      <td class="azione">
+        <form method="post" action="{{ url_for('viste.ripristina') }}" class="in-linea"
+              onsubmit="return confirm('Rimettere la copia del {{ c.quando.strftime('%d/%m/%Y %H:%M') }}? Gli appuntamenti inseriti dopo quella data spariscono (il database attuale resta comunque fra le copie).')">
+          <input type="hidden" name="nome" value="{{ c.nome }}">
+          <label><input type="checkbox" name="conferma" value="1" required> confermo</label>
+          <button class="bottone piccolo elimina-testo" type="submit">Ripristina</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+  {% endif %}
+
+  <h2 class="sezione" id="messaggi">Messaggi ai pazienti</h2>
+  <p>Il testo che WhatsApp ed Email preparano nella pagina Conferme, e dei promemoria automatici per email (<a href="{{ url_for('invii.pagina') }}#promemoria">Email e WhatsApp</a>). Si può usare:
+    {% for s in segnaposto %}<code>{{ '{' ~ s ~ '}' }}</code>{% if not loop.last %} {% endif %}{% endfor %}.</p>
+  <form method="post">
+    <div class="campo"><label for="testo">Testo del messaggio</label>
+      <textarea id="testo" name="testo" rows="4" maxlength="1000">{{ modello }}</textarea></div>
+    <div class="campo"><label for="oggetto">Oggetto dell'email</label>
+      <input type="text" id="oggetto" name="oggetto" value="{{ oggetto }}" maxlength="200"></div>
+    <div class="azioni">
+      <button class="bottone primario" type="submit" name="azione" value="testo">Salva testo</button>
+      <button class="bottone" type="submit" name="azione" value="testo_predefinito" formnovalidate>Rimetti il testo predefinito</button>
+    </div>
+  </form>
+  {% if esempio %}<div class="riquadro"><p class="aiuto">Esempio con l'ultimo appuntamento:</p><p>{{ esempio }}</p></div>{% endif %}
+</div>
+{% endblock %}
