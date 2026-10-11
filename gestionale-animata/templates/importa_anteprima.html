@@ -39,7 +39,7 @@
         {% endif %}
       </div>
       <div class="filtri" style="margin:10px 0 0">
-        <input type="hidden" name="maiuscole" value="0"><label><input type="checkbox" name="maiuscole" value="1"{% if opzioni.maiuscole %} checked{% endif %}> nomi scritti tutti in maiuscolo con le iniziali maiuscole (DE FALCO → De Falco)</label>
+        <input type="hidden" name="maiuscole" value="0"><label><input type="checkbox" name="maiuscole" value="1"{% if opzioni.maiuscole %} checked{% endif %}> nomi scritti tutti in maiuscolo con le iniziali maiuscole (DE LUCA → De Luca)</label>
         {% if analisi.tipo == 'appuntamenti' %}
         <input type="hidden" name="crea_medici" value="0"><label><input type="checkbox" name="crea_medici" value="1"{% if opzioni.crea_medici %} checked{% endif %}> crea i medici che mancano</label>
         <input type="hidden" name="crea_prestazioni" value="0"><label><input type="checkbox" name="crea_prestazioni" value="1"{% if opzioni.crea_prestazioni %} checked{% endif %}> crea le prestazioni che mancano</label>

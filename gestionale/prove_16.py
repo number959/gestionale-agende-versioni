@@ -170,10 +170,13 @@ def pubblica(dove, numero='1.6.1', dati=None, **cambi):
     return dove
 
 
-def nuova_versione():
-    """Una versione sicuramente piu' nuova di quella installata."""
+def nuova_versione(passo=1):
+    """Una versione sicuramente piu' nuova di quella installata (con un passo piu'
+    lungo, una ancora piu' nuova), di quattro numeri al massimo come vuole il file
+    delle versioni: dalla 1.7 la 1.7.1, dalla 1.7.1 la 1.7.1.1."""
     n = novita.numeri(comune.VERSIONE)
-    return '.'.join(str(x) for x in n + [1])
+    n = n + [passo] if len(n) < 4 else n[:-1] + [n[-1] + passo]
+    return '.'.join(str(x) for x in n)
 
 
 def pronto(S, dove):
@@ -552,18 +555,18 @@ def c_un_controllo_alla_volta():
         assert json.loads(html(C.get('/aggiornamenti/stato.json')))['in_corso'] is True
         assert 'Controllo in corso' in testo(C.get('/aggiornamenti'))
         # cambiato l'indirizzo mentre il controllo e' in corso: il nuovo controllo aspetta e poi parte
-        altra = pubblica(os.path.join(dove, 'altra'), nuova_versione() + '.5')
+        altra = pubblica(os.path.join(dove, 'altra'), nuova_versione(5))
         C.post('/aggiornamenti', data={'azione': 'indirizzo', 'indirizzo': altra})
         via.set()
         t.join(10)
         for _ in range(100):
-            if not AG.stato['in_corso'] and AG.stato['disponibile'] and AG.stato['disponibile']['versione'] == nuova_versione() + '.5':
+            if not AG.stato['in_corso'] and AG.stato['disponibile'] and AG.stato['disponibile']['versione'] == nuova_versione(5):
                 break
             orologio.sleep(0.1)
     finally:
         AG.apri = vero
     assert AG.stato['pronto'] and not AG.stato['in_corso'], AG.stato
-    assert AG.stato['disponibile']['versione'] == nuova_versione() + '.5', ('controllato il vecchio indirizzo', AG.stato)
+    assert AG.stato['disponibile']['versione'] == nuova_versione(5), ('controllato il vecchio indirizzo', AG.stato)
 
 
 prova('versione nuova in una cartella: scaricata, controllata, notifica e pagina', c_nuova_versione)
@@ -610,7 +613,7 @@ def c_in_corso_fra_due_controlli():
         primo = threading.Thread(target=AG.controlla, args=(fabbrica,))          # quello delle sei ore
         primo.start()
         assert entrato.wait(5)
-        altra = pubblica(os.path.join(dove, 'altra'), nuova_versione() + '.5')
+        altra = pubblica(os.path.join(dove, 'altra'), nuova_versione(5))
         C.post('/aggiornamenti', data={'azione': 'indirizzo', 'indirizzo': altra})   # il secondo aspetta
         via.set()
         primo.join(10)
@@ -630,7 +633,7 @@ def c_in_corso_fra_due_controlli():
             if AG._attivi == [0]:
                 break
             orologio.sleep(0.1)
-    assert not AG.stato['in_corso'] and AG.stato['disponibile']['versione'] == nuova_versione() + '.5', AG.stato
+    assert not AG.stato['in_corso'] and AG.stato['disponibile']['versione'] == nuova_versione(5), AG.stato
     assert AG._attivi == [0], AG._attivi
 
 
@@ -993,7 +996,9 @@ def d_prima_volta_con_dati():
     s.close()
     assert leggi(S, 'versione_avviata') == comune.VERSIONE and leggi(S, 'novita_dal') == OGGI.isoformat(), note
     n = [x for x in notifiche_di(C) if x['chiave'] == 'novita-%s' % comune.VERSIONE]
-    assert n and n[0]['link'] == '/aiuto/novita' and 'cose nuove' in n[0]['testo'], notifiche_di(C)
+    k = len(novita.NOVITA[0][1])
+    assert n and n[0]['link'] == '/aiuto/novita' and '%d %s' % (k, 'cosa nuova' if k == 1 else 'cose nuove') in n[0]['testo'], \
+        notifiche_di(C)
     t = testo(C.get('/aiuto/novita'))
     assert 'Novità della versione %s' % comune.VERSIONE in t, t[:300]
     for x in novita.NOVITA[0][1]:

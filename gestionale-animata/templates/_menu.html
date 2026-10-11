@@ -17,6 +17,7 @@
   <a href="{{ url_for('sala.giornata', iso=_data, struttura=_sid) }}"{% if _sez == 'sala' %} class="attivo"{% endif %} data-guida="menu-sala">Sala</a>{% endif %}
   <span class="separatore"></span>
   <a href="{{ url_for('pazienti.elenco') }}"{% if _sez == 'pazienti' %} class="attivo"{% endif %} data-guida="menu-pazienti">Pazienti</a>
+  <a href="{{ url_for('personale.turni', struttura=_sid) }}"{% if _sez == 'personale' %} class="attivo"{% endif %} data-guida="menu-turni">Turni</a>
   <div class="gruppo{% if _segreteria %} attivo{% endif %}" data-guida="menu-segreteria">
     <button type="button" class="apri-gruppo" aria-haspopup="true" aria-expanded="false">Segreteria{% if _n_conf %}<span class="contatore" title="{{ _n_conf }} da confermare">{{ _n_conf }}</span>{% endif %}<span class="freccia" aria-hidden="true"></span></button>
     <div class="tendina" role="menu">

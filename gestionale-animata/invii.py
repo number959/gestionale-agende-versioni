@@ -74,9 +74,37 @@ PREDEFINITI = {
     'email_password': '', 'email_mittente': '', 'email_attiva': '1',
     'promemoria_attivo': '0', 'promemoria_ora': '10:00', 'promemoria_whatsapp': '1', 'promemoria_email': '1',
     'wa_token': '', 'wa_numero_id': '', 'wa_modello': 'promemoria_appuntamento', 'wa_lingua': 'it',
-    'wa_parametri': 'paziente,giorno,ora,struttura,recapito', 'wa_versione': 'v22.0',
-    'wa_indirizzo': 'https://graph.facebook.com',
+    'wa_parametri': 'paziente,giorno,ora,struttura,recapito', 'wa_versione': 'v25.0',
+    'wa_indirizzo': 'https://graph.facebook.com', 'wa_registrato': '',
 }
+# cosa vuol dire, in parole semplici, un errore di Meta (codice dell'errore -> spiegazione)
+SPIEGAZIONI_META = {
+    190: 'il token non vale (scaduto o copiato male): crearne uno permanente con un utente di sistema e incollarlo qui',
+    10: 'al token manca un permesso: servono whatsapp_business_messaging e whatsapp_business_management',
+    200: 'al token manca un permesso: servono whatsapp_business_messaging e whatsapp_business_management',
+    100: 'un dato non va: controllare l\'ID del numero di telefono (lo mostra Meta in «Configurazione API»)',
+    131030: 'con il numero di prova di Meta si scrive solo ai numeri aggiunti fra i destinatari consentiti',
+    131031: 'l\'account WhatsApp è bloccato da Meta: va controllato in WhatsApp Manager',
+    132000: 'le variabili mandate non sono quante ne ha il modello: controllare «Variabili del modello»',
+    132001: 'un modello con questo nome e questa lingua non c\'è, o non è ancora approvato',
+    133005: 'PIN sbagliato: il numero ha già la verifica in due passaggi con un altro PIN. Usare quello, oppure '
+            'disattivarla in WhatsApp Manager e sceglierne uno nuovo',
+    133006: 'il numero va verificato di nuovo (codice via SMS o chiamata in WhatsApp Manager), poi si registra',
+    133008: 'troppi PIN sbagliati: aspettare il tempo indicato da Meta e riprovare con il PIN giusto',
+    133009: 'PIN provati troppo in fretta: aspettare almeno mezzo minuto e riprovare',
+    133010: 'il numero non è ancora registrato: in Configura → Email e WhatsApp premere «Registra il numero»',
+    133015: 'il numero è stato cancellato da poco: aspettare qualche minuto e riprovare',
+    133016: 'troppe registrazioni (al massimo 10 in 72 ore): riprovare fra tre giorni',
+}
+
+
+def spiega_meta(codice):
+    """' Il token non vale...' da aggiungere al messaggio di Meta; vuoto se il codice non e' fra quelli noti."""
+    try:
+        testo = SPIEGAZIONI_META.get(int(codice))
+    except (TypeError, ValueError):
+        testo = None
+    return '. %s%s.' % (testo[0].upper(), testo[1:]) if testo else ''
 PARAMETRI_WA = ['paziente', 'giorno', 'data', 'ora', 'struttura', 'indirizzo', 'prestazione', 'medico',
                 'stanza', 'recapito', 'telefono_struttura']
 MODELLO_WA = ("Gentile {{1}}, le ricordiamo l'appuntamento di {{2}} alle ore {{3}} presso {{4}}. "
@@ -710,14 +738,44 @@ def manda_whatsapp(cfg, numero, parametri):
         testo = errore.get('message') or e.reason or 'errore %d' % e.code
         codice = errore.get('code')
         # 429 e 5xx: Meta e' occupata, si riprova; il resto e' da correggere
-        raise ErroreInvio('WhatsApp ha rifiutato il messaggio: %s%s' % (testo, ' (codice %s)' % codice if codice else ''),
-                          permanente=not (e.code == 429 or e.code >= 500))
+        raise ErroreInvio('WhatsApp ha rifiutato il messaggio: %s%s%s' % (
+            testo, ' (codice %s)' % codice if codice else '', spiega_meta(codice)),
+            permanente=not (e.code == 429 or e.code >= 500))
     except (urllib.error.URLError, OSError, ValueError) as e:
         raise ErroreInvio('WhatsApp non raggiungibile: %s' % e, permanente=False)
     try:
         return str(risposta['messages'][0]['id'])
     except (KeyError, IndexError, TypeError):
         raise ErroreInvio('risposta di WhatsApp non prevista: %s' % str(risposta)[:150], permanente=False)
+
+
+def registra_numero(cfg, pin):
+    """Attiva il numero sulla piattaforma di Meta per gli invii dal programma
+    (una volta, dopo averlo aggiunto e verificato in Meta). Il PIN e' quello
+    della verifica in due passaggi: se il numero non l'ha ancora, lo imposta.
+    Il PIN non si salva da nessuna parte. ErroreInvio se Meta dice di no."""
+    token = svela(cfg['wa_token'])
+    indirizzo = '%s/%s/%s/register' % (cfg['wa_indirizzo'].rstrip('/'), cfg['wa_versione'].strip('/'),
+                                      cfg['wa_numero_id'].strip())
+    corpo = {'messaging_product': 'whatsapp', 'pin': pin}
+    richiesta = urllib.request.Request(indirizzo, data=json.dumps(corpo).encode('utf-8'), method='POST', headers={
+        'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'User-Agent': 'GestionaleAgende'})
+    try:
+        with urllib.request.urlopen(richiesta, timeout=30) as r:
+            risposta = json.loads(r.read().decode('utf-8') or '{}')
+    except urllib.error.HTTPError as e:
+        try:
+            errore = json.loads(e.read().decode('utf-8') or '{}').get('error', {})
+        except (ValueError, AttributeError):
+            errore = {}
+        codice = errore.get('code')
+        testo = errore.get('error_user_msg') or errore.get('message') or e.reason or 'errore %d' % e.code
+        raise ErroreInvio('Meta non ha registrato il numero: %s%s%s' % (
+            testo, ' (codice %s)' % codice if codice else '', spiega_meta(codice)))
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        raise ErroreInvio('Meta non raggiungibile: %s. Controllare la connessione a internet e riprovare.' % e)
+    if not (isinstance(risposta, dict) and risposta.get('success') is True):
+        raise ErroreInvio('risposta di Meta non prevista: %s' % str(risposta)[:150])
 
 
 PASSATO = 'appuntamento già passato'
@@ -1080,9 +1138,11 @@ def _cfg_modulo(f, cfg):
             errori.append('Al massimo 10 variabili.')
         versione = (f.get('wa_versione') or PREDEFINITI['wa_versione']).strip()
         if not re.fullmatch(r'v\d{1,2}\.\d', versione):
-            errori.append('Versione dell\'API non valida (per esempio v22.0).')
+            errori.append('Versione dell\'API non valida (per esempio v25.0).')
         nuovi.update(wa_numero_id=numero_id, wa_modello=modello or PREDEFINITI['wa_modello'], wa_lingua=lingua,
                      wa_parametri=','.join(parametri) or PREDEFINITI['wa_parametri'], wa_versione=versione)
+        if numero_id != cfg['wa_numero_id']:
+            nuovi['wa_registrato'] = ''          # un altro numero: va registrato anche lui
         token = re.sub(r'\s', '', f.get('wa_token') or '')
         if token:
             if len(token) > 1000 or not re.fullmatch(r'[A-Za-z0-9._\-]+', token):
@@ -1212,6 +1272,26 @@ def pagina():
                              testo='|'.join(esempio.get(n, n) for n in nomi)).id
                 s.commit()
             _manda_e_dici(xid, '+' + numero, 'Prova mandata: controllare che sia arrivata')
+            return redirect(url_for('invii.pagina') + '#whatsapp')
+        if azione == 'registra_whatsapp':
+            pin = re.sub(r'\s', '', request.form.get('pin') or '')
+            if not re.fullmatch(r'\d{6}', pin):
+                flash('Il PIN sono 6 cifre.', 'errore')
+                return redirect(url_for('invii.pagina') + '#registra-numero')
+            if not (cfg['wa_token'] and cfg['wa_numero_id']):
+                flash('Prima salvare il token e l\'ID del numero di telefono.', 'errore')
+                return redirect(url_for('invii.pagina') + '#whatsapp')
+            try:
+                registra_numero(cfg, pin)        # senza lucchetto: e' una chiamata a internet
+            except ErroreInvio as e:
+                logging.warning('registrazione del numero WhatsApp non riuscita: %s', e)
+                flash(str(e), 'errore')
+                return redirect(url_for('invii.pagina') + '#registra-numero')
+            with _lucchetto:
+                scrivi_impostazione(s, 'wa_registrato', datetime.now().strftime('%Y-%m-%d %H:%M'))
+                s.commit()
+            flash('Numero registrato: ora il programma può mandare i WhatsApp. Conservare il PIN in un posto sicuro: '
+                  'serve se un giorno il numero va registrato di nuovo.', 'ok')
             return redirect(url_for('invii.pagina') + '#whatsapp')
         if azione in ('riprova', 'annulla'):
             x = s.get(Invio, intero(request.form.get('invio')))

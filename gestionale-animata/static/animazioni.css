@@ -184,11 +184,44 @@ html:not(.anim) .tempo-notifica { display: none; }
 .anim .campo input, .anim .campo select, .anim .campo textarea { transition: border-color .15s, box-shadow .2s; }
 .anim .campo input:focus, .anim .campo select:focus, .anim .campo textarea:focus { box-shadow: 0 0 0 3px rgba(21, 67, 129, .15); }
 
+/* ------------------------------------------------- 1.8: turni del personale */
+@keyframes a-cresce-su { from { transform: scaleY(0); } to { transform: none; } }
+/* la scelta del turno si apre dalla cella; i codici rispondono al passaggio */
+.anim .scelta-turno.aperta { animation: a-pop .18s var(--curva-uscita) both; }
+.anim .scelta-tipo { transition: background-color .12s, border-color .12s; }
+.anim .scelta-tipo .codice { transition: transform .16s var(--curva-molla); }
+.anim .scelta-tipo:hover .codice, .anim .scelta-tipo:focus-visible .codice { transform: scale(1.08); }
+/* il turno appena messo entra con un piccolo rimbalzo; il codice che si scrive compare dalla cella */
+.anim table.turni td.cella.appena-cambiata .turno { animation: a-pop .32s var(--curva-molla) both; }
+.anim table.turni td.cella[data-scrivendo]::after, .anim .pista[data-scrivendo]::after { animation: a-pop .14s var(--curva-uscita) both; }
+/* i giorni del mese e della settimana scendono uno dopo l'altro */
+.anim table.turni thead th.giorno-col { animation: a-scende .3s var(--curva-uscita) both; animation-delay: calc(var(--i, 0) * 12ms); }
+.anim .schede-vista a { transition: background-color .15s, color .15s; }
+/* il giorno a ore: le barre si allungano dall'inizio del turno, le presenze crescono dal basso */
+.anim .barra-turno, .anim .seduta { transform-origin: left; animation: a-cresce .45s var(--curva-uscita) both;
+  animation-delay: calc(.1s + var(--i, 0) * 25ms); }
+.anim .ora-pres i { transform-origin: bottom; animation: a-cresce-su .45s var(--curva-uscita) both;
+  animation-delay: calc(.05s + var(--i, 0) * 14ms); }
+.anim .linea-adesso { animation: a-appare .4s ease-out .5s both; }
+.anim .pista { transition: background-color .15s, box-shadow .15s; }
+/* gli avvisi in basso salgono; lo schema a rotazione si apre come una scheda */
+.anim .avviso-turni { animation: a-sale .28s var(--curva-molla) both; }
+.anim dialog.finestra-schema[open] { animation: a-pop .22s var(--curva-uscita) both; }
+.anim dialog.finestra-schema[open]::backdrop { animation: a-appare .2s ease-out both; }
+.anim .chip-codice { transition: transform .12s var(--curva-molla), filter .12s; }
+.anim .chip-codice:active { transform: scale(.9); }
+/* Oggi: chi e' in servizio entra riga per riga; chi e' al lavoro adesso ha il punto che pulsa */
+.anim .in-servizio li { animation: a-da-sinistra .3s var(--curva-uscita) both; animation-delay: calc(.2s + var(--i, 0) * 35ms); }
+.anim .in-servizio .al-lavoro { animation: a-punto 2s ease-in-out infinite; }
+/* persone: la scelta del ruolo */
+.anim .ruolo-opzione span { transition: background-color .15s, border-color .15s, color .15s, transform .12s var(--curva-molla); }
+.anim .ruolo-opzione input:checked + span { transform: scale(1.03); }
+
 /* --------------------------------------------------------- mai in stampa */
 @media print {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .adesso, .caricamento, .tempo-notifica, .spunta-animata, .icona-animata, .attesa-lunga { display: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .adesso::before { animation: none !important; }
+  .adesso::before, .in-servizio .al-lavoro { animation: none !important; }
 }

@@ -36,6 +36,21 @@ with sync_playwright() as p:
         casella.uncheck(); pg.wait_for_timeout(300)
     else:
         ok('checklist: interventi di domani nei dati di prova', False, 'nessuna casella da spuntare')
+    # 1.8: turni del personale
+    pg.goto(B+'/personale/turni/mese/'); pg.wait_for_timeout(200)
+    giorni=pg.evaluate("[...document.querySelectorAll('#griglia-turni thead th.giorno-col')].map(v=>[getComputedStyle(v).animationName, getComputedStyle(v).animationDelay])")
+    ok('turni: i giorni del mese scendono uno dopo l\'altro', giorni and all(x[0]=='a-scende' for x in giorni) and len({x[1] for x in giorni}) > 5, giorni[:3])
+    pg.locator('#griglia-turni td.cella').nth(3).click(); pg.wait_for_timeout(50)
+    ok('turni: la scelta del turno si apre animata', pg.evaluate("getComputedStyle(document.getElementById('scelta-turno')).animationName")=='a-pop')
+    pg.keyboard.press('Escape')
+    pg.goto(B+'/personale/turni/giorno/%s' % mar); pg.wait_for_timeout(100)
+    barre=pg.evaluate("[...document.querySelectorAll('.barra-turno')].slice(0,6).map(v=>getComputedStyle(v).animationName)")
+    ok('turni: nel giorno a ore le barre si allungano', barre and all(x=='a-cresce' for x in barre), barre)
+    ore=pg.evaluate("[...document.querySelectorAll('.presenze')].slice(0,1).map(r=>[...r.querySelectorAll('.ora-pres i')].map(v=>getComputedStyle(v).animationDelay))")
+    ok('turni: le presenze crescono ora per ora', ore and len(set(ore[0])) == 24, ore[:1])
+    pg.goto(B+'/oggi'); pg.wait_for_timeout(200)
+    righe=pg.evaluate("[...document.querySelectorAll('.in-servizio li')].map(v=>getComputedStyle(v).animationName)")
+    ok('Oggi: In servizio oggi, una riga dopo l\'altra', righe and all(x=='a-da-sinistra' for x in righe), righe[:3])
     ok('nessun errore JavaScript', not err, err[:3])
     # griglia di oggi: linea dell'ora al posto giusto
     pg.goto(B+'/giorno/%s?struttura=1' % oggi); pg.wait_for_timeout(900)
@@ -107,6 +122,8 @@ with sync_playwright() as p:
     # movimento ridotto di Windows
     cr=br.new_context(reduced_motion='reduce', viewport={'width':1366,'height':820}); pr=cr.new_page(); pr.goto(B+'/giorno/%s?struttura=1' % mar)
     ok('movimento ridotto: niente animazioni', pr.evaluate("document.querySelectorAll('.voce').length") > 0 and all(x=='none' for x in pr.evaluate("[...document.querySelectorAll('.voce, .pagina, .telaio')].map(v=>getComputedStyle(v).animationName)")))
+    pr.goto(B+'/personale/turni/giorno/%s' % mar)
+    ok('movimento ridotto: turni fermi', all(x=='none' for x in pr.evaluate("[...document.querySelectorAll('.barra-turno, .ora-pres i, th.giorno-col, .al-lavoro')].map(v=>getComputedStyle(v).animationName)")))
     pr.goto(B+'/impostazioni'); ok('movimento ridotto: lo dice in Impostazioni', pr.is_visible('#animazioni-ridotte'))
     # stampa: tutto visibile, niente linea
     pg.goto(B+'/giorno/%s?struttura=1' % mar); pg.emulate_media(media='print')

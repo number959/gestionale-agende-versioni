@@ -243,6 +243,142 @@
   html.scuro .testo-avviso { color: #EAD5AD; }
   html.scuro .riquadro-incroci { background: #1C242D; border-left: 4px solid #9CB2C9; }
   html.scuro .riquadro-incroci.doppie { border-left-color: #E8B27D; }
+  html.scuro .bottone.pericolo { color: #E8A8A5; border-color: #633E3B; }
+  html.scuro .bottone.pericolo:hover { color: #E49793; border-color: #E6716A; }
+  html.scuro .etichetta-spenta { color: #8C9AA6; border: 1px solid #2E3843; }
+  html.scuro tr.non-attiva td, html.scuro tr.non-attiva th { color: #7F8C97; }
+  html.scuro .turno { background: var(--c, #2D2D36); color: var(--t, #E1E7ED); }
+  html.scuro .turno.a-mano { background: #1C242D; box-shadow: inset 0 0 0 1px #4E5A62; }
+  html.scuro .schede-vista { border: 1px solid #45525F; background: #1C242D; }
+  html.scuro .schede-vista a { color: #E1E7ED; border-right: 1px solid #35434F; }
+  html.scuro .schede-vista a .icona { color: #9AA8B4; }
+  html.scuro .schede-vista a.attiva { color: #FFFFFF; }
+  html.scuro .schede-vista a.attiva .icona { color: #FFFFFF; }
+  html.scuro .filtri-turni select { border: 1px solid #45525F; background: #1C242D; color: #E1E7ED; }
+  html.scuro .legenda-turni li { color: #BCCBD9; }
+  html.scuro .legenda-turni li small { color: #8C9AA6; }
+  html.scuro .aiuto-tasti-turni { color: #9AA8B4; }
+  html.scuro .aiuto-tasti-turni .icona { color: #7F8C97; }
+  html.scuro kbd { border: 1px solid #2E3843; background: #1C242D; color: #BCCBD9; }
+  html.scuro .scorri-turni { background: #1C242D; border: 1px solid #35434F; }
+  html.scuro table.turni col.festivo { background: #2F2721; }
+  html.scuro table.turni col.sabato { background: #252A20; }
+  html.scuro table.turni thead th { color: #FFFFFF; }
+  html.scuro table.turni thead th.festivo { background: color-mix(in srgb, var(--primario) 78%, #974F27); }
+  html.scuro table.turni thead th.oggi .gn { background: #1C242D; }
+  html.scuro table.turni thead th.nome-col { color: #FFFFFF; }
+  html.scuro table.turni thead th.tot-col { background: color-mix(in srgb, var(--primario) 86%, #383838); }
+  html.scuro table.turni th.nome-col { background: #1C242D; border-right: 1px solid #35434F; }
+  html.scuro table.turni th.nome-col a { color: #E1E7ED; }
+  html.scuro table.turni th.nome-col small { color: #8C9AA6; }
+  html.scuro table.turni tr.testa-ruolo th { background: #20282F; border-top: 1px solid #35434F; border-bottom: 1px solid #33414D; color: #E1E7ED; }
+  html.scuro table.turni tr.testa-ruolo .quanti { background: #1C242D; color: #9AA8B4; border: 1px solid #35434F; }
+  html.scuro table.turni td { border-bottom: 1px solid #354146; border-right: 1px solid #353F44; }
+  html.scuro table.turni td.cella:hover { background: #22303F; }
+  html.scuro table.turni td.cella.scelta { background: color-mix(in srgb, var(--primario-tenue) 70%, #1C242D); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--primario-fuoco) 55%, #FFFFFF); }
+  html.scuro table.turni td.cella.sbagliata { background: #302322; }
+  html.scuro .segno-riposo { border-top: 9px solid #E8B27D; }
+  html.scuro table.turni tr.non-attiva th.nome-col a { color: #7F8C97; }
+  html.scuro table.turni td.tot { color: #BCCBD9; background: #1C2228; }
+  html.scuro table.turni td.tot b { color: #E1E7ED; }
+  html.scuro table.turni td.tot small { color: #7F8C97; }
+  html.scuro .scarto.sotto { background: #3A3428; color: #EAD5AD; }
+  html.scuro .scarto.sopra { background: #242834; color: #B7C2E7; }
+  html.scuro .scarto.pari { background: #1A441C; color: #B5EAB9; }
+  html.scuro table.turni tr.copertura th.nome-col span { color: #8C9AA6; }
+  html.scuro table.turni tr.copertura td { color: #8C9AA6; background: #1C2228; border-bottom: 2px solid #33414D; }
+  html.scuro table.turni tr.copertura td.manca { background: #302322; color: #E8A8A5; }
+  html.scuro .segno-manca { background: #A1221B; }
+  html.scuro .scelta-turno { background: #1C242D; border: 1px solid #2E3843; }
+  html.scuro .scelta-testa b { color: #E1E7ED; }
+  html.scuro .scelta-testa small { color: #8C9AA6; }
+  html.scuro .scelta-chiudi { color: #9AA8B4; }
+  html.scuro .scelta-chiudi:hover { background: #222B35; color: #E1E7ED; }
+  html.scuro .scelta-attuali { border-bottom: 1px solid #354146; }
+  html.scuro .scelta-attuali .attuale { color: #BCCBD9; background: #20272E; }
+  html.scuro .scelta-attuali .attuale button { color: #8C9AA6; }
+  html.scuro .scelta-attuali .attuale button:hover { background: #302322; color: #E49793; }
+  html.scuro .scelta-cat { color: #7F8C97; }
+  html.scuro .scelta-tipo { background: #1C242D; color: #E1E7ED; }
+  html.scuro .scelta-tipo .orario { color: #8C9AA6; }
+  html.scuro .scelta-tipo:hover { background: #202A35; border-color: #35434F; }
+  html.scuro .scelta-altro { border-top: 1px solid #354146; }
+  html.scuro .scelta-campi label { color: #A9B7C4; }
+  html.scuro .scelta-campi label.spunta { color: #E1E7ED; }
+  html.scuro .scelta-campi input[type="time"], html.scuro .scelta-campi input[type="text"] { border: 1px solid #45525F; background: #1C242D; color: #E1E7ED; }
+  html.scuro .scelta-campi p.aiuto { color: #8C9AA6; }
+  html.scuro .scelta-piede { border-top: 1px solid #354146; }
+  html.scuro .scelta-tasti { color: #7F8C97; }
+  html.scuro .scelta-errore { background: #302322; color: #E8A8A5; }
+  html.scuro dialog.finestra-schema { color: #E1E7ED; }
+  html.scuro .modulo-schema p.aiuto { color: #9AA8B4; }
+  html.scuro .modulo-schema label { color: #A9B7C4; }
+  html.scuro .modulo-schema label.spunta { color: #E1E7ED; }
+  html.scuro .modulo-schema input[type="text"], html.scuro .modulo-schema input[type="date"], html.scuro .modulo-schema input[type="number"] { border: 1px solid #45525F; color: #E1E7ED; }
+  html.scuro .schema-anteprima .errore-codice { color: #E49793; }
+  html.scuro .chip-codice.vuoto { background: #1C242D; color: #9AA8B4; }
+  html.scuro .schema-riga label small { color: #8C9AA6; }
+  html.scuro fieldset.schema-persone { border: 1px solid #35434F; }
+  html.scuro fieldset.schema-persone legend { color: #A9B7C4; }
+  html.scuro .schema-gruppo { border-bottom: 1px solid #353F44; }
+  html.scuro .festa-giorno { color: #E7BCA0; background: #2F2721; }
+  html.scuro .aggiungi-turno { color: #A9B7C4; }
+  html.scuro .aggiungi-turno select { border: 1px solid #45525F; background: #1C242D; color: #E1E7ED; }
+  html.scuro .linea-tempo { background: #1C242D; border: 1px solid #35434F; }
+  html.scuro .scala-ore { background: #1C242D; border-bottom: 1px solid #35434F; }
+  html.scuro .scala-ore .ore span { color: #8C9AA6; }
+  html.scuro .gruppo-giorno { border-bottom: 1px solid #33414D; }
+  html.scuro .riga-giorno { border-top: 1px solid #353F44; }
+  html.scuro .riga-giorno.riga-presenze { background: #1E242A; }
+  html.scuro .nome-giorno a { color: #E1E7ED; }
+  html.scuro .nome-giorno small { color: #8C9AA6; }
+  html.scuro .badge-manca { color: #E8A8A5; background: #302322; }
+  html.scuro .ora-pres i { background: color-mix(in srgb, var(--primario) 62%, #1C242D); }
+  html.scuro .ora-pres.zero i { background: #2A343C; }
+  html.scuro .ora-pres em { color: #A9B7C4; }
+  html.scuro .pista { background: #1C2228; }
+  html.scuro .pista:hover { background: #1F252D; }
+  html.scuro .tacca { background: #222B35; }
+  html.scuro .tacca.forte { background: #273139; }
+  html.scuro .barra-turno.reperibile { background: repeating-linear-gradient(135deg, var(--c) 0 7px,
+  color-mix(in srgb, var(--c) 72%, #1C242D) 7px 14px); }
+  html.scuro .linea-adesso { background: #BB2F28; }
+  html.scuro .linea-adesso span { color: #E2918D; background: #1C242D; }
+  html.scuro .esempio-continua { background: #2650D9; }
+  html.scuro .vuoto-turni { background: #1C242D; border: 1px solid #35434F; }
+  html.scuro .vuoto-turni p { color: #A9B7C4; }
+  html.scuro h2.titolo-ruolo small { background: #1C242D; color: #9AA8B4; border: 1px solid #35434F; }
+  html.scuro .collegato { color: #B5EAB9; }
+  html.scuro fieldset.scelta-ruolo legend { color: #A9B7C4; }
+  html.scuro .ruolo-opzione span { border: 1px solid #45525F; background: #1C242D; color: #E1E7ED; }
+  html.scuro .ruolo-opzione span .icona { color: #9AA8B4; }
+  html.scuro .ruolo-opzione input:checked + span { color: #FFFFFF; }
+  html.scuro .ruolo-opzione input:checked + span .icona { color: #FFFFFF; }
+  html.scuro .elimina-persona .aiuto, html.scuro .elimina-tipo .aiuto { color: #8C9AA6; }
+  html.scuro .giorni-cop span.no { color: #C2C9CE; }
+  html.scuro .in-servizio .gruppo-servizio > b { color: #BCCBD9; }
+  html.scuro .in-servizio li { color: #E1E7ED; }
+  html.scuro .in-servizio li.finito { color: #7F8C97; }
+  html.scuro .in-servizio li .al-lavoro { background: #29702D; }
+  html.scuro form.registra-numero h3 small { color: #8C9AA6; }
+  html.scuro form.registra-numero .registrato { color: #B5EAB9; }
+  html.scuro form.registra-numero .riga-registra label { color: #A9B7C4; }
+  html.scuro form.registra-numero input { border: 1px solid #45525F; }
+  html.scuro table.turni td.cella[data-scrivendo]::after, html.scuro .pista[data-scrivendo]::after { background: #1C242D; }
+  html.scuro .avviso-turni { background: #203350; color: #FFFFFF; border-left: 4px solid #437056; }
+  html.scuro .avviso-turni.livello-avviso { border-left-color: #706243; }
+  html.scuro .avviso-turni.livello-errore { border-left-color: #643F3C; }
+  html.scuro .azione-avviso { color: #B1C9EC; }
+  html.scuro .chiudi-avviso { color: #C9D3DD; }
+  html.scuro .chiudi-avviso:hover { color: #FFFFFF; }
+  html.scuro .azione-avviso:focus-visible, html.scuro .chiudi-avviso:focus-visible { outline: 2px solid #37455B; }
+  html.scuro .schema-anteprima .vuoto-schema, html.scuro .tabella-schema .vuoto-schema { background: #1C242D; color: #7F8C97; box-shadow: inset 0 0 0 1px #35434F; }
+  html.scuro .schema-anteprima .lunghezza-schema { color: #8C9AA6; }
+  html.scuro .schema-prova p.aiuto { color: #8C9AA6; }
+  html.scuro table.tabella-schema th { color: #8C9AA6; }
+  html.scuro table.tabella-schema th b { color: #E1E7ED; }
+  html.scuro table.tabella-schema th.domenica, html.scuro table.tabella-schema th.domenica b { color: #E3B093; }
+  html.scuro table.tabella-schema tr th:first-child { color: #E1E7ED; }
 }
 /* --------------------------------------------- correzioni a mano, solo schermo */
 @media screen {
@@ -290,5 +426,19 @@
   html.scuro dialog.finestra-video { background: #0E1A2E; }
   html.scuro .finestra-video video { background: #000000; }
   html.scuro .rotella { border-top-color: var(--primario-chiaro); }
+}
+@media screen {
+  /* 1.8: turni del personale. Gli avvisi in basso sono gia' scuri: nel tema scuro restano come sono */
+  html.scuro .avviso-turni { background: #26364F; color: #FFFFFF; border-left-color: #6FCF97;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .55); }
+  html.scuro .avviso-turni.livello-avviso { border-left-color: #F2C14E; }
+  html.scuro .avviso-turni.livello-errore { border-left-color: #F28B82; }
+  html.scuro .azione-avviso { color: #9EC5FF; }
+  html.scuro .chiudi-avviso { color: #C9D3DD; }
+  /* le icone dei ruoli: chiare sul cerchio scuro */
+  html.scuro .icona-ruolo, html.scuro .icone-ruoli span { color: var(--primario-scuro); }
+  /* il codice che si sta scrivendo sopra la cella */
+  html.scuro table.turni td.cella[data-scrivendo]::after, html.scuro .pista[data-scrivendo]::after { background: #1C242D;
+    color: #E1E7ED; }
 }
 

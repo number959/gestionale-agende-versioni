@@ -10,7 +10,9 @@ Controlla: versione in Aiuto e nelle Novità, ogni guida con il suo video
 servito come video/webm (anche a pezzi, Range), pagina Aggiornamenti con la
 sua variante e l'indirizzo degli aggiornamenti, stato.json, i tipi dei file
 statici, il codice fiscale (controllo, calcolo e luoghi: il file dei luoghi
-deve essere dentro l'eseguibile) e la pagina Controllo dei codici fiscali."""
+deve essere dentro l'eseguibile), la pagina Controllo dei codici fiscali, i turni
+del personale (pagine, i dieci tipi di turno di partenza, Excel, turni.js, icone e
+loro licenze) e la registrazione del numero WhatsApp."""
 import json
 import os
 import re
@@ -94,6 +96,27 @@ d = json.loads(b) if s == 200 else []
 controlla('luoghi di nascita: il file dei luoghi è dentro l\'eseguibile', d and d[0].get('codice') == 'G964', (s, d[:1]))
 s, b, _ = get('/pazienti/codici-fiscali')
 controlla('pagina Controllo dei codici fiscali', s == 200 and 'Controllo dei codici fiscali' in testo(b), s)
+# 1.8: turni del personale (solo lettura)
+for p in ('/personale/turni/mese/', '/personale/turni/settimana/', '/personale/turni/giorno/', '/personale/persone'):
+    s, b, _ = get(p)
+    t = b.decode('utf-8', 'replace')
+    controlla('turni: %s' % p, s == 200 and ('id="griglia-turni"' in t or 'id="vista-giorno"' in t or
+                                             'Per cominciare, il personale' in t or 'Aggiungi una persona' in t), s)
+s, b, _ = get('/personale/tipi')
+t = testo(b)
+codici = re.findall(r'<span class="turno[^"]*"[^>]*><b>([A-Z0-9]{1,4})</b></span>', b.decode('utf-8', 'replace'))
+controlla('turni: i dieci tipi di turno di partenza (database aggiornato allo schema 9)',
+          s == 200 and {'M', 'P', 'N', 'G', 'RE', 'SN', 'R', 'F', 'MA', 'PE'} <= set(codici), codici)
+s, b, h = get('/personale/turni/mese/2026-12.xlsx')
+controlla('turni: il mese in Excel', s == 200 and b[:2] == b'PK' and 'spreadsheet' in h.get('Content-Type', ''),
+          (s, h.get('Content-Type')))
+for p, tipo, parola in (('/static/turni.js', 'text/javascript', b'griglia-turni'),
+                        ('/static/icone/LICENZE.txt', 'text/plain', b'Lucide')):
+    s, b, h = get(p)
+    controlla('turni: %s' % p, s == 200 and h.get('Content-Type', '').startswith(tipo) and parola in b,
+              (s, h.get('Content-Type')))
+s, b, _ = get('/invii')
+controlla('WhatsApp: «Registra il numero» nella pagina', s == 200 and 'Registra il numero' in testo(b), s)
 
 for ok, nome, dettaglio in esiti:
     print(('OK ' if ok else 'KO ') + nome + ('' if ok else '  ' + str(dettaglio)[:300]))

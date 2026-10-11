@@ -2,10 +2,10 @@
 
 Programma per l'accettazione della Clinica Posillipo (Gruppo NefroCenter): agenda delle
 stanze, pazienti (con codice fiscale controllato e calcolato), conferme, cassa, sala
-operatoria, email e WhatsApp ai pazienti. Lo usa una persona sola, sul PC Windows 11 della
-segreteria, tutto in locale (Flask + SQLite, waitress su 127.0.0.1:5000). Internet serve
-solo in uscita, per email (Gmail), WhatsApp (Meta) e per scaricare gli aggiornamenti
-(«Aggiorna adesso», dalle versioni su GitHub).
+operatoria, email e WhatsApp ai pazienti, turni del personale (dalla 1.8). Lo usa una
+persona sola, sul PC Windows 11 della segreteria, tutto in locale (Flask + SQLite,
+waitress su 127.0.0.1:5000). Internet serve solo in uscita, per email (Gmail), WhatsApp
+(Meta) e per scaricare gli aggiornamenti («Aggiorna adesso», dalle versioni su GitHub).
 
 Da leggere prima di modificare qualcosa: `../PASSAGGIO_DI_CONSEGNE.md` (nella radice del
 repository: stato, persone, decisioni e perché, cose aperte) e `LEGGIMI.md` (il manuale
@@ -31,10 +31,13 @@ completo: architettura, scelte, prove, storico dei difetti).
   medici della clinica (Lippiello, Galasso) invece ci sono di proposito.
 - I file veri che Giovanni manda (Excel delle agende, schermate) restano fuori dal
   progetto. Prima di consegnare: `python strumenti/cerca_dati_veri.py <file veri…>
-  --cartella . --cartella ../gestionale-animata --ammessi lippiello,galasso,3339876543`
-  (3339876543 è il numero d'esempio del foglio istruzioni di un'agenda, usato nei dati di
-  prova): deve finire con «Niente di grave trovato», e le parole da guardare a occhio
-  devono essere parole normali, nomi di prestazioni o intestazioni.
+  --cartella . --cartella ../gestionale-animata --ammessi lippiello,galasso,3339876543,3331234567`
+  (3339876543 e 3331234567 sono i numeri d'esempio dei fogli istruzioni di due agende, usati
+  nei dati di prova): deve finire con «Niente di grave trovato», e le parole da guardare a
+  occhio devono essere parole normali, nomi di prestazioni o intestazioni. Se un nome
+  inventato delle prove coincide con uno di un file vero arrivato dopo, si cambia il nome
+  inventato (alla 1.8 l'esempio di cognome con «De» dell'importazione, ora «De Fittizi
+  Teresa»), senza mai scrivere quello vero nei file.
 - Il database vero è `%LOCALAPPDATA%\GestionaleAgende\agende.db` sul PC della clinica: non
   si tocca mai per provare.
 
@@ -63,18 +66,21 @@ python strumenti/tutte_le_prove.py --browser http://127.0.0.1:5001 --solo prove_
 ```
 
 Senza `--solo` e con `--browser` le lancia tutte, anche quelle nel browser (Playwright con
-Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_15_browser.py`,
-`prove_17_browser.py`, nell'animata `prove_animazioni.py` e `prove_icone_animate.py`, e per
-ultima `prove_16_browser.py`, che cambia l'indirizzo degli aggiornamenti. Le prove nel
-browser salvano dati: sempre su un gestionale di prova, mai su quello vero.
+Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_tendine_browser.py`,
+`prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, nell'animata
+`prove_animazioni.py` e `prove_icone_animate.py`, e per ultima `prove_16_browser.py`, che
+cambia l'indirizzo degli aggiornamenti. Le prove nel browser salvano dati: sempre su un
+gestionale di prova, mai su quello vero.
 
 Le prove senza browser: `prove.py`, `prove2.py`, `prove100.py`, `prove200.py`,
 `prove_anagrafiche.py`, `prove_personalizzazione.py`, `prove_funzioni.py`, `prove_14.py`,
 `prove_143.py`, `prove_145.py`, `prove_146.py`, `prove_guida.py`, `prove_15.py`,
 `prove_16.py`, `prove_17.py` (codice fiscale, confrontato anche con una libreria
-indipendente) e `campagna.py` (casi generati con oracoli e invarianti). Alcune delle più
-vecchie escono con codice 0 anche se qualcosa non va: conta la riga finale («0 da
-sistemare»), ed è quella che legge `tutte_le_prove.py`. `PROVE_SOLO=nome1,nome2 python
+indipendente), `prove_18.py` (turni del personale con oracoli, annulla e rifai, modifiche a
+caso con invarianti; registrazione del numero WhatsApp con una finta Meta) e `campagna.py`
+(casi generati con oracoli e invarianti). Alcune delle più vecchie escono con codice 0
+anche se qualcosa non va: conta la riga finale («0 da sistemare»), ed è quella che legge
+`tutte_le_prove.py`. `PROVE_SOLO=nome1,nome2 python
 prove_15.py` rifà solo alcune prove di una raccolta. Le due cartelle si possono provare
 insieme: ogni giro di `tutte_le_prove.py` ha la sua cartella temporanea.
 
@@ -85,10 +91,26 @@ insieme: ogni giro di `tutte_le_prove.py` ha la sua cartella temporanea.
   modifiche in sospeso fuori dal lucchetto.
 - Un difetto nei messaggi non deve mai far perdere una prenotazione (try/except intorno a
   `invii.dopo_salvataggio`).
-- Schema del database: `modelli.VERSIONE_SCHEMA` (8 dalla 1.7) e `COLONNE_AGGIUNTE`;
+- Schema del database: `modelli.VERSIONE_SCHEMA` (9 dalla 1.8) e `COLONNE_AGGIUNTE`;
   l'aggiornamento fa prima una copia di sicurezza («prima-della-versione-N») e aggiunge
   colonne e tabelle senza toccare i dati. `_migra_a_8` ricava sesso, data e luogo di
-  nascita dai codici fiscali validi già in archivio, senza cambiare quelli scritti.
+  nascita dai codici fiscali validi già in archivio, senza cambiare quelli scritti. Alla 9
+  si aggiungono le tabelle dei turni e, una volta sola (impostazione
+  `tipi_turno_iniziali`), i dieci tipi di turno di partenza (`_prepara_tipi_turno`).
+- Turni del personale: le regole stanno solo in `personale.py` (sovrapposizioni anche con
+  la notte del giorno prima, riposi e assenze tutto il giorno, riposo sotto le 11 ore solo
+  avvisato); `static/turni.js` manda la richiesta a `POST /personale/turni/cambia` e
+  ridisegna quello che risponde, una richiesta alla volta (coda). La risposta porta lo
+  stato di prima delle celle cambiate; *ripristina* (Annulla) è tutto o niente. Il disegno
+  della cella è due volte, nella macro `contenuto()` di `_personale_cella.html` e in
+  `chipCella()` di `turni.js`: se si cambia uno, va cambiato l'altro (le prove nel browser
+  lo controllano). La struttura scelta arriva da `request.values`: nelle richieste JSON va
+  nell'indirizzo (`?struttura=`). Attenzione a `data_da(x, None)`: senza data dà oggi.
+- WhatsApp: «Registra il numero» (`invii.registra_numero`) manda il PIN a Meta e non lo
+  salva mai, nemmeno nel registro; cambiando l'ID del numero `wa_registrato` si azzera.
+- Icone: `templates/_icone.html` lo scrive `strumenti/genera_icone.py` (Lucide, licenza
+  ISC; testi in `static/icone/LICENZE.txt` insieme a Radix Colors, MIT): niente icone da
+  internet.
 - Codice fiscale: il controllo è uno solo, `codice_fiscale.py`, usato dal salvataggio e
   dalla pagina (`/pazienti/codice-fiscale` e `/pazienti/luoghi`; `gestionale.js` mostra
   soltanto la risposta). Un codice sbagliato non si salva; uno che non corrisponde ai dati
@@ -168,8 +190,8 @@ sopra il vecchio; non serve disinstallare.
    cartelle (il tag è la versione con una "v" davanti) e segnata come ultima ("latest"):
 
    ```
-   gh release create v1.7 --repo number959/gestionale-agende-versioni --latest \
-     --title "Gestionale Agende 1.7" --notes "…" \
+   gh release create v1.8 --repo number959/gestionale-agende-versioni --latest \
+     --title "Gestionale Agende 1.8" --notes "…" \
      gestionale/Output/GestionaleAgende-setup.exe gestionale/Output/aggiornamento.json \
      gestionale-animata/Output/GestionaleAgende-animata-setup.exe gestionale-animata/Output/aggiornamento-animata.json
    ```

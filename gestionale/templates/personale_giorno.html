@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block classe_body %} class="pagina-turni vista-giorno"{% endblock %}
+{% block corpo %}
+{% include "_personale_barra.html" %}
+{% set gi = giorni[0] %}
+
+{% if nessuno %}
+<div class="pagina primi-turni"><div class="vuoto-turni">
+  <h2>Per cominciare, il personale</h2>
+  <p>Prima si aggiungono le persone, poi i loro turni nella vista della settimana o del mese.</p>
+  <div class="azioni"><a class="bottone primario con-icona" href="{{ url_for('personale.persone') }}">{{ icona('users') }}Persone</a></div>
+</div></div>
+{% else %}
+<div class="telaio telaio-giorno" id="vista-giorno" data-indirizzo="{{ url_for('personale.cambia') }}" data-giorno="{{ g.isoformat() }}"
+     data-ruolo="{{ ruolo }}" data-area="{{ area }}"{% if strutture|length > 1 %} data-struttura="{{ sid }}"{% endif %}>
+  <div class="testa-giorno">
+    {% if gi.festa %}<span class="festa-giorno">{{ icona('calendar-clock') }}{{ gi.festa }}</span>{% elif gi.festivo %}<span class="festa-giorno">{{ icona('calendar-clock') }}Domenica</span>{% endif %}
+    <label class="aggiungi-turno">{{ icona('plus') }}<span>Turno a</span>
+      <select id="aggiungi-persona" aria-label="Aggiungi un turno a">
+        <option value="">scegliere una persona…</option>
+        {% for r in ruoli %}{% set del_ruolo = persone_attive|selectattr('ruolo', 'equalto', r[0])|list %}{% if del_ruolo %}
+        <optgroup label="{{ r[1] }}">{% for p in del_ruolo %}<option value="{{ p.id }}">{{ p.etichetta }}</option>{% endfor %}</optgroup>
+        {% endif %}{% endfor %}
+      </select>
+    </label>
+  </div>
+  {% if not gruppi %}
+  <p class="avvio">Nessun turno in questo giorno{% if ruolo or area %} con questi filtri{% endif %}. Si mettono qui sopra («Turno a…») o nella vista della settimana.</p>
+  {% else %}
+  <div class="linea-tempo" data-guida="turni-ore">
+    <div class="scala-ore" aria-hidden="true">
+      <span class="spazio-nome"></span>
+      <div class="ore">{% for h in range(0, 25, 2) %}<span style="left: {{ h * 100 / 24 }}%">{{ '%02d' % h }}</span>{% endfor %}</div>
+    </div>
+    {% for gr in gruppi %}
+    <section class="gruppo-giorno" data-ruolo="{{ gr.ruolo }}" aria-label="{{ gr.nome }}">
+      <div class="riga-giorno riga-presenze">
+        <div class="nome-giorno"><span class="icona-ruolo">{{ icona(gr.icona) }}</span><b>{{ gr.nome }}</b>
+          {% if gr.carenze %}<span class="badge-manca" title="{{ gr.carenze|join('; ') }}">{{ icona('triangle-alert') }}manca qualcuno</span>{% endif %}</div>
+        <div class="presenze" role="img" aria-label="Al lavoro ora per ora: {% for n in gr.per_ora %}{{ loop.index0 }}: {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}">
+          {% for n in gr.per_ora %}<span class="ora-pres{% if not n %} zero{% endif %}" style="--h: {{ (n * 100 / gr.massimo)|round(1) }}%" title="{{ '%02d' % loop.index0 }}:00 – {{ n }} al lavoro"><i></i>{% if n %}<em>{{ n }}</em>{% endif %}</span>{% endfor %}
+        </div>
+      </div>
+      {% for r in gr.righe %}{% set p = r.persona %}
+      <div class="riga-giorno" data-persona="{{ p.id }}">
+        <div class="nome-giorno"><a href="{{ url_for('personale.persona', pid=p.id) }}">{{ p.etichetta }}</a>{% if p.qualifica %}<small>{{ p.qualifica }}</small>{% endif %}
+          {%- for t in r.giorno_intero %}<span class="giorno-intero" style="--c: {{ t.tipo.colore_sicuro }}; --t: {{ t.tipo.colore_testo }}" data-id="{{ t.id }}" data-desc="{{ descrizione(t) }}" data-codice="{{ t.codice }}"><b>{{ t.codice }}</b>{{ t.tipo.nome }}</span>{% endfor %}</div>
+        <div class="pista{% if r.ambulatori and r.barre %} con-agenda{% endif %}" role="button" tabindex="0" data-k="{{ p.id }}_{{ g.isoformat() }}" aria-label="Turni di {{ p.etichetta }}: {% for t in r.turni %}{{ descrizione(t) }}{% if not loop.last %}, {% endif %}{% else %}nessuno{% endfor %}{% for a in r.ambulatori %}; in agenda {{ a.turno.risorsa.nome }} {{ a.turno.ora_inizio.strftime('%H:%M') }}–{{ a.turno.ora_fine.strftime('%H:%M') }}{% endfor %}. Invio per cambiare.">
+          {% for h in range(1, 24) %}<i class="tacca{% if h % 6 == 0 %} forte{% endif %}" style="left: {{ h * 100 / 24 }}%"></i>{% endfor %}
+          {% for a in r.ambulatori %}
+          <span class="seduta" style="left: {{ a.sinistra|round(3) }}%; width: {{ a.larghezza|round(3) }}%" title="Agenda: {{ a.turno.risorsa.nome }} {{ a.turno.ora_inizio.strftime('%H:%M') }}–{{ a.turno.ora_fine.strftime('%H:%M') }}">{{ a.turno.risorsa.nome }}</span>
+          {% endfor %}
+          {% for b in r.barre %}{% set t = b.turno %}
+          <span class="barra-turno{% if t.categoria == 'REPERIBILITA' %} reperibile{% endif %}{% if b.continua_prima %} da-ieri{% endif %}{% if b.continua_dopo %} fino-domani{% endif %}"
+                style="left: {{ b.sinistra|round(3) }}%; width: {{ b.larghezza|round(3) }}%; --c: {{ t.tipo.colore_sicuro if t.tipo else '#F1F3F4' }}; --t: {{ t.tipo.colore_testo if t.tipo else '#16263F' }}"
+                title="{{ descrizione(t) }}{% if b.continua_prima %} (dalla notte prima){% endif %}"{% if not b.continua_prima %} data-id="{{ t.id }}" data-desc="{{ descrizione(t) }}" data-codice="{{ t.codice if t.tipo else '' }}"{% if t.area %} data-area="{{ t.area }}"{% endif %}{% endif %}>
+            <b>{{ t.codice if t.tipo else '' }}</b><span>{{ t.orario }}{% if t.area %} · {{ t.area }}{% endif %}</span>
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+    {% endfor %}
+    {% if ora_adesso is not none %}<div class="linea-adesso" style="--x: {{ ora_adesso|round(3) }}" aria-hidden="true"><span>adesso</span></div>{% endif %}
+  </div>
+  <div class="legenda-turni legenda-giorno">
+    <ul>
+      <li><span class="esempio-seduta"></span>Ambulatorio dall'agenda (medici collegati)</li>
+      <li><span class="esempio-continua"></span>Notte cominciata il giorno prima</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% include "_personale_scelta.html" %}
+<script type="application/json" id="tipi-turno">{{ tipi_json|tojson }}</script>
+{% endif %}
+<script src="{{ url_for('static', filename='turni.js') }}"></script>
+{% endblock %}

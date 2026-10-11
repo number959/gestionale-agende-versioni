@@ -647,7 +647,8 @@ def a_migrazione():
     S = crea_sessione('sqlite:///' + percorso)
     assert S.versione_precedente == 7 and {'pazienti.sesso', 'pazienti.luogo_nascita'} <= set(S.colonne_aggiunte)
     note = ' | '.join(S.migrazioni)
-    assert 'prima-della-versione-8' in note and '2 pazienti completati' in note and '1 riscritti' in note, note
+    assert 'prima-della-versione-%d' % VERSIONE_SCHEMA in note and '2 pazienti completati' in note and \
+        '1 riscritti' in note, note
     assert os.listdir(os.path.join(os.path.dirname(percorso), 'backup')), 'copia di sicurezza mancante'
     s = S()
     p = {x.cognome: x for x in s.scalars(select(Paziente))}
@@ -660,7 +661,7 @@ def a_migrazione():
     assert (p['Fittizi'].sesso, p['Fittizi'].luogo_nascita) == ('', '')
     s.close()
     S2 = crea_sessione('sqlite:///' + percorso)
-    assert S2.versione_precedente == VERSIONE_SCHEMA == 8 and not S2.migrazioni
+    assert S2.versione_precedente == VERSIONE_SCHEMA >= 8 and not S2.migrazioni
 
 
 def popola_archivio(S):
@@ -832,16 +833,17 @@ def x_pagine():
 
 
 def x_versione():
-    assert comune.VERSIONE == '1.7' and novita.NOVITA[0][0] == '1.7'
-    for v in novita.NOVITA[0][1]:
+    # la 1.7 o una piu' nuova: il numero, le sue novita' in cima e quelle della 1.7, ognuna con la sua guida
+    assert novita.confronta(comune.VERSIONE, '1.7') >= 0 and novita.NOVITA[0][0] == comune.VERSIONE
+    for v in novita.NOVITA[0][1] + dict(novita.NOVITA)['1.7']:
         assert v['guida'] in guida.PER_SLUG, v
     for nome in ('codice-fiscale', 'controllo-codici-fiscali'):
         assert nome in guida.PER_SLUG, nome
     iss = open(os.path.join(CARTELLA, 'installer.iss'), encoding='utf-8-sig').read()
-    assert '#define Versione "1.7"' in iss
+    assert '#define Versione "%s"' % comune.VERSIONE in iss
     spec = open(os.path.join(CARTELLA, 'gestionale.spec'), encoding='utf-8').read()
     assert "('dati', 'dati')" in spec, 'i luoghi non finiscono nell\'eseguibile'
-    assert VERSIONE_SCHEMA == 8
+    assert VERSIONE_SCHEMA >= 8
 
 
 def x_generatore():

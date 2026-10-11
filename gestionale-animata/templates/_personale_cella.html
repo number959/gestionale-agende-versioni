@@ -1,0 +1,20 @@
+{#- il contenuto di una cella dei turni (lo stesso disegno lo rifa' static/turni.js dopo una modifica) -#}
+{%- macro contenuto(c, larga=false) -%}
+{%- for v in c.turni -%}
+<span class="turno{% if v.categoria in ('ASSENZA', 'RIPOSO') %} senza-orario{% endif %}{% if v.categoria == 'REPERIBILITA' %} reperibile{% endif %}{% if not v.codice %} a-mano{% endif %}{% if v.diverso %} diverso{% endif %}{% if c.turni|length > 1 %} doppio{% endif %}" style="--c: {{ v.colore }}; --t: {{ v.testo }}" data-id="{{ v.id }}" data-desc="{{ v.desc }}"{% if v.area %} data-area="{{ v.area }}"{% endif %}>
+  {%- if v.codice or larga %}<b>{{ v.codice or v.orario }}</b>
+  {%- elif c.turni|length > 1 %}<b>{{ v.orario.split('–')[0] }}</b>
+  {%- else %}{% set o = v.orario.split('–') %}<b class="orario-stretto"><span>{{ o[0] }}</span><span>{{ o[1] }}</span></b>{% endif %}
+  {%- if larga and (v.orario and v.codice) %}<small class="ore-turno">{{ v.orario }}</small>{% endif %}
+  {%- if larga and v.area %}<small class="area-turno">{{ v.area }}</small>{% endif %}
+</span>
+{%- endfor -%}
+{%- if c.avviso %}<i class="segno-riposo" aria-hidden="true"></i>{% endif -%}
+{%- endmacro -%}
+
+{%- macro totali(t, vista) -%}
+<td class="tot" data-tot="ore"><b>{{ t.ore }}</b>{% if t.previste %}<small>/ {{ t.previste }}</small>{% if vista == 'settimana' and t.segno %}<span class="scarto {{ t.segno }}">{{ '+' if t.segno == 'sopra' }}{{ t.differenza if t.segno != 'pari' else '✓' }}</span>{% endif %}{% endif %}</td>
+<td class="tot" data-tot="notti">{{ t.notti or '' }}</td>
+<td class="tot" data-tot="festivi">{{ t.festivi or '' }}</td>
+<td class="tot" data-tot="assenze" title="{{ t.dettaglio_assenze }}">{{ t.assenze or '' }}</td>
+{%- endmacro -%}

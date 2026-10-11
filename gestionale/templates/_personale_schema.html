@@ -1,0 +1,43 @@
+{#- lo schema a rotazione: una sequenza di codici ripetuta nel periodo, persona per persona -#}
+{%- from "_icone.html" import icona -%}
+<dialog class="finestra-schema" id="finestra-schema" aria-labelledby="schema-titolo">
+  <form method="post" action="{{ url_for('personale.schema') }}" class="modulo-schema">
+    <div class="schema-testa">
+      <h2 id="schema-titolo">{{ icona('repeat') }}Schema a rotazione</h2>
+      <button type="button" class="scelta-chiudi" data-chiudi-schema aria-label="Chiudi">{{ icona('x') }}</button>
+    </div>
+    <p class="aiuto">La sequenza si ripete giorno dopo giorno. Con lo sfasamento ogni persona comincia qualche giorno più
+      avanti della precedente: così, con la stessa sequenza, i reparti restano coperti. Le celle già piene restano
+      come sono.</p>
+    <input type="hidden" name="torna" value="{{ request.full_path }}">
+    {% if strutture|length > 1 %}<input type="hidden" name="struttura" value="{{ sid }}">{% endif %}
+    <label class="largo">Sequenza
+      <input type="text" name="sequenza" id="schema-sequenza" required autocomplete="off" spellcheck="false"
+             placeholder="M M P P N SN R R" value="M M P P N SN R R"></label>
+    <div class="schema-anteprima" id="schema-anteprima" aria-live="polite"></div>
+    <div class="schema-codici">{% for t in tipi %}<button type="button" class="chip-codice" data-aggiungi-codice="{{ t.codice }}" style="--c: {{ t.colore_sicuro }}; --t: {{ t.colore_testo }}" title="{{ t.nome }}{% if t.orario %} {{ t.orario }}{% endif %}">{{ t.codice }}</button>{% endfor %}<button type="button" class="chip-codice vuoto" data-aggiungi-codice="-" title="giorno vuoto">–</button></div>
+    <div class="schema-riga">
+      <label>Dal<input type="date" name="dal" value="{{ dal.isoformat() }}" required></label>
+      <label>Al<input type="date" name="al" value="{{ al.isoformat() }}" required></label>
+      <label>Sfasamento<input type="number" name="sfasamento" value="2" min="0" max="60" style="width:5em"><small>giorni</small></label>
+    </div>
+    <fieldset class="schema-persone">
+      <legend>Persone, nell'ordine</legend>
+      {% for gr in gruppi %}
+      <div class="schema-gruppo">
+        <label class="spunta tutti"><input type="checkbox" data-tutti="{{ gr.ruolo }}"> <b>{{ gr.nome }}</b></label>
+        {% for r in gr.righe if r.persona.attiva %}
+        <label class="spunta"><input type="checkbox" name="persone" value="{{ r.persona.id }}" data-ruolo="{{ gr.ruolo }}"> {{ r.persona.etichetta }}</label>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </fieldset>
+    <div class="schema-prova" id="schema-prova" aria-live="polite"></div>
+    <label class="spunta"><input type="checkbox" name="sostituisci" value="1"> Sostituisci anche i turni già messi</label>
+    <p class="scelta-errore" id="schema-errore" role="alert" hidden></p>
+    <div class="schema-piede">
+      <button type="button" class="bottone" data-chiudi-schema>Annulla</button>
+      <button type="submit" class="bottone primario">{{ icona('wand-sparkles') }}Applica lo schema</button>
+    </div>
+  </form>
+</dialog>

@@ -7,7 +7,7 @@ Per ogni articolo di guida.py apre la pagina indicata in 'foto', trova gli
 elementi dei passi con lo stesso criterio della guida sullo schermo, li
 contorna e ci mette il numero del passo, poi ritaglia la parte che serve.
 
-    python strumenti/genera_immagini_guida.py http://127.0.0.1:5000 [cartella]
+    python strumenti/genera_immagini_guida.py http://127.0.0.1:5000 [cartella] [--solo articolo1,articolo2]
 
 Serve Playwright con Chromium e Pillow. Stampa i passi il cui elemento non
 e' stato trovato: vuol dire che la guida va corretta."""
@@ -22,8 +22,22 @@ import guida  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 from playwright.sync_api import sync_playwright  # noqa: E402
 
-B = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000'
-USCITA = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'guida')
+# --solo a,b: solo alcuni articoli (quelli delle pagine cambiate); senza, tutti
+SOLO = set()
+_argomenti = []
+for _x in sys.argv[1:]:
+    if _x.startswith('--solo='):
+        SOLO |= {s.strip() for s in _x[7:].split(',') if s.strip()}
+    elif _argomenti and _argomenti[-1] == '--solo':
+        _argomenti.pop()
+        SOLO |= {s.strip() for s in _x.split(',') if s.strip()}
+    else:
+        _argomenti.append(_x)
+B = _argomenti[0] if _argomenti else 'http://127.0.0.1:5000'
+USCITA = _argomenti[1] if len(_argomenti) > 1 else os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'guida')
+_sconosciuti = SOLO - set(guida.PER_SLUG)
+if _sconosciuti:
+    sys.exit('Articoli sconosciuti: %s' % ', '.join(sorted(_sconosciuti)))
 LARGHEZZA_MASSIMA = 1100
 ROSSO = (208, 52, 44)
 
@@ -84,7 +98,7 @@ def principale():
         pg = ctx.new_page()
         valori = segnaposto(pg)
         for a in guida.ARTICOLI:
-            if not a.get('foto'):
+            if not a.get('foto') or (SOLO and a['slug'] not in SOLO):
                 continue
             percorso = a['foto']
             if '{app_esempio}' in percorso:

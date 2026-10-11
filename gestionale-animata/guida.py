@@ -55,6 +55,8 @@ ARTICOLI = [
                'nav.menu [data-guida="menu-giorno"]'),
              P('Pazienti', 'L\'anagrafica: cercare, aprire la scheda, vedere gli appuntamenti e i documenti di un paziente.',
                'nav.menu [data-guida="menu-pazienti"]'),
+             P('Turni', 'I turni del personale (medici, infermieri, OSS e gli altri) nel mese, nella settimana e nel '
+               'giorno a ore.', 'nav.menu [data-guida="menu-turni"]'),
              P('Segreteria', 'Il lavoro di tutti i giorni oltre a prenotare: conferme, da confermare, chiusura della '
                'giornata, cose da fare, lista d\'attesa. Il numero arancione dice quante prenotazioni sono in sospeso.',
                'nav.menu [data-guida="menu-segreteria"]'),
@@ -255,6 +257,109 @@ ARTICOLI = [
              P('Fatto', 'Fatto la toglie; Domani la rimanda di un giorno.', 'button', 'Fatto'),
          ]),
     # ---------------------------------------------------------- sala operatoria
+    # ------------------------------------------------------------ turni del personale
+    dict(slug='turni-personale', gruppo='Turni del personale', titolo='I turni del personale: il mese e la settimana',
+         in_breve='Menu Turni: una riga per persona, una colonna per giorno. Clic sulla cella, oppure il codice scritto '
+                  'da tastiera, come in un foglio di calcolo.',
+         endpoint='personale.mese', apri=('personale.mese', {'aaaamm': 'MESE'}), foto='/personale/turni/mese/{mese}',
+         passi=[
+             P('Apri i turni', 'Menu Turni: il foglio del mese, con una riga per persona divisa per ruolo (medici, '
+               'infermieri, OSS, tecnici, accettazione, ausiliari) e una colonna per giorno.',
+               'nav.menu [data-guida="menu-turni"]'),
+             P('Giorno, settimana, mese', 'Il mese è il foglio dei turni con i codici. La settimana mostra anche orari e '
+               'aree, e le ore di ciascuno contro quelle del contratto. Il giorno è a ore: chi c\'è e quando.',
+               '[data-guida="turni-viste"]'),
+             P('I codici', 'Ogni turno ha un codice e un colore: M mattina, P pomeriggio, N notte, R riposo, F ferie… Si '
+               'cambiano e se ne aggiungono in Tipi di turno.', '[data-guida="turni-legenda"]'),
+             P('Mettere un turno', 'Clic sulla cella della persona nel giorno: si apre la scelta con tutti i turni. Oppure, '
+               'con la cella scelta, si scrive il codice: il turno si mette e si passa al giorno dopo. Invio apre la '
+               'scelta, le frecce si spostano.', '[data-guida="turni-griglia"]'),
+             P('Più celle insieme', 'Trascinando con il mouse, o con Maiusc e le frecce, si scelgono più celle, anche di '
+               'più persone: il turno va in tutte. Canc toglie i turni delle celle scelte.'),
+             P('Orario diverso, area, nota', 'Nella scelta, «Orario diverso, area, nota»: un orario scritto a mano (per '
+               'esempio 8–12), l\'area (Degenza, Sala operatoria…) o una nota; e un secondo turno nello stesso giorno.'),
+             P('Annullare', 'Ogni modifica si annulla con Ctrl+Z, o con «Annulla» nell\'avviso in basso, e si rifà con '
+               'Ctrl+Y.'),
+             P('I controlli', 'Due turni della stessa persona che si sovrappongono, anche con la notte del giorno prima, non '
+               'si salvano: il programma dice perché. Meno di 11 ore di riposo fra due turni si possono tenere, ma la '
+               'cella ha un triangolino arancione.'),
+             P('Totali e copertura', 'In fondo alla riga le ore lavorate (con quelle del contratto), le notti, i festivi e '
+               'i giorni di assenza. Sotto ogni ruolo la copertura del giorno, quanti per turno: in rosso dove manca '
+               'qualcuno rispetto alle coperture minime.', 'tr.copertura'),
+             P('Filtri', 'Solo un ruolo (per esempio gli infermieri) o solo un\'area.', '[data-guida="turni-filtri"]'),
+             P('Stampa ed Excel', 'In Strumenti: il foglio da stampare in orizzontale e il mese in Excel, con un secondo '
+               'foglio di un turno per riga (per le paghe).', '[data-guida="turni-strumenti"]'),
+         ]),
+    dict(slug='turni-giorno', gruppo='Turni del personale', titolo='Il giorno a ore: chi c\'è e quando',
+         in_breve='Turni → Giorno: una riga per persona sulle 24 ore, quanti al lavoro ora per ora, gli ambulatori dei '
+                  'medici. Clic sulla riga per cambiare il turno.',
+         endpoint='personale.giorno', apri=('personale.giorno', {'iso': 'OGGI'}),
+         foto='/personale/turni/giorno/{martedi}',
+         passi=[
+             P('Il giorno a ore', 'Una riga per chi ha un turno quel giorno, sulla linea delle 24 ore; la notte cominciata '
+               'il giorno prima parte da sinistra. La linea rossa è adesso.', '.scala-ore'),
+             P('Quanti al lavoro', 'Per ogni ruolo, le barre dicono quante persone sono al lavoro ora per ora. «Manca '
+               'qualcuno» se una copertura minima non è raggiunta.', '.riga-presenze .presenze'),
+             P('Gli ambulatori', 'Per i medici collegati all\'agenda si vedono anche i loro ambulatori del giorno, '
+               'tratteggiati (sotto il turno, se c\'è anche quello): così turno e agenda si confrontano a colpo '
+               'd\'occhio.'),
+             P('Cambiare un turno', 'Clic sulla riga della persona (o Invio, con il tasto Tab fin lì): si apre la stessa '
+               'scelta della griglia. Si può anche scrivere il codice.', '.pista'),
+             P('Riposi e assenze', 'Valgono tutto il giorno e compaiono accanto al nome.', '.nome-giorno .giorno-intero'),
+             P('Un turno a chi non c\'è', '«Turno a…»: si sceglie la persona e poi il turno.', '#aggiungi-persona'),
+         ]),
+    dict(slug='turni-schema', gruppo='Turni del personale', titolo='Schema a rotazione e copia della settimana',
+         in_breve='Una sequenza come M M P P N SN R R che si ripete da sola, persona per persona; oppure la settimana '
+                  'prima copiata nelle celle vuote.',
+         endpoint='personale.settimana', apri=('personale.settimana', {'iso': 'OGGI'}),
+         foto='/personale/turni/settimana/{oggi}',
+         passi=[
+             P('Strumenti', 'Nella settimana e nel mese, Strumenti → «Schema a rotazione…»; nella settimana anche «Copia '
+               'la settimana prima».', '[data-guida="turni-strumenti"]'),
+             P('La sequenza', 'I codici che si ripetono giorno dopo giorno, per esempio M M P P N SN R R. Si scrivono o si '
+               'compongono con i pulsanti colorati; un trattino è un giorno vuoto.'),
+             P('Lo sfasamento', 'Con più persone ognuna comincia qualche giorno più avanti nella sequenza: con otto '
+               'infermieri e una sequenza di otto giorni sfasata di uno, ogni giorno ci sono due mattine, due pomeriggi '
+               'e una notte.'),
+             P('Prima di applicare', 'Sotto si vede come verranno i primi giorni per le persone scelte. Le celle già piene '
+               'restano come sono, a meno di «Sostituisci anche i turni già messi».'),
+             P('Più veloce dalla griglia', 'Scelto prima un gruppo di celle nella griglia (persone e giorni), lo schema si '
+               'apre già con quelle persone e quel periodo.', '[data-guida="turni-griglia"]'),
+             P('Copia la settimana prima', 'Gli stessi turni della settimana precedente, nelle celle ancora vuote; poi si '
+               'correggono le eccezioni.'),
+         ]),
+    dict(slug='turni-persone', gruppo='Turni del personale', titolo='Le persone del personale',
+         in_breve='Turni → Persone: chi fa i turni, con ruolo e ore del contratto. I medici dell\'agenda si aggiungono '
+                  'tutti insieme.',
+         endpoint='personale.persone', apri=('personale.persone', {}), foto='/personale/persone',
+         passi=[
+             P('Aggiungi una persona', 'Cognome, nome e ruolo: medico, infermiere, OSS, tecnico, accettazione, ausiliario.',
+               '[data-guida="persone-nuova"]'),
+             P('Le ore del contratto', 'Le ore a settimana (36, oppure 37:30 o 37,5): nei turni si confrontano con quelle '
+               'lavorate, settimana per settimana e nel mese.'),
+             P('I medici dell\'agenda', '«Aggiungi i medici dell\'agenda» li aggiunge tutti insieme, già collegati: nella '
+               'vista del giorno si vedono anche i loro ambulatori. Il pulsante c\'è finché qualche medico manca.'),
+             P('Chi non lavora più', 'Nella sua scheda si toglie la spunta «In servizio»: non compare nei turni nuovi ma '
+               'resta in quelli passati. Si può eliminare solo chi non ha turni.'),
+             P('Modificare', 'Modifica, sulla riga della persona.', 'table.elenco-persone td.azione a'),
+         ]),
+    dict(slug='turni-tipi', gruppo='Turni del personale', titolo='Tipi di turno e coperture minime',
+         in_breve='Turni → Tipi di turno: codici, orari e colori dei turni, e quante persone servono almeno, per ruolo '
+                  'e turno.',
+         endpoint='personale.tipi_turno', apri=('personale.tipi_turno', {}), foto='/personale/tipi',
+         passi=[
+             P('I tipi di turno', 'Codice, nome, orario e colore di ogni turno. Si comincia con mattina, pomeriggio, notte, '
+               'giornata, reperibilità, smonto notte, riposo, ferie, malattia e permesso.', '[data-guida="tipi-elenco"]'),
+             P('Un tipo nuovo', 'Codice (da una a quattro lettere o cifre), nome, categoria e colore; per lavoro e '
+               'reperibilità anche inizio, fine e pausa. Le ore contate sono la durata meno la pausa; se la fine viene '
+               'prima dell\'inizio, il turno finisce il giorno dopo.', '#modulo-tipo'),
+             P('Le categorie', 'Lavoro: conta nelle ore e nella copertura. Reperibilità: ore a parte. Riposo e assenza: '
+               'valgono tutto il giorno e non stanno insieme ad altri turni.'),
+             P('Le coperture minime', 'Quante persone servono almeno, per ruolo e turno, nei giorni scelti (ed '
+               'eventualmente in un\'area): dove manca qualcuno la copertura del giorno si colora di rosso.', '#coperture'),
+             P('Cambiare un orario', 'I turni già messi tengono l\'orario di prima. Un tipo già usato non si elimina: '
+               'smette solo di comparire fra quelli da mettere.'),
+         ]),
     dict(slug='checklist', gruppo='Sala operatoria', titolo='Checklist pre-operatoria',
          in_breve='Esami, consenso, anestesista, preparazione, acconto: le caselle si salvano da sole.',
          endpoint='sala.giornata', apri=('sala.giornata', {'iso': 'OGGI'}), foto='/sala/{domani}',
@@ -443,10 +548,29 @@ ARTICOLI += [
              P('Nelle conferme', 'La pagina Conferme dice per ogni paziente cosa è partito; chi non ha né cellulare né email '
                'resta da chiamare come prima.'),
          ]),
+    dict(slug='whatsapp-numero', gruppo='Email e WhatsApp', titolo='Attivare i WhatsApp automatici',
+         in_breve='Token e ID del numero da Meta, poi «Registra il numero» con un PIN di 6 cifre e una prova al proprio '
+                  'cellulare.',
+         endpoint='invii.pagina', apri=('invii.pagina', {}), foto='/invii#whatsapp',
+         passi=[
+             P('Cosa serve', 'I passi da fare in Meta, in ordine: account Meta Business, app con il caso d\'uso WhatsApp, '
+               'numero dedicato verificato, modello di messaggio approvato, token permanente.',
+               '[data-guida="whatsapp-requisiti"]'),
+             P('Token e ID del numero', 'Si incollano qui e si preme «Salva WhatsApp». L\'ID lo mostra Meta in WhatsApp → '
+               'Configurazione API; il token si crea con un utente di sistema, scadenza «mai».', '#wa_numero_id'),
+             P('Registra il numero', 'Una volta sola: un PIN di 6 cifre e «Registra il numero». Se il numero ha già la '
+               'verifica in due passaggi il PIN è quello; altrimenti questo diventa il suo PIN. Conservarlo.',
+               '[data-guida="whatsapp-registra"]'),
+             P('La prova', 'Una prova al proprio cellulare: se arriva, i promemoria del giorno prima possono partire.',
+               'input[name="a"][type="tel"]'),
+             P('Se qualcosa non va', 'Il messaggio dice cosa fare in parole semplici: token scaduto, PIN sbagliato, numero '
+               'non registrato, modello non approvato. Nel Registro, in fondo alla pagina, l\'esito di ogni messaggio.'),
+         ]),
 ]
 
 PER_SLUG = {a['slug']: a for a in ARTICOLI}
-GRUPPI = ['Primi passi', 'Tutti i giorni', 'Sala operatoria', 'Cassa e fogli', 'Email e WhatsApp', 'Configurazione']
+GRUPPI = ['Primi passi', 'Tutti i giorni', 'Turni del personale', 'Sala operatoria', 'Cassa e fogli', 'Email e WhatsApp',
+          'Configurazione']
 
 
 def collega(app):

@@ -5,6 +5,22 @@ ogni struttura: nome, logo, società e colori si impostano dal programma. Gira s
 della segreteria, con un solo utente; internet serve solo, in uscita, per le email e i
 WhatsApp ai pazienti e per scaricare gli aggiornamenti. Il database è un file unico.
 
+**Novità della 1.8.** **Turni del personale.** Nuovo menu *Turni*: medici, infermieri, OSS,
+tecnici, accettazione e ausiliari, nel **mese** (il foglio dei turni con i codici M, P,
+N…), nella **settimana** (con orari, aree e le ore di ciascuno contro quelle del contratto)
+e nel **giorno a ore** (chi c'è ora per ora, con gli ambulatori dei medici dall'agenda). I
+turni si mettono come in un foglio di calcolo: clic sulla cella oppure il codice scritto da
+tastiera, più celle insieme trascinando o con Maiusc e le frecce; Ctrl+Z annulla e Ctrl+Y
+rifà. Il programma rifiuta i turni sovrapposti (anche con la notte del giorno prima),
+segnala i riposi sotto le 11 ore, conta ore, notti, festivi e assenze e, con le **coperture
+minime**, colora i giorni in cui manca qualcuno. Lo **schema a rotazione** ripete una
+sequenza (M M P P N SN R R) sfasata persona per persona, con l'anteprima; la settimana si
+copia dalla precedente; il mese si stampa o si scarica in Excel; nella pagina *Oggi* c'è
+*In servizio oggi* (vedi *Turni del personale*). In *Email e WhatsApp* il numero WhatsApp
+**si registra dal programma** con il PIN, e gli errori di Meta si spiegano in parole
+semplici. Le tendine del menu e *Stampa e scarica* della giornata restano sempre sopra la
+pagina e le notifiche.
+
 **Novità della 1.7.** **Codice fiscale controllato e calcolato.** Nella scheda del paziente e
 nella prenotazione il codice fiscale si controlla mentre lo si scrive: se è sbagliato il
 programma dice cosa non va (la lunghezza, il carattere al posto sbagliato, una data che non
@@ -565,11 +581,13 @@ prossimo giro, e con quale canale.
 **WhatsApp automatico.** L'app WhatsApp del telefono non permette invii da un programma:
 serve la **WhatsApp Business Platform** di Meta.
 
-1. Un account **Meta Business** della società e un'app di tipo WhatsApp in
-   developers.facebook.com.
-2. Un **numero di telefono dedicato**, che riceve un SMS o una chiamata di verifica. Non
-   può essere un numero in uso in quel momento con l'app WhatsApp o WhatsApp Business del
-   telefono.
+1. Un account **Meta Business** della società e un'app in developers.facebook.com con il
+   caso d'uso WhatsApp (*Connect with customers through WhatsApp*).
+2. Un **numero di telefono dedicato**, aggiunto in *WhatsApp → Configurazione API* e
+   verificato con un SMS o una chiamata. Non può essere un numero in uso in quel momento con
+   l'app WhatsApp o WhatsApp Business del telefono: se lo è, prima si cancella l'account
+   WhatsApp da quel telefono. Il **nome visualizzato** (quello che vedono i pazienti) lo
+   approva Meta.
 3. Un **modello di messaggio** approvato da Meta, categoria *Utilità*, lingua *Italiano*,
    nome `promemoria_appuntamento`, con questo testo:
 
@@ -578,10 +596,19 @@ serve la **WhatsApp Business Platform** di Meta.
    Il programma riempie {{1}}…{{5}} con nome del paziente, giorno, ora, struttura e
    "chiami il …" (il telefono della struttura). Se il modello approvato è diverso, si
    cambiano nome e variabili nella pagina, nello stesso ordine.
-4. Un **token permanente** (un utente di sistema con il permesso
-   *whatsapp_business_messaging*) e l'**ID del numero di telefono** (WhatsApp →
-   Configurazione API): si copiano nella pagina. Il token è cifrato come la password.
-5. Un metodo di pagamento: in Italia un messaggio di utilità costa circa 2,5 centesimi
+4. Un **token permanente**: in *Impostazioni dell'azienda → Utenti di sistema* un utente di
+   sistema con l'app e l'account WhatsApp assegnati, poi *Genera token* con i permessi
+   *whatsapp_business_messaging* e *whatsapp_business_management* e scadenza «mai»; e
+   l'**ID del numero di telefono** (WhatsApp → Configurazione API). Si copiano nella pagina;
+   il token è cifrato come la password.
+5. **Registra il numero** (dalla 1.8, nella pagina): una volta sola, con un PIN di 6 cifre.
+   Se il numero ha già la verifica in due passaggi il PIN è quello; altrimenti questo
+   diventa il suo PIN. Il programma manda a Meta `POST /{ID del numero}/register` e non
+   salva il PIN; Meta accetta al massimo 10 registrazioni in 72 ore. Senza questo passaggio
+   Meta rifiuta i messaggi (codice 133010). Se Meta dice di no, la pagina spiega perché in
+   parole semplici (PIN sbagliato, troppi tentativi, numero da verificare di nuovo, token
+   scaduto o senza permessi); un altro ID del numero va registrato di nuovo.
+6. Un metodo di pagamento: in Italia un messaggio di utilità costa circa 2,5 centesimi
    (listino Meta da ottobre 2026), cioè circa 2,50 € ogni 100 promemoria.
 
 Meta conferma di aver preso in carico il messaggio (il registro ne tiene l'identificativo),
@@ -697,7 +724,7 @@ Il programma riconosce da solo:
 3. **le agende a blocchi**, con più sale affiancate e le stesse colonne ripetute: la sala
    è il nome scritto sopra il blocco; giorno e data scritti una volta per blocco, anche in
    celle unite, valgono per le righe sotto;
-4. **cognome e nome insieme** ("DE FALCO TERESA", "ANNA VITALE", "DE LUCA CIRO"), con
+4. **cognome e nome insieme** ("DE FITTIZI TERESA", "ANNA VITALE", "DE LUCA CIRO"), con
    un elenco di nomi propri e le particelle (De, Di, Della…) attaccate al cognome. Se non
    si capisce ("MARIA ROSA"), la riga è segnata da controllare;
 5. **la durata**, se non scritta: quella della prestazione se esiste, altrimenti il passo
@@ -877,6 +904,97 @@ scrive anche `static/video/durate.json`. Anche lui dice se un passo non si trova
 
 *Apri la giornata* porta alla griglia di sempre.
 
+## Turni del personale
+
+Menu **Turni** (dalla 1.8). Tre viste dello stesso planning, con le schede *Giorno*,
+*Settimana* e *Mese* in alto a sinistra:
+
+- **Mese**: il foglio dei turni, una riga per persona (divise per ruolo: medici,
+  infermieri, OSS, tecnici, accettazione e amministrazione, ausiliari, altro) e una colonna
+  per giorno, con il codice del turno nella cella. A 1366 pixel entra tutto il mese, con i
+  totali; sugli schermi più larghi le colonne si allargano.
+- **Settimana**: le stesse celle più larghe, con orario e area; la colonna *Ore* confronta
+  le ore lavorate con quelle del contratto (sotto, sopra o ✓).
+- **Giorno**: a ore, una riga per chi ha un turno quel giorno; per ogni ruolo quante persone
+  sono al lavoro ora per ora, e per i medici collegati all'agenda i loro ambulatori,
+  tratteggiati (in una striscia sotto il turno, se c'è anche quello).
+
+**Mettere i turni.** Come in un foglio di calcolo. Un clic sulla cella apre la scelta del
+turno: i tipi divisi per categoria, *Orario diverso, area, nota* (un orario scritto a mano,
+l'area, una nota, un secondo turno nello stesso giorno) e *Togli*. Con una cella scelta
+basta scrivere il codice: il turno si mette e si passa al giorno dopo; un codice che può
+continuare (M e MA) aspetta un attimo, oppure Invio. Le frecce si spostano; Maiusc+frecce
+o trascinando si scelgono più celle, anche di più persone, Ctrl+clic ne aggiunge una; Canc
+toglie; Invio apre la scelta, Esc la chiude. **Ctrl+Z** annulla l'ultima modifica e
+**Ctrl+Y** la rifà, anche con *Annulla* nell'avviso in basso: le celle tornano esattamente
+com'erano, con orari, aree e note. Sostituire o svuotare 8 o più celle già piene chiede
+conferma. Cambiando turno dalla tastiera, o su più celle, l'area che c'era resta. Nella
+vista del giorno: clic (o Invio) sulla riga della persona, e *Turno a…* per chi quel
+giorno non ha ancora un turno.
+
+**Regole**, controllate dal programma e non dalla pagina:
+
+- due turni della stessa persona non si sovrappongono, nemmeno con la notte del giorno
+  prima (una notte 21–7 conta nel giorno in cui comincia); due turni che si toccano (la
+  notte finisce alle 7, la mattina comincia alle 7) vanno bene;
+- riposi e assenze (R, SN, F, MA, PE) valgono tutto il giorno e non stanno insieme ad altri
+  turni dello stesso giorno; due turni con orario nello stesso giorno (spezzato) sì;
+- meno di 11 ore di riposo fra due turni si possono tenere, ma il salvataggio lo dice e la
+  cella ha un triangolino arancione;
+- chi non è più in servizio non riceve turni nuovi, ma resta in quelli passati.
+
+**Conti.** In fondo alla riga: ore di lavoro (la durata meno la pausa del tipo; la
+reperibilità a parte), notti (turni che finiscono il giorno dopo), festivi (domeniche,
+festività del calendario e patrono della struttura) e giorni di assenza, con il dettaglio
+passandoci sopra. Le ore del contratto del periodo sono le ore a settimana × giorni ÷ 7.
+Sotto ogni ruolo la riga **Copertura** dice quanti per turno quel giorno (M2 P2 N1), in
+rosso dove una copertura minima non è raggiunta.
+
+**Persone** (*Turni → Persone*): cognome, nome, ruolo, qualifica, ore a settimana (36,
+37:30 o 37,5), telefono, email, struttura (o tutte), note e *In servizio*. **Aggiungi i
+medici dell'agenda** crea una persona per ogni medico attivo che non ce l'ha, già
+collegata all'agenda. Una persona con turni non si elimina: si toglie *In servizio*.
+
+**Tipi di turno** (*Turni → Tipi di turno*): codice (da una a quattro lettere o cifre),
+nome, categoria (lavoro, reperibilità, riposo, assenza), orario, pausa e colore; il colore
+del testo, blu scuro o bianco, lo sceglie il programma per il contrasto. Si comincia con
+M 7–14, P 14–21, N 21–7, G 8–17 con un'ora di pausa, RE 20–8, SN, R, F, MA e PE. Cambiando
+l'orario di un tipo i turni già messi tengono il loro; un tipo già usato non si elimina,
+smette di comparire fra quelli da mettere. **Coperture minime**: per ruolo, tipo di turno,
+giorni della settimana ed eventualmente area, quante persone servono almeno.
+
+**Strumenti**, in alto a destra:
+
+- *Schema a rotazione…*: una sequenza come M M P P N SN R R (un trattino è un giorno vuoto)
+  ripetuta nel periodo per le persone scelte, ognuna sfasata di qualche giorno; l'anteprima
+  mostra i primi 14 giorni delle prime sei persone; le celle già piene restano, a meno di
+  *Sostituisci*; al massimo 120 giorni alla volta. Scelto prima un gruppo di celle nella
+  griglia, lo schema si apre con quelle persone e quei giorni.
+- *Copia la settimana prima*: gli stessi turni, nelle celle ancora vuote.
+- *Stampa*: A4 orizzontale, con la legenda dei codici.
+- *Scarica in Excel*: il mese con i colori e i totali, e un foglio *Elenco* con un turno
+  per riga, per le paghe.
+
+I filtri *ruolo* e *area* valgono per le tre viste e per l'Excel (riposi e assenze restano
+sempre). Con più strutture, una persona di una struttura compare solo lì; senza struttura,
+in tutte.
+
+**Oggi.** Se il personale è stato inserito, la pagina Oggi ha **In servizio oggi**: per
+ruolo chi lavora oggi, anche chi fa la notte cominciata ieri (*da ieri*), con un punto
+verde per chi è al lavoro in quel momento.
+
+Dentro: `personale.py` (regole, conti, pagine, Excel), le tabelle `personale`,
+`tipi_turno`, `turni_personale` e `coperture_minime` (schema 9), le pagine
+`templates/personale_*.html` e `static/turni.js`. Ogni modifica dalla pagina è una
+richiesta `POST /personale/turni/cambia` in JSON (*metti*, *aggiungi*, *togli*,
+*ripristina*) che risponde con le celle, i totali e la copertura da ridisegnare e con lo
+stato di prima delle celle cambiate: è quello che *Annulla* rimanda indietro (*ripristina*
+è tutto o niente: se un turno di prima non sta più, non cambia niente e lo dice). Le
+richieste della pagina passano da una coda, una alla volta, così le risposte arrivano in
+ordine. Le icone delle pagine dei turni sono di Lucide (licenza ISC), scritte dentro la
+pagina, senza niente da internet (`templates/_icone.html`, licenze in
+`static/icone/LICENZE.txt`).
+
 ## Sala operatoria
 
 Un **intervento** è un appuntamento in una stanza di tipo *Sala operatoria* (il tipo si
@@ -958,6 +1076,11 @@ pianificazione, ma non serve più.
 In più il pulsante *Scarica in Excel* rigenera il planning del giorno nel formato che
 l'accettazione usa già.
 
+**Aggiornamento alla 1.8.** Al primo avvio della 1.8 il programma copia il database in
+`backup\agende-…-prima-della-versione-9.db`, poi aggiunge le quattro tabelle dei turni del
+personale e i dieci tipi di turno di partenza (una volta sola: se poi si tolgono tutti, non
+tornano). Niente di quello che c'era viene toccato.
+
 **Aggiornamento alla 1.7.** Al primo avvio della 1.7 il programma copia il database in
 `backup\agende-…-prima-della-versione-8.db`, poi aggiunge alla scheda dei pazienti sesso e
 luogo di nascita e li ricava, con la data di nascita dove manca, dai codici fiscali validi
@@ -1010,6 +1133,9 @@ la transazione si annulla e il database resta com'era. Il registro riporta ogni 
 | `novita.py` | Le novità di ogni versione (pagina Novità, notifica, file delle versioni) |
 | `sala.py` | Checklist pre-operatoria, pagina Sala, lista operatoria, posti letto, giorni di sala dei chirurghi |
 | `cruscotto.py` | La pagina Oggi e il riepilogo del mese per medico |
+| `personale.py` | Turni del personale: regole (sovrapposizioni, riposi), conti, coperture, schema a rotazione, copia della settimana, pagine, Excel del mese |
+| `static/turni.js` | La griglia dei turni come un foglio di calcolo, la scelta del turno, annulla e rifai, la vista del giorno, lo schema a rotazione |
+| `templates/_icone.html`, `static/icone/LICENZE.txt` | Le icone (Lucide, licenza ISC) scritte dentro le pagine, con le licenze (anche Radix Colors, MIT, per i colori dei turni) |
 | `importa.py` | Importazione da Excel e CSV: riconoscimento, anteprima, esecuzione |
 | `marchio.py` | Controllo e pulizia del logo, colore proposto, contrasto |
 | `servizi.py` | Griglia, turni effettivi (assenze, chiusure, festivi), conflitti, disponibilità, statistiche, export in Excel |
@@ -1018,7 +1144,7 @@ la transazione si annulla e il database resta com'era. Il registro riporta ogni 
 | `templates/`, `static/` | Interfaccia; `static/tema-scuro.css` è generato |
 | `static/fonts/` | I caratteri del sito della clinica (Manrope, Inter) con la loro licenza |
 | `static/logo-posillipo.png` | Il logo della clinica (*Longevity Institute*); `logo-posillipo-precedente.png` serve a riconoscere e sostituire quello di prima |
-| `strumenti/` | Il generatore del tema scuro e le sue correzioni a mano; i generatori delle immagini, dei video e del PDF della guida; `prepara_aggiornamento.py` (il file delle versioni accanto al Setup); `genera_luoghi_nascita.py` (l'elenco dei luoghi di nascita) |
+| `strumenti/` | Il generatore del tema scuro e le sue correzioni a mano; i generatori delle immagini, dei video e del PDF della guida; `prepara_aggiornamento.py` (il file delle versioni accanto al Setup); `genera_luoghi_nascita.py` (l'elenco dei luoghi di nascita); `genera_icone.py` (le icone di Lucide nella macro delle pagine) |
 | `strumenti/demo.py` | Il gestionale con i dati di prova intorno a oggi: per le prove nel browser, le immagini e i video della guida, le dimostrazioni |
 | `strumenti/tutte_le_prove.py` | Tutte le prove in fila con il riepilogo, anche quelle nel browser (`--browser`) |
 | `strumenti/allinea_animata.py` | Porta i file comuni nella versione animata e controlla che siano uguali |
@@ -1226,6 +1352,31 @@ Inno Setup 6.7.3), partendo da un Windows finto nuovo:
   il codice fiscale scritto (data, sesso e luogo riempiti dal codice), poi la 1.7 animata
   sopra: scheda intatta, stessi 16 controlli a posto.
 
+Versione 1.8, con gli stessi script (Wine 9, Python 3.14.8, PyInstaller 6.22.3, Inno Setup 6.7.3):
+
+- `costruisci.sh` per le due versioni: `CREA_EXE.bat` e `CREA_SETUP.bat` per intero, Setup
+  (circa 54 MB, con i 35 video) e file delle versioni in `Output`.
+- Aggiornamento dalla 1.7.1 installata, con 81 appuntamenti, 81 pazienti e 14 medici: copia
+  di sicurezza *prima della versione 9* identica al database di partenza, schema da 8 a 9, le
+  quattro tabelle dei turni e i dieci tipi di turno di partenza, *"versione 1.8 avviata la
+  prima volta (prima c'era la 1.7.1)"*. Tutte le tabelle di prima sono identiche riga per
+  riga; nelle impostazioni cambiano solo le voci della versione; `integrity_check` e
+  `foreign_key_check` a posto.
+- Sull'eseguibile installato, normale e animato, `prove_installato.py`: 25 controlli a posto
+  (in più rispetto alla 1.7: le pagine dei turni, i dieci tipi di partenza, il mese in Excel,
+  `turni.js`, le licenze delle icone, «Registra il numero» di WhatsApp).
+- **Aggiorna adesso per intero** dalla 1.8 a una 1.8.1 di prova in una cartella: pronta in 2
+  secondi, notifica, clic nel browser, Setup silenzioso, gestionale riaperto e pagina passata
+  da sola alle *Novità della versione 1.8.1* in 11 secondi, registro *"aggiornamento dalla
+  1.8 alla 1.8.1 riuscito"*, copia di sicurezza, Setup installato tolto al primo giro del
+  controllo, dati identici: 14 controlli su 14.
+- La 1.8 animata installata sopra la 1.7 animata (con una scheda): stessa copia di sicurezza
+  e stesso aggiornamento dello schema, dati identici, 25 controlli a posto.
+- Primo avvio senza dati, come dopo un'installazione nuova: database creato già allo schema
+  9 con i dieci tipi di turno, 25 controlli a posto; sull'eseguibile, nel browser, due
+  persone aggiunte, un turno scritto con il tasto M nella griglia del mese, Ctrl+Z e Ctrl+Y,
+  il turno ancora lì dopo aver ricaricato la pagina, nessun errore JavaScript.
+
 Restano fuori, perché si vedono solo su un Windows vero: l'avviso SmartScreen, il
 comportamento dell'antivirus del PC e l'apertura del browser predefinito; per gli
 aggiornamenti, una versione più nuova pubblicata davvero su GitHub (il percorso è lo stesso provato su
@@ -1307,6 +1458,9 @@ python prove_15.py           # 69 prove sulla 1.5: campi del paziente, email aut
 python prove_17.py           # 33 prove sulla 1.7: codice fiscale (controllo, omocodia, calcolo e lettura confrontati
                              # con python-codicefiscale su migliaia di casi), luoghi, scheda, prenotazione,
                              # aggiornamento dello schema, Controllo dei codici fiscali, importazione, unione
+python prove_18.py           # 29 prove sulla 1.8: turni del personale (regole contro oracoli scritti a parte, conti,
+                             # schema, copia, annulla e rifai, protezioni, 260 modifiche a caso con invarianti,
+                             # aggiornamento dalla 8) e registrazione del numero WhatsApp con una finta Meta
 python prove_16.py           # 45 prove sulla 1.6: Aggiorna adesso da una cartella e da un finto GitHub su https
                              # (rimandi, errori del sito, certificati, file delle versioni storpiati, Setup rovinati),
                              # installazione, esito al riavvio, novità, videoguide, installer e file delle versioni,
@@ -1317,12 +1471,15 @@ python prove_16_browser.py http://127.0.0.1:5001   # 19 controlli: finestra dei 
                              # l'indirizzo degli aggiornamenti: su un gestionale di prova a parte)
 python prove_17_browser.py http://127.0.0.1:5001   # 16 controlli: codice fiscale mentre si scrive, calcolo,
                              # suggerimenti del luogo, prenotazione, pagina di controllo (salva pazienti di prova)
-python prove_guida_browser.py http://127.0.0.1:5000   # 44 controlli nel browser, sui dati di prova
+python prove_tendine_browser.py http://127.0.0.1:5001   # 144 controlli: le tendine sopra la pagina e le notifiche, a 1366x657
+python prove_18_browser.py http://127.0.0.1:5001   # 46 controlli sui turni: griglia, tastiera, annulla e rifai, scelta del turno
+                             # (dove si apre, mai coperta), schema, giorno a ore, schermo stretto, movimento ridotto
+python prove_guida_browser.py http://127.0.0.1:5000   # 50 controlli nel browser, sui dati di prova
 python prove_sicurezza_browser.py http://127.0.0.1:5000   # 5 controlli: moduli mandati da un altro sito
 python campagna.py           # 2550 casi generati, anche sulle pagine della 1.4, circa due minuti
 ```
 
-In tutto 874 prove più 2550 casi generati e 98 controlli nel browser, tutte verdi su Python 3.11 e 3.14.
+In tutto 903 prove più 2550 casi generati e 294 controlli nel browser, tutte verdi su Python 3.11 e 3.14.
 Vanno rilanciate dopo ogni modifica; ognuna crea un database usa e getta. Alcune delle più
 vecchie escono con codice 0 anche se una prova non va: conta la riga finale («0 da
 sistemare»), che è quella che legge `tutte_le_prove.py`.
@@ -1494,6 +1651,35 @@ registro di una giornata):
 | Sala occupata alla stessa ora, stanza non indicata | La riga restava fuori, solo nell'Excel degli scarti | Va fra i da confermare, con i suoi dati |
 | Nome del file e riepilogo nel titolo uniti | "Lippiello Data" preso per un medico | Le celle del titolo restano separate |
 | Menu con la voce nuova | Andava a capo a 1366 pixel | Spaziature e ricerca più strette |
+
+Quindicesimo giro, 1.8, turni del personale e tendine (trovati provando, nel browser e con
+le prove nuove):
+
+| Difetto | Effetto | Correzione |
+|---|---|---|
+| Nella versione animata le animazioni con `fill-mode: both` creano contesti di sovrapposizione | La tendina *Stampa e scarica* restava in parte sotto la nota del giorno e la griglia | La barra ha il suo piano (`z-index` 40), le notifiche scendono a 30; una prova controlla con `elementFromPoint` |
+| Il periodo della richiesta letto con `data_da(x, None)` | Senza periodo valeva *oggi*: la risposta ridisegnava le celle del giorno sbagliato | Lettura propria, che senza data dà «nessun periodo» |
+| Classi degli avvisi dei turni con nomi già usati (`avviso`, `testo-avviso`) | Testo degli avvisi color ambra su fondo scuro | Nomi propri (`livello-…`, `parole-avviso`) |
+| Il punto «al lavoro adesso» chiamato `adesso` | Nell'animata prendeva lo stile della linea rossa dell'agenda | `al-lavoro` |
+| Ore del contratto «37,5» | Lette come 37 ore e 5 minuti | Decimali e ore:minuti distinti |
+| Tutto il mese a 1366 pixel | Le colonne si allargavano sul contenuto e i totali uscivano a destra | Larghezze fisse delle colonne; lo spazio in più va diviso solo sugli schermi larghi |
+| Copertura del mese «M2 N1 P2» su una riga | Tagliata nelle colonne strette, e in ordine alfabetico | Una riga per turno, nell'ordine dei tipi (M, P, N) |
+| Orario scritto a mano nella cella stretta del mese | «8–12:30» usciva dalla cella | Su due righe, inizio e fine |
+| Riposi e assenze nella vista del giorno sopra la riga delle ore | Coprivano la notte cominciata il giorno prima | Accanto al nome |
+| Medico con turno e ambulatorio alla stessa ora | La barra del turno nascondeva l'ambulatorio | Ambulatorio in una striscia sotto il turno |
+| L'esempio di cognome con «De» dell'importazione, scritto alla 1.7 al posto dei frammenti veri | Coincideva con un nome di un'agenda vera arrivata dopo | «DE FITTIZI TERESA»; il controllo dei dati veri prima della consegna legge anche quell'agenda |
+
+Due rossi erano delle prove: una nuova prova dei festivi non sapeva che San Francesco
+(4 ottobre) è di nuovo festa nazionale dal 2026, e un'altra cercava `<b>` in una pagina
+dove `<b>` c'è per davvero (i codici della legenda).
+
+Altri due, sempre delle prove e non del programma: `prove2.py` usava una porta fissa (5099),
+e con le due cartelle provate insieme ogni tanto una trovava la porta già presa (ora la
+sceglie il sistema); `prove_guida_browser.py`, nell'animata, quando Playwright rifaceva un
+clic su un pulsante che entrava muovendosi lo portava in cima alla finestra e lasciava lì
+il mouse, sopra il menu: dalla 1.8 in quel punto c'è *Segreteria*, la tendina si apriva e
+copriva il pulsante della guida successiva (ora il mouse si sposta lontano dal menu prima
+di ogni guida).
 
 Quattordicesimo giro, 1.7, codice fiscale e passaggio di consegne:
 

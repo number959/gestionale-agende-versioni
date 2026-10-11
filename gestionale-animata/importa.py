@@ -129,7 +129,7 @@ SINONIMI = {
 GIORNI_SETTIMANA = {'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica',
                     'lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'}
 
-# nomi propri comuni: servono a dividere "DE FALCO TERESA" in cognome e nome
+# nomi propri comuni: servono a dividere "DE FITTIZI TERESA" in cognome e nome
 NOMI_PROPRI = set("""
 adele adriana agata agnese alba alberta alessandra alessia alice alma amalia ambra anastasia andrea
 angela angelica angelina anita anna annalisa annamaria antonella antonia antonietta arianna assunta
@@ -385,7 +385,7 @@ def testo_di(v):
 
 
 def iniziali_maiuscole(testo):
-    """'DE FALCO TERESA' -> 'De Falco Teresa', "D'ARCO" -> "D'Arco". Un
+    """'DE FITTIZI TERESA' -> 'De Fittizi Teresa', "D'ARCO" -> "D'Arco". Un
     testo gia' scritto con le maiuscole giuste resta com'e'."""
     if not testo or not testo.isupper():
         return testo
@@ -417,7 +417,7 @@ def dividi_nome(testo):
     # "DI NARDO", "DE LUCA": solo il cognome, con la sua particella
     if len(parole) == 2 and norma(parole[0]) in PARTICELLE and not e_nome_proprio(parole[1]):
         return ' '.join(parole), '', True
-    # nome in fondo: 'DE FALCO TERESA', 'SERRA MARIA ELENA'
+    # nome in fondo: 'DE FITTIZI TERESA', 'SERRA MARIA ELENA'
     for k in (2, 1):
         coda, testa = parole[-k:], parole[:-k]
         # la testa e' un cognome se ha una particella (DE LUCA) o una parola

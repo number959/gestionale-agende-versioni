@@ -732,13 +732,239 @@ class Modifica(Base):
     dettaglio = Column(Text, default='')
 
 
+# ============================================================ turni del personale (1.8)
+# Il personale della struttura e i suoi turni: medici, infermieri, OSS, accettazione...
+# Sono un'altra cosa dai "turni" dell'agenda (tabella turni): quelli dicono quando un
+# medico riceve in una stanza e aprono le fasce prenotabili; questi dicono chi lavora,
+# quando e dove, per tutto il personale. Un medico del personale puo' essere collegato
+# al suo medico dell'agenda: nella vista del giorno compaiono anche i suoi ambulatori.
+RUOLI = [
+    # codice, nome del gruppo, nome di una persona, icona (static: templates/_icone.html)
+    ('MEDICO', 'Medici', 'Medico', 'stethoscope'),
+    ('INFERMIERE', 'Infermieri', 'Infermiere', 'heart-pulse'),
+    ('OSS', 'OSS', 'OSS', 'hand-heart'),
+    ('TECNICO', 'Tecnici', 'Tecnico', 'microscope'),
+    ('AMMINISTRATIVO', 'Accettazione e amministrazione', 'Amministrativo', 'clipboard-list'),
+    ('AUSILIARIO', 'Ausiliari', 'Ausiliario', 'spray-can'),
+    ('ALTRO', 'Altro personale', 'Altro', 'users'),
+]
+ETICHETTA_RUOLO = {r[0]: r[1] for r in RUOLI}
+ORDINE_RUOLO = {r[0]: i for i, r in enumerate(RUOLI)}
+
+# Le categorie dei tipi di turno: un turno di LAVORO conta nelle ore e nella copertura;
+# la REPERIBILITA ha un orario ma le sue ore si contano a parte; ASSENZA e RIPOSO
+# valgono tutto il giorno, senza orario (ferie, malattia, riposo, smonto notte).
+CATEGORIE_TURNO = [('LAVORO', 'Lavoro'), ('REPERIBILITA', 'Reperibilità'), ('ASSENZA', 'Assenza'),
+                   ('RIPOSO', 'Riposo')]
+ETICHETTA_CATEGORIA = dict(CATEGORIE_TURNO)
+
+# I tipi di turno con cui comincia ogni gestionale (si cambiano in Turni → Tipi di turno).
+# I colori sono delle scale Radix Colors (MIT, vedi static/icone/LICENZE.txt): sfondo
+# chiaro e codice scuro, o sfondo pieno e codice bianco per la notte.
+TIPI_TURNO_INIZIALI = [
+    # codice, nome, categoria, inizio, fine, pausa (minuti), colore
+    ('M', 'Mattina', 'LAVORO', time(7, 0), time(14, 0), 0, '#FBE577'),
+    ('P', 'Pomeriggio', 'LAVORO', time(14, 0), time(21, 0), 0, '#FFD19A'),
+    ('N', 'Notte', 'LAVORO', time(21, 0), time(7, 0), 0, '#3E63DD'),
+    ('G', 'Giornata', 'LAVORO', time(8, 0), time(17, 0), 60, '#B8EAE0'),
+    ('RE', 'Reperibilità', 'REPERIBILITA', time(20, 0), time(8, 0), 0, '#F7DEF8'),
+    ('SN', 'Smonto notte', 'RIPOSO', None, None, 0, '#EBE4FF'),
+    ('R', 'Riposo', 'RIPOSO', None, None, 0, '#E8E8EC'),
+    ('F', 'Ferie', 'ASSENZA', None, None, 0, '#C9E8CA'),
+    ('MA', 'Malattia', 'ASSENZA', None, None, 0, '#FFCDC2'),
+    ('PE', 'Permesso', 'ASSENZA', None, None, 0, '#B5E9F0'),
+]
+
+
+def _colore_sicuro(colore, ripiego='#E8E8EC'):
+    return colore if re.fullmatch(r'#[0-9A-Fa-f]{6}', colore or '') else ripiego
+
+
+def _luminanza(colore):
+    """Luminanza relativa WCAG di un #rrggbb."""
+    def canale(c):
+        c = c / 255
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (int(colore[i:i + 2], 16) for i in (1, 3, 5))
+    return 0.2126 * canale(r) + 0.7152 * canale(g) + 0.0722 * canale(b)
+
+
+def testo_su(colore):
+    """Il colore del testo che si legge meglio su quello sfondo: il blu scuro del
+    programma o il bianco, scegliendo il contrasto piu' alto (WCAG)."""
+    L = _luminanza(_colore_sicuro(colore))
+    scuro = (L + 0.05) / (_luminanza('#16263F') + 0.05)
+    bianco = 1.05 / (L + 0.05)
+    return '#16263F' if scuro >= bianco else '#FFFFFF'
+
+
+class Persona(Base):
+    """Una persona del personale: medico, infermiere, OSS, accettazione..."""
+    __tablename__ = 'personale'
+    id = Column(Integer, primary_key=True)
+    cognome = Column(String(60), nullable=False)
+    nome = Column(String(60), default='')
+    ruolo = Column(String(20), nullable=False, default='INFERMIERE')
+    qualifica = Column(String(60), default='')          # "Coordinatrice", "Anestesista", "Strumentista"
+    telefono = Column(String(30), default='')
+    email = Column(String(120), default='')
+    minuti_settimana = Column(Integer)                  # ore del contratto, in minuti (36 ore = 2160)
+    operatore_id = Column(Integer, ForeignKey('operatori.id'))   # il suo medico dell'agenda, se c'e'
+    struttura_id = Column(Integer, ForeignKey('strutture.id'))   # vuoto = tutte le strutture
+    ordine = Column(Integer, default=0, nullable=False)
+    attiva = Column(Boolean, default=True, nullable=False)
+    note = Column(String(300), default='')
+    creato_il = Column(DateTime, default=datetime.now)
+    operatore = relationship('Operatore')
+    struttura = relationship('Struttura')
+
+    @property
+    def etichetta(self):
+        return ('%s %s' % (self.cognome or '', self.nome or '')).strip()
+
+    @property
+    def ruolo_etichetta(self):
+        return next((r[2] for r in RUOLI if r[0] == self.ruolo), self.ruolo or '')
+
+    @property
+    def ore_settimana(self):
+        """'36' o '37:30', vuoto se non indicate."""
+        if not self.minuti_settimana:
+            return ''
+        h, m = divmod(self.minuti_settimana, 60)
+        return '%d' % h if not m else '%d:%02d' % (h, m)
+
+    def __repr__(self):
+        return self.etichetta
+
+
+class TipoTurno(Base):
+    """Mattina, pomeriggio, notte, riposo, ferie...: codice, orario e colore."""
+    __tablename__ = 'tipi_turno'
+    id = Column(Integer, primary_key=True)
+    codice = Column(String(4), nullable=False, unique=True)
+    nome = Column(String(40), nullable=False)
+    categoria = Column(String(12), nullable=False, default='LAVORO')
+    ora_inizio = Column(Time)                           # vuoti per riposi e assenze
+    ora_fine = Column(Time)                             # prima dell'inizio: finisce il giorno dopo
+    pausa_min = Column(Integer, default=0, nullable=False)
+    colore = Column(String(7), default='#E8E8EC')
+    ordine = Column(Integer, default=0, nullable=False)
+    attivo = Column(Boolean, default=True, nullable=False)
+
+    @property
+    def con_orario(self):
+        return self.categoria in ('LAVORO', 'REPERIBILITA') and self.ora_inizio is not None \
+            and self.ora_fine is not None
+
+    @property
+    def tutto_il_giorno(self):
+        return not self.con_orario
+
+    @property
+    def colore_sicuro(self):
+        return _colore_sicuro(self.colore)
+
+    @property
+    def colore_testo(self):
+        return testo_su(self.colore_sicuro)
+
+    @property
+    def minuti(self):
+        """Durata del turno meno la pausa (0 per riposi e assenze)."""
+        if not self.con_orario:
+            return 0
+        a = self.ora_inizio.hour * 60 + self.ora_inizio.minute
+        b = self.ora_fine.hour * 60 + self.ora_fine.minute
+        durata = (b - a) % 1440 or 1440
+        return max(durata - (self.pausa_min or 0), 0)
+
+    @property
+    def orario(self):
+        if not self.con_orario:
+            return ''
+        return '%s–%s' % (self.ora_inizio.strftime('%H:%M'), self.ora_fine.strftime('%H:%M'))
+
+    def __repr__(self):
+        return self.codice
+
+
+class TurnoPersonale(Base):
+    """Un turno di una persona in un giorno. 'giorno' e' il giorno in cui il
+    turno comincia: la notte del 12 e' del 12 anche se finisce il 13 mattina.
+    Riposi e assenze non hanno orario (inizio e fine vuoti)."""
+    __tablename__ = 'turni_personale'
+    id = Column(Integer, primary_key=True)
+    persona_id = Column(Integer, ForeignKey('personale.id'), nullable=False)
+    giorno = Column(Date, nullable=False)
+    tipo_id = Column(Integer, ForeignKey('tipi_turno.id'))   # vuoto: orario scritto a mano
+    inizio = Column(DateTime)
+    fine = Column(DateTime)
+    area = Column(String(60), default='')               # reparto o servizio: "Degenza", "Sala operatoria"
+    note = Column(String(200), default='')
+    creato_il = Column(DateTime, default=datetime.now)
+    modificato_il = Column(DateTime, default=datetime.now)
+    persona = relationship('Persona')
+    tipo = relationship('TipoTurno')
+    __table_args__ = (Index('ix_turni_personale_giorno', 'giorno'),
+                      Index('ix_turni_personale_persona_giorno', 'persona_id', 'giorno'))
+
+    @property
+    def categoria(self):
+        return self.tipo.categoria if self.tipo is not None else 'LAVORO'
+
+    @property
+    def con_orario(self):
+        return self.inizio is not None and self.fine is not None
+
+    @property
+    def codice(self):
+        return self.tipo.codice if self.tipo is not None else 'O'
+
+    @property
+    def minuti(self):
+        """Minuti del turno, pausa tolta; 0 per riposi e assenze."""
+        if not self.con_orario:
+            return 0
+        pausa = (self.tipo.pausa_min or 0) if self.tipo is not None else 0
+        return max(int((self.fine - self.inizio).total_seconds() // 60) - pausa, 0)
+
+    @property
+    def di_notte(self):
+        """Finisce il giorno dopo: una notte (o una reperibilita' notturna)."""
+        return self.con_orario and self.fine.date() > self.inizio.date()
+
+    @property
+    def orario(self):
+        if not self.con_orario:
+            return ''
+        return '%s–%s' % (self.inizio.strftime('%H:%M'), self.fine.strftime('%H:%M'))
+
+
+class CoperturaMinima(Base):
+    """Quante persone di un ruolo servono almeno in un tipo di turno (e area),
+    nei giorni indicati: '2 infermieri di notte in degenza, tutti i giorni'."""
+    __tablename__ = 'coperture_minime'
+    id = Column(Integer, primary_key=True)
+    ruolo = Column(String(20), nullable=False)
+    tipo_id = Column(Integer, ForeignKey('tipi_turno.id'), nullable=False)
+    area = Column(String(60), default='')               # vuota: qualunque area
+    giorni = Column(String(7), default='1111111', nullable=False)   # lun..dom
+    minimo = Column(Integer, nullable=False, default=1)
+    tipo = relationship('TipoTurno')
+
+    def vale_il(self, g):
+        return re.fullmatch(r'[01]{7}', self.giorni or '') is not None and self.giorni[g.weekday()] == '1'
+
+
 # ============================================================ aggiornamenti
 # Versione dello schema, scritta in "impostazioni". 1-2 = gestionale 1.1-1.2
 # (senza la tabella impostazioni), 3 = 1.3, 4 = 1.4, 5 = 1.4.1 (appunti da confermare),
 # 6 = 1.4.3 (degenza, checklist, posti letto, giorni di sala dei chirurghi),
 # 7 = 1.5 (indirizzo del paziente, email automatiche, promemoria, registro degli invii),
-# 8 = 1.7 (sesso e luogo di nascita del paziente, per controllare e calcolare il codice fiscale).
-VERSIONE_SCHEMA = 8
+# 8 = 1.7 (sesso e luogo di nascita del paziente, per controllare e calcolare il codice fiscale),
+# 9 = 1.8 (turni del personale: persone, tipi di turno, turni, coperture minime).
+VERSIONE_SCHEMA = 9
 
 # Colonne aggiunte dopo la prima versione. create_all crea le tabelle nuove
 # ma non tocca quelle esistenti: su un PC dove il gestionale e' gia'
@@ -1024,6 +1250,27 @@ def _migra_a_8(motore):
     return note
 
 
+def _prepara_tipi_turno(motore):
+    """I tipi di turno con cui si comincia (mattina, pomeriggio, notte...), se la
+    tabella e' vuota: in un database nuovo e alla prima apertura con la 1.8.
+    Una volta sola: chi poi li cancella tutti non se li ritrova."""
+    note = []
+
+    def lavoro(cur):
+        fatto = cur.execute("SELECT valore FROM impostazioni WHERE chiave = 'tipi_turno_iniziali'").fetchone()
+        if fatto or cur.execute('SELECT COUNT(*) FROM tipi_turno').fetchone()[0]:
+            return
+        for i, (codice, nome, categoria, inizio, fine, pausa, colore) in enumerate(TIPI_TURNO_INIZIALI):
+            cur.execute('INSERT INTO tipi_turno (codice, nome, categoria, ora_inizio, ora_fine, pausa_min, colore, '
+                        'ordine, attivo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)',
+                        (codice, nome, categoria, inizio.strftime('%H:%M:%S.000000') if inizio else None,
+                         fine.strftime('%H:%M:%S.000000') if fine else None, pausa, colore, i))
+        cur.execute("INSERT OR REPLACE INTO impostazioni (chiave, valore) VALUES ('tipi_turno_iniziali', '1')")
+        note.append('turni del personale: %d tipi di turno iniziali' % len(TIPI_TURNO_INIZIALI))
+    in_transazione(motore, lavoro)
+    return note
+
+
 def copia_di_sicurezza(motore, motivo):
     """Copia del database prima di un aggiornamento dello schema, nella
     cartella backup accanto al database. None se il database non e' un file."""
@@ -1068,6 +1315,7 @@ def aggiorna_database(motore):
             with motore.begin() as c:
                 c.exec_driver_sql("INSERT OR REPLACE INTO impostazioni (chiave, valore) "
                                   "VALUES ('versione_schema', '%d')" % VERSIONE_SCHEMA)
+            _prepara_tipi_turno(motore)
         elif trovata < VERSIONE_SCHEMA:
             if trovata < 3:
                 migrazioni += _migra_a_3(motore)
@@ -1075,6 +1323,8 @@ def aggiorna_database(motore):
                 migrazioni += _migra_a_6(motore)
             if trovata < 8:
                 migrazioni += _migra_a_8(motore)
+            if trovata < 9:
+                migrazioni += _prepara_tipi_turno(motore)
             # dalla 3 alla 4 bastano tabelle e colonne nuove, gia' aggiunte sopra
             with motore.begin() as c:
                 c.exec_driver_sql("INSERT OR REPLACE INTO impostazioni (chiave, valore) "

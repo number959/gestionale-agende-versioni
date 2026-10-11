@@ -58,6 +58,13 @@ h1, h2, h3 { font-family: var(--titoli); }
 
 /* ---------------------------------------------------------- barra alta */
 .barra {
+  /* sopra tutto quello che viene dopo (nota del giorno, avvisi, griglia) e sopra le
+     notifiche: la tendina «Stampa e scarica» sta dentro la barra e deve coprirli, anche
+     quando quei riquadri entrano con un'animazione (versione animata), che li mette su un
+     piano tutto loro. Piani: pagina 0, notifiche 30, barra 40, tendine del menu e ricerca
+     rapida 50, tasti rapidi 70, guida sullo schermo da 900 in su */
+  position: relative;
+  z-index: 40;
   background: #FFFFFF;
   border-bottom: 2px solid var(--primario);
   padding: 10px 18px 0;
@@ -611,7 +618,7 @@ body.pagina-stampa .promemoria ~ * { display: none; }
 .risultati-rapidi .nessuno { padding: 8px 10px; color: #5B6B75; font-size: 13px; }
 
 /* notifiche a scomparsa, in basso a destra */
-.notifiche { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: flex; flex-direction: column; gap: 8px;
+.notifiche { position: fixed; right: 16px; bottom: 16px; z-index: 30; display: flex; flex-direction: column; gap: 8px;
   width: 320px; pointer-events: none; }
 .notifica { pointer-events: auto; background: #FFFFFF; border-left: 4px solid var(--primario); box-shadow: 0 6px 20px rgba(0,0,0,.2);
   padding: 9px 30px 10px 12px; font-size: 13px; position: relative; animation: entrata .3s ease-out; }
@@ -889,3 +896,446 @@ td.promemoria-conferme form.in-linea { margin-left: 4px; }
 .riquadro-incroci h2 { font-size: 15px; margin: 0 0 4px; }
 .riquadro-incroci ul { margin: 4px 0; padding-left: 18px; }
 .riquadro-incroci li { margin-bottom: 3px; font-size: 13.5px; }
+
+/* ------------------------------------------------------- 1.8: turni del personale */
+/* Le icone sono di Lucide (ISC), i colori iniziali dei turni di Radix Colors (MIT): vedi
+   static/icone/LICENZE.txt. Ogni turno porta il suo colore in --c e il colore del testo
+   che ci si legge sopra in --t (calcolato dal programma per il contrasto). */
+.icona { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex-shrink: 0; }
+.bottone.con-icona { display: inline-flex; align-items: center; gap: 6px; }
+.bottone.con-icona .icona { width: 15px; height: 15px; }
+.bottone.pericolo { color: #8A1C16; border-color: #D9A7A3; }
+.bottone.pericolo:hover { color: #B3261E; border-color: #B3261E; }
+button.collegamento { border: 0; background: none; padding: 0; font: inherit; color: var(--primario-scuro);
+  text-decoration: underline; cursor: pointer; }
+.etichetta-spenta { font-size: 11.5px; color: #6A7A84; border: 1px solid #CFD5D8; padding: 0 5px; margin-left: 4px;
+  border-radius: 8px; white-space: nowrap; }
+tr.non-attiva td, tr.non-attiva th { color: #8C979E; }
+
+/* il codice di un turno: un tassello colorato */
+.turno { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 26px; height: 22px;
+  padding: 0 5px; border-radius: 5px; background: var(--c, #E8E8EC); color: var(--t, #16263F);
+  font: 700 12px/1 var(--titoli); letter-spacing: .02em; box-shadow: inset 0 0 0 1px rgba(22, 38, 63, .07);
+  white-space: nowrap; }
+.turno b { font-weight: 700; }
+.turno.reperibile { box-shadow: inset 0 0 0 1.5px currentColor; }
+.turno.senza-orario { box-shadow: inset 0 0 0 1px rgba(22, 38, 63, .10); }
+.turno.a-mano { background: #FFFFFF; box-shadow: inset 0 0 0 1px #9AA6AE; font: 600 10.5px/1 var(--testo); letter-spacing: 0; }
+
+/* la barra delle viste */
+.barra-turni .comandi { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 4px; }
+.barra-turni .comandi > .separa { width: 10px; }
+.schede-vista { display: inline-flex; border: 1px solid #B8C0C4; background: #FFFFFF; }
+.schede-vista a { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; color: #16263F;
+  text-decoration: none; font-size: 13px; border-right: 1px solid #DDE3E8; }
+.schede-vista a:last-child { border-right: 0; }
+.schede-vista a .icona { width: 15px; height: 15px; color: #5B6B75; }
+.schede-vista a:hover { background: var(--primario-tenue); }
+.schede-vista a.attiva { background: var(--primario); color: #FFFFFF; font-weight: 600; }
+.schede-vista a.attiva .icona { color: #FFFFFF; }
+.filtri-turni { display: inline-flex; gap: 4px; }
+.filtri-turni select { font: 13px var(--testo); padding: 5px 8px; border: 1px solid #B8C0C4; background: #FFFFFF;
+  color: #16263F; max-width: 200px; }
+.barra-turni .gruppo-comandi .tendina a { display: grid; grid-template-columns: 22px 1fr; column-gap: 8px; }
+.barra-turni .gruppo-comandi .tendina a .icona { grid-row: 1 / span 2; width: 17px; height: 17px; margin-top: 2px;
+  color: var(--primario); }
+
+/* legenda e aiuto */
+.legenda-turni { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px;
+  padding: 12px 18px 0; }
+.legenda-turni ul { display: flex; flex-wrap: wrap; gap: 6px 14px; list-style: none; margin: 0; padding: 0; }
+.legenda-turni li { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #33475B; }
+.legenda-turni li small { color: #6A7A84; font-size: 11.5px; }
+.aiuto-tasti-turni { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 12px; color: #5B6B75; }
+.aiuto-tasti-turni .icona { width: 16px; height: 16px; color: #8C979E; }
+kbd { font: 600 11px var(--testo); padding: 1px 5px; border: 1px solid #CFD5D8; border-bottom-width: 2px;
+  border-radius: 4px; background: #FFFFFF; color: #33475B; }
+
+/* la griglia del mese e della settimana */
+.telaio-turni { padding-top: 10px; }
+.scorri-turni { overflow: auto; max-height: calc(100vh - 230px); min-height: 260px; background: #FFFFFF;
+  border: 1px solid #DDE3E8; border-radius: 6px; }
+/* larghezza fissa: le colonne sono quelle del colgroup; sugli schermi larghi lo spazio in piu' si divide fra le colonne */
+table.turni { border-collapse: separate; border-spacing: 0; table-layout: fixed; width: 1px; min-width: 100%; }
+table.turni col.col-nome { width: 168px; }
+table.turni-mese col.col-giorno { width: 32px; }
+table.turni-settimana col.col-giorno { width: 128px; }
+table.turni col.col-tot { width: 34px; }
+table.turni-mese col.col-tot:nth-last-child(4) { width: 54px; }
+table.turni-settimana col.col-tot { width: 48px; }
+table.turni-settimana col.col-tot:nth-last-child(4) { width: 92px; }
+table.turni col.festivo { background: #FBF4EE; }
+table.turni col.sabato { background: #F8F9F7; }
+table.turni thead th { position: sticky; top: 0; z-index: 3; background: var(--primario); color: #FFFFFF;
+  font: 600 11px/1.1 var(--titoli); padding: 5px 2px 6px; text-align: center; border-right: 1px solid rgba(255, 255, 255, .14); }
+table.turni thead th a { color: inherit; text-decoration: none; display: block; }
+table.turni thead th .gs { display: block; font-weight: 500; opacity: .78; font-size: 10px; text-transform: uppercase;
+  letter-spacing: .04em; }
+table.turni thead th .gn { display: block; font-size: 14px; margin-top: 2px; }
+table.turni-settimana thead th .gs { font-size: 11px; }
+table.turni thead th.festivo { background: color-mix(in srgb, var(--primario) 78%, #A8582B); }
+table.turni thead th.oggi .gn { display: inline-block; min-width: 24px; padding: 2px 4px; border-radius: 12px;
+  background: #FFFFFF; color: var(--primario); }
+table.turni thead th.nome-col { text-align: left; padding-left: 12px; font-size: 12px; left: 0; z-index: 4;
+  background: var(--primario); color: #FFFFFF; }
+table.turni thead th.tot-col { font-size: 11px; background: color-mix(in srgb, var(--primario) 86%, #000000); }
+table.turni th.nome-col { position: sticky; left: 0; z-index: 2; background: #FFFFFF; text-align: left;
+  padding: 3px 8px 3px 12px; border-right: 1px solid #DDE3E8; font-weight: 400; overflow: hidden; }
+table.turni th.nome-col a { color: #16263F; text-decoration: none; font-weight: 600; font-size: 13px; display: block;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+table.turni th.nome-col a:hover { color: var(--primario-scuro); text-decoration: underline; }
+table.turni th.nome-col .nome-proprio { font-weight: 400; }
+table.turni th.nome-col small { display: block; color: #6A7A84; font-size: 11px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+table.turni tr.testa-ruolo th { position: sticky; left: 0; background: #F2F5F8; text-align: left; padding: 9px 12px 7px;
+  border-top: 1px solid #DDE3E8; border-bottom: 1px solid #E4E9ED; font: 600 13px/1.2 var(--titoli); color: #16263F; }
+table.turni tbody:first-of-type tr.testa-ruolo th { border-top: 0; }
+.icona-ruolo { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px;
+  border-radius: 50%; background: var(--primario-tenue); color: var(--primario); margin-right: 8px; vertical-align: -6px; }
+.icona-ruolo .icona { width: 14px; height: 14px; vertical-align: 0; }
+table.turni tr.testa-ruolo .quanti { display: inline-block; margin-left: 6px; font: 600 11px/18px var(--testo);
+  padding: 0 7px; border-radius: 9px; background: #FFFFFF; color: #5B6B75; border: 1px solid #DDE3E8; }
+table.turni tr.testa-ruolo .aggiungi-ruolo { margin-left: 12px; font: 500 12px var(--testo); color: var(--primario-scuro);
+  text-decoration: none; display: inline-flex; align-items: center; gap: 3px; }
+table.turni tr.testa-ruolo .aggiungi-ruolo:hover { text-decoration: underline; }
+table.turni td { border-bottom: 1px solid #EEF1F2; border-right: 1px solid #F1F3F4; padding: 0; }
+table.turni td.cella { position: relative; height: 36px; text-align: center; cursor: pointer; outline: none;
+  transition: background-color .12s; }
+table.turni-settimana td.cella { height: 52px; padding: 3px 4px; vertical-align: middle; }
+table.turni td.cella .turno { width: calc(100% - 4px); height: 28px; padding: 0 2px; }
+table.turni td.cella .turno.doppio { height: 14px; font-size: 9.5px; border-radius: 3px; margin: 1px 0; }
+table.turni td.cella .turno.doppio + .turno.doppio { margin-top: 0; }
+table.turni-settimana td.cella .turno { height: auto; min-height: 42px; flex-direction: column; gap: 1px; padding: 4px 6px;
+  border-radius: 6px; width: 100%; }
+table.turni-settimana td.cella .turno b { font-size: 13px; }
+table.turni-settimana td.cella .turno.doppio { min-height: 20px; flex-direction: row; font-size: 11px; }
+table.turni td.cella .ore-turno, table.turni td.cella .area-turno { display: block; font: 500 10.5px/1.15 var(--testo);
+  opacity: .82; letter-spacing: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+table.turni td.cella .turno b.orario-stretto { display: flex; flex-direction: column; align-items: center;
+  font: 600 9px/1.08 var(--testo); letter-spacing: -.01em; }
+table.turni td.cella .turno.diverso::after { content: ''; position: absolute; top: 4px; right: 4px; width: 5px; height: 5px;
+  border-radius: 50%; background: currentColor; opacity: .7; }
+table.turni td.cella:hover { background: #EEF3FA; }
+table.turni td.cella:focus-visible, table.turni td.cella.fuoco { box-shadow: inset 0 0 0 2px var(--primario-fuoco); z-index: 1; }
+table.turni td.cella.scelta { background: color-mix(in srgb, var(--primario-tenue) 70%, #FFFFFF);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--primario-fuoco) 55%, #FFFFFF); }
+table.turni td.cella.scelta.fuoco { box-shadow: inset 0 0 0 2px var(--primario-fuoco); }
+table.turni td.cella.in-attesa .turno, table.turni td.cella.in-attesa { opacity: .55; }
+table.turni td.cella.sbagliata { background: #FDECEA; }
+.segno-riposo { position: absolute; top: 0; left: 0; width: 0; height: 0; border-top: 9px solid #D9822B;
+  border-right: 9px solid transparent; pointer-events: none; }
+table.turni tr.non-attiva th.nome-col a { color: #8C979E; }
+table.turni td.tot { text-align: center; font: 500 12.5px/1.2 var(--testo); font-variant-numeric: tabular-nums;
+  color: #33475B; background: #FAFBFC; padding: 2px 3px; }
+table.turni td.tot b { font-weight: 600; color: #16263F; }
+table.turni td.tot small { color: #8C979E; font-size: 11px; margin-left: 2px; }
+table.turni td.tot .scarto { display: inline-block; margin-left: 4px; font: 600 10.5px/16px var(--testo); padding: 0 5px;
+  border-radius: 8px; }
+.scarto.sotto { background: #FFF1D6; color: #8A5A00; }
+.scarto.sopra { background: #E1E9FF; color: #1F2D5C; }
+.scarto.pari { background: #DAF1DB; color: #1B5E20; }
+table.turni tr.copertura th.nome-col span { font: 500 11px var(--testo); color: #6A7A84; text-transform: uppercase;
+  letter-spacing: .05em; }
+table.turni tr.copertura td { height: 22px; font: 500 9.5px/1.1 var(--testo); color: #6A7A84; text-align: center;
+  background: #FAFBFC; border-bottom: 2px solid #E4E9ED; position: relative; white-space: nowrap; overflow: hidden; }
+table.turni tr.copertura td span { margin: 0 2px; }
+table.turni-mese tr.copertura td { height: auto; padding: 2px 0; line-height: 10px; vertical-align: top; }
+table.turni-mese tr.copertura td span { display: block; margin: 0; }
+table.turni-settimana tr.copertura td { font-size: 11px; }
+table.turni tr.copertura td.manca { background: #FDECEA; color: #8A1C16; font-weight: 600; }
+.segno-manca { position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: #B3261E; }
+.stampa-legenda { display: none; }
+
+/* la scelta del turno, sopra le celle */
+.scelta-turno { position: fixed; z-index: 45; width: 352px; max-width: calc(100vw - 16px); max-height: calc(100vh - 24px);
+  overflow: auto; background: #FFFFFF; border: 1px solid #CFD5D8; border-radius: 10px; padding: 12px 12px 10px;
+  box-shadow: 0 18px 48px rgba(22, 38, 63, .22), 0 2px 6px rgba(22, 38, 63, .08); }
+.scelta-testa { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+.scelta-testa b { display: block; font: 600 14.5px/1.25 var(--titoli); color: #16263F; }
+.scelta-testa small { display: block; font-size: 12px; color: #6A7A84; margin-top: 1px; }
+.scelta-chiudi { border: 0; background: none; padding: 4px; margin: -4px -4px 0 0; color: #5B6B75; cursor: pointer;
+  border-radius: 6px; line-height: 0; }
+.scelta-chiudi:hover { background: #EEF1F2; color: #16263F; }
+.scelta-chiudi .icona { width: 18px; height: 18px; }
+.scelta-attuali { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 0 10px; border-bottom: 1px solid #EEF1F2;
+  margin-bottom: 8px; }
+.scelta-attuali .attuale { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #33475B;
+  background: #F4F6F8; padding: 3px 4px 3px 4px; border-radius: 7px; }
+.scelta-attuali .attuale button { border: 0; background: none; padding: 2px; cursor: pointer; color: #6A7A84; line-height: 0;
+  border-radius: 4px; }
+.scelta-attuali .attuale button:hover { background: #FDECEA; color: #B3261E; }
+.scelta-attuali .attuale button .icona { width: 14px; height: 14px; }
+.scelta-gruppo { margin-bottom: 6px; }
+.scelta-cat { margin: 4px 0 4px; font: 600 10.5px var(--testo); color: #8C979E; text-transform: uppercase; letter-spacing: .06em; }
+.scelta-tipi { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.scelta-tipo { display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto; column-gap: 8px;
+  align-items: center; text-align: left; border: 1px solid transparent; background: #FFFFFF; padding: 4px 6px 4px 4px;
+  border-radius: 8px; cursor: pointer; font: inherit; color: #16263F; }
+.scelta-tipo .codice { grid-row: 1 / span 2; display: flex; align-items: center; justify-content: center; width: 34px;
+  height: 34px; border-radius: 7px; background: var(--c); color: var(--t); font: 700 13px/1 var(--titoli);
+  box-shadow: inset 0 0 0 1px rgba(22, 38, 63, .08); }
+.scelta-tipo .nome { font-size: 13px; font-weight: 600; line-height: 1.15; }
+.scelta-tipo .orario { font-size: 11.5px; color: #6A7A84; line-height: 1.15; }
+.scelta-tipo .nome:last-child { grid-row: 1 / span 2; }
+.scelta-tipo:hover { background: #F4F7FB; border-color: #DDE3E8; }
+.scelta-tipo:focus-visible { outline: 2px solid var(--primario-fuoco); outline-offset: 1px; }
+.scelta-tipo.attuale-tipo { border-color: var(--primario-fuoco); background: var(--primario-tenue); }
+.scelta-altro { margin: 6px 0 2px; border-top: 1px solid #EEF1F2; padding-top: 6px; }
+.scelta-altro summary { cursor: pointer; font-size: 12.5px; color: var(--primario-scuro); display: flex; align-items: center;
+  gap: 6px; list-style: none; padding: 4px 0; }
+.scelta-altro summary::-webkit-details-marker { display: none; }
+.scelta-altro summary .icona { width: 15px; height: 15px; }
+.scelta-campi { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; padding: 6px 0 4px; }
+.scelta-campi label { font-size: 12px; color: #46596A; display: flex; flex-direction: column; gap: 3px; }
+.scelta-campi label.largo, .scelta-campi .largo { grid-column: 1 / -1; }
+.scelta-campi label.spunta { flex-direction: row; align-items: center; gap: 6px; color: #16263F; font-size: 12.5px; }
+.scelta-campi input[type="time"], .scelta-campi input[type="text"] { font: 13px var(--testo); padding: 5px 7px;
+  border: 1px solid #B8C0C4; background: #FFFFFF; color: #16263F; border-radius: 0; }
+.scelta-campi .bottone { grid-column: 1 / -1; justify-self: start; }
+.scelta-campi p.aiuto { margin: 0; font-size: 11.5px; color: #6A7A84; }
+.scelta-piede { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px;
+  padding-top: 8px; border-top: 1px solid #EEF1F2; }
+.scelta-piede .bottone:disabled { opacity: .45; cursor: default; }
+.scelta-tasti { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #8C979E; text-align: right; }
+.scelta-tasti .icona { width: 14px; height: 14px; }
+.scelta-errore { margin: 8px 0 0; padding: 6px 8px; background: #FDECEA; color: #8A1C16; font-size: 12.5px; border-radius: 6px; }
+
+/* schema a rotazione */
+dialog.finestra-schema { width: min(640px, 96vw); max-height: 92vh; padding: 0; border: 0; border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(22, 38, 63, .35); color: #16263F; }
+dialog.finestra-schema::backdrop { background: rgba(14, 26, 46, .45); }
+.modulo-schema { padding: 16px 20px 18px; display: flex; flex-direction: column; gap: 10px; }
+.schema-testa { display: flex; justify-content: space-between; align-items: center; }
+.schema-testa h2 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.schema-testa h2 .icona { color: var(--primario); }
+.modulo-schema p.aiuto { margin: 0; font-size: 12.5px; color: #5B6B75; }
+.modulo-schema label { font-size: 12.5px; color: #46596A; display: flex; flex-direction: column; gap: 3px; }
+.modulo-schema label.spunta { flex-direction: row; align-items: center; gap: 6px; color: #16263F; font-size: 13px; }
+.modulo-schema input[type="text"], .modulo-schema input[type="date"], .modulo-schema input[type="number"] {
+  font: 14px var(--testo); padding: 6px 8px; border: 1px solid #B8C0C4; color: #16263F; }
+#schema-sequenza { font: 600 15px var(--titoli); letter-spacing: .06em; }
+.schema-anteprima { display: flex; flex-wrap: wrap; gap: 3px; min-height: 24px; }
+.schema-anteprima .turno { min-width: 30px; }
+.schema-anteprima .errore-codice { color: #B3261E; font-size: 12.5px; }
+.schema-codici { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip-codice { border: 0; border-radius: 6px; min-width: 32px; height: 26px; padding: 0 6px; background: var(--c); color: var(--t);
+  font: 700 12px var(--titoli); cursor: pointer; box-shadow: inset 0 0 0 1px rgba(22, 38, 63, .1); }
+.chip-codice.vuoto { background: #FFFFFF; color: #5B6B75; }
+.chip-codice:hover { filter: brightness(.95); }
+.chip-codice:focus-visible { outline: 2px solid var(--primario-fuoco); outline-offset: 1px; }
+.schema-riga { display: flex; flex-wrap: wrap; gap: 12px; }
+.schema-riga label small { color: #6A7A84; }
+fieldset.schema-persone { border: 1px solid #DDE3E8; border-radius: 8px; padding: 8px 12px 10px; max-height: 240px;
+  overflow: auto; margin: 0; }
+fieldset.schema-persone legend { font-size: 12.5px; color: #46596A; padding: 0 4px; }
+.schema-gruppo { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 4px 0 6px; border-bottom: 1px solid #F1F3F4; }
+.schema-gruppo:last-child { border-bottom: 0; }
+.schema-gruppo label.tutti { flex-basis: 100%; }
+.schema-piede { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.schema-piede .bottone.primario { display: inline-flex; align-items: center; gap: 6px; }
+
+/* la vista del giorno, a ore */
+.telaio-giorno { padding-top: 12px; }
+.testa-giorno { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.festa-giorno { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #8A4A22; background: #FBF4EE;
+  padding: 3px 10px; border-radius: 12px; }
+.aggiungi-turno { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #46596A; margin-left: auto; }
+.aggiungi-turno select { font: 13px var(--testo); padding: 5px 8px; border: 1px solid #B8C0C4; background: #FFFFFF; color: #16263F; }
+.linea-tempo { position: relative; background: #FFFFFF; border: 1px solid #DDE3E8; border-radius: 6px; padding-bottom: 4px;
+  --nome: 220px; --margine: 16px; }
+.scala-ore { position: sticky; top: 0; z-index: 3; display: grid; grid-template-columns: var(--nome) 1fr; background: #FFFFFF;
+  border-bottom: 1px solid #DDE3E8; border-radius: 6px 6px 0 0; }
+.scala-ore .ore { position: relative; height: 28px; margin-right: var(--margine); }
+.scala-ore .ore span { position: absolute; top: 7px; transform: translateX(-50%); font: 600 11px var(--titoli); color: #6A7A84; }
+.scala-ore .ore span:first-child { transform: none; }
+.scala-ore .ore span:last-child { transform: translateX(-100%); }
+.gruppo-giorno { border-bottom: 1px solid #E4E9ED; }
+.gruppo-giorno:last-of-type { border-bottom: 0; }
+.riga-giorno { display: grid; grid-template-columns: var(--nome) 1fr; align-items: center; min-height: 40px;
+  border-top: 1px solid #F1F3F4; }
+.riga-giorno.riga-presenze { background: #F7F9FB; border-top: 0; min-height: 52px; }
+.nome-giorno { padding: 4px 10px 4px 14px; overflow: hidden; }
+.nome-giorno a { color: #16263F; font-weight: 600; font-size: 13px; text-decoration: none; display: block; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.nome-giorno a:hover { text-decoration: underline; }
+.nome-giorno small { display: block; color: #6A7A84; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.riga-presenze .nome-giorno b { font: 600 13.5px var(--titoli); }
+.badge-manca { display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; font: 600 11px var(--testo); color: #8A1C16;
+  background: #FDECEA; padding: 1px 7px; border-radius: 9px; }
+.badge-manca .icona { width: 12px; height: 12px; }
+.presenze { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; align-items: end; height: 40px;
+  margin-right: var(--margine); padding-top: 4px; }
+.ora-pres { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+.ora-pres i { display: block; height: var(--h); min-height: 2px; border-radius: 3px 3px 1px 1px;
+  background: color-mix(in srgb, var(--primario) 62%, #FFFFFF); }
+.ora-pres.zero i { background: #E4E9ED; }
+.ora-pres em { position: absolute; left: 0; right: 0; top: -1px; text-align: center; font: 600 9.5px var(--testo);
+  font-style: normal; color: #46596A; }
+.pista { position: relative; height: 32px; margin: 4px var(--margine) 4px 0; border-radius: 6px; background: #FAFBFC;
+  cursor: pointer; outline: none; }
+.pista:hover { background: #F2F6FB; }
+.pista:focus-visible { box-shadow: 0 0 0 2px var(--primario-fuoco); }
+.tacca { position: absolute; top: 0; bottom: 0; width: 1px; background: #EEF1F2; }
+.tacca.forte { background: #DDE3E8; }
+.barra-turno { position: absolute; top: 3px; bottom: 3px; display: flex; align-items: center; gap: 6px; padding: 0 8px;
+  border-radius: 7px; background: var(--c); color: var(--t); font-size: 12px; overflow: hidden; white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(22, 38, 63, .14), inset 0 0 0 1px rgba(22, 38, 63, .06); }
+.barra-turno b { font: 700 12px var(--titoli); }
+.barra-turno span { overflow: hidden; text-overflow: ellipsis; }
+.barra-turno.reperibile { background: repeating-linear-gradient(135deg, var(--c) 0 7px,
+  color-mix(in srgb, var(--c) 72%, #FFFFFF) 7px 14px); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--t) 45%, transparent); }
+.barra-turno.da-ieri { border-top-left-radius: 0; border-bottom-left-radius: 0;
+  -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, .55), #000 18px); mask-image: linear-gradient(90deg, rgba(0, 0, 0, .55), #000 18px); }
+.barra-turno.fino-domani { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.seduta { position: absolute; top: 3px; bottom: 3px; display: flex; align-items: center; padding: 0 7px; border-radius: 7px;
+  font-size: 11px; color: var(--primario-scuro); white-space: nowrap; overflow: hidden;
+  background: repeating-linear-gradient(135deg, rgba(21, 67, 129, .09) 0 6px, rgba(21, 67, 129, .03) 6px 12px);
+  border: 1px dashed rgba(21, 67, 129, .38); }
+/* turno e agenda nella stessa riga: il turno sopra, l'ambulatorio in una striscia sotto (si vedono tutti e due) */
+.pista.con-agenda .barra-turno { bottom: 12px; }
+.pista.con-agenda .barra-turno b, .pista.con-agenda .barra-turno span { font-size: 11px; }
+.pista.con-agenda .seduta { top: auto; bottom: 2px; height: 8px; padding: 0; border-radius: 3px; font-size: 0; }
+/* riposi e assenze (tutto il giorno): accanto al nome, la riga delle ore resta per gli orari */
+.giorno-intero { display: inline-flex; align-items: center; gap: 6px; height: 24px; margin-top: 3px; padding: 0 10px 0 3px;
+  border-radius: 7px; background: var(--c); color: var(--t); font-size: 12px; max-width: 100%; white-space: nowrap; }
+.giorno-intero b { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px;
+  border-radius: 5px; background: rgba(255, 255, 255, .55); font: 700 11px var(--titoli); }
+.linea-adesso { position: absolute; top: 28px; bottom: 0; width: 2px; background: #D0342C; pointer-events: none; z-index: 2;
+  left: calc(var(--nome) + (100% - var(--nome) - var(--margine)) * var(--x) / 100); }
+.linea-adesso span { position: absolute; top: -2px; left: 4px; font: 600 10px var(--testo); color: #D0342C; background: #FFFFFF;
+  padding: 0 3px; border-radius: 3px; }
+.legenda-giorno { padding: 10px 2px 0; }
+.esempio-seduta { display: inline-block; width: 26px; height: 14px; border-radius: 4px; border: 1px dashed rgba(21, 67, 129, .38);
+  background: repeating-linear-gradient(135deg, rgba(21, 67, 129, .09) 0 4px, rgba(21, 67, 129, .03) 4px 8px); }
+.esempio-continua { display: inline-block; width: 26px; height: 14px; border-radius: 0 4px 4px 0; background: #3E63DD;
+  -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, .55), #000 14px); mask-image: linear-gradient(90deg, rgba(0, 0, 0, .55), #000 14px); }
+
+/* primi passi, persone e tipi */
+.primi-turni { max-width: 640px; }
+.vuoto-turni { background: #FFFFFF; border: 1px solid #DDE3E8; border-radius: 10px; padding: 28px 30px 26px; text-align: center; }
+.vuoto-turni h2 { margin: 12px 0 6px; font-size: 20px; }
+.vuoto-turni p { color: #46596A; margin: 0 auto 16px; max-width: 46ch; }
+.vuoto-turni .azioni { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.icone-ruoli { display: flex; justify-content: center; gap: 10px; }
+.icone-ruoli span { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--primario-tenue); color: var(--primario); }
+.icone-ruoli .icona { width: 22px; height: 22px; }
+.comandi-persone { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+h2.titolo-ruolo { display: flex; align-items: center; }
+h2.titolo-ruolo small { margin-left: 8px; font: 600 12px/20px var(--testo); padding: 0 8px; border-radius: 10px;
+  background: #FFFFFF; color: #5B6B75; border: 1px solid #DDE3E8; }
+h2.titolo-ruolo .bottone.aggiungi { margin-left: auto; }
+.collegato { display: inline-flex; align-items: center; gap: 4px; color: #1B5E20; font-size: 13px; }
+.collegato .icona { width: 14px; height: 14px; }
+fieldset.scelta-ruolo { border: 0; padding: 0; margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+fieldset.scelta-ruolo legend { font-size: 13px; color: #46596A; margin-bottom: 4px; padding: 0; }
+.ruolo-opzione input { position: absolute; opacity: 0; pointer-events: none; }
+.ruolo-opzione span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #B8C0C4;
+  background: #FFFFFF; cursor: pointer; font-size: 13.5px; color: #16263F; border-radius: 18px; }
+.ruolo-opzione span .icona { width: 16px; height: 16px; color: #5B6B75; }
+.ruolo-opzione input:checked + span { background: var(--primario); border-color: var(--primario); color: #FFFFFF; font-weight: 600; }
+.ruolo-opzione input:checked + span .icona { color: #FFFFFF; }
+.ruolo-opzione input:focus-visible + span { outline: 2px solid var(--primario-fuoco); outline-offset: 2px; }
+.elimina-persona, .elimina-tipo { margin-top: 18px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.elimina-persona .aiuto, .elimina-tipo .aiuto { font-size: 12px; color: #6A7A84; }
+.giorni-cop span { display: inline-block; width: 18px; text-align: center; font: 600 11px var(--testo); margin-right: 1px;
+  border-radius: 3px; }
+.giorni-cop span.si { background: var(--primario-tenue); color: var(--primario-scuro); }
+.giorni-cop span.no { color: #C2C9CE; }
+.pagina-tipi table.elenco-tipi td { vertical-align: middle; }
+
+/* in servizio oggi (pagina Oggi) */
+.in-servizio .gruppo-servizio { margin: 0 0 8px; }
+.in-servizio .gruppo-servizio > b { display: flex; align-items: center; gap: 6px; font: 600 12.5px var(--titoli); color: #33475B;
+  margin-bottom: 3px; }
+.in-servizio .gruppo-servizio > b .icona { width: 15px; height: 15px; color: var(--primario); }
+.in-servizio ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.in-servizio li { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #16263F; }
+.in-servizio li.finito { color: #8C979E; }
+.in-servizio li .turno { height: 19px; min-width: 22px; font-size: 11px; }
+.in-servizio li .al-lavoro { flex: none; width: 7px; height: 7px; border-radius: 50%; background: #2E7D32; box-shadow: 0 0 0 3px rgba(46, 125, 50, .18); }
+
+/* WhatsApp: registrare il numero */
+form.registra-numero h3 { margin: 0 0 6px; font-size: 15px; }
+form.registra-numero h3 small { font: 500 12px var(--testo); color: #6A7A84; margin-left: 6px; }
+form.registra-numero .registrato { margin: 0 0 8px; color: #1B5E20; font-weight: 600; font-size: 13.5px; }
+form.registra-numero .riga-registra { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-top: 8px; }
+form.registra-numero .riga-registra label { font-size: 13px; color: #46596A; }
+form.registra-numero input { font: 15px var(--testo); padding: 6px 8px; border: 1px solid #B8C0C4; letter-spacing: .2em; }
+
+/* il codice che si sta scrivendo da tastiera, sopra la cella */
+table.turni td.cella[data-scrivendo]::after, .pista[data-scrivendo]::after { content: attr(data-scrivendo); position: absolute;
+  inset: 3px; display: flex; align-items: center; justify-content: center; z-index: 2; background: #FFFFFF;
+  border: 2px dashed var(--primario-fuoco); border-radius: 5px; color: var(--primario-scuro); font: 700 12.5px/1 var(--titoli);
+  letter-spacing: .04em; }
+.pista[data-scrivendo]::after { inset: 3px auto 3px 6px; padding: 0 14px; }
+.pista.aperta { box-shadow: inset 0 0 0 2px var(--primario-fuoco); }
+/* frecce e Tab: la cella scelta non finisce sotto la riga dei giorni o la colonna dei nomi */
+.scorri-turni { scroll-padding: 64px 8px 8px 176px; }
+.scelta-attuali .desc-attuale { max-width: 236px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* gli avvisi delle modifiche, in basso al centro (con «Annulla») */
+.avvisi-turni { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 46; display: flex;
+  flex-direction: column; align-items: center; gap: 8px; width: max-content; max-width: calc(100vw - 24px); pointer-events: none; }
+.avviso-turni { pointer-events: auto; display: flex; align-items: center; gap: 10px; min-width: 260px; max-width: 620px;
+  padding: 8px 8px 8px 14px; border-radius: 10px; background: #1B2B44; color: #FFFFFF; font-size: 13.5px; line-height: 1.35;
+  box-shadow: 0 12px 32px rgba(14, 26, 46, .28); border-left: 4px solid #6FCF97; }
+.avviso-turni.livello-avviso { border-left-color: #F2C14E; }
+.avviso-turni.livello-errore { border-left-color: #F28B82; }
+.avviso-turni .parole-avviso { flex: 1; }
+.avviso-turni .parole-avviso p { margin: 0; }
+.avviso-turni .parole-avviso p + p { margin-top: 3px; }
+.azione-avviso { border: 0; background: none; color: #9EC5FF; font: 600 13.5px var(--testo); padding: 5px 9px; border-radius: 6px;
+  cursor: pointer; white-space: nowrap; }
+.azione-avviso:hover { background: rgba(255, 255, 255, .1); }
+.chiudi-avviso { border: 0; background: none; color: #C9D3DD; font-size: 19px; line-height: 1; padding: 3px 7px; border-radius: 6px;
+  cursor: pointer; }
+.chiudi-avviso:hover { background: rgba(255, 255, 255, .1); color: #FFFFFF; }
+.azione-avviso:focus-visible, .chiudi-avviso:focus-visible { outline: 2px solid #9EC5FF; outline-offset: 1px; }
+
+/* lo schema a rotazione: la sequenza e come verranno i primi giorni */
+.schema-anteprima .vuoto-schema, .tabella-schema .vuoto-schema { background: #FFFFFF; color: #8C979E;
+  box-shadow: inset 0 0 0 1px #DDE3E8; }
+.schema-anteprima .lunghezza-schema { align-self: center; margin-left: 6px; font-size: 12px; color: #6A7A84; }
+.schema-prova { overflow-x: auto; }
+.schema-prova p.aiuto { margin: 2px 0 0; font-size: 12.5px; color: #6A7A84; }
+table.tabella-schema { border-collapse: separate; border-spacing: 2px; }
+table.tabella-schema th { font: 500 10.5px var(--testo); color: #6A7A84; text-align: center; padding: 0 1px; }
+table.tabella-schema th span, table.tabella-schema th b { display: block; line-height: 1.2; }
+table.tabella-schema th b { color: #16263F; font-weight: 600; font-size: 11.5px; }
+table.tabella-schema th.domenica, table.tabella-schema th.domenica b { color: #A8582B; }
+table.tabella-schema tr th:first-child { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding-right: 8px; text-align: left; font-size: 12px; color: #16263F; }
+table.tabella-schema td .turno { min-width: 26px; height: 22px; padding: 0 3px; font-size: 11px; }
+
+/* tipi di turno: come appare il codice con quel colore */
+.colore-e-prova { display: inline-flex; align-items: center; gap: 10px; }
+.colore-e-prova .anteprima-tipo { min-width: 42px; height: 30px; font-size: 13px; }
+
+@media (max-width: 760px) {
+  /* sul telefono la giornata scorre di lato: 24 ore in 200 pixel non si leggono */
+  .linea-tempo { --nome: 130px; --margine: 8px; min-width: 760px; }
+  table.turni col.col-nome { width: 124px; }
+  .scorri-turni { scroll-padding-left: 132px; }
+  .barra-turni .comandi > .separa { display: none; }
+  .filtri-turni { flex-wrap: wrap; }
+  .legenda-turni { padding: 10px 12px 0; }
+  .scorri-turni { max-height: none; }
+  .scelta-tipi { grid-template-columns: 1fr; }
+}
+
+@media print {
+  .pagina-turni .legenda-turni, .scelta-turno, .finestra-schema, .testa-giorno, .aggiungi-ruolo,
+  .avvisi-turni { display: none !important; }
+  .scorri-turni { overflow: visible; max-height: none; border: 0; }
+  table.turni { width: 100%; font-size: 9px; }
+  table.turni thead th { position: static; }
+  table.turni th.nome-col, table.turni tr.testa-ruolo th { position: static; }
+  table.turni-mese col.col-giorno { width: auto; }
+  table.turni td.cella { height: 20px; }
+  table.turni td.cella .turno { height: 16px; font-size: 9px; }
+  .turno, table.turni thead th, table.turni col.festivo, table.turni col.sabato, table.turni tr.copertura td,
+  .barra-turno, .seduta, .ora-pres i, .giorno-intero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .stampa-legenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 9px; margin-top: 6px; }
+  .linea-adesso, .segno-riposo { display: none; }
+}

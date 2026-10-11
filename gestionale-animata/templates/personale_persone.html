@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Persone del personale{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-persone">
+  <p class="marchio" style="border:0;margin-bottom:16px">{% include "_marchio.html" %}</p>
+  <h1>Persone <small class="sotto-titolo">il personale che fa i turni</small></h1>
+  <p class="sotto"><a href="{{ url_for('personale.turni') }}">Torna ai turni</a> · <a href="{{ url_for('personale.tipi_turno') }}">Tipi di turno</a></p>
+
+  <div class="comandi-persone">
+    <a class="bottone primario con-icona" href="{{ url_for('personale.persona') }}" data-guida="persone-nuova">{{ icona('user-plus') }}Aggiungi una persona</a>
+    {% if medici_liberi %}
+    <form method="post" action="{{ url_for('personale.medici_dall_agenda') }}" style="display:inline">
+      <button class="bottone con-icona" type="submit" data-guida="persone-medici" title="{{ medici_liberi|map(attribute='etichetta')|join(', ') }}">{{ icona('stethoscope') }}Aggiungi i medici dell'agenda ({{ medici_liberi|length }})</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if not gruppi %}
+  <div class="guida">
+    <h2>Per cominciare</h2>
+    <ol>
+      <li>Aggiungere le persone, ciascuna con il suo ruolo: medico, infermiere, OSS, tecnico, accettazione, ausiliario.</li>
+      <li>I medici dell'agenda si aggiungono tutti insieme con il pulsante qui sopra: restano collegati, e nella vista del giorno compaiono anche i loro ambulatori.</li>
+      <li>Poi i turni, nella vista della settimana o del mese: un clic sulla cella, o il codice scritto da tastiera.</li>
+    </ol>
+  </div>
+  {% endif %}
+
+  {% for gr in gruppi %}
+  <h2 class="sezione titolo-ruolo"><span class="icona-ruolo">{{ icona(gr.icona) }}</span>{{ gr.nome }} <small>{{ gr.persone|selectattr('attiva')|list|length }}</small>
+    <a class="bottone aggiungi" href="{{ url_for('personale.persona', ruolo=gr.ruolo) }}">Aggiungi</a></h2>
+  <table class="elenco elenco-persone">
+    <tr><th>Cognome e nome</th><th>Qualifica</th><th>Ore a settimana</th><th>Telefono</th><th>{% if gr.ruolo == 'MEDICO' %}Agenda{% else %}Struttura{% endif %}</th><th></th></tr>
+    {% for p in gr.persone %}
+    <tr{% if not p.attiva %} class="non-attiva"{% endif %}>
+      <td><b>{{ p.cognome }}</b> {{ p.nome }}{% if not p.attiva %} <span class="etichetta-spenta">non in servizio</span>{% endif %}</td>
+      <td>{{ p.qualifica }}</td>
+      <td>{{ p.ore_settimana }}</td>
+      <td>{{ p.telefono }}</td>
+      <td>{% if gr.ruolo == 'MEDICO' %}{% if p.operatore %}<span class="collegato">{{ icona('check') }}{{ p.operatore.etichetta }}</span>{% else %}<span class="senza">non collegato</span>{% endif %}{% else %}{{ p.struttura.nome if p.struttura else 'tutte' }}{% endif %}</td>
+      <td class="azione"><a href="{{ url_for('personale.persona', pid=p.id) }}">Modifica</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endfor %}
+</div>
+{% endblock %}

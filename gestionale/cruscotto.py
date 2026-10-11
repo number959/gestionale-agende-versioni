@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """La pagina "Oggi", che si apre all'avvio, e il riepilogo del mese per
 ciascun medico, da stampare, scaricare in Excel o mandare per email."""
+import logging
 import re
 import threading
 from datetime import datetime, time, timedelta
@@ -17,6 +18,7 @@ import sala
 import cassa
 import pazienti
 import backup
+import personale
 
 bp = Blueprint('cruscotto', __name__)
 _fornitore = None
@@ -84,7 +86,20 @@ def quadro_di_oggi(s, st, adesso=None):
         'letti_oltre': sala.notti_oltre(s, st, oggi),
         'allarme': backup.allarme(adesso),
         'nota': segreteria.nota_del_giorno(s, st.id, oggi),
+        'personale': _personale_di_oggi(s, st, adesso),
     }
+
+
+def _personale_di_oggi(s, st, adesso):
+    """Chi lavora oggi (per la scheda «In servizio oggi»); None se i turni del
+    personale non si usano. Un errore qui non deve fermare la pagina Oggi."""
+    try:
+        if not s.scalars(select(personale.Persona.id).limit(1)).first():
+            return None
+        return personale.in_servizio(s, adesso, st)
+    except Exception:
+        logging.exception('in servizio oggi')
+        return None
 
 
 @bp.route('/oggi')

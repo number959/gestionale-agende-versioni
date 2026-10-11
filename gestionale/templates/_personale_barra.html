@@ -1,0 +1,54 @@
+{#- la barra delle viste dei turni: vista, giorni, filtri, persone, tipi, strumenti -#}
+{%- from "_icone.html" import icona -%}
+{%- set filtri = {'struttura': sid if strutture|length > 1 else none, 'ruolo': ruolo or none, 'area': area or none} -%}
+<div class="barra barra-turni">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">{{ titolo }}</h1>
+  <span class="conteggio">Turni del personale</span>
+  <div class="comandi">
+    <nav class="schede-vista" aria-label="Vista dei turni" data-guida="turni-viste">
+      <a href="{{ url_for('personale.giorno', iso=dal.isoformat(), **filtri) }}"{% if vista == 'giorno' %} aria-current="page" class="attiva"{% endif %}>{{ icona('clock') }}<span>Giorno</span></a>
+      <a href="{{ url_for('personale.settimana', iso=dal.isoformat(), **filtri) }}"{% if vista == 'settimana' %} aria-current="page" class="attiva"{% endif %}>{{ icona('calendar-range') }}<span>Settimana</span></a>
+      <a href="{{ url_for('personale.mese', aaaamm=dal.strftime('%Y-%m'), **filtri) }}"{% if vista == 'mese' %} aria-current="page" class="attiva"{% endif %}>{{ icona('calendar-days') }}<span>Mese</span></a>
+    </nav>
+    <span class="separa"></span>
+    <a class="passo" data-tasto="precedente" href="{{ indietro }}" title="{{ 'Giorno' if vista == 'giorno' else 'Settimana' if vista == 'settimana' else 'Mese' }} precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ avanti }}" title="{{ 'Giorno' if vista == 'giorno' else 'Settimana' if vista == 'settimana' else 'Mese' }} successivo">&rsaquo;</a>
+    <a class="bottone" data-tasto="oggi" href="{{ adesso_url }}" title="{{ 'Oggi' if vista == 'giorno' else 'Questa settimana' if vista == 'settimana' else 'Questo mese' }} (tasto T)">Oggi</a>
+    <span class="separa"></span>
+    <form method="get" class="filtri-turni" data-guida="turni-filtri">
+      {% if strutture|length > 1 %}
+      <select name="struttura" onchange="this.form.submit()" aria-label="Struttura">
+        {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+      </select>
+      {% endif %}
+      <select name="ruolo" onchange="this.form.submit()" aria-label="Ruolo">
+        <option value="">Tutto il personale</option>
+        {% for r in ruoli %}<option value="{{ r[0] }}"{% if r[0] == ruolo %} selected{% endif %}>{{ r[1] }}</option>{% endfor %}
+      </select>
+      <select name="area" onchange="this.form.submit()" aria-label="Area">
+        <option value="">Tutte le aree</option>
+        {% for a in aree %}<option value="{{ a }}"{% if a == area %} selected{% endif %}>{{ a }}</option>{% endfor %}
+      </select>
+      <noscript><button class="bottone" type="submit">Mostra</button></noscript>
+    </form>
+    <span class="separa"></span>
+    <a class="bottone con-icona" href="{{ url_for('personale.persone') }}" data-guida="turni-persone">{{ icona('users') }}Persone</a>
+    <a class="bottone con-icona" href="{{ url_for('personale.tipi_turno') }}" data-guida="turni-tipi">{{ icona('settings-2') }}Tipi di turno</a>
+    <div class="gruppo-comandi" data-guida="turni-strumenti">
+      <button type="button" class="bottone apri-gruppo" aria-haspopup="true" aria-expanded="false">Strumenti<span class="freccia" aria-hidden="true"></span></button>
+      <div class="tendina" role="menu">
+        {% if vista != 'giorno' %}<a href="#" data-apri-schema role="menuitem">{{ icona('repeat') }}<b>Schema a rotazione…</b><small>ripetere una sequenza di turni (M M P P N…)</small></a>{% endif %}
+        {% if vista == 'settimana' %}<a href="#" data-copia-settimana role="menuitem">{{ icona('copy') }}<b>Copia la settimana prima</b><small>gli stessi turni, nelle celle ancora vuote</small></a>{% endif %}
+        <a href="#" onclick="window.print(); return false" role="menuitem">{{ icona('printer') }}<b>Stampa</b><small>il foglio dei turni, in orizzontale</small></a>
+        <a href="{{ url_for('personale.mese_excel', aaaamm=dal.strftime('%Y-%m'), **filtri) }}" role="menuitem">{{ icona('file-spreadsheet') }}<b>Scarica in Excel</b><small>il mese, con un foglio per le ore</small></a>
+      </div>
+    </div>
+  </div>
+</div>
+{% if vista == 'settimana' %}
+<form method="post" action="{{ url_for('personale.copia') }}" id="modulo-copia" hidden>
+  <input type="hidden" name="lunedi" value="{{ dal.isoformat() }}"><input type="hidden" name="ruolo" value="{{ ruolo }}">
+  {% if strutture|length > 1 %}<input type="hidden" name="struttura" value="{{ sid }}">{% endif %}
+</form>
+{% endif %}

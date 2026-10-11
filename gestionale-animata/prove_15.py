@@ -1807,7 +1807,7 @@ def e_whatsapp_riuscito():
     assert [e[1] for e in esito] == ['INVIATO'], esito
     assert len(META.richieste) == 1
     q = META.richieste[0]
-    assert q['percorso'] == '/v22.0/123456789/messages' and q['auth'] == 'Bearer ' + TOKEN, q
+    assert q['percorso'] == '/%s/123456789/messages' % invii.PREDEFINITI['wa_versione'] and q['auth'] == 'Bearer ' + TOKEN, q
     c = q['corpo']
     assert (c['messaging_product'], c['to'], c['type']) == ('whatsapp', '393330000001', 'template'), c
     assert c['template']['name'] == 'promemoria_appuntamento' and c['template']['language'] == {'code': 'it'}

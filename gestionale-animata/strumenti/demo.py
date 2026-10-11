@@ -251,6 +251,78 @@ if CFm is not None:
         nuovo('Testabianca', 'Lia', telefono=tel, sesso='F', data_nascita=date(1990, 11, 23), luogo_nascita=pozzuoli,
               codice_fiscale=lia)
     s.commit(); s.close()
+# ---- 1.8: il personale e i turni, dal mese scorso al mese prossimo (nomi inventati)
+try:
+    import personale as PE
+except ImportError:
+    PE = None
+if PE is not None:
+    s = S()
+    T = {t.codice: t for t in s.scalars(select(TipoTurno))}
+    def persona(c, n, ruolo, qualifica='', ore=36, **k):
+        x = Persona(cognome=c, nome=n, ruolo=ruolo, qualifica=qualifica, minuti_settimana=ore * 60 if ore else None,
+                    attiva=True, **k)
+        s.add(x); return x
+    medici = {o.cognome: persona(o.cognome, o.nome or '', 'MEDICO', o.specialita or '', None, operatore_id=o.id)
+              for o in s.scalars(select(Operatore).where(Operatore.attivo == True).order_by(Operatore.cognome))}
+    inf = [persona('Provanzi', 'Lucia', 'INFERMIERE', 'Coordinatrice'), persona('Campionelli', 'Marco', 'INFERMIERE'),
+           persona('Esemplari', 'Anna', 'INFERMIERE'), persona('Fintoni', 'Paolo', 'INFERMIERE'),
+           persona('Saggini', 'Teresa', 'INFERMIERE'), persona('Bozzolini', 'Rita', 'INFERMIERE'),
+           persona('Pagellini', 'Ivo', 'INFERMIERE'), persona('Taccuini', 'Nora', 'INFERMIERE', 'Strumentista')]
+    oss = [persona('Modellini', 'Carla', 'OSS'), persona('Prototti', 'Gino', 'OSS'), persona('Scheduzzi', 'Elsa', 'OSS'),
+           persona('Moduletti', 'Bruno', 'OSS', ore=30)]
+    tec = [persona('Righelli', 'Dario', 'TECNICO', 'Tecnico di radiologia'), persona('Matitelli', 'Nadia', 'TECNICO', 'Fisioterapista', 30)]
+    amm = [persona('Cartolini', 'Giada', 'AMMINISTRATIVO', 'Accettazione'), persona('Fogliotti', 'Remo', 'AMMINISTRATIVO', 'Accettazione')]
+    aus = [persona('Gessetti', 'Ugo', 'AUSILIARIO')]
+    s.flush()
+    primo = (oggi.replace(day=1) - timedelta(days=1)).replace(day=1)             # il primo del mese scorso
+    dal_ = primo - timedelta(days=primo.weekday())                                # dal lunedi di quella settimana
+    al_ = (oggi.replace(day=28) + timedelta(days=40)).replace(day=1) - timedelta(days=1)   # fine del mese prossimo
+    def schema(persone, sequenza, sfasamento=0):
+        PE.applica_schema(s, persone, dal_, al_, PE.leggi_sequenza(sequenza, T), sfasamento)
+    schema(inf, 'M M P P N SN R R', 1)            # otto infermieri, otto giorni: ogni giorno due mattine, due pomeriggi, una notte
+    schema(oss, 'M P R R', 1)
+    schema(tec, 'G G G G G R R')
+    schema(amm[:1], 'M M M M M R R'); schema(amm[1:], 'P P P P P R R')
+    schema(aus, 'M M M M M M R')
+    for cognome in ('Lippiello', 'Valente', 'Fiore'):
+        if cognome in medici:
+            schema([medici[cognome]], 'G G G G G R R')
+    if 'Galasso' in medici:
+        schema([medici['Galasso']], 'G - G - G R R')
+    if 'Conte' in medici:
+        schema([medici['Conte']], '- - - - - RE RE')
+    s.flush()
+    # le aree: degenza per gli infermieri (sala operatoria per la strumentista), ambulatori, accettazione
+    for t in s.scalars(select(TurnoPersonale).where(TurnoPersonale.inizio != None)):
+        p_ = t.persona
+        if t.categoria != 'LAVORO':
+            continue
+        t.area = ('Sala operatoria' if p_ is inf[-1] else 'Degenza') if p_.ruolo in ('INFERMIERE', 'OSS') else \
+            'Ambulatori' if p_.ruolo in ('TECNICO', 'MEDICO') else 'Accettazione' if p_.ruolo == 'AMMINISTRATIVO' else ''
+    lun = oggi - timedelta(days=oggi.weekday())
+    for d in range(5):                              # Esemplari in ferie la settimana prossima: lì manca qualcuno
+        PE.assegna(s, inf[2], lun + timedelta(days=7 + d), T['F'])
+    PE.assegna(s, oss[1], oggi, T['MA']); PE.assegna(s, oss[1], oggi + timedelta(days=1), T['MA'])
+    PE.assegna(s, amm[1], lun + timedelta(days=2), T['PE'])
+    # un cambio con poco riposo (pomeriggio e poi mattina), un orario diverso e uno scritto a mano
+    for d in range(1, 7):
+        g_ = lun + timedelta(days=d)
+        prima_ = s.scalars(select(TurnoPersonale).where(TurnoPersonale.persona_id == inf[3].id,
+                                                        TurnoPersonale.giorno == g_ - timedelta(days=1))).first()
+        ora_ = s.scalars(select(TurnoPersonale).where(TurnoPersonale.persona_id == inf[3].id,
+                                                      TurnoPersonale.giorno == g_)).first()
+        if prima_ is not None and prima_.tipo is T['P'] and ora_ is not None and ora_.tipo is T['P']:
+            PE.assegna(s, inf[3], g_, T['M'], area='Degenza', note='cambio con Saggini')
+            break
+    PE.assegna(s, amm[0], lun + timedelta(days=3), T['M'], time(7, 30), time(13, 30), 'Accettazione')
+    PE.assegna(s, aus[0], lun + timedelta(days=4), None, time(8, 0), time(12, 0), note='solo mattina')
+    s.add_all([CoperturaMinima(ruolo='INFERMIERE', tipo_id=T['M'].id, minimo=2),
+               CoperturaMinima(ruolo='INFERMIERE', tipo_id=T['P'].id, minimo=2),
+               CoperturaMinima(ruolo='INFERMIERE', tipo_id=T['N'].id, minimo=1),
+               CoperturaMinima(ruolo='OSS', tipo_id=T['M'].id, minimo=1, giorni='1111110'),
+               CoperturaMinima(ruolo='AMMINISTRATIVO', tipo_id=T['M'].id, minimo=1, giorni='1111100')])
+    s.commit(); s.close()
 # ---- 1.6: un aggiornamento finto gia' scaricato, per la pagina Aggiornamenti (guida e video)
 try:
     import aggiornamenti

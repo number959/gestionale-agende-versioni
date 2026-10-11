@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_stato.html" import pulsanti %}
+{% from "_icone.html" import icona %}
 {% block titolo %}Oggi · {{ titolo }}{% endblock %}
 {% block corpo %}
 <div class="barra">
@@ -60,6 +61,25 @@
     {% if q.chirurghi.disponibili %}<p class="nota-riga">Operano di solito oggi e sono liberi: {% for o in q.chirurghi.disponibili %}{{ o.cognome }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
     <p>Letti stanotte: <a href="{{ url_for('sala.posti_letto', struttura=sid) }}" class="{{ 'oltre' if q.posti and q.letti > q.posti }}"><b>{{ q.letti }}</b>{% if q.posti %} su {{ q.posti }}{% endif %}</a>
       {%- if q.letti_oltre %} · <b class="oltre">non bastano la notte del {{ q.letti_oltre[0][0].strftime('%d/%m') }}{% if q.letti_oltre|length > 1 %} (e altre {{ q.letti_oltre|length - 1 }}){% endif %}</b>{% endif %}</p>
+  </section>
+  {% endif %}
+
+  {% if q.personale is not none %}
+  <section class="scheda-oggi in-servizio" data-guida="oggi-in-servizio">
+    <h2>In servizio oggi <small><a href="{{ url_for('personale.giorno', iso=q.oggi.isoformat(), struttura=sid if strutture|length > 1 else none) }}">turni</a></small></h2>
+    {% if q.personale %}
+    {% for gr in q.personale %}
+    <div class="gruppo-servizio"><b>{{ icona(gr.icona) }}{{ gr.nome }}</b>
+      <ul>
+        {% for v in gr.voci %}{% set t = v.turno %}
+        <li{% if v.finito %} class="finito"{% endif %}><span class="turno{% if t.categoria == 'REPERIBILITA' %} reperibile{% endif %}{% if not t.tipo %} a-mano{% endif %}" style="--c: {{ t.tipo.colore_sicuro if t.tipo else '#F1F3F4' }}; --t: {{ t.tipo.colore_testo if t.tipo else '#16263F' }}"><b>{{ t.codice if t.tipo else '·' }}</b></span>{{ t.persona.etichetta }}
+          <span class="nota-riga">{{ t.inizio.strftime('%H:%M') }}–{{ t.fine.strftime('%H:%M') }}{% if t.giorno != q.oggi %} da ieri{% endif %}{% if t.area %} · {{ t.area }}{% endif %}</span>
+          {%- if v.adesso %} <span class="al-lavoro" role="img" aria-label="al lavoro adesso" title="al lavoro adesso"></span>{% endif %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+    {% else %}<p class="vuoto">Nessun turno di lavoro del personale oggi.</p>{% endif %}
   </section>
   {% endif %}
 

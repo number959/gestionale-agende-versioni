@@ -435,7 +435,7 @@ def agenda_a_blocchi():
     unite = ['D1:K1', 'M1:T1', 'A2:B2']
     blocchi = [
         (IERI, {9: (['OTOPLASTICA', 'AMENTA', 3470009101, 'LANDOLFI', 'CAPASSO CIRO', None, None, None], None)}),
-        (MAR, {9: (['RINOPLASTICA', 'COSTANZO ', 3470009102, 'LANDOLFI', 'DE FALCO TERESA', 'RO', None, None],
+        (MAR, {9: (['RINOPLASTICA', 'COSTANZO ', 3470009102, 'LANDOLFI', 'DE FITTIZI TERESA', 'RO', None, None],
                    ['MASTOPALSTICA ADDITIVA', 'PALUMBO', 3470009103, 'IZZO', 'FERRARA LUCIA ', 'DH', None, None]),
                10: (['MASTOPLASTICA ADDITIVA', 'PALUMBO', 3470009103, 'IZZO', 'SERRA MARIA ELENA', None, None, None], None),
                12: (['RIMOZIONE PROTESI', 'AMENTA', 3470009101, 'IZZO', 'PROVETTI PAOLA', 'DH', None, None],
@@ -444,7 +444,7 @@ def agenda_a_blocchi():
                15: (['RINOPLASTICA ?', 'SORRENTINO', 3470009104, 'IZZO', '?', 'DH', None, None], None)}),
         (GIO, {8.5: (None, ['MASTOPLASTICA ADDITIVA', 'MARINO', 3470009105, 'ORLANDO', 'SCOGNAMIGLIO RITA', 'DH', 'UNISALUTE', 1500]),
                9: (['MASTOPLASTICA ADDITIVA', 'CARUSO', 3470009106, 'LANDOLFI F.', 'ANNA VITALE', 'DH', None, None], None),
-               10: (['MASTOPESSI', 'PALUMBO', 3470009103, 'IZZO', 'DE FALCO TERESA', None, None, None], None)})]
+               10: (['MASTOPESSI', 'PALUMBO', 3470009103, 'IZZO', 'DE FITTIZI TERESA', None, None, None], None)})]
     for giorno, voci in blocchi:
         ore = [8, 8.5, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] if 8.5 in voci else list(range(8, 20))
         primo = len(righe_) + 1
@@ -499,14 +499,14 @@ def im_riconoscimento_semplice():
 
 def im_nomi():
     casi = {'DE LUCA CIRO': ('DE LUCA', 'CIRO', True), 'ROSSI MARTA': ('ROSSI', 'MARTA', True),
-            'DE FALCO TERESA': ('DE FALCO', 'TERESA', True), 'ANNA VITALE': ('VITALE', 'ANNA', True),
+            'DE FITTIZI TERESA': ('DE FITTIZI', 'TERESA', True), 'ANNA VITALE': ('VITALE', 'ANNA', True),
             'SERRA MARIA ELENA': ('SERRA', 'MARIA ELENA', True), "D'ARCO SILVIA": ("D'ARCO", 'SILVIA', True),
             'DI MARIA ANNA': ('DI MARIA', 'ANNA', True), 'LUCA DELLA ROCCA': ('DELLA ROCCA', 'LUCA', True),
             'ESPOSITO': ('ESPOSITO', '', True), 'MARIA ROSA': ('MARIA', 'ROSA', False),
             'KOWALSKI JAN': ('KOWALSKI', 'JAN', False)}
     for testo, atteso in casi.items():
         assert importa.dividi_nome(testo) == atteso, '%s -> %s' % (testo, importa.dividi_nome(testo))
-    for testo, atteso in {'DE FALCO': 'De Falco', "D'ARCO": "D'Arco", 'Rossi': 'Rossi', 'mcDONALD': 'mcDONALD'}.items():
+    for testo, atteso in {'DE FITTIZI': 'De Fittizi', "D'ARCO": "D'Arco", 'Rossi': 'Rossi', 'mcDONALD': 'mcDONALD'}.items():
         assert importa.iniziali_maiuscole(testo) == atteso, '%s -> %s' % (testo, importa.iniziali_maiuscole(testo))
 
 
@@ -571,12 +571,12 @@ def im_agenda():
     palumbo = s.scalars(select(Operatore).where(Operatore.cognome == 'Palumbo')).one()
     assert palumbo.telefono == '3470009103', 'telefono del medico non salvato sul medico'
     paz = s.scalars(select(Paziente)).all()
-    assert sorted(p.etichetta for p in paz) == sorted(['De Falco Teresa', 'Ferrara Lucia', 'Serra Maria Elena',
+    assert sorted(p.etichetta for p in paz) == sorted(['De Fittizi Teresa', 'Ferrara Lucia', 'Serra Maria Elena',
                                                         'Provetti Paola', "D'Amore Giulia", 'Scognamiglio Rita',
                                                         'Vitale Anna', 'Capasso Ciro']), [p.etichetta for p in paz]
     assert all(not p.telefono for p in paz), 'il telefono del chirurgo è finito su un paziente'
-    de_sivo = next(p for p in paz if p.cognome == 'De Falco')
-    assert sum(1 for a in apps if a.paziente_id == de_sivo.id) == 2, 'De Falco in due schede'
+    de_fittizi = next(p for p in paz if p.cognome == 'De Fittizi')
+    assert sum(1 for a in apps if a.paziente_id == de_fittizi.id) == 2, 'De Fittizi in due schede'
     prest = {p.nome for p in s.scalars(select(Prestazione))}
     assert 'Mastoplastica additiva' in prest and not any('palstica' in p.lower() for p in prest), prest
     rino = [a for a in apps if a.prestazione and a.prestazione.nome == 'Rinoplastica']
@@ -594,7 +594,7 @@ def im_agenda():
     assert 'Medico anestesista' in campi and 'Degenza' not in campi, 'campi in più della prestazione: %s' % campi
     # la degenza e' un campo dell'appuntamento (conta i letti), non un campo in piu'
     degenze = {a.paziente.cognome: a.degenza for a in apps if a.paziente and a.inizio.date() == MAR}
-    assert degenze.get('De Falco') == 'RICOVERO' and degenze.get('Ferrara') == 'DH' \
+    assert degenze.get('De Fittizi') == 'RICOVERO' and degenze.get('Ferrara') == 'DH' \
         and degenze.get("D'Amore") == 'NOTTE' and degenze.get('Serra') == '', degenze
     nota = s.scalars(select(NotaGiorno).where(NotaGiorno.data == MAR)).first()
     assert nota is not None and 'NESSUNA SECONDA SALA' in nota.testo, 'nota del giorno non importata'
@@ -612,7 +612,7 @@ def im_agenda():
         conta(S, Appuntamento), conta(S, Paziente))
     # la griglia del giorno si apre e mostra la nota
     t = html(C.get('/giorno/%s?struttura=1' % MAR))
-    assert 'NESSUNA SECONDA SALA' in t and 'De Falco Teresa' in t
+    assert 'NESSUNA SECONDA SALA' in t and 'De Fittizi Teresa' in t
     return '10 appuntamenti, 8 pazienti, 6 medici'
 
 

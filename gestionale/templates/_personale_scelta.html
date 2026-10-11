@@ -1,0 +1,44 @@
+{#- la scelta del turno: si apre sopra la cella (o le celle) scelte; la riempie static/turni.js -#}
+{%- from "_icone.html" import icona -%}
+<div class="scelta-turno" id="scelta-turno" role="dialog" aria-modal="false" aria-labelledby="scelta-titolo" hidden>
+  <div class="scelta-testa">
+    <div><b id="scelta-titolo">Turno</b><small id="scelta-sotto"></small></div>
+    <button type="button" class="scelta-chiudi" aria-label="Chiudi (Esc)">{{ icona('x') }}</button>
+  </div>
+  <div class="scelta-attuali" id="scelta-attuali" hidden></div>
+  {% for cat, nome_cat in categorie %}
+  {%- set del_gruppo = tipi|selectattr('categoria', 'equalto', cat)|list %}
+  {%- if del_gruppo %}
+  <div class="scelta-gruppo">
+    <p class="scelta-cat">{{ nome_cat if cat != 'RIPOSO' else 'Riposo' }}</p>
+    <div class="scelta-tipi">
+      {% for t in del_gruppo %}
+      <button type="button" class="scelta-tipo" data-tipo="{{ t.id }}" data-codice="{{ t.codice }}" style="--c: {{ t.colore_sicuro }}; --t: {{ t.colore_testo }}">
+        <span class="codice">{{ t.codice }}</span>
+        <span class="nome">{{ t.nome }}</span>
+        {% if t.con_orario %}<span class="orario">{{ t.orario }}</span>{% endif %}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+  {%- endif %}
+  {% endfor %}
+  <details class="scelta-altro" id="scelta-altro">
+    <summary>{{ icona('square-pen') }}Orario diverso, area, nota</summary>
+    <div class="scelta-campi">
+      <label>Inizio<input type="time" id="scelta-inizio" step="900"></label>
+      <label>Fine<input type="time" id="scelta-fine" step="900"></label>
+      <label class="largo">Area<input type="text" id="scelta-area" list="aree-turni" maxlength="60" placeholder="per esempio Degenza"></label>
+      <label class="largo">Nota<input type="text" id="scelta-nota" maxlength="200" placeholder="per esempio cambio con Rossi"></label>
+      <label class="spunta largo"><input type="checkbox" id="scelta-aggiungi"> Aggiungi come secondo turno dello stesso giorno</label>
+      <button type="button" class="bottone primario" id="scelta-metti-orario">Metti questo orario</button>
+      <p class="aiuto largo">Con un turno scelto sopra, inizio e fine scritti qui prendono il posto del suo orario.</p>
+    </div>
+  </details>
+  <datalist id="aree-turni">{% for a in aree %}<option value="{{ a }}">{% endfor %}</datalist>
+  <div class="scelta-piede">
+    <button type="button" class="bottone con-icona" id="scelta-togli">{{ icona('eraser') }}Togli</button>
+    <span class="scelta-tasti">{{ icona('keyboard') }}Nella griglia basta scrivere il codice; Canc toglie</span>
+  </div>
+  <p class="scelta-errore" id="scelta-errore" role="alert" hidden></p>
+</div>

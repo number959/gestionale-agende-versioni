@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% block titolo %}{{ p.etichetta if p else 'Nuova persona' }}{% endblock %}
+{% block corpo %}
+{%- macro val(nome, difetto='') -%}{{ campi.get(nome, difetto) if campi else difetto }}{%- endmacro -%}
+{%- set c = campi if campi else {} -%}
+<div class="pagina pagina-persona">
+  <p class="marchio" style="border:0;margin-bottom:16px">{% include "_marchio.html" %}</p>
+  <h1>{{ p.etichetta if p else 'Nuova persona' }}{% if p %} <small class="sotto-titolo">{{ p.ruolo_etichetta|lower }}</small>{% endif %}</h1>
+  <p class="sotto"><a href="{{ url_for('personale.persone') }}">Torna alle persone</a> · <a href="{{ url_for('personale.turni') }}">Turni</a></p>
+
+  <form method="post" class="modulo-persona">
+    <div class="campo meta"><label for="cognome">Cognome</label>
+      <input type="text" id="cognome" name="cognome" maxlength="60" required value="{{ c.get('cognome', p.cognome if p else '') }}"{% if not p %} autofocus{% endif %}></div>
+    <div class="campo meta"><label for="nome">Nome</label>
+      <input type="text" id="nome" name="nome" maxlength="60" value="{{ c.get('nome', p.nome if p else '') }}"></div>
+    {% set ruolo_scelto = c.get('ruolo', p.ruolo if p else 'INFERMIERE') %}
+    <fieldset class="campo scelta-ruolo">
+      <legend>Ruolo</legend>
+      {% for r in ruoli %}
+      <label class="ruolo-opzione"><input type="radio" name="ruolo" value="{{ r[0] }}"{% if r[0] == ruolo_scelto %} checked{% endif %}><span>{{ icona(r[3]) }}{{ r[2] }}</span></label>
+      {% endfor %}
+    </fieldset>
+    <div class="campo meta"><label for="qualifica">Qualifica <small>(facoltativa)</small></label>
+      <input type="text" id="qualifica" name="qualifica" maxlength="60" placeholder="Coordinatrice, anestesista…" value="{{ c.get('qualifica', p.qualifica if p else '') }}"></div>
+    <div class="campo meta"><label for="ore_settimana">Ore a settimana <small>(del contratto)</small></label>
+      <input type="text" id="ore_settimana" name="ore_settimana" maxlength="5" inputmode="decimal" placeholder="36" value="{{ c.get('ore_settimana', p.ore_settimana if p else '') }}"></div>
+    <div class="campo meta"><label for="telefono">Telefono</label>
+      <input type="tel" id="telefono" name="telefono" maxlength="30" value="{{ c.get('telefono', p.telefono if p else '') }}"></div>
+    <div class="campo meta"><label for="email">Email</label>
+      <input type="email" id="email" name="email" maxlength="120" value="{{ c.get('email', p.email if p else '') }}"></div>
+    <div class="campo meta campo-medico"><label for="operatore_id">Medico dell'agenda <small>(per i medici)</small></label>
+      {% set op_scelto = (c.get('operatore_id', p.operatore_id if p else '') or '')|string %}
+      <select id="operatore_id" name="operatore_id">
+        <option value="">nessuno</option>
+        {% for o in operatori %}<option value="{{ o.id }}"{% if o.id|string == op_scelto %} selected{% endif %}>{{ o.etichetta }}{% if o.specialita %} · {{ o.specialita }}{% endif %}</option>{% endfor %}
+      </select>
+      <p class="aiuto">Collegato, nella vista del giorno compaiono anche i suoi ambulatori.</p></div>
+    {% if strutture|length > 1 %}
+    {% set st_scelta = (c.get('struttura_id', p.struttura_id if p else '') or '')|string %}
+    <div class="campo meta"><label for="struttura_id">Struttura</label>
+      <select id="struttura_id" name="struttura_id"><option value="">tutte</option>
+        {% for x in strutture %}<option value="{{ x.id }}"{% if x.id|string == st_scelta %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+      </select></div>
+    {% endif %}
+    <div class="campo"><label for="note">Note</label>
+      <input type="text" id="note" name="note" maxlength="300" value="{{ c.get('note', p.note if p else '') }}"></div>
+    {% set attiva = (c.get('attiva') in ('1', 'on')) if c and 'cognome' in c else (p.attiva if p else true) %}
+    <div class="campo spunta"><label><input type="checkbox" name="attiva" value="1"{% if attiva %} checked{% endif %}> In servizio</label>
+      <p class="aiuto">Chi non è più in servizio non compare nei turni nuovi, ma resta in quelli passati.</p></div>
+    <div class="azioni">
+      <button class="bottone primario" type="submit">Salva</button>
+      {% if not p %}<button class="bottone" type="submit" name="ancora" value="1">Salva e aggiungi un'altra</button>{% endif %}
+      <a class="bottone" href="{{ url_for('personale.persone') }}">Annulla</a>
+    </div>
+  </form>
+  {% if p %}
+  <form method="post" class="elimina-persona" onsubmit="return confirm('Eliminare {{ p.etichetta|e }}?')">
+    <input type="hidden" name="azione" value="elimina">
+    <button class="bottone con-icona pericolo" type="submit">{{ icona('trash-2') }}Elimina</button>
+    <span class="aiuto">Solo se non ha turni: altrimenti si toglie la spunta «In servizio».</span>
+  </form>
+  {% endif %}
+</div>
+<script src="{{ url_for('static', filename='turni.js') }}"></script>
+{% endblock %}

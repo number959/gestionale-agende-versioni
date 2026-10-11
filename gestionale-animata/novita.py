@@ -13,6 +13,41 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.8', [
+        dict(titolo='Turni del personale',
+             testo='Nuovo menu Turni: medici, infermieri, OSS, tecnici, accettazione e ausiliari, nel mese, nella '
+                   'settimana e nel giorno a ore. I turni si mettono con un clic sulla cella o scrivendo il codice (M, P, '
+                   'N…), come in un foglio di calcolo; Ctrl+Z annulla. Stampa ed Excel del mese.',
+             guida='turni-personale'),
+        dict(titolo='Controlli, ore e coperture minime',
+             testo='Due turni della stessa persona che si sovrappongono (anche con la notte del giorno prima) non si '
+                   'salvano; meno di 11 ore di riposo si segnalano. In fondo alla riga ore lavorate contro quelle del '
+                   'contratto, notti, festivi e assenze; con le coperture minime il giorno in cui manca qualcuno si '
+                   'colora di rosso.',
+             guida='turni-tipi'),
+        dict(titolo='Il giorno a ore e «In servizio oggi»',
+             testo='La vista Giorno mostra chi c\'è ora per ora, ruolo per ruolo, con gli ambulatori dei medici '
+                   'dall\'agenda. Nella pagina Oggi la scheda «In servizio oggi» dice chi lavora e chi è già al lavoro.',
+             guida='turni-giorno'),
+        dict(titolo='Schema a rotazione e copia della settimana',
+             testo='Una sequenza come M M P P N SN R R si ripete da sola per le persone scelte, ognuna sfasata di '
+                   'qualche giorno, e prima di applicarla si vede come verrà. La settimana si copia dalla precedente.',
+             guida='turni-schema'),
+        dict(titolo='Persone e tipi di turno',
+             testo='Turni → Persone: il personale con ruolo e ore del contratto; i medici dell\'agenda si aggiungono '
+                   'tutti con un clic. Turni → Tipi di turno: codici, orari, colori e coperture minime.',
+             guida='turni-persone'),
+        dict(titolo='WhatsApp: il numero si registra dal programma',
+             testo='In Configura → Email e WhatsApp c\'è il passo che mancava: «Registra il numero», con il PIN di 6 '
+                   'cifre. E gli errori di Meta ora si spiegano in parole semplici (token scaduto, PIN sbagliato, '
+                   'numero non registrato…).',
+             guida='whatsapp-numero'),
+        dict(titolo='La tendina «Stampa e scarica» si vede per intero',
+             testo='Nella versione con le animazioni, aprendo Stampa e scarica nella griglia del giorno, la tendina '
+                   'restava in parte sotto la nota del giorno, gli avvisi e la griglia. Ora si vede sempre per intero, e '
+                   'anche le tendine del menu restano sopra le notifiche.',
+             guida='stampare-giornata'),
+    ]),
     ('1.7', [
         dict(titolo='Codice fiscale controllato mentre si scrive',
              testo='Nella scheda del paziente e nella prenotazione il codice fiscale si controlla mentre lo si scrive: '

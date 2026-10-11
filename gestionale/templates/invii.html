@@ -126,12 +126,13 @@
   <details class="riquadro" data-guida="whatsapp-requisiti"{% if not whatsapp_pronto %} open{% endif %}>
     <summary><b>Cosa serve e quanto costa</b></summary>
     <ol>
-      <li>Un account <b>Meta Business</b> della società e un'app di tipo WhatsApp in <b>developers.facebook.com</b>.</li>
-      <li>Un <b>numero di telefono dedicato</b>, che riceve un SMS o una chiamata di verifica. Non può essere un numero usato in quel momento con l'app WhatsApp o WhatsApp Business del telefono.</li>
+      <li>Un account <b>Meta Business</b> della società e un'app in <b>developers.facebook.com</b> con il caso d'uso WhatsApp (in inglese <i>Connect with customers through WhatsApp</i>).</li>
+      <li>Un <b>numero di telefono dedicato</b>, aggiunto in <i>WhatsApp → Configurazione API</i> e verificato con un SMS o una chiamata. Non può essere un numero usato in quel momento con l'app WhatsApp o WhatsApp Business del telefono: se lo è, prima si cancella l'account WhatsApp da quel telefono. Il <b>nome visualizzato</b> (quello che vedono i pazienti, per esempio il nome della clinica) lo approva Meta.</li>
       <li>Un <b>modello di messaggio</b> approvato da Meta, categoria <i>Utilità</i>, lingua <i>Italiano</i>, chiamato <code>{{ cfg.wa_modello }}</code>, con questo testo:
         <pre class="modello-wa">{{ modello_wa }}</pre>
         Le variabili {{ '{{1}}' }}, {{ '{{2}}' }}… vengono riempite con: {{ cfg.wa_parametri|replace(',', ', ') }}. Se il modello approvato è diverso, cambiare qui sotto nome e variabili nello stesso ordine.</li>
-      <li>Un <b>token permanente</b> (utente di sistema con il permesso <i>whatsapp_business_messaging</i>) e l'<b>ID del numero di telefono</b>, che Meta mostra in <i>WhatsApp → Configurazione API</i>.</li>
+      <li>Un <b>token permanente</b>: in <i>Impostazioni dell'azienda → Utenti di sistema</i> un utente di sistema con l'app e l'account WhatsApp assegnati, poi <i>Genera token</i> con i permessi <i>whatsapp_business_messaging</i> e <i>whatsapp_business_management</i>, scadenza «mai». E l'<b>ID del numero di telefono</b>, che Meta mostra in <i>WhatsApp → Configurazione API</i>. Tutti e due si salvano qui sotto.</li>
+      <li>Una volta sola, <b>Registra il numero</b> (qui sotto) con un PIN di 6 cifre: senza questo passaggio Meta rifiuta i messaggi («numero non registrato», codice 133010).</li>
       <li>Un metodo di pagamento nell'account: in Italia un messaggio di utilità costa circa 2,5 centesimi (tariffa Meta da ottobre 2026), cioè circa 2,50 € ogni 100 promemoria.</li>
     </ol>
     <p class="aiuto">Meta conferma di aver preso in carico il messaggio, non che il paziente l'abbia letto: le spunte blu restano sul telefono, non arrivano qui.</p>
@@ -155,6 +156,17 @@
       {% if token_salvato %}<label><input type="checkbox" name="togli_token" value="1"> Togli il token salvato</label>{% endif %}
     </details>
     <div class="azioni"><button class="bottone primario" type="submit">Salva WhatsApp</button></div>
+  </form>
+  <form method="post" class="riquadro registra-numero" id="registra-numero" autocomplete="off" data-attesa="Registrazione in corso…" data-guida="whatsapp-registra">
+    <input type="hidden" name="azione" value="registra_whatsapp">
+    <h3>Registra il numero <small>una volta sola</small></h3>
+    {% if cfg.wa_registrato %}<p class="registrato">Numero registrato il {{ cfg.wa_registrato[8:10] }}/{{ cfg.wa_registrato[5:7] }}/{{ cfg.wa_registrato[:4] }} alle {{ cfg.wa_registrato[11:16] }}.</p>{% endif %}
+    <p class="aiuto">Dopo aver aggiunto e verificato il numero in Meta e salvato qui sopra token e ID, il programma lo attiva per gli invii. Il PIN è quello della verifica in due passaggi del numero: se il numero non ne ha ancora uno, questo diventa il suo PIN. Il programma non lo salva: va conservato in un posto sicuro. Meta accetta al massimo 10 registrazioni in 72 ore.</p>
+    <div class="riga-registra">
+      <label for="pin-wa">PIN di 6 cifre</label>
+      <input type="password" id="pin-wa" name="pin" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" required autocomplete="off" style="width:110px">
+      <button class="bottone" type="submit"{% if not (cfg.wa_token and cfg.wa_numero_id) %} disabled title="Prima salvare token e ID del numero"{% endif %}>Registra il numero</button>
+    </div>
   </form>
   <form method="post" class="riquadro filtri" data-attesa="Invio in corso…">
     <input type="hidden" name="azione" value="prova_whatsapp">

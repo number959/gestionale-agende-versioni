@@ -45,3 +45,17 @@
   html.scuro .finestra-video video { background: #000000; }
   html.scuro .rotella { border-top-color: var(--primario-chiaro); }
 }
+@media screen {
+  /* 1.8: turni del personale. Gli avvisi in basso sono gia' scuri: nel tema scuro restano come sono */
+  html.scuro .avviso-turni { background: #26364F; color: #FFFFFF; border-left-color: #6FCF97;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .55); }
+  html.scuro .avviso-turni.livello-avviso { border-left-color: #F2C14E; }
+  html.scuro .avviso-turni.livello-errore { border-left-color: #F28B82; }
+  html.scuro .azione-avviso { color: #9EC5FF; }
+  html.scuro .chiudi-avviso { color: #C9D3DD; }
+  /* le icone dei ruoli: chiare sul cerchio scuro */
+  html.scuro .icona-ruolo, html.scuro .icone-ruoli span { color: var(--primario-scuro); }
+  /* il codice che si sta scrivendo sopra la cella */
+  html.scuro table.turni td.cella[data-scrivendo]::after, html.scuro .pista[data-scrivendo]::after { background: #1C242D;
+    color: #E1E7ED; }
+}

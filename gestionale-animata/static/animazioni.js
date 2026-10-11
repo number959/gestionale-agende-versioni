@@ -98,6 +98,13 @@
   sfalsa('.scheda-guida', 20);
   sfalsa('ol.passi-guida li', 10);
   sfalsa('ul.righe-oggi li', 10);
+  // 1.8, turni del personale: i giorni della griglia, le righe del giorno a ore, le ore delle presenze
+  sfalsa('table.turni thead th.giorno-col', 31);
+  sfalsa('.riga-giorno', 20);
+  sfalsa('.in-servizio li', 12);
+  document.querySelectorAll('.presenze').forEach(function (riga) {
+    riga.querySelectorAll('.ora-pres').forEach(function (o, ora) { o.style.setProperty('--i', ora); });
+  });
   sfalsa('.barra-letti span', 28);
   // la checklist spuntata: il contatore rimbalza (verde quando e' completa)
   if (window.MutationObserver) {

@@ -9,7 +9,7 @@
  "chirurghi": 34.4,
  "chiusura": 43.2,
  "codice-fiscale": 74.8,
- "come-e-fatto": 103.7,
+ "come-e-fatto": 114.5,
  "conferme": 59.4,
  "controllo-codici-fiscali": 73.6,
  "cose-da-fare": 36.8,
@@ -27,5 +27,11 @@
  "riepilogo": 32.7,
  "spostare": 36.9,
  "stampare-giornata": 28.1,
- "stato": 47.6
+ "stato": 47.6,
+ "turni-giorno": 68.0,
+ "turni-personale": 127.5,
+ "turni-persone": 56.9,
+ "turni-schema": 73.0,
+ "turni-tipi": 63.0,
+ "whatsapp-numero": 62.3
 }

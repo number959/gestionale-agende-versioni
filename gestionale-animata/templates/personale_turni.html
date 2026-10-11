@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% from "_personale_cella.html" import contenuto, totali %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block classe_body %} class="pagina-turni vista-{{ vista }}"{% endblock %}
+{% block corpo %}
+{% include "_personale_barra.html" %}
+
+{% if nessuno %}
+<div class="pagina primi-turni">
+  <div class="vuoto-turni">
+    <div class="icone-ruoli" aria-hidden="true">{% for r in ruoli[:4] %}<span>{{ icona(r[3]) }}</span>{% endfor %}</div>
+    <h2>Per cominciare, il personale</h2>
+    <p>I turni si mettono per persona: medici, infermieri, OSS, tecnici, accettazione. I medici dell'agenda si
+      aggiungono con un clic; gli altri uno per volta.</p>
+    <div class="azioni">
+      <form method="post" action="{{ url_for('personale.medici_dall_agenda') }}" style="display:inline">
+        <button class="bottone primario con-icona" type="submit">{{ icona('stethoscope') }}Aggiungi i medici dell'agenda</button>
+      </form>
+      <a class="bottone con-icona" href="{{ url_for('personale.persona') }}">{{ icona('user-plus') }}Aggiungi una persona</a>
+    </div>
+  </div>
+</div>
+{% else %}
+
+<div class="legenda-turni" data-guida="turni-legenda">
+  <ul>
+    {% for t in tipi %}
+    <li><span class="turno{% if not t.con_orario %} senza-orario{% endif %}{% if t.categoria == 'REPERIBILITA' %} reperibile{% endif %}" style="--c: {{ t.colore_sicuro }}; --t: {{ t.colore_testo }}"><b>{{ t.codice }}</b></span>{{ t.nome }}{% if t.orario %} <small>{{ t.orario }}</small>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  <p class="aiuto-tasti-turni">{{ icona('keyboard') }}<span>Clic su una cella per scegliere il turno · da tastiera scrivere il codice (M, P, N…), <kbd>Canc</kbd> toglie, <kbd>Maiusc</kbd>+frecce o trascinando si scelgono più celle, <kbd>Ctrl</kbd>+<kbd>Z</kbd> annulla</span></p>
+</div>
+
+<div class="telaio telaio-turni">
+<div class="scorri-turni">
+<table class="turni turni-{{ vista }}" role="grid" aria-label="{{ titolo }}" id="griglia-turni" data-guida="turni-griglia"
+       data-indirizzo="{{ url_for('personale.cambia') }}" data-dal="{{ dal.isoformat() }}" data-al="{{ al.isoformat() }}"
+       data-vista="{{ vista }}" data-ruolo="{{ ruolo }}" data-area="{{ area }}"{% if strutture|length > 1 %} data-struttura="{{ sid }}"{% endif %}>
+  <colgroup><col class="col-nome">{% for gi in giorni %}<col class="col-giorno{% if gi.festivo %} festivo{% elif gi.sabato %} sabato{% endif %}">{% endfor %}<col class="col-tot"><col class="col-tot"><col class="col-tot"><col class="col-tot"></colgroup>
+  <thead>
+    <tr>
+      <th class="nome-col" scope="col">Persona</th>
+      {% for gi in giorni %}
+      <th scope="col" class="giorno-col{% if gi.festivo %} festivo{% elif gi.sabato %} sabato{% endif %}{% if gi.oggi %} oggi{% endif %}" title="{{ gi.nome }} {{ gi.data.day }}/{{ gi.data.month }}{% if gi.festa %} · {{ gi.festa }}{% endif %}">
+        <a href="{{ url_for('personale.giorno', iso=gi.data.isoformat(), struttura=sid if strutture|length > 1 else none, ruolo=ruolo or none, area=area or none) }}">
+          <span class="gs">{{ gi.nome if vista == 'settimana' else gi.corto }}</span><span class="gn">{{ gi.data.day }}</span></a>
+      </th>
+      {% endfor %}
+      <th scope="col" class="tot-col" title="Ore di lavoro{% if vista == 'settimana' %} e ore del contratto{% endif %}">Ore</th>
+      <th scope="col" class="tot-col" title="Notti">Notti</th>
+      <th scope="col" class="tot-col" title="Turni di domenica e nei festivi">Fest.</th>
+      <th scope="col" class="tot-col" title="Giorni di assenza (ferie, malattia, permessi)">Ass.</th>
+    </tr>
+  </thead>
+  {% for gr in gruppi %}
+  <tbody class="gruppo-ruolo" data-ruolo="{{ gr.ruolo }}">
+    <tr class="testa-ruolo">
+      <th scope="rowgroup" colspan="{{ giorni|length + 5 }}">
+        <span class="icona-ruolo">{{ icona(gr.icona) }}</span><span class="nome-ruolo">{{ gr.nome }}</span>
+        <span class="quanti">{{ gr.righe|length }}</span>
+        <a class="aggiungi-ruolo" href="{{ url_for('personale.persona', ruolo=gr.ruolo) }}">{{ icona('plus') }}Aggiungi</a>
+      </th>
+    </tr>
+    {% for r in gr.righe %}{% set p = r.persona %}
+    <tr class="riga-persona{% if not p.attiva %} non-attiva{% endif %}" data-persona="{{ p.id }}">
+      <th scope="row" class="nome-col">
+        <a href="{{ url_for('personale.persona', pid=p.id) }}" title="Scheda di {{ p.etichetta }}">{{ p.cognome }} <span class="nome-proprio">{{ p.nome }}</span></a>
+        {%- if p.qualifica or p.ore_settimana %}<small>{{ p.qualifica }}{% if p.qualifica and p.ore_settimana %} · {% endif %}{% if p.ore_settimana %}{{ p.ore_settimana }} h{% endif %}</small>{% endif %}
+      </th>
+      {% for g, c in r.celle %}
+      <td role="gridcell" tabindex="-1" class="cella{% if c.turni %} piena{% endif %}{% if c.avviso %} con-avviso{% endif %}" data-k="{{ p.id }}_{{ g.isoformat() }}"
+          aria-label="{{ c.titolo }}" title="{{ c.titolo }}">{{ contenuto(c, vista == 'settimana') }}</td>
+      {% endfor %}
+      {{ totali(testi_totali(r.conti, r.previsto), vista) }}
+    </tr>
+    {% endfor %}
+    <tr class="copertura">
+      <th scope="row" class="nome-col"><span>Copertura</span></th>
+      {% for g, conteggi, carenze in gr.copertura %}
+      <td class="cop{% if carenze %} manca{% endif %}" data-c="{{ gr.ruolo }}_{{ g.isoformat() }}" title="{{ ('Manca: ' ~ carenze|join('; ')) if carenze else ('Al lavoro: ' ~ (testo_copertura(conteggi) or 'nessuno')) }}">{% if carenze %}<i class="segno-manca" aria-hidden="true"></i>{% endif %}{% for x in testo_copertura(conteggi).split() %}<span>{{ x }}</span>{% endfor %}</td>
+      {% endfor %}
+      <td colspan="4"></td>
+    </tr>
+  </tbody>
+  {% endfor %}
+</table>
+</div>
+{% if not gruppi %}
+<p class="avvio">Nessuno con questi filtri. <a href="{{ url_for('personale.' ~ vista, **({'aaaamm': dal.strftime('%Y-%m')} if vista == 'mese' else {'iso': dal.isoformat()})) }}">Mostra tutto il personale</a>.</p>
+{% endif %}
+</div>
+<div class="stampa-legenda" aria-hidden="true">
+  {% for t in tipi %}<span><b>{{ t.codice }}</b> {{ t.nome }}{% if t.orario %} {{ t.orario }}{% endif %}</span>{% endfor %}
+</div>
+
+{% include "_personale_scelta.html" %}
+{% include "_personale_schema.html" %}
+<script type="application/json" id="tipi-turno">{{ tipi_json|tojson }}</script>
+{% endif %}
+<script src="{{ url_for('static', filename='turni.js') }}"></script>
+{% endblock %}

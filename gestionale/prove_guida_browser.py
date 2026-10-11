@@ -59,6 +59,10 @@ with sync_playwright() as p:
     for a in guida.ARTICOLI:
         if not any('sel' in x for x in a['passi']):
             continue
+        # il mouse lontano dal menu: nell'animata la pagina entra muovendosi, e Playwright
+        # puo' rifare il clic portando il pulsante in cima alla finestra; il mouse resterebbe
+        # li', sopra un gruppo del menu (dalla 1.8 Segreteria), che si apre e copre la pagina dopo
+        pg.mouse.move(700, 700)
         pg.goto(B + '/aiuto/' + a['slug']); pg.wait_for_timeout(200)
         link = pg.locator('[data-guida-mostra]')
         if not link.count():

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Tipi di turno{% endblock %}
+{% block corpo %}
+{%- set m = modifica -%}
+<div class="pagina larga pagina-tipi">
+  <p class="marchio" style="border:0;margin-bottom:16px">{% include "_marchio.html" %}</p>
+  <h1>Tipi di turno <small class="sotto-titolo">codici, orari e colori</small></h1>
+  <p class="sotto"><a href="{{ url_for('personale.turni') }}">Torna ai turni</a> · <a href="{{ url_for('personale.persone') }}">Persone</a></p>
+  <p class="nota">Il codice è quello che si scrive nella cella dei turni. Riposi e assenze valgono tutto il giorno; i turni di
+    lavoro contano nelle ore (meno la pausa) e nella copertura; quelli di reperibilità hanno le loro ore, a parte.
+    Cambiando l'orario di un tipo, i turni già messi tengono l'orario di prima.</p>
+
+  <table class="elenco elenco-tipi" data-guida="tipi-elenco">
+    <tr><th>Codice</th><th>Nome</th><th>Categoria</th><th>Orario</th><th>Ore</th><th></th></tr>
+    {% for t in tipi %}
+    <tr{% if not t.attivo %} class="non-attiva"{% endif %}>
+      <td><span class="turno{% if not t.con_orario %} senza-orario{% endif %}{% if t.categoria == 'REPERIBILITA' %} reperibile{% endif %}" style="--c: {{ t.colore_sicuro }}; --t: {{ t.colore_testo }}"><b>{{ t.codice }}</b></span></td>
+      <td>{{ t.nome }}{% if not t.attivo %} <span class="etichetta-spenta">non in uso</span>{% endif %}</td>
+      <td>{{ categorie|selectattr(0, 'equalto', t.categoria)|map(attribute=1)|first }}</td>
+      <td>{{ t.orario or 'tutto il giorno' }}{% if t.pausa_min %} <small>pausa {{ t.pausa_min }}'</small>{% endif %}</td>
+      <td>{{ testo_ore(t.minuti) if t.con_orario else '' }}</td>
+      <td class="azione"><a href="{{ url_for('personale.tipi_turno', tipo=t.id) }}#modulo-tipo">Modifica</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2 class="sezione" id="modulo-tipo">{{ 'Modifica ' ~ m.codice if m else 'Nuovo tipo di turno' }}</h2>
+  <form method="post" class="modulo-tipo">
+    <input type="hidden" name="azione" value="{{ 'salva_tipo' if m else 'nuovo_tipo' }}">
+    {% if m %}<input type="hidden" name="id" value="{{ m.id }}">{% endif %}
+    <div class="campo meta"><label for="codice">Codice</label>
+      <input type="text" id="codice" name="codice" maxlength="4" required placeholder="M" value="{{ m.codice if m else '' }}" style="text-transform: uppercase"></div>
+    <div class="campo meta"><label for="nome-tipo">Nome</label>
+      <input type="text" id="nome-tipo" name="nome" maxlength="40" required placeholder="Mattina" value="{{ m.nome if m else '' }}"></div>
+    <div class="campo meta"><label for="categoria">Categoria</label>
+      <select id="categoria" name="categoria" data-categoria-tipo>
+        {% for k, nome in categorie %}<option value="{{ k }}"{% if (m.categoria if m else 'LAVORO') == k %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+      </select></div>
+    <div class="campo meta"><label for="colore">Colore</label>
+      <span class="colore-e-prova"><input type="color" id="colore" name="colore" value="{{ (m.colore_sicuro if m else '#B8EAE0')|lower }}">
+        <span class="turno anteprima-tipo" id="anteprima-tipo" aria-hidden="true" style="--c: {{ m.colore_sicuro if m else '#B8EAE0' }}; --t: {{ m.colore_testo if m else '#16263F' }}"><b>{{ m.codice if m else 'M' }}</b></span></span></div>
+    <div class="campo meta orario-tipo"><label for="ora_inizio">Inizio</label>
+      <input type="time" id="ora_inizio" name="ora_inizio" step="900" value="{{ m.ora_inizio.strftime('%H:%M') if m and m.ora_inizio else '' }}"></div>
+    <div class="campo meta orario-tipo"><label for="ora_fine">Fine <small>(prima dell'inizio: il giorno dopo)</small></label>
+      <input type="time" id="ora_fine" name="ora_fine" step="900" value="{{ m.ora_fine.strftime('%H:%M') if m and m.ora_fine else '' }}"></div>
+    <div class="campo meta orario-tipo"><label for="pausa_min">Pausa <small>(minuti, non contati nelle ore)</small></label>
+      <input type="number" id="pausa_min" name="pausa_min" min="0" max="240" step="5" value="{{ m.pausa_min if m else 0 }}"></div>
+    <div class="campo spunta"><label><input type="checkbox" name="attivo" value="1"{% if not m or m.attivo %} checked{% endif %}> In uso <small>(compare fra i turni da mettere)</small></label></div>
+    <div class="azioni">
+      <button class="bottone primario" type="submit">{{ 'Salva' if m else 'Aggiungi il tipo' }}</button>
+      {% if m %}<a class="bottone" href="{{ url_for('personale.tipi_turno') }}">Annulla</a>{% endif %}
+    </div>
+  </form>
+  {% if m %}
+  <form method="post" class="elimina-tipo" onsubmit="return confirm('Eliminare il tipo {{ m.codice }}?')">
+    <input type="hidden" name="azione" value="elimina_tipo"><input type="hidden" name="id" value="{{ m.id }}">
+    <button class="bottone con-icona pericolo" type="submit">{{ icona('trash-2') }}Elimina</button>
+    <span class="aiuto">Se è già usato nei turni non si elimina: smette di comparire fra quelli da mettere.</span>
+  </form>
+  {% endif %}
+
+  <h2 class="sezione" id="coperture">Coperture minime</h2>
+  <p class="nota">Quante persone servono almeno, per ruolo e turno: nei giorni in cui manca qualcuno la riga
+    «Copertura» dei turni si colora di rosso.</p>
+  {% if coperture %}
+  <table class="elenco elenco-coperture" data-guida="tipi-coperture">
+    <tr><th>Ruolo</th><th>Turno</th><th>Area</th><th>Giorni</th><th>Almeno</th><th></th></tr>
+    {% for r in coperture %}
+    <tr>
+      <td>{{ etichetta_ruolo.get(r.ruolo, r.ruolo) }}</td>
+      <td><span class="turno" style="--c: {{ r.tipo.colore_sicuro }}; --t: {{ r.tipo.colore_testo }}"><b>{{ r.tipo.codice }}</b></span> {{ r.tipo.nome }}</td>
+      <td>{{ r.area or 'qualunque' }}</td>
+      <td class="giorni-cop">{% for g in giorni_corti %}<span class="{{ 'si' if r.giorni[loop.index0] == '1' else 'no' }}">{{ g }}</span>{% endfor %}</td>
+      <td><b>{{ r.minimo }}</b></td>
+      <td class="azione"><form method="post" style="display:inline"><input type="hidden" name="azione" value="elimina_copertura"><input type="hidden" name="id" value="{{ r.id }}"><button class="collegamento" type="submit">Togli</button></form></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+  <form method="post" class="modulo-copertura">
+    <input type="hidden" name="azione" value="nuova_copertura">
+    <div class="campo meta"><label for="cop-ruolo">Ruolo</label>
+      <select id="cop-ruolo" name="ruolo">{% for r in ruoli %}<option value="{{ r[0] }}"{% if r[0] == 'INFERMIERE' %} selected{% endif %}>{{ r[1] }}</option>{% endfor %}</select></div>
+    <div class="campo meta"><label for="cop-tipo">Turno</label>
+      <select id="cop-tipo" name="tipo_id">{% for t in tipi if t.con_orario and t.attivo %}<option value="{{ t.id }}">{{ t.codice }} · {{ t.nome }} {{ t.orario }}</option>{% endfor %}</select></div>
+    <div class="campo meta"><label for="cop-area">Area <small>(facoltativa)</small></label>
+      <input type="text" id="cop-area" name="area" maxlength="60" list="aree-cop" placeholder="qualunque"><datalist id="aree-cop">{% for a in aree %}<option value="{{ a }}">{% endfor %}</datalist></div>
+    <div class="campo meta"><label for="cop-minimo">Almeno quante persone</label>
+      <input type="number" id="cop-minimo" name="minimo" min="1" max="50" value="1"></div>
+    <div class="campo giorni"><span class="etichetta">Giorni</span>
+      {% for g in ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'] %}<label><input type="checkbox" name="g{{ loop.index0 }}" value="1" checked> {{ g }}</label>{% endfor %}</div>
+    <div class="azioni"><button class="bottone con-icona" type="submit">{{ icona('plus') }}Aggiungi la copertura</button></div>
+  </form>
+</div>
+<script src="{{ url_for('static', filename='turni.js') }}"></script>
+{% endblock %}

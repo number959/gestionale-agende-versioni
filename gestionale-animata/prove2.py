@@ -80,16 +80,25 @@ def oltre_mezzanotte():
     assert ultima['righe'] == 1, 'la cella delle 23:30 sfora la tabella'
     return 'ultima fascia %s' % v['fasce'][-1]
 
+def porta_libera():
+    # Una porta scelta dal sistema: con una porta fissa due giri di prove insieme
+    # (versione normale e animata) si pestavano i piedi.
+    import socket
+    with socket.socket() as so:
+        so.bind(('127.0.0.1', 0))
+        return so.getsockname()[1]
+
 def concorrenza_waitress():
     from waitress import serve
+    porta = porta_libera()
     t = threading.Thread(target=serve, kwargs=dict(app=A.app, host='127.0.0.1',
-                                                   port=5099, threads=4), daemon=True)
+                                                   port=porta, threads=4), daemon=True)
     t.start()
     import time as T; T.sleep(2)
     errori = []
     def colpo(n):
         try:
-            u = 'http://127.0.0.1:5099/giorno/2026-09-%02d?struttura=%d' % (10 + n % 5, 1 + n % 2)
+            u = 'http://127.0.0.1:%d/giorno/2026-09-%02d?struttura=%d' % (porta, 10 + n % 5, 1 + n % 2)
             with urllib.request.urlopen(u, timeout=15) as r:
                 if r.status != 200: errori.append(r.status)
         except Exception as e:
