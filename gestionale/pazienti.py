@@ -17,8 +17,8 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, abort, jsonify)
 from sqlalchemy import select, func, update
 
-from modelli import (Paziente, Appuntamento, Attivita, Attesa, Documento, Appunto, Invio, STATI_ATTIVI, CANALI,
-                     PROVENIENZE, ETICHETTA_PROVENIENZA)
+from modelli import (Paziente, Appuntamento, Attivita, Attesa, Documento, Appunto, Invio, Indirizzato, STATI_ATTIVI,
+                     CANALI, PROVENIENZE, ETICHETTA_PROVENIENZA)
 import servizi
 import codice_fiscale as CF
 from comune import json_sicuro
@@ -476,7 +476,7 @@ def unisci(s, tenuto, eliminato):
     n = s.execute(update(Appuntamento).where(Appuntamento.paziente_id == eliminato.id)
                   .values(paziente_id=tenuto.id)).rowcount
     # documenti, cose da fare e lista d'attesa seguono la persona
-    for modello in (Documento, Attivita, Attesa, Appunto, Invio):
+    for modello in (Documento, Attivita, Attesa, Appunto, Invio, Indirizzato):
         s.execute(update(modello).where(modello.paziente_id == eliminato.id).values(paziente_id=tenuto.id))
     for campo in ('nome', 'telefono', 'telefono2', 'email', 'codice_fiscale', 'data_nascita', 'indirizzo', 'sesso',
                   'luogo_nascita'):
@@ -761,8 +761,10 @@ def scheda(pid=None):
                 for modello in (Attivita, Attesa):
                     for x in s.scalars(select(modello).where(modello.paziente_id == p.id)):
                         s.delete(x)
-                # il registro dei messaggi resta, senza il collegamento alla scheda
-                s.execute(update(Invio).where(Invio.paziente_id == p.id).values(paziente_id=None))
+                # il registro dei messaggi e quello dei pazienti indirizzati restano, senza il
+                # collegamento alla scheda (il nome e' copiato)
+                for modello in (Invio, Indirizzato):
+                    s.execute(update(modello).where(modello.paziente_id == p.id).values(paziente_id=None))
                 # gli appunti restano, con il nome scritto
                 for x in s.scalars(select(Appunto).where(Appunto.paziente_id == p.id)):
                     x.cognome, x.nome, x.telefono, x.paziente_id = p.cognome, p.nome or '', p.telefono or '', None

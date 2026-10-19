@@ -86,6 +86,11 @@
       <h2 class="sezione">Chi li manda</h2>
       <table class="elenco">{% for nome, n in dati.inviati %}<tr><td>{{ nome }}</td><td>{{ n }}</td></tr>{% endfor %}</table>
       {% endif %}
+      {% if indirizzati %}
+      <h2 class="sezione">Indirizzati alle altre strutture</h2>
+      <table class="elenco">{% for nome, n in indirizzati %}<tr><td>{{ nome }}</td><td>{{ n }}</td></tr>{% endfor %}</table>
+      <p class="nota"><a href="{{ url_for('dovesifa.registro', mese=dal.strftime('%Y-%m')) }}">Il registro dei pazienti indirizzati</a></p>
+      {% endif %}
     </div>
   </div>
 </div>

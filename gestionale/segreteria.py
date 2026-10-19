@@ -982,7 +982,7 @@ def cerca_tutto():
     s = ses()
     q = (request.args.get('q') or '').strip()[:80]
     sid = intero(request.args.get('struttura')) or None
-    uscita = {'giorno': None, 'pazienti': [], 'medici': []}
+    uscita = {'giorno': None, 'pazienti': [], 'medici': [], 'prestazioni': []}
     g = interpreta_data(q)
     if g is not None:
         uscita['giorno'] = {'etichetta': servizi.etichetta_giorno(g),
@@ -998,6 +998,13 @@ def cerca_tutto():
                                          'url': url_for('viste.settimana', iso=date.today().isoformat(),
                                                         medico=o.id, struttura=sid)})
         uscita['medici'] = uscita['medici'][:4]
+        # in quale struttura del gruppo si fa (Dove si fa), se il database delle prestazioni c'e':
+        # un guasto qui non deve fermare la ricerca dei pazienti
+        try:
+            import dovesifa
+            uscita['prestazioni'] = dovesifa.per_ricerca_rapida(s, q)
+        except Exception:
+            logging.exception('ricerca rapida: prestazioni non cercate')
     return json_sicuro(uscita)
 
 

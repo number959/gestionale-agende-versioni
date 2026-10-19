@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Dove si fa{% endblock %}
+{% block classe_body %}{% if scheda %} class="scheda-dove-aperta"{% endif %}{% endblock %}
+{% block corpo %}
+{#- Dove si fa: si scrive la prestazione, si vede in quali strutture del gruppo si fa,
+    un clic sulla struttura apre la sua scheda (recapiti e messaggio per il paziente).
+    I risultati e la scheda sono _dove_risultati.html e _dove_scheda.html: gli stessi
+    nella pagina intera e nei pezzi che static/dove.js chiede mentre si scrive. -#}
+<div class="pagina larga pagina-dove" id="pagina-dove"
+     data-risultati="{{ url_for('dovesifa.risultati') }}" data-scheda="{{ url_for('dovesifa.scheda', gid=0) }}"
+     data-indirizza="{{ url_for('dovesifa.indirizza') }}" data-pazienti="{{ url_for('pazienti.cerca_json') }}"
+     data-pagina="{{ url_for('dovesifa.pagina') }}" data-paziente="{{ paziente.id if paziente else '' }}"
+     data-struttura="{{ sid if strutture|length > 1 and sid else '' }}">
+  <p class="marchio" style="border:0;margin-bottom:16px">{% include "_marchio.html" %}</p>
+  <div class="testa-dove">
+    <h1>Dove si fa <small class="sotto-titolo">in quale struttura del gruppo si fa una prestazione</small></h1>
+    <p class="link-dove">
+      <a class="con-icona-testo" href="{{ url_for('dovesifa.registro', struttura=sid if strutture|length > 1 else none) }}">{{ icona('history') }}Pazienti indirizzati</a>
+      <a class="con-icona-testo" href="{{ url_for('dovesifa.strutture') }}">{{ icona('building-2') }}Strutture del gruppo</a>
+    </p>
+  </div>
+
+  {% if vuoto %}
+  <div class="vuoto-turni vuoto-dove" data-guida="dove-vuoto">
+    <div class="icone-ruoli"><span>{{ icona('signpost') }}</span></div>
+    <h2>Manca il database delle prestazioni</h2>
+    <p>È il file Excel del gruppo con tutte le prestazioni e, per ognuna, le strutture dove si fa.
+       Si carica una volta (e di nuovo quando esce una versione nuova): poi qui basta scrivere la prestazione.</p>
+    <div class="azioni"><a class="bottone primario con-icona" href="{{ url_for('dovesifa.strutture') }}">{{ icona('upload') }}Carica il database delle prestazioni</a></div>
+  </div>
+  {% else %}
+  <form class="cerca-dove" method="get" action="{{ url_for('dovesifa.pagina') }}" role="search" id="modulo-dove">
+    {% if paziente %}<input type="hidden" name="paziente" value="{{ paziente.id }}">{% endif %}
+    <input type="hidden" name="sede" id="sede-dove" value="{{ sede or '' }}">
+    {% if strutture|length > 1 and sid %}<input type="hidden" name="struttura" value="{{ sid }}">{% endif %}
+    <div class="campo-cerca-dove" data-guida="dove-cerca">
+      {{ icona('search') }}
+      <input type="search" id="q-dove" name="q" value="{{ q }}" maxlength="80" autocomplete="off" spellcheck="false"
+             placeholder="Che prestazione serve? Es. risonanza ginocchio, holter"
+             aria-label="Prestazione da cercare" aria-controls="risultati-dove" autofocus>
+    </div>
+    <select name="branca" id="branca-dove" aria-label="Branca" data-guida="dove-branca">
+      <option value="">Tutte le branche</option>
+      {% for b in tutte_branche %}<option value="{{ b }}"{% if b == branca %} selected{% endif %}>{{ b|capitalize }}</option>{% endfor %}
+    </select>
+    <button class="bottone primario" type="submit" id="cerca-dove-invia">Cerca</button>
+  </form>
+
+  <div class="paziente-dove" data-guida="dove-paziente">
+    {{ icona('user') }}
+    {% if paziente %}
+    <span>Per <a href="{{ url_for('pazienti.scheda', pid=paziente.id) }}"><b>{{ paziente.etichetta }}</b></a>{% if paziente.telefono %} · {{ paziente.telefono }}{% endif %}:
+      il messaggio porta il suo nome, WhatsApp ed email partono verso i suoi recapiti.</span>
+    <a class="togli-paziente" href="{{ url_for('dovesifa.pagina', q=q or none, branca=branca or none, struttura=sid if strutture|length > 1 else none) }}">Togli</a>
+    {% else %}
+    <label for="paziente-dove">Per un paziente in anagrafica?</label>
+    <div class="scegli-paziente">
+      <input type="search" id="paziente-dove" placeholder="cognome, telefono…" autocomplete="off" maxlength="60"
+             aria-describedby="spiega-paziente-dove">
+      <div class="suggerimenti suggerimenti-dove" id="suggerimenti-paziente-dove" hidden></div>
+    </div>
+    <small id="spiega-paziente-dove">facoltativo: il messaggio porta il suo nome, WhatsApp ed email partono verso i suoi recapiti</small>
+    {% endif %}
+  </div>
+
+  <div id="risultati-dove" class="risultati-dove" aria-live="polite" aria-busy="false">
+    {% include "_dove_risultati.html" %}
+  </div>
+  {% endif %}
+</div>
+
+<aside id="scheda-dove" class="scheda-dove" role="dialog" aria-modal="false" aria-labelledby="titolo-scheda-dove"
+       tabindex="-1"{% if not scheda %} hidden{% endif %}>
+  {%- if scheda %}{% include "_dove_scheda.html" %}{% endif -%}
+</aside>
+<div class="avvisi-turni" id="avvisi-dove" aria-live="polite"></div>
+<script src="{{ url_for('static', filename='dove.js') }}"></script>
+{% endblock %}

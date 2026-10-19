@@ -24,6 +24,9 @@ ICONE = [
     'check', 'keyboard', 'plus', 'funnel', 'calendar-clock', 'wand-sparkles', 'square-pen',
     # tipi di turno
     'sun', 'sunset', 'moon', 'phone-call', 'tree-palm', 'thermometer', 'coffee', 'bed',
+    # dove si fa (1.9)
+    'search', 'signpost', 'map-pin', 'phone', 'mail', 'message-circle', 'globe', 'building-2', 'external-link',
+    'upload', 'history', 'user', 'map', 'send',
 ]
 
 

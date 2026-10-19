@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% set foglio_carta = true %}
+{% block titolo %}Dove fare {{ voce.nome if voce else 'la prestazione' }}{% endblock %}
+{% block classe_body %} class="pagina-stampa"{% endblock %}
+{% block menu %}{% endblock %}
+{% block corpo %}
+{#- il foglio da dare al paziente: dove si fa la prestazione e come si prenota -#}
+<div class="comandi-stampa solo-schermo">
+  <button class="bottone primario" type="button" onclick="window.print()">Stampa</button>
+  <button class="bottone" type="button" onclick="window.close()">Chiudi</button>
+  {% if not scheda.con_recapiti %}<span class="errore-testo">Indirizzo e telefono della struttura non sono scritti:
+    <a href="{{ scheda.modifica }}">scriverli</a> prima di stampare.</span>{% endif %}
+</div>
+<div class="modulo-stampa foglio-dove">
+  <header class="testata-stampa">
+    <div class="logo-stampa">{% include "_marchio.html" %}</div>
+    <div class="dati-stampa">{% if st %}<div class="nome-struttura">{{ st.nome }}</div>{% if st.indirizzo or st.telefono or st.email %}<div>{{ [st.indirizzo, ('tel. ' ~ st.telefono) if st.telefono else '', st.email]|select|join(' · ') }}</div>{% endif %}{% endif %}</div>
+  </header>
+  <h1 class="giorno-stampa" style="text-transform:none">Dove fare {{ ('«' ~ voce.nome ~ '»') if voce else 'la prestazione' }}</h1>
+  {% if paziente %}<p class="per-paziente">Per: <b>{{ paziente.etichetta }}</b></p>{% endif %}
+  <div class="riquadro-dove-stampa">
+    <h2>{{ g.nome }}</h2>
+    <table class="recapiti-stampa">
+      {% if scheda.indirizzo or scheda.citta %}<tr><th>Indirizzo</th><td>{{ [scheda.indirizzo, scheda.citta]|select|join(', ') }}</td></tr>{% endif %}
+      {% if scheda.telefoni %}<tr><th>Per prenotare</th><td><b>{{ scheda.telefoni|map(attribute='numero')|join('  oppure  ') }}</b></td></tr>{% endif %}
+      {% if scheda.sito %}<tr><th>Online</th><td>{{ scheda.sito }}</td></tr>{% endif %}
+      {% if scheda.email %}<tr><th>Email</th><td>{{ scheda.email }}</td></tr>{% endif %}
+      {% if scheda.orari %}<tr><th>Orari</th><td>{{ scheda.orari }}</td></tr>{% endif %}
+      {% if scheda.prenotazione %}<tr><th>Come si prenota</th><td>{{ scheda.prenotazione }}</td></tr>{% endif %}
+    </table>
+  </div>
+  <p class="piede-dove-stampa">Indicazioni date dalla segreteria{% if st %} di {{ st.nome }}{% endif %} il {{ oggi.strftime('%d/%m/%Y') }}.
+    Per conferme su orari e preparazione all'esame rivolgersi direttamente alla struttura.</p>
+</div>
+{% endblock %}

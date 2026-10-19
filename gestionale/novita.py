@@ -13,6 +13,27 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.9', [
+        dict(titolo='Dove si fa: in quale struttura del gruppo',
+             testo='Nuovo menu Dove si fa (tasto D): si scrive la prestazione come la dice il paziente («risonanza '
+                   'ginocchio», «tac torace», «holter») e si vedono subito le strutture del gruppo dove si fa. Valgono '
+                   'le sigle d\'uso (RM, TC, RX, ECG…) e le parole scritte male si correggono da sole.',
+             guida='dove-si-fa'),
+        dict(titolo='La scheda della struttura e il messaggio per il paziente',
+             testo='Un clic sulla struttura: indirizzo, telefoni, prenotazione online, orari e come si prenota, con il '
+                   'messaggio già scritto per il paziente da copiare, mandare su WhatsApp o per email, o stampare. I '
+                   'pazienti indirizzati restano in un registro, anche nelle Statistiche e in Excel.',
+             guida='dove-si-fa'),
+        dict(titolo='Il database delle prestazioni del gruppo',
+             testo='Configura → Strutture del gruppo: si carica il file Excel con le prestazioni di ogni struttura (prima '
+                   'si vede cosa cambia, poi si conferma) e si scrivono i recapiti di ciascuna. Per una versione nuova del '
+                   'database basta caricarla allo stesso modo.',
+             guida='strutture-gruppo'),
+        dict(titolo='Anche dalla ricerca e dalla scheda del paziente',
+             testo='La ricerca in alto (tasto /) trova anche le prestazioni e dice dove si fanno; dalla scheda di un '
+                   'paziente, «Dove si fa una prestazione» prepara il messaggio con il suo nome.',
+             guida='dove-si-fa'),
+    ]),
     ('1.8', [
         dict(titolo='Turni del personale',
              testo='Nuovo menu Turni: medici, infermieri, OSS, tecnici, accettazione e ausiliari, nel mese, nella '

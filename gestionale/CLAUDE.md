@@ -2,7 +2,8 @@
 
 Programma per l'accettazione della Clinica Posillipo (Gruppo NefroCenter): agenda delle
 stanze, pazienti (con codice fiscale controllato e calcolato), conferme, cassa, sala
-operatoria, email e WhatsApp ai pazienti, turni del personale (dalla 1.8). Lo usa una
+operatoria, email e WhatsApp ai pazienti, turni del personale (dalla 1.8), Dove si fa (dalla
+1.9: in quale struttura del gruppo si fa una prestazione, per indirizzarci il paziente). Lo usa una
 persona sola, sul PC Windows 11 della segreteria, tutto in locale (Flask + SQLite,
 waitress su 127.0.0.1:5000). Internet serve solo in uscita, per email (Gmail), WhatsApp
 (Meta) e per scaricare gli aggiornamenti («Aggiorna adesso», dalle versioni su GitHub).
@@ -40,6 +41,13 @@ completo: architettura, scelte, prove, storico dei difetti).
   Teresa»), senza mai scrivere quello vero nei file.
 - Il database vero è `%LOCALAPPDATA%\GestionaleAgende\agende.db` sul PC della clinica: non
   si tocca mai per provare.
+- Il database delle prestazioni del gruppo (l'Excel di Dove si fa, con una colonna per
+  struttura) è un file vero come le agende: resta fuori dal progetto e dalle consegne, si
+  carica dal programma (*Configura → Strutture del gruppo*) e va passato a
+  `cerca_dati_veri.py` con gli altri. Prove, prova (`strumenti/demo.py`), immagini e video
+  usano il catalogo inventato di `strumenti/catalogo_prova.py` (Centro Nord, Centro Sud,
+  Poliambulatorio Mare, Clinica Collina, Diagnostica Lago, più Clinica Posillipo per il segno
+  «qui»): i nomi delle strutture vere del gruppo non si scrivono in prove, esempi e commenti.
 
 ## Due versioni da tenere allineate
 
@@ -67,7 +75,7 @@ python strumenti/tutte_le_prove.py --browser http://127.0.0.1:5001 --solo prove_
 
 Senza `--solo` e con `--browser` le lancia tutte, anche quelle nel browser (Playwright con
 Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_tendine_browser.py`,
-`prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, nell'animata
+`prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, `prove_19_browser.py`, nell'animata
 `prove_animazioni.py` e `prove_icone_animate.py`, e per ultima `prove_16_browser.py`, che
 cambia l'indirizzo degli aggiornamenti. Le prove nel browser salvano dati: sempre su un
 gestionale di prova, mai su quello vero.
@@ -77,7 +85,9 @@ Le prove senza browser: `prove.py`, `prove2.py`, `prove100.py`, `prove200.py`,
 `prove_143.py`, `prove_145.py`, `prove_146.py`, `prove_guida.py`, `prove_15.py`,
 `prove_16.py`, `prove_17.py` (codice fiscale, confrontato anche con una libreria
 indipendente), `prove_18.py` (turni del personale con oracoli, annulla e rifai, modifiche a
-caso con invarianti; registrazione del numero WhatsApp con una finta Meta) e `campagna.py`
+caso con invarianti; registrazione del numero WhatsApp con una finta Meta), `prove_19.py`
+(Dove si fa: lettura del file in tanti modi, importazione e versioni nuove, ricerca contro
+un oracolo su 1200 prestazioni inventate, pagine, protezioni, aggiornamento dalla 9) e `campagna.py`
 (casi generati con oracoli e invarianti). Alcune delle più vecchie escono con codice 0
 anche se qualcosa non va: conta la riga finale («0 da sistemare»), ed è quella che legge
 `tutte_le_prove.py`. `PROVE_SOLO=nome1,nome2 python
@@ -91,12 +101,13 @@ insieme: ogni giro di `tutte_le_prove.py` ha la sua cartella temporanea.
   modifiche in sospeso fuori dal lucchetto.
 - Un difetto nei messaggi non deve mai far perdere una prenotazione (try/except intorno a
   `invii.dopo_salvataggio`).
-- Schema del database: `modelli.VERSIONE_SCHEMA` (9 dalla 1.8) e `COLONNE_AGGIUNTE`;
+- Schema del database: `modelli.VERSIONE_SCHEMA` (10 dalla 1.9) e `COLONNE_AGGIUNTE`;
   l'aggiornamento fa prima una copia di sicurezza («prima-della-versione-N») e aggiunge
   colonne e tabelle senza toccare i dati. `_migra_a_8` ricava sesso, data e luogo di
   nascita dai codici fiscali validi già in archivio, senza cambiare quelli scritti. Alla 9
   si aggiungono le tabelle dei turni e, una volta sola (impostazione
-  `tipi_turno_iniziali`), i dieci tipi di turno di partenza (`_prepara_tipi_turno`).
+  `tipi_turno_iniziali`), i dieci tipi di turno di partenza (`_prepara_tipi_turno`). Alla 10
+  le quattro tabelle di Dove si fa, vuote.
 - Turni del personale: le regole stanno solo in `personale.py` (sovrapposizioni anche con
   la notte del giorno prima, riposi e assenze tutto il giorno, riposo sotto le 11 ore solo
   avvisato); `static/turni.js` manda la richiesta a `POST /personale/turni/cambia` e
@@ -106,6 +117,19 @@ insieme: ogni giro di `tutte_le_prove.py` ha la sua cartella temporanea.
   `chipCella()` di `turni.js`: se si cambia uno, va cambiato l'altro (le prove nel browser
   lo controllano). La struttura scelta arriva da `request.values`: nelle richieste JSON va
   nell'indirizzo (`?struttura=`). Attenzione a `data_da(x, None)`: senza data dà oggi.
+- Dove si fa: tutto in `dovesifa.py`. La ricerca è una sola (`cerca`), per la pagina, per i
+  pezzi chiesti mentre si scrive e per la ricerca rapida del menu (`per_ricerca_rapida`,
+  dentro un try: un guasto lì non ferma la ricerca dei pazienti). L'indice delle prestazioni si
+  rifà solo quando cambia l'impostazione `catalogo_versione`: chi cambia strutture del gruppo,
+  prestazioni o sedi chiama `segna_cambio(s)`. Risultati e scheda della struttura sono
+  `_dove_risultati.html` e `_dove_scheda.html`, gli stessi nella pagina intera e nei pezzi
+  (`/dove-si-fa/risultati`, `/dove-si-fa/scheda/<id>`): `static/dove.js` li inserisce come
+  arrivano, quindi ogni dato va scritto nei modelli con l'escape di Jinja (mai `|safe`); il
+  colore della struttura passa da `colore_sicuro`, i siti da `sito_valido` (solo http/https).
+  Importando una versione nuova del file: stessi id per gli stessi nomi (`chiave`), recapiti
+  del foglio Strutture solo dove mancano, prestazioni tolte con `voce_id` messo a vuoto nel
+  registro (`Indirizzato` copia i nomi). Eliminando o unendo pazienti, anche `Indirizzato`
+  segue (in `pazienti.py`).
 - WhatsApp: «Registra il numero» (`invii.registra_numero`) manda il PIN a Meta e non lo
   salva mai, nemmeno nel registro; cambiando l'ID del numero `wa_registrato` si azzera.
 - Icone: `templates/_icone.html` lo scrive `strumenti/genera_icone.py` (Lucide, licenza
@@ -190,8 +214,8 @@ sopra il vecchio; non serve disinstallare.
    cartelle (il tag è la versione con una "v" davanti) e segnata come ultima ("latest"):
 
    ```
-   gh release create v1.8 --repo number959/gestionale-agende-versioni --latest \
-     --title "Gestionale Agende 1.8" --notes "…" \
+   gh release create v1.9 --repo number959/gestionale-agende-versioni --latest \
+     --title "Gestionale Agende 1.9" --notes "…" \
      gestionale/Output/GestionaleAgende-setup.exe gestionale/Output/aggiornamento.json \
      gestionale-animata/Output/GestionaleAgende-animata-setup.exe gestionale-animata/Output/aggiornamento-animata.json
    ```

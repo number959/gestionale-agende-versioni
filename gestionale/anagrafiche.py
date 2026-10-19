@@ -14,7 +14,7 @@ from datetime import datetime, date, timedelta, time
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, abort)
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from sqlalchemy.exc import IntegrityError
 
 from modelli import (Struttura, Risorsa, Operatore, Prestazione, Turno,
@@ -757,6 +757,15 @@ def struttura(sid=None):
                 if s.scalar(select(func.count()).select_from(Struttura)) <= 1:
                     flash('È l\'unica struttura: non si può eliminare, si può rinominare.', 'errore')
                     return redirect(request.url)
+                if not usi(s, [(Risorsa, Risorsa.struttura_id, 'stanza', 'stanze')], st.id):
+                    # Dove si fa: la struttura del gruppo collegata a questa e il registro dei pazienti
+                    # indirizzati perdono il collegamento, non i dati
+                    import dovesifa
+                    from modelli import StrutturaGruppo, Indirizzato
+                    s.execute(update(StrutturaGruppo).where(StrutturaGruppo.struttura_id == st.id)
+                              .values(struttura_id=None))
+                    s.execute(update(Indirizzato).where(Indirizzato.struttura_id == st.id).values(struttura_id=None))
+                    dovesifa.segna_cambio(s)
                 return elimina(
                     s, st, 'Struttura',
                     [(Risorsa, Risorsa.struttura_id, 'stanza', 'stanze')],

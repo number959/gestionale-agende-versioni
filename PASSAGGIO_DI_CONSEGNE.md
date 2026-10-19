@@ -7,7 +7,7 @@ cose aperte. Si legge una volta per intero. Poi servono `CLAUDE.md` (le regole, 
 delle due cartelle) e `LEGGIMI.md` (il manuale completo, con le prove e lo storico dei
 difetti).
 
-Scritto il 5 ottobre 2026 alla versione 1.7, aggiornato l'11 ottobre 2026 alla versione **1.8**.
+Scritto il 5 ottobre 2026 alla versione 1.7, aggiornato il 12 ottobre 2026 alla versione **1.9**.
 
 ## In breve
 
@@ -15,7 +15,8 @@ Gestionale degli appuntamenti per l'accettazione della **Clinica Posillipo** di 
 (Gruppo NefroCenter). Prende il posto dei file Excel con cui si gestivano le agende: stanze,
 medici e turni, prenotazioni, pazienti, conferme, cassa, sala operatoria con posti letto,
 email e WhatsApp ai pazienti, guide con videoguide, aggiornamenti dal programma, codice
-fiscale, turni del personale (medici, infermieri, OSS e gli altri).
+fiscale, turni del personale (medici, infermieri, OSS e gli altri) e *Dove si fa*: in quale
+struttura del gruppo si fa una prestazione, per indirizzarci il paziente.
 
 - Python, Flask e SQLite, con il server waitress su `127.0.0.1:5000`. Un solo utente, sul PC
   Windows 11 della segreteria, tutto in locale. Internet serve solo in uscita: Gmail,
@@ -53,6 +54,7 @@ fiscale, turni del personale (medici, infermieri, OSS e gli altri).
 | Le versioni pubblicate | GitHub, progetto **pubblico** `number959/gestionale-agende-versioni`: contiene solo le "Releases". Il programma legge `…/releases/latest/download/aggiornamento.json` |
 | Il programma installato | Sul PC della segreteria, in `%LOCALAPPDATA%\Programs\Gestionale Agende` |
 | I dati veri | Solo sul PC della clinica: `%LOCALAPPDATA%\GestionaleAgende\agende.db`, il registro `gestionale.log` e le copie in `backup\` |
+| Il database delle prestazioni del gruppo | Un file Excel di Giovanni (alla 1.9 la versione 8, sei strutture, 729 prestazioni): non nel repository; si carica dal programma, *Configura → Strutture del gruppo* |
 
 I dati veri non entrano **mai** nel repository, nelle prove, nelle immagini o nei video
 della guida, né nei file consegnati. Le prove usano nomi inventati (Fintini, Esempietti,
@@ -74,11 +76,25 @@ negli esempi dell'importazione (un nome di battesimo raro, uno scritto male e un
 già con i cognomi cambiati): sostituiti con nomi inventati. Alla 1.8, con un'agenda vera
 arrivata dopo, uno di quei nomi inventati (l'esempio di cognome con «De») è risultato
 uguale a un nome vero: cambiato di nuovo, senza scrivere quello vero da nessuna parte.
-Anche i database dei Windows finti delle prove (sotto) vanno trattati come dati veri.
+Anche i database dei Windows finti delle prove (sotto) vanno trattati come dati veri. Alla
+1.9 va passato al controllo anche il database delle prestazioni del gruppo: i nomi delle
+sue strutture non si scrivono nei file del progetto (prove, prova, immagini e video usano le
+strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
-- **Versione 1.8**, pronta: i **turni del personale** (menu Turni: medici, infermieri, OSS,
+- **Versione 1.9**, pronta: **Dove si fa** (menu Dove si fa, tasto D): si scrive la
+  prestazione come la dice il paziente e si vedono le strutture del gruppo dove si fa; la
+  scheda della struttura ha recapiti, mappa, orari e il messaggio già scritto per il paziente
+  (copia, WhatsApp, email, stampa); il paziente si sceglie dalla pagina o dalla sua scheda; i
+  pazienti indirizzati vanno in un registro (Excel, Statistiche). Il database delle
+  prestazioni del gruppo (l'Excel con una X per struttura) si carica da *Configura →
+  Strutture del gruppo* con l'anteprima di cosa cambia: **va caricato dalla clinica**, il
+  file vero non è nel Setup; i recapiti delle strutture si scrivono lì. Tutte le prove sono
+  verdi; eseguibile e due Setup costruiti e provati in Wine: aggiornamento dalla 1.8.1 con 81
+  appuntamenti, primo avvio senza dati, il database delle prestazioni caricato
+  sull'eseguibile, «Aggiorna adesso» dalla 1.9 a una 1.9.1 di prova.
+- La **1.8** (dentro la 1.9): i **turni del personale** (menu Turni: medici, infermieri, OSS,
   tecnici, accettazione e ausiliari nel mese, nella settimana e nel giorno a ore; turni
   scritti con un clic o con il codice da tastiera come in un foglio di calcolo, Ctrl+Z e
   Ctrl+Y; schema che si ripete, copia della settimana, coperture minime, controllo delle
@@ -87,23 +103,23 @@ Anche i database dei Windows finti delle prove (sotto) vanno trattati come dati 
   programma (PIN a sei cifre, mai salvato) e gli errori di Meta spiegati in parole semplici,
   le tendine sempre sopra la pagina (la finestra «Stampa e scarica» coperta che aveva
   segnalato Federica: era stata corretta come 1.7.1, mai pubblicata, ed è dentro la 1.8).
-  Tutte le prove sono verdi (vedi *Prove*); eseguibile e due Setup costruiti e provati in
-  Wine: aggiornamento dalla 1.7.1 con 81 appuntamenti, primo avvio senza dati, «Aggiorna
-  adesso» dalla 1.8 a una 1.8.1 di prova.
 - **Pubblicazione su GitHub**: da fare a mano, da Giovanni o da una sessione che abbia
-  accesso in scrittura al progetto delle versioni. Nemmeno la sessione della 1.8 l'aveva
-  ("GitHub access to this repository is not enabled for this session"). L'11 ottobre 2026
-  il progetto era ancora **vuoto** (né file né release): serve prima un file, per esempio
-  un README, poi la release `v1.8` con i quattro file (vedi *Pubblicare una versione*).
+  accesso in scrittura al progetto delle versioni. Nemmeno le sessioni della 1.8 e della 1.9
+  l'avevano ("GitHub access to this repository is not enabled for this session"). L'11
+  ottobre 2026 il progetto era ancora **vuoto** (né file né release): serve prima un file,
+  per esempio un README, poi la release `v1.9` con i quattro file (vedi *Pubblicare una
+  versione*); se la 1.8 non è stata pubblicata nel frattempo, si salta: la 1.9 la contiene.
   Appena pubblicata si controlla che l'indirizzo pubblico risponda.
 - **Alla clinica** potrebbe esserci ancora la 1.5, che non ha «Aggiorna adesso». La prima
-  volta il Setup della 1.8 si avvia a mano sopra il vecchio: non si disinstalla e i dati
+  volta il Setup della 1.9 si avvia a mano sopra il vecchio: non si disinstalla e i dati
   restano. Dalla 1.6 in poi gli aggiornamenti arrivano dal programma, ogni sei ore o con
   «Controlla adesso».
-- La 1.6 e la 1.7 non sono mai state pubblicate: la prima release su GitHub sarà la 1.8.
+- La 1.6 e la 1.7 non sono mai state pubblicate: la prima release su GitHub sarà la 1.8 o
+  la 1.9.
 - Il **codice** (questo repository) è nel pacchetto `gestionale-agende.bundle` consegnato
-  con la 1.8 (storia: un commit per la 1.7, uno per la 1.8, con i tag `v1.7` e `v1.8`): va
-  messo in un progetto **privato** su GitHub (vedi *Consegnare file a Giovanni*).
+  con la 1.9 (storia: un commit per la 1.7, uno per la 1.8, uno per la 1.9, con i tag `v1.7`,
+  `v1.8` e `v1.9`): va messo in un progetto **privato** su GitHub (vedi *Consegnare file a
+  Giovanni*).
 
 ## Storia in breve
 
@@ -121,6 +137,7 @@ Il dettaglio di ogni versione è in `LEGGIMI.md` (paragrafi *Novità della …* 
 | 1.6 | Videoguide per ogni guida, «Aggiorna adesso» (Setup scaricato, controllato e installato dal programma), pagina delle Novità |
 | 1.7 | Codice fiscale controllato e calcolato, luoghi di nascita, controllo dell'archivio, indirizzo GitHub predefinito |
 | 1.8 | Turni del personale (mese, settimana, giorno a ore, schema, coperture, controlli dei riposi, Excel), «In servizio oggi», registrazione del numero WhatsApp dal programma, tendine sempre sopra la pagina (la 1.7.1 mai pubblicata) |
+| 1.9 | Dove si fa: ricerca delle prestazioni nelle strutture del gruppo (sigle, plurali, correzioni), scheda della struttura con recapiti e messaggio per il paziente (copia, WhatsApp, email, stampa), registro dei pazienti indirizzati, database delle prestazioni importato dall'Excel del gruppo con l'anteprima |
 
 Idee messe da parte da Giovanni: un **PIN** per aprire il programma ("ignora il PIN": non
 fatto, non richiesto per ora).
@@ -141,8 +158,9 @@ fatto, non richiesto per ora).
   a `invii.dopo_salvataggio`.
 - **Il database si aggiorna da solo** (`modelli.aggiorna_database`). Prima viene la copia di
   sicurezza (`backup\agende-…-prima-della-versione-N.db`), poi le colonne e le tabelle nuove
-  in una transazione; i dati esistenti non si toccano. Lo schema è alla versione 9 (dalla 1.8:
-  le tabelle dei turni e, una volta sola, i dieci tipi di turno di partenza).
+  in una transazione; i dati esistenti non si toccano. Lo schema è alla versione 10 (dalla
+  1.8 la 9: le tabelle dei turni e, una volta sola, i dieci tipi di turno di partenza; dalla
+  1.9 la 10: le quattro tabelle di Dove si fa).
 - **Aggiorna adesso.** Il Setup parte con `cmd /c start`, così non è figlio del programma,
   con `/SILENT` e con l'**ambiente pulito**: senza le variabili `_PYI_*` dell'eseguibile, il
   programma riaperto si fermerebbe con "Security validation failure". La voce `[Run]` con
@@ -164,6 +182,19 @@ fatto, non richiesto per ora).
   Il disegno della cella esiste due volte, nel modello `_personale_cella.html` e in
   `chipCella()` di `turni.js`: si cambiano insieme, e le prove nel browser lo controllano.
   Le leggi sul lavoro non si controllano (vincolo di Giovanni): solo buon senso.
+- **Dove si fa legge l'Excel del gruppo così com'è** (Branca, Prestazione, Sinonimi, una
+  colonna per struttura con le X, Note con le sigle delle strutture), senza chiedere a
+  nessuno di cambiarlo: il foglio giusto, le colonne di struttura e le note «da confermare»
+  li riconosce il programma, e l'anteprima mostra cosa cambia prima di importare. Una
+  versione nuova del file si carica sopra la vecchia: le prestazioni tengono il loro id per
+  nome, i recapiti scritti nel programma restano (il foglio facoltativo *Strutture* riempie
+  solo quelli che mancano), il registro copia i nomi e resta leggibile. La ricerca è fatta
+  per come si parla allo sportello (RM, TAC, eco, «lastra», plurali, parole scritte male)
+  e si prova contro un oracolo scritto a parte. I risultati e la scheda sono un solo
+  disegno (modelli Jinja usati sia dalla pagina sia dai pezzi chiesti mentre si scrive),
+  per non avere due copie che divergono come succedeva con le celle dei turni. Il registro
+  si riempie da solo con WhatsApp, email e stampa (con Annulla): è per i conti del gruppo,
+  non deve costare lavoro in più.
 - **WhatsApp: il PIN non si salva mai.** «Registra il numero» lo manda a Meta
   (`POST /{id del numero}/register`) e lo dimentica, anche nel registro; Meta accetta al
   massimo 10 registrazioni in 72 ore per numero.
@@ -210,8 +241,8 @@ python strumenti/tutte_le_prove.py --browser http://127.0.0.1:5001   # tutte, an
 python strumenti/tutte_le_prove.py --solo prove_17,campagna     # solo alcune
 ```
 
-In totale: 903 prove e 2550 casi generati (`campagna.py`), più 294 controlli nel browser
-nella normale e 361 nell'animata (che ha anche `prove_animazioni.py` e
+In totale: 930 prove e 2550 casi generati (`campagna.py`), più 339 controlli nel browser
+nella normale e 406 nell'animata (che ha anche `prove_animazioni.py` e
 `prove_icone_animate.py`). Le prove nel browser (Playwright con Chromium) salvano dati:
 sempre sul server di prova, mai su quello vero; `prove_16_browser.py` cambia l'indirizzo
 degli aggiornamenti e per questo il giro la lancia per ultima. Ogni prova si può anche
@@ -222,7 +253,10 @@ riga finale («0 da sistemare»), ed è quella che legge `tutte_le_prove.py`. Og
 sua cartella temporanea, quindi le due cartelle si possono provare insieme. `prove_17.py`
 confronta il codice fiscale con il pacchetto indipendente python-codicefiscale
 (`pip install python-codicefiscale`); senza il pacchetto quelle prove si saltano e lo
-dicono. Tutto verde alla 1.8 su Python 3.11 e 3.14 (le prove nel browser su 3.11).
+dicono. Tutto verde alla 1.9 su Python 3.11 e 3.14 (le prove nel browser su 3.11).
+`prove_19.py` confronta la ricerca di Dove si fa con un oracolo scritto a parte su 1200
+prestazioni inventate (ogni risultato contiene tutte le parole cercate, ogni prestazione si
+trova con l'inizio delle sue parole).
 
 ## Guide: immagini e video
 
@@ -266,7 +300,7 @@ bash strumenti/wine/ferma.sh
 3. Si lancia:
 
 ```
-python strumenti/prova_aggiorna_adesso.py 'C:\aggiornamenti-prova' 1.8.1 "$WINEPREFIX/drive_c/users/$(id -un)/AppData/Local/GestionaleAgende"
+python strumenti/prova_aggiorna_adesso.py 'C:\aggiornamenti-prova' 1.9.1 "$WINEPREFIX/drive_c/users/$(id -un)/AppData/Local/GestionaleAgende"
 ```
 
 Alla 1.7 così, partendo da un Windows finto nuovo: `prepara.sh`, le due versioni costruite,
@@ -280,6 +314,15 @@ a 9, dieci tipi di turno, tutte le tabelle di prima identiche riga per riga); la
 sopra la 1.7 animata; 25 controlli di `prove_installato.py` a posto su tutte e due e su un
 database nuovo; sull'eseguibile, nel browser, un turno scritto da tastiera, annullato e
 rifatto; «Aggiorna adesso» dalla 1.8 a una 1.8.1 di prova con 14 controlli su 14.
+
+Alla 1.9 così: le due versioni costruite nello stesso Windows finto; la 1.9 installata sopra
+la 1.8.1 con 81 appuntamenti (copia di sicurezza identica al database di prima, schema da 9 a
+10, le quattro tabelle di Dove si fa, tutte le tabelle di prima identiche riga per riga); la
+1.9 animata sopra la 1.8 animata; 31 controlli di `prove_installato.py` a posto su tutte e
+due e su un database nuovo; sull'eseguibile, il database delle prestazioni inventato
+caricato dalla pagina e provato (anteprima, importazione con la copia di sicurezza, ricerca,
+scheda, registro); «Aggiorna adesso» dalla 1.9 a una 1.9.1 di prova con 14 controlli su 14,
+con il database delle prestazioni ancora lì dopo.
 
 Il programma installato nel Windows finto ha i suoi dati in
 `$WINEPREFIX/drive_c/users/<utente>/AppData/Local/GestionaleAgende`. Sono dati delle prove,
@@ -333,7 +376,7 @@ grossi in pezzi e scrive `RICOMPONI.bat`, che su Windows li rimette insieme e co
 dimensione e impronta. Su GitHub invece i Setup vanno interi.
 
 Il codice viaggia come `gestionale-agende.bundle`: un solo file di git con tutta la storia
-(ramo `main`, tag `v1.7` e `v1.8`). Per metterlo in un progetto **privato** su GitHub (per
+(ramo `main`, tag `v1.7`, `v1.8` e `v1.9`). Per metterlo in un progetto **privato** su GitHub (per
 esempio `number959/gestionale-agende`, creato vuoto e privato dalla pagina di GitHub, senza
 README):
 
@@ -350,12 +393,20 @@ le sole release: lì il codice non va.
 
 ## Cose aperte
 
-- Pubblicare la 1.8 su GitHub e controllare l'indirizzo pubblico (vedi *Stato alla
-  consegna*); mettere il codice (`gestionale-agende.bundle`) in un progetto privato.
-- Installare la 1.8 alla clinica la prima volta a mano, se c'è ancora la 1.5.
+- Pubblicare la 1.9 su GitHub (se la 1.8 non è stata pubblicata, basta la 1.9) e
+  controllare l'indirizzo pubblico (vedi *Stato alla consegna*); mettere il codice
+  (`gestionale-agende.bundle`) in un progetto privato.
+- Installare la 1.9 alla clinica la prima volta a mano, se c'è ancora la 1.5.
 - WhatsApp: quando Giovanni avrà numero, ID del numero e token di Meta, registrare il
   numero una volta dal programma (Configura → Email e WhatsApp → «Registra il numero», con
   il PIN a sei cifre della verifica in due passaggi) e mandare un messaggio di prova.
+- Dove si fa: caricare il database delle prestazioni vero dal programma (*Configura →
+  Strutture del gruppo*) e scrivere i recapiti delle sei strutture (indirizzo, telefono per
+  prenotare, prenotazione online, orari): finché mancano, la scheda della struttura lo dice
+  e il messaggio per il paziente ha solo il nome. Quando arrivano le altre quattro strutture
+  annunciate nel file (foglio REGOLE), si carica la versione nuova allo stesso modo. Se la
+  Clinica Posillipo entra nel file con lo stesso nome della struttura del gestionale, prende
+  il segno «qui» da sola. Federica non l'ha ancora vista.
 - Turni: Federica non li ha ancora visti. Le prime impressioni (codici e orari dei turni
   della clinica, ruoli, coperture minime) vanno nei tipi di turno e nelle persone, non nel
   codice; se chiede altro (per esempio mandare i turni al personale), è una funzione nuova.

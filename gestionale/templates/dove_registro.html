@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Pazienti indirizzati{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-registro-dove">
+  <h1>Pazienti indirizzati <small class="sotto-titolo">alle altre strutture del gruppo</small></h1>
+  <p class="sotto"><a href="{{ url_for('dovesifa.pagina', struttura=sid if sid and request.args.get('struttura') else none) }}">Torna a Dove si fa</a></p>
+
+  <div class="barra-mese-dove">
+    <a class="passo" href="{{ url_for('dovesifa.registro', mese=precedente) }}" aria-label="Mese precedente">{{ icona('chevron-left') }}</a>
+    <h2>{{ mese_nome|capitalize }}</h2>
+    <a class="passo" href="{{ url_for('dovesifa.registro', mese=successivo) }}" aria-label="Mese successivo">{{ icona('chevron-right') }}</a>
+    {% if righe %}<a class="bottone con-icona" href="{{ url_for('dovesifa.registro_excel', mese=mese) }}">{{ icona('file-spreadsheet') }}Scarica in Excel</a>{% endif %}
+  </div>
+
+  {% if righe %}
+  <ul class="numeri">
+    <li><b>{{ righe|length }}</b> in tutto</li>
+    {% for nome, n in conta %}<li><b>{{ n }}</b> {{ nome }}</li>{% endfor %}
+  </ul>
+  <table class="elenco elenco-indirizzati">
+    <tr><th>Quando</th><th>Paziente</th><th>Prestazione</th><th>Struttura</th><th>Come</th><th></th></tr>
+    {% for x in righe %}
+    <tr>
+      <td class="quando">{{ x.quando.strftime('%d/%m %H:%M') }}</td>
+      <td>{% if x.paziente_id %}<a href="{{ url_for('pazienti.scheda', pid=x.paziente_id) }}">{{ x.paziente }}</a>{% elif x.paziente %}{{ x.paziente }}{% else %}<span class="senza">non indicato</span>{% endif %}</td>
+      <td>{{ x.prestazione or '—' }}{% if x.branca %}<small class="branca-riga">{{ x.branca|capitalize }}</small>{% endif %}</td>
+      <td>{{ x.gruppo_nome }}</td>
+      <td>{{ canali.get(x.canale, x.canale) }}{% if x.note %}<small class="nota-riga">{{ x.note }}</small>{% endif %}</td>
+      <td class="azione"><form method="post" action="{{ url_for('dovesifa.togli', iid=x.id) }}" class="in-linea">
+        <input type="hidden" name="torna" value="{{ request.full_path }}">
+        <button class="bottone piccolo" type="submit" onclick="return confirm('Togliere questa riga dal registro?')">Togli</button></form></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Nessun paziente indirizzato in questo mese.</p>
+  {% endif %}
+  <p class="nota">Si segna dalla scheda di una struttura in Dove si fa: con «Segna come indirizzato», oppure da solo
+    quando si manda il messaggio su WhatsApp, per email o si stampa il foglio.</p>
+</div>
+{% endblock %}

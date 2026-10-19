@@ -1,0 +1,105 @@
+{#- I risultati di Dove si fa: nella pagina intera (dove.html) e da soli, chiesti da
+    static/dove.js mentre si scrive (dovesifa.risultati). -#}
+{%- from "_icone.html" import icona -%}
+{%- set _pid = paziente.id if paziente else none -%}
+{%- if q or branca or sede %}
+  {%- if sede_info %}
+  <p class="filtro-sede" style="--c: {{ sede_info.colore }}"><i class="pallino" aria-hidden="true"></i>Solo le prestazioni di
+    <b>{{ sede_info.nome }}</b>
+    <a href="{{ url_for('dovesifa.pagina', q=q or none, branca=branca or none, paziente=_pid, struttura=sid_link) }}" data-sede="">tutte le strutture</a></p>
+  {%- endif %}
+  {%- if corretta %}
+  <p class="corretta-dove">Nessuna prestazione con «{{ q }}»: ecco quelle con «<b>{{ corretta }}</b>».</p>
+  {%- endif %}
+  {%- if nostri %}
+  <div class="nostri-dove" data-guida="dove-nostri">
+    {{ icona('check') }}
+    <div><b>Si fa anche qui{% if st %}, a {{ st.nome }}{% endif %}:</b>
+      {% for p in nostri %}<a href="{{ p.url }}">{{ p.nome }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
+      <small>(un clic per prenotare)</small></div>
+  </div>
+  {%- endif %}
+  {%- if risultati %}
+  <p class="conta-dove">
+    {%- if totale == 1 %}1 prestazione{% else %}{{ totale }} prestazioni{% endif %}
+    {%- if branca %} in {{ branca|capitalize }}{% endif %}
+    {%- if sede_info %} a {{ sede_info.nome }}{% endif %}
+    {%- if totale > risultati|length %}: le prime {{ risultati|length }}, una parola in più restringe la ricerca{% endif %}.
+    <span class="aiuto-dove">Un clic sulla struttura per i recapiti e il messaggio per il paziente.</span></p>
+  <div class="voci-dove">
+  {%- for v in risultati %}
+    <article class="voce-dove{% if voce_scelta and v.id == voce_scelta %} evidenziata{% endif %}" data-voce="{{ v.id }}"{% if loop.first %} data-guida="dove-risultato"{% endif %}>
+      <div class="nome-voce">
+        <h2>{{ v.nome }}</h2>
+        {%- if v.branca %}<span class="branca-voce">{{ v.branca|capitalize }}</span>{% endif %}
+        {%- if v.sinonimi %}<p class="sinonimi-voce">anche: {{ v.sinonimi|join(', ') }}</p>{% endif %}
+        {%- if v.note %}<p class="nota-voce-dove">{{ v.note }}</p>{% endif %}
+      </div>
+      <div class="sedi-voce"{% if loop.first %} data-guida="dove-sedi"{% endif %}>
+        {%- for x in v.sedi %}
+        <a class="sede{% if x.da_confermare %} da-confermare{% endif %}{% if x.qui %} qui{% endif %}" style="--c: {{ x.colore }}"
+           href="{{ url_for('dovesifa.pagina', q=q or none, branca=branca or none, sede=sede or none, paziente=_pid, voce=v.id, gruppo=x.id, struttura=sid_link) }}"
+           data-gruppo="{{ x.id }}" data-voce="{{ v.id }}"{% if x.nota %} title="{{ x.nota }}"{% endif %}>
+          <i class="pallino" aria-hidden="true"></i><span class="nome-sede">{{ x.etichetta }}</span>
+          {%- if x.citta %}<small>{{ x.citta }}</small>{% endif %}
+          {%- if x.qui %}<span class="segno-sede segno-qui">qui</span>{% endif %}
+          {%- if x.da_confermare %}<span class="segno-sede segno-conferma">da confermare</span>{% endif %}
+        </a>
+        {%- else %}
+        <span class="senza">In nessuna struttura del database.</span>
+        {%- endfor %}
+      </div>
+    </article>
+  {%- endfor %}
+  </div>
+  {%- else %}
+  <div class="nessuno-dove">
+    <p><b>Nessuna prestazione{% if q %} con «{{ q }}»{% endif %}{% if branca %} in {{ branca|capitalize }}{% endif %}{% if sede_info %} a {{ sede_info.nome }}{% endif %}.</b></p>
+    <p>Provare con meno parole, con l'inizio della parola («cardio», «gastro») o con il nome d'uso:
+      RM o risonanza, TC o TAC, RX o radiografia, eco, ECG, holter, MOC.{% if branca %}
+      <a href="{{ url_for('dovesifa.pagina', q=q or none, sede=sede or none, paziente=_pid, struttura=sid_link) }}" data-branca="">Cercare in tutte le branche</a>.{% endif %}{% if sede_info %}
+      <a href="{{ url_for('dovesifa.pagina', q=q or none, branca=branca or none, paziente=_pid, struttura=sid_link) }}" data-sede="">Cercare in tutte le strutture</a>.{% endif %}</p>
+    <p class="senza">Se la prestazione non c'è proprio, nel database del gruppo manca: va chiesto a chi lo tiene aggiornato.</p>
+  </div>
+  {%- endif %}
+{%- else %}
+  {#- niente da cercare: le branche, le strutture e gli ultimi pazienti indirizzati -#}
+  <div class="inizio-dove">
+    <section class="branche-dove" data-guida="dove-branche">
+      <h2 class="sezione">Per branca</h2>
+      <ul>
+        {%- for b, n, quante in branche %}
+        <li><a href="{{ url_for('dovesifa.pagina', branca=b, paziente=_pid, struttura=sid_link) }}" data-branca="{{ b }}">{{ b|capitalize }} <small>{{ n }}</small></a></li>
+        {%- endfor %}
+      </ul>
+    </section>
+    <div class="colonna-dove">
+      <section class="strutture-dove" data-guida="dove-strutture">
+        <h2 class="sezione">Le strutture</h2>
+        <ul>
+          {%- for g in gruppo %}
+          <li><a class="sede-grande" style="--c: {{ g.colore }}" href="{{ url_for('dovesifa.pagina', paziente=_pid, gruppo=g.id, struttura=sid_link) }}" data-gruppo="{{ g.id }}">
+            <i class="pallino" aria-hidden="true"></i>
+            <span><b>{{ g.nome }}</b>{% if g.qui and g.qui == sid %} <span class="segno-sede segno-qui">qui</span>{% endif %}
+              <small>{{ g.citta or 'città da scrivere' }} · {{ g.voci }} prestazion{{ 'e' if g.voci == 1 else 'i' }}{% if not g.recapiti %} · <em>recapiti da scrivere</em>{% endif %}</small></span>
+          </a></li>
+          {%- endfor %}
+        </ul>
+      </section>
+      <section class="recenti-dove">
+        <h2 class="sezione">Ultimi indirizzati</h2>
+        {%- if recenti %}
+        <ul>
+          {%- for x in recenti %}
+          <li><span class="quando">{{ x.quando.strftime('%d/%m %H:%M') }}</span>
+            <span>{% if x.paziente %}<b>{{ x.paziente }}</b>{% else %}Paziente{% endif %} → {{ x.gruppo_nome }}{% if x.prestazione %}<small>{{ x.prestazione }}</small>{% endif %}</span></li>
+          {%- endfor %}
+        </ul>
+        <p><a href="{{ url_for('dovesifa.registro', struttura=sid_link) }}">Tutto il registro</a></p>
+        {%- else %}
+        <p class="senza">Ancora nessuno. Dalla scheda di una struttura: «Segna come indirizzato», oppure WhatsApp, email o stampa, che si segnano da soli.</p>
+        {%- endif %}
+      </section>
+    </div>
+  </div>
+{%- endif %}

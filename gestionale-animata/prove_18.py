@@ -1091,7 +1091,7 @@ def d_migrazione():
     s.close()
     S2 = crea_sessione('sqlite:///' + percorso)
     s = S2()
-    assert S2.versione_precedente == VERSIONE_SCHEMA == 9 and not S2.migrazioni
+    assert S2.versione_precedente == VERSIONE_SCHEMA and not S2.migrazioni
     assert not s.scalars(select(TipoTurno)).all(), 'tipi ricreati dopo che erano stati tolti'
     s.close()
 

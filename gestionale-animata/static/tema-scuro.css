@@ -379,6 +379,80 @@
   html.scuro table.tabella-schema th b { color: #E1E7ED; }
   html.scuro table.tabella-schema th.domenica, html.scuro table.tabella-schema th.domenica b { color: #E3B093; }
   html.scuro table.tabella-schema tr th:first-child { color: #E1E7ED; }
+  html.scuro .campo-cerca-dove > .icona { color: #8C9AA6; }
+  html.scuro .campo-cerca-dove input { color: #E1E7ED; border: 1px solid #45525F; background: #1C242D; }
+  html.scuro .cerca-dove select { color: #E1E7ED; border: 1px solid #45525F; background: #1C242D; }
+  html.scuro .paziente-dove { color: #A9B7C4; }
+  html.scuro .paziente-dove > .icona { color: #8C9AA6; }
+  html.scuro .paziente-dove label { color: #A9B7C4; }
+  html.scuro .paziente-dove small { color: #8C9AA6; }
+  html.scuro .scegli-paziente input { border: 1px solid #45525F; background: #1C242D; color: #E1E7ED; }
+  html.scuro .conta-dove { color: #A9B7C4; }
+  html.scuro .conta-dove .aiuto-dove { color: #8C9AA6; }
+  html.scuro .filtro-sede { background: #1C242D; border: 1px solid #35434F; }
+  html.scuro .corretta-dove { background: #343024; border-left: 4px solid #E9CC7C; }
+  html.scuro .nostri-dove { background: #253527; border-left: 4px solid #64C669; }
+  html.scuro .nostri-dove > .icona { color: #A9DFAC; }
+  html.scuro .nostri-dove small { color: #A9B7C4; }
+  html.scuro .voce-dove { background: #1C242D; border: 1px solid #35434F; }
+  html.scuro .nome-voce h2 { color: #E1E7ED; }
+  html.scuro .branca-voce { color: #9AA8B4; border: 1px solid #35434F; }
+  html.scuro .sinonimi-voce { color: #8C9AA6; }
+  html.scuro .nota-voce-dove { color: #ECDDB2; }
+  html.scuro a.sede { border-color: #2E3843; background: #1C242D; color: #E1E7ED; }
+  html.scuro a.sede small { color: #8C9AA6; }
+  html.scuro a.sede:hover { background: #1E232B; }
+  html.scuro a.sede.da-confermare { border-color: #E0C685; }
+  html.scuro .segno-conferma { background: #453A1A; color: #ECDDB2; }
+  html.scuro .segno-qui { background: #293B2B; color: #B5EAB9; }
+  html.scuro .nessuno-dove { background: #1C242D; border: 1px solid #35434F; }
+  html.scuro .branche-dove a { color: #E1E7ED; }
+  html.scuro .branche-dove a small { color: #8C9AA6; }
+  html.scuro a.sede-grande { background: #1C242D; border: 1px solid #35434F; color: #E1E7ED; }
+  html.scuro a.sede-grande small { color: #8C9AA6; }
+  html.scuro a.sede-grande em { color: #E9D4A6; }
+  html.scuro a.sede-grande:hover, html.scuro a.sede-grande:focus-visible { background: #1E232B; }
+  html.scuro .recenti-dove li { border-bottom: 1px solid #35414A; }
+  html.scuro .recenti-dove li small { color: #8C9AA6; }
+  html.scuro .recenti-dove .quando, html.scuro .ultimi-scheda .quando { color: #8C9AA6; }
+  html.scuro .scheda-dove { background: #1C242D; border-left: 1px solid #2E3843; }
+  html.scuro .testa-scheda { background: #1C242D; }
+  html.scuro .titolo-scheda p { color: #9AA8B4; }
+  html.scuro .chiudi-scheda { color: #A9B7C4; }
+  html.scuro .chiudi-scheda:hover, html.scuro .chiudi-scheda:focus-visible { background: #232B33; color: #E1E7ED; }
+  html.scuro .voce-scheda.da-confermare { background: #343024; box-shadow: inset 0 0 0 1px #63593B; }
+  html.scuro .voce-scheda.da-confermare p .icona { color: #E9D4A6; }
+  html.scuro .voce-scheda.non-si-fa { background: #302322; box-shadow: inset 0 0 0 1px #5A3936; }
+  html.scuro .voce-scheda .nota-voce { color: #A9B7C4; }
+  html.scuro .qui-scheda { color: #B5EAB9; }
+  html.scuro .avviso-scheda { color: #A9B7C4; }
+  html.scuro .recapiti-scheda li { border-bottom: 1px solid #333F48; }
+  html.scuro .note-scheda { background: #141A21; }
+  html.scuro .senza-recapiti { background: #343024; box-shadow: inset 0 0 0 1px #63593B; }
+  html.scuro .senza-recapiti .icona { color: #E9D4A6; }
+  html.scuro .branche-scheda h4 { color: #BCCBD9; }
+  html.scuro .branche-scheda h4 small { color: #8C9AA6; }
+  html.scuro .branche-scheda li { border: 1px solid #35434F; }
+  html.scuro .branche-scheda li a { color: #E1E7ED; }
+  html.scuro .branche-scheda li small { color: #8C9AA6; }
+  html.scuro .titolo-messaggio small { color: #9AA8B4; }
+  html.scuro textarea.messaggio-dove { color: #E1E7ED; border: 1px solid #45525F; background: #1C242D; }
+  html.scuro .segna-scheda select { border: 1px solid #45525F; background: #1C242D; color: #E1E7ED; }
+  html.scuro .aiuto-segna { color: #8C9AA6; }
+  html.scuro .ultimi-scheda h4 { color: #A9B7C4; }
+  html.scuro .ultimi-scheda li small { color: #8C9AA6; }
+  html.scuro small.branca-riga, html.scuro small.nota-riga { color: #8C9AA6; }
+  html.scuro .stato-catalogo .icona { color: #A9DFAC; }
+  html.scuro .stato-catalogo.vuoto .icona { color: #8C9AA6; }
+  html.scuro .pagina form.modulo-carica label { color: #A9B7C4; }
+  html.scuro .carica-dove p.aiuto { color: #8C9AA6; }
+  html.scuro details.cambi-dove { background: #1C242D; border: 1px solid #35434F; }
+  html.scuro details.cambi-dove.tolte summary b { color: #E49793; }
+  html.scuro .conferma-dove .aiuto { color: #8C9AA6; }
+  html.scuro .pagina-struttura-dove .spiega-modulo { color: #A9B7C4; }
+  html.scuro .riquadro-dove-stampa { border: 2px solid #375F9E; }
+  html.scuro table.recapiti-stampa th { color: #A9B7C4; }
+  html.scuro .piede-dove-stampa { color: #A9B7C4; }
 }
 /* --------------------------------------------- correzioni a mano, solo schermo */
 @media screen {
@@ -440,5 +514,11 @@
   /* il codice che si sta scrivendo sopra la cella */
   html.scuro table.turni td.cella[data-scrivendo]::after, html.scuro .pista[data-scrivendo]::after { background: #1C242D;
     color: #E1E7ED; }
+}
+@media screen {
+  /* 1.9: dove si fa. Le icone dei recapiti e dei collegamenti, chiare sul fondo scuro */
+  html.scuro .recapiti-scheda li > .icona, html.scuro .con-icona-testo .icona { color: var(--primario-scuro); }
+  html.scuro .scheda-dove { box-shadow: -14px 0 34px rgba(0, 0, 0, .55); }
+  html.scuro a.sede.scelta { box-shadow: 0 0 0 1px var(--primario-scuro); border-color: var(--primario-scuro); }
 }
 

@@ -354,9 +354,10 @@ def statistiche():
         ('Anno in corso', date(oggi.year, 1, 1), date(oggi.year, 12, 31)),
     ]
     dati = servizi.statistiche(s, st.id, dal, al)
+    import dovesifa
     return render_template('statistiche.html', dati=dati, st=st, sid=st.id, strutture=strutture,
                            dal=dal, al=al, scorciatoie=scorciatoie, giorni_nomi=servizi.GIORNI,
-                           sezione='statistiche')
+                           indirizzati=dovesifa.conteggi_periodo(s, dal, al, st.id), sezione='statistiche')
 
 
 @bp.route('/statistiche/excel')
@@ -409,6 +410,10 @@ def statistiche_excel():
            [[servizi.GIORNI[i], n] for i, n in enumerate(d['per_giorno_settimana'])])
     foglio('Provenienza', ['Come ci hanno conosciuto', 'Pazienti nuovi'],
            [list(x) for x in d['per_provenienza']] + [[]] + [['Inviati da', '']] + [list(x) for x in d['inviati']])
+    import dovesifa
+    indirizzati = dovesifa.conteggi_periodo(s, dal, al, st.id)
+    if indirizzati:
+        foglio('Indirizzati', ['Struttura del gruppo', 'Pazienti indirizzati'], [list(x) for x in indirizzati])
     nome = 'statistiche-%s-%s.xlsx' % (dal.isoformat(), al.isoformat())
     return scarica_excel(wb, nome)
 

@@ -46,6 +46,7 @@ import guida
 import invii
 import aggiornamenti
 import personale
+import dovesifa
 
 # i tipi dei file del programma non si chiedono a Windows: sul PC il registro puo'
 # dire "text/plain" per i .js o non conoscere i video, e il browser li rifiuterebbe
@@ -663,6 +664,7 @@ importa.collega(app, ses, LUCCHETTO)
 sala.collega(app, ses, LUCCHETTO)
 cruscotto.collega(app, ses, LUCCHETTO)
 personale.collega(app, ses, LUCCHETTO)
+dovesifa.collega(app, ses, LUCCHETTO)
 guida.collega(app)
 # la coda dei messaggi lavora in un thread suo: le serve una sessione nuova ogni volta
 invii.collega(app, ses, LUCCHETTO, lambda: Sessione())

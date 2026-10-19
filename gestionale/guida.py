@@ -57,11 +57,13 @@ ARTICOLI = [
                'nav.menu [data-guida="menu-pazienti"]'),
              P('Turni', 'I turni del personale (medici, infermieri, OSS e gli altri) nel mese, nella settimana e nel '
                'giorno a ore.', 'nav.menu [data-guida="menu-turni"]'),
+             P('Dove si fa', 'In quale struttura del gruppo si fa una prestazione: si scrive la prestazione e si vedono le '
+               'strutture, i loro recapiti e il messaggio pronto per il paziente.', 'nav.menu [data-guida="menu-dove"]'),
              P('Segreteria', 'Il lavoro di tutti i giorni oltre a prenotare: conferme, da confermare, chiusura della '
                'giornata, cose da fare, lista d\'attesa. Il numero arancione dice quante prenotazioni sono in sospeso.',
                'nav.menu [data-guida="menu-segreteria"]'),
-             P('Cerca', 'Scrivere qui (o premere il tasto /) un cognome, un telefono o un giorno come "domani" o "24/9".',
-               'nav.menu [data-guida="menu-cerca"]'),
+             P('Cerca', 'Scrivere qui (o premere il tasto /) un cognome, un telefono, un giorno come "domani" o "24/9", '
+               'oppure una prestazione per sapere dove si fa.', 'nav.menu [data-guida="menu-cerca"]'),
              P('Aiuto', 'Da qui si torna sempre a questa guida: "Guida di questa pagina" per un giro sulla pagina aperta, '
                '"Come fare…" per tutte le guide, con le immagini e i video, "Novità" per cosa c\'è di nuovo.',
                'nav.menu [data-guida="menu-aiuto"]'),
@@ -257,6 +259,55 @@ ARTICOLI = [
              P('Fatto', 'Fatto la toglie; Domani la rimanda di un giorno.', 'button', 'Fatto'),
          ]),
     # ---------------------------------------------------------- sala operatoria
+    # ------------------------------------------------------------- dove si fa
+    dict(slug='dove-si-fa', gruppo='Dove si fa', titolo='Dove si fa una prestazione: indirizzare il paziente',
+         in_breve='Si scrive la prestazione: le strutture del gruppo dove si fa, i loro recapiti e il messaggio già '
+                  'pronto per il paziente, da copiare, mandare su WhatsApp o per email, o stampare.',
+         endpoint='dovesifa.pagina', apri=('dovesifa.pagina', {'q': 'ecografia'}), condizione='#q-dove',
+         foto='/dove-si-fa/?q=rm+ginocchio&voce=1&gruppo=2&struttura=1',
+         passi=[
+             P('Apri la pagina', 'Menu Dove si fa, o il tasto D. Si può anche scrivere la prestazione nella ricerca in alto '
+               '(tasto /): le prestazioni compaiono insieme ai pazienti.', 'nav.menu [data-guida="menu-dove"]'),
+             P('Scrivi la prestazione', 'Come la dice il paziente: «risonanza ginocchio», «tac torace», «eco addome», '
+               '«holter». Bastano le prime lettere; valgono le sigle d\'uso (RM, TC, RX, ECG, MOC) e i sinonimi del '
+               'database. Una parola scritta male si corregge da sola.', '#q-dove'),
+             P('Dove si fa', 'Sotto ogni prestazione le strutture dove si fa, ciascuna con il suo colore. «qui» è questa '
+               'struttura; «da confermare» vuol dire che il database non ne è sicuro: meglio chiedere alla struttura '
+               'prima di mandarci il paziente.', '[data-guida="dove-sedi"]'),
+             P('La scheda della struttura', 'Un clic sulla struttura apre la sua scheda: indirizzo con la mappa, telefoni, '
+               'prenotazione online, orari e come si prenota. Esc la chiude.', '.recapiti-scheda'),
+             P('Il messaggio per il paziente', 'Già scritto, con la prestazione e i recapiti; si può cambiare. Copia, '
+               'WhatsApp, Email, oppure Stampa per un foglio da dare al paziente allo sportello.',
+               '[data-guida="dove-azioni"]'),
+             P('Segna come indirizzato', 'Il registro dei pazienti mandati alle altre strutture: si vede in «Pazienti '
+               'indirizzati», nelle Statistiche e in Excel. WhatsApp, email e stampa si segnano da sole, con Annulla se '
+               'non serviva.', '[data-guida="dove-segna"]'),
+             P('Per un paziente', 'Scegliendo il paziente (anche dalla sua scheda: «Dove si fa una prestazione») il '
+               'messaggio porta il suo nome e WhatsApp ed email partono verso i suoi recapiti.',
+               '[data-guida="dove-paziente"]'),
+             P('Si fa anche qui', 'Se la prestazione è anche nel listino di questo gestionale, sopra i risultati c\'è il '
+               'collegamento per prenotarla subito.'),
+         ]),
+    dict(slug='strutture-gruppo', gruppo='Dove si fa', titolo='Il database delle prestazioni e i recapiti',
+         in_breve='Il file Excel del gruppo con le prestazioni di ogni struttura: si carica una volta e di nuovo a ogni '
+                  'versione; i recapiti delle strutture si scrivono nel programma.',
+         endpoint='dovesifa.strutture', apri=('dovesifa.strutture', {}), foto='/dove-si-fa/strutture',
+         passi=[
+             P('Apri la pagina', 'Menu Configura → Strutture del gruppo.', 'nav.menu [data-guida="menu-configura"]'),
+             P('Carica il database', 'Il file Excel del database delle prestazioni: una riga per prestazione e una colonna '
+               'per struttura, con una X dove si fa. Prima si vede cosa cambia e si conferma; il programma fa una copia '
+               'di sicurezza.', '[data-guida="gruppo-carica"]'),
+             P('Una versione nuova', 'Quando il database viene aggiornato si carica il file nuovo allo stesso modo: si '
+               'vedono le prestazioni nuove, quelle tolte e le strutture nuove. I recapiti scritti e il registro dei '
+               'pazienti indirizzati restano.'),
+             P('I recapiti', '«Recapiti», accanto a ogni struttura: indirizzo, telefoni, email, prenotazione online, orari '
+               'e come si prenota. Finiscono nella scheda, nel messaggio e nel foglio per il paziente.',
+               '[data-guida="gruppo-elenco"]'),
+             P('Questa struttura', 'Una struttura del database con lo stesso nome di una di questo gestionale porta il '
+               'segno «qui»; altrimenti si sceglie nei suoi recapiti.'),
+             P('Spegnere una struttura', 'Togliendo la spunta «Compare nelle ricerche di Dove si fa» la struttura non '
+               'viene più proposta, senza cancellare niente.'),
+         ]),
     # ------------------------------------------------------------ turni del personale
     dict(slug='turni-personale', gruppo='Turni del personale', titolo='I turni del personale: il mese e la settimana',
          in_breve='Menu Turni: una riga per persona, una colonna per giorno. Clic sulla cella, oppure il codice scritto '
@@ -569,8 +620,8 @@ ARTICOLI += [
 ]
 
 PER_SLUG = {a['slug']: a for a in ARTICOLI}
-GRUPPI = ['Primi passi', 'Tutti i giorni', 'Turni del personale', 'Sala operatoria', 'Cassa e fogli', 'Email e WhatsApp',
-          'Configurazione']
+GRUPPI = ['Primi passi', 'Tutti i giorni', 'Dove si fa', 'Turni del personale', 'Sala operatoria', 'Cassa e fogli',
+          'Email e WhatsApp', 'Configurazione']
 
 
 def collega(app):

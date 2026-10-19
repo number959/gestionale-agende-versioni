@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% block titolo %}{{ g.nome }}: recapiti{% endblock %}
+{% block corpo %}
+<div class="pagina pagina-struttura-dove">
+  <h1><span class="sede-elenco" style="--c: {{ colore }}"><i class="pallino" aria-hidden="true"></i>{{ g.nome }}</span></h1>
+  <p class="sotto"><a href="{{ url_for('dovesifa.strutture') }}">Torna alle strutture del gruppo</a> ·
+    {{ conta }} prestazion{{ 'e' if conta == 1 else 'i' }} nel database{% if not g.nel_database %} (non è più nel database){% endif %}</p>
+  {% for e in errori %}<div class="avviso errore">{{ e }}</div>{% endfor %}
+  <form method="post" class="modulo-struttura-dove">
+    <p class="spiega-modulo">Quello che si scrive qui compare nella scheda della struttura, nel messaggio per il
+      paziente e nel foglio da stampare. Il nome è quello della colonna del database: non si cambia da qui.</p>
+    <div class="campo meta"><label for="indirizzo">{{ etichette.indirizzo }}</label>
+      <input type="text" id="indirizzo" name="indirizzo" value="{{ campi.indirizzo }}" maxlength="160" placeholder="Via, numero civico"></div>
+    <div class="campo meta"><label for="citta">{{ etichette.citta }}</label>
+      <input type="text" id="citta" name="citta" value="{{ campi.citta }}" maxlength="80"></div>
+    <div class="campo meta"><label for="telefono">{{ etichette.telefono }}</label>
+      <input type="tel" id="telefono" name="telefono" value="{{ campi.telefono }}" maxlength="40" placeholder="quello per prenotare"></div>
+    <div class="campo meta"><label for="telefono2">{{ etichette.telefono2 }}</label>
+      <input type="tel" id="telefono2" name="telefono2" value="{{ campi.telefono2 }}" maxlength="40"></div>
+    <div class="campo meta"><label for="email">{{ etichette.email }}</label>
+      <input type="email" id="email" name="email" value="{{ campi.email }}" maxlength="120"></div>
+    <div class="campo meta"><label for="sito">{{ etichette.sito }}</label>
+      <input type="url" id="sito" name="sito" value="{{ campi.sito }}" maxlength="300" placeholder="https://…"></div>
+    <div class="campo"><label for="orari">{{ etichette.orari }}</label>
+      <input type="text" id="orari" name="orari" value="{{ campi.orari }}" maxlength="200" placeholder="per esempio: dal lunedì al venerdì 8-19, sabato 8-13"></div>
+    <div class="campo"><label for="prenotazione">{{ etichette.prenotazione }}</label>
+      <textarea id="prenotazione" name="prenotazione" rows="2" maxlength="400" placeholder="per esempio: per telefono al mattino; portare l'impegnativa">{{ campi.prenotazione }}</textarea></div>
+    <div class="campo"><label for="note">{{ etichette.note }}</label>
+      <textarea id="note" name="note" rows="2" maxlength="400" placeholder="solo per chi usa il programma: non va nel messaggio al paziente">{{ campi.note }}</textarea></div>
+    <div class="campo meta"><label for="nome_breve">{{ etichette.nome_breve }}</label>
+      <input type="text" id="nome_breve" name="nome_breve" value="{{ campi.nome_breve }}" maxlength="30" placeholder="{{ g.nome }}"></div>
+    <div class="campo meta"><label for="struttura_id">È una struttura di questo gestionale?</label>
+      <select id="struttura_id" name="struttura_id">
+        <option value="">No</option>
+        {% for x in locali %}<option value="{{ x.id }}"{% if x.id == scelte.struttura_id %} selected{% endif %}>Sì: {{ x.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="campo spunta"><label><input type="checkbox" name="attiva" value="1"{% if scelte.attiva %} checked{% endif %}>
+      Compare nelle ricerche di Dove si fa</label></div>
+    <div class="azioni">
+      <button class="bottone primario" type="submit">Salva</button>
+      <a class="bottone" href="{{ url_for('dovesifa.strutture') }}">Annulla</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

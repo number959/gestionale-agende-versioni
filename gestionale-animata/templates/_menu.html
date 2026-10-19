@@ -7,7 +7,7 @@
     I gruppi si aprono passandoci sopra o con un clic (anche da tastiera). -#}
 {%- set _n_conf = n_da_confermare() if n_da_confermare is defined else 0 %}
 {%- set _segreteria = _sez in ('conferme', 'chiusura', 'confermare', 'cose', 'attesa', 'disponibilita', 'elenco') %}
-{%- set _configura = _sez in ('anagrafiche', 'impostazioni', 'importa', 'invii', 'aggiornamenti') %}
+{%- set _configura = _sez in ('anagrafiche', 'gruppo', 'impostazioni', 'importa', 'invii', 'aggiornamenti') %}
 <nav class="menu" aria-label="Pagine">
   <a href="{{ url_for('cruscotto.oggi', struttura=_sid) }}"{% if _sez == 'oggi' %} class="attivo"{% endif %} data-guida="menu-oggi">Oggi</a>
   <a data-tasto="g" href="{{ url_for('giorno', iso=_data, struttura=_sid) }}"{% if _sez == 'giorno' %} class="attivo"{% endif %} data-guida="menu-giorno">Giorno</a>
@@ -18,6 +18,7 @@
   <span class="separatore"></span>
   <a href="{{ url_for('pazienti.elenco') }}"{% if _sez == 'pazienti' %} class="attivo"{% endif %} data-guida="menu-pazienti">Pazienti</a>
   <a href="{{ url_for('personale.turni', struttura=_sid) }}"{% if _sez == 'personale' %} class="attivo"{% endif %} data-guida="menu-turni">Turni</a>
+  <a data-tasto="d" href="{{ url_for('dovesifa.pagina', struttura=_sid) }}"{% if _sez == 'dove' %} class="attivo"{% endif %} data-guida="menu-dove">Dove si fa</a>
   <div class="gruppo{% if _segreteria %} attivo{% endif %}" data-guida="menu-segreteria">
     <button type="button" class="apri-gruppo" aria-haspopup="true" aria-expanded="false">Segreteria{% if _n_conf %}<span class="contatore" title="{{ _n_conf }} da confermare">{{ _n_conf }}</span>{% endif %}<span class="freccia" aria-hidden="true"></span></button>
     <div class="tendina" role="menu">
@@ -35,7 +36,7 @@
   <span class="spinta"></span>
   <div class="ricerca-rapida" role="search" data-guida="menu-cerca">
     <input type="search" id="ricerca-rapida" placeholder="Cerca (tasto /)" autocomplete="off"
-           aria-label="Cerca un paziente, un medico o un giorno"
+           aria-label="Cerca un paziente, un medico, un giorno o una prestazione"
            data-indirizzo="{{ url_for('segreteria.cerca_tutto', struttura=_sid) }}">
     <div class="risultati-rapidi" id="risultati-rapidi" hidden></div>
   </div>
@@ -52,6 +53,7 @@
     <button type="button" class="apri-gruppo" aria-haspopup="true" aria-expanded="false">Configura<span class="freccia" aria-hidden="true"></span></button>
     <div class="tendina" role="menu">
       <a href="{{ url_for('anagrafiche.elenco') }}"{% if _sez == 'anagrafiche' %} class="attivo"{% endif %}><b>Anagrafiche</b><small>stanze, medici, turni, prestazioni, strutture</small></a>
+      <a href="{{ url_for('dovesifa.strutture') }}"{% if _sez == 'gruppo' %} class="attivo"{% endif %}><b>Strutture del gruppo</b><small>database delle prestazioni e recapiti, per Dove si fa</small></a>
       <a href="{{ url_for('invii.pagina') }}"{% if _sez == 'invii' %} class="attivo"{% endif %}><b>Email e WhatsApp</b><small>email automatiche, promemoria, registro</small></a>
       <a href="{{ url_for('importa.carica') }}"{% if _sez == 'importa' %} class="attivo"{% endif %}><b>Importa da Excel</b><small>rubrica e agende dei file vecchi</small></a>
       <a href="{{ url_for('viste.impostazioni') }}"{% if _sez == 'impostazioni' %} class="attivo"{% endif %}><b>Impostazioni</b><small>backup, messaggi, stampa, tema</small></a>
@@ -63,11 +65,12 @@
 <div id="aiuto-tasti" class="aiuto-tasti" hidden>
   <h2>Tasti rapidi</h2>
   <table>
-    <tr><th>/</th><td>cerca un paziente, un medico o un giorno ("domani", "lunedì", "24/9")</td></tr>
+    <tr><th>/</th><td>cerca un paziente, un medico, un giorno ("domani", "lunedì", "24/9") o dove si fa una prestazione</td></tr>
     <tr><th>← →</th><td>giorno precedente e successivo</td></tr>
     <tr><th>T</th><td>oggi</td></tr>
     <tr><th>N</th><td>nuovo appuntamento</td></tr>
     <tr><th>G · E · C</th><td>griglia, elenco, conferme del giorno</td></tr>
+    <tr><th>D</th><td>Dove si fa: in quale struttura del gruppo si fa una prestazione</td></tr>
     <tr><th>Ctrl + Invio</th><td>salva il modulo che si sta compilando</td></tr>
     <tr><th>Esc</th><td>chiude questo riquadro e i suggerimenti</td></tr>
     <tr><th>?</th><td>mostra questo riquadro</td></tr>

@@ -1,0 +1,112 @@
+{#- La scheda di una struttura del gruppo, nel riquadro a destra di Dove si fa: nella
+    pagina intera (dove.html, con ?gruppo=) e da sola, chiesta da static/dove.js
+    (dovesifa.scheda). I collegamenti di WhatsApp ed email si rifanno nella pagina se si
+    cambia il testo del messaggio (data-base + testo codificato). -#}
+{%- from "_icone.html" import icona -%}
+{%- set _pid = paziente.id if paziente else none -%}
+<div class="dentro-scheda" data-gruppo="{{ scheda.id }}" data-voce="{{ scheda.voce.id if scheda.voce else '' }}"
+     data-paziente="{{ scheda.paziente.id if scheda.paziente else '' }}" data-nome="{{ scheda.nome }}">
+  <div class="testa-scheda" style="--c: {{ scheda.colore }}">
+    <i class="pallino" aria-hidden="true"></i>
+    <div class="titolo-scheda">
+      <h2 id="titolo-scheda-dove">{{ scheda.nome }}</h2>
+      {%- if scheda.citta %}<p>{{ scheda.citta }}</p>{% endif %}
+    </div>
+    <a class="chiudi-scheda" href="{{ url_for('dovesifa.pagina', q=q or none, branca=branca or none, sede=sede or none, paziente=_pid, struttura=sid_link) }}"
+       data-chiudi aria-label="Chiudi la scheda" title="Chiudi (Esc)">{{ icona('x') }}</a>
+  </div>
+
+  {%- if scheda.voce %}
+  <div class="voce-scheda{% if scheda.voce.da_confermare %} da-confermare{% elif not scheda.voce.si_fa %} non-si-fa{% endif %}">
+    <b>{{ scheda.voce.nome }}</b>
+    {%- if not scheda.voce.si_fa %}
+    <p>{{ icona('triangle-alert') }}Per il database questa prestazione qui non si fa.</p>
+    {%- elif scheda.voce.da_confermare %}
+    <p>{{ icona('triangle-alert') }}<span><b>Da confermare{% if scheda.voce.nota %}:{% endif %}</b>{% if scheda.voce.nota %} {{ scheda.voce.nota }}{% endif %}.
+      Meglio chiedere alla struttura prima di mandarci il paziente.</span></p>
+    {%- elif scheda.voce.nota %}
+    <p class="nota-voce">{{ icona('info') }}<span>{{ scheda.voce.nota }}</span></p>
+    {%- endif %}
+  </div>
+  {%- endif %}
+
+  {%- if not scheda.attiva %}
+  <p class="avviso-scheda">{{ icona('info') }}Struttura spenta: non compare nelle ricerche (si riaccende dai suoi recapiti).</p>
+  {%- endif %}
+  {%- if scheda.qui %}
+  <p class="qui-scheda">{{ icona('check') }}<span>È questa struttura: il paziente si prenota da qui.</span></p>
+  {%- endif %}
+
+  <ul class="recapiti-scheda">
+    {%- if scheda.indirizzo or scheda.citta %}
+    <li>{{ icona('map-pin') }}<span>{{ [scheda.indirizzo, scheda.citta]|select|join(', ') }}</span>
+      {%- if scheda.mappa %} <a href="{{ scheda.mappa }}" target="_blank" rel="noopener noreferrer" class="piccolo-link">mappa</a>{% endif %}</li>
+    {%- endif %}
+    {%- for t in scheda.telefoni %}
+    <li class="telefono-scheda">{{ icona('phone') }}<b>{{ t.numero }}</b>
+      <button type="button" class="collegamento piccolo-link" data-copia="{{ t.numero }}">copia</button></li>
+    {%- endfor %}
+    {%- if scheda.email %}
+    <li>{{ icona('mail') }}<span>{{ scheda.email }}</span> <button type="button" class="collegamento piccolo-link" data-copia="{{ scheda.email }}">copia</button></li>
+    {%- endif %}
+    {%- if scheda.sito %}
+    <li>{{ icona('globe') }}<a href="{{ scheda.sito }}" target="_blank" rel="noopener noreferrer">Prenotazione online</a></li>
+    {%- endif %}
+    {%- if scheda.orari %}<li>{{ icona('clock') }}<span>{{ scheda.orari }}</span></li>{% endif %}
+    {%- if scheda.prenotazione %}<li>{{ icona('info') }}<span>{{ scheda.prenotazione }}</span></li>{% endif %}
+  </ul>
+  {%- if scheda.note %}<p class="note-scheda"><b>Per la segreteria:</b> {{ scheda.note }}</p>{% endif %}
+  {%- if not scheda.con_recapiti %}
+  <div class="senza-recapiti">{{ icona('triangle-alert') }}<span>Indirizzo e telefono non sono ancora scritti.
+    <a href="{{ scheda.modifica }}">Scriverli adesso</a>: poi compaiono qui, nel messaggio e nel foglio da stampare.</span></div>
+  {%- endif %}
+
+  {%- if not scheda.voce %}
+  <div class="branche-scheda">
+    <h4>Cosa si fa qui{% if scheda.branche %} <small>{{ scheda.branche|sum(attribute=1) }} prestazioni ·
+      <a href="{{ url_for('dovesifa.pagina', sede=scheda.id, paziente=_pid, struttura=sid_link) }}" data-branca-scheda="" data-sede="{{ scheda.id }}">vedile tutte</a></small>{% endif %}</h4>
+    {%- if scheda.branche %}
+    <ul>
+      {%- for b, n in scheda.branche %}
+      <li><a href="{{ url_for('dovesifa.pagina', branca=b, sede=scheda.id, paziente=_pid, struttura=sid_link) }}" data-branca-scheda="{{ b }}" data-sede="{{ scheda.id }}">{{ b|capitalize }}</a> <small>{{ n }}</small></li>
+      {%- endfor %}
+    </ul>
+    {%- else %}
+    <p class="senza">Nessuna prestazione nel database.</p>
+    {%- endif %}
+  </div>
+  {%- endif %}
+
+  <h3 class="titolo-messaggio"><label for="messaggio-dove">Messaggio per il paziente</label>
+    {%- if scheda.paziente %} <small>{{ scheda.paziente.etichetta }}</small>{% endif %}</h3>
+  <textarea id="messaggio-dove" class="messaggio-dove" rows="9" spellcheck="true">{{ scheda.messaggio }}</textarea>
+  <div class="azioni-scheda" data-guida="dove-azioni">
+    <button type="button" class="bottone con-icona" data-azione="copia">{{ icona('copy') }}Copia</button>
+    <a class="bottone con-icona" data-azione="whatsapp" href="{{ scheda.whatsapp }}" data-base="{{ scheda.base_whatsapp }}"
+       target="_blank" rel="noopener noreferrer"
+       title="{% if scheda.paziente and scheda.paziente.whatsapp %}A {{ scheda.paziente.etichetta }}{% elif scheda.paziente %}Il paziente non ha un cellulare in anagrafica: si sceglie a chi mandarlo{% else %}Si sceglie a chi mandarlo{% endif %}">{{ icona('message-circle') }}WhatsApp</a>
+    <a class="bottone con-icona" data-azione="email" href="{{ scheda.email_link }}" data-base="{{ scheda.base_email }}"
+       title="{% if scheda.paziente and scheda.paziente.email %}A {{ scheda.paziente.etichetta }}{% else %}Si scrive l'indirizzo nel programma della posta{% endif %}">{{ icona('mail') }}Email</a>
+    <a class="bottone con-icona" data-azione="stampa" href="{{ scheda.stampa }}" target="_blank" rel="noopener">{{ icona('printer') }}Stampa</a>
+  </div>
+  <div class="segna-scheda" data-guida="dove-segna">
+    <button type="button" class="bottone primario con-icona" data-azione="segna">{{ icona('check') }}Segna come indirizzato</button>
+    <select id="canale-dove" aria-label="Come">
+      <option value="telefono">al telefono</option>
+      <option value="voce">a voce, allo sportello</option>
+    </select>
+    <p class="aiuto-segna">WhatsApp, email e stampa si segnano da sole nel registro (con «Annulla» se non serviva).</p>
+  </div>
+
+  {%- if scheda.ultimi %}
+  <div class="ultimi-scheda">
+    <h4>Ultimi indirizzati qui</h4>
+    <ul>
+      {%- for x in scheda.ultimi %}
+      <li><span class="quando">{{ x.quando }}</span> {{ x.paziente or 'Paziente' }}{% if x.prestazione %} <small>{{ x.prestazione }}</small>{% endif %}</li>
+      {%- endfor %}
+    </ul>
+  </div>
+  {%- endif %}
+  <p class="modifica-scheda"><a class="con-icona-testo" href="{{ scheda.modifica }}">{{ icona('square-pen') }}Modifica i recapiti</a></p>
+</div>

@@ -957,14 +957,109 @@ class CoperturaMinima(Base):
         return re.fullmatch(r'[01]{7}', self.giorni or '') is not None and self.giorni[g.weekday()] == '1'
 
 
+# ===================================================== strutture del gruppo
+# "Dove si fa": le prestazioni delle altre strutture del gruppo, dal database
+# delle prestazioni (un file Excel: una riga per prestazione, una colonna per
+# struttura con una X dove si fa), per indirizzare un paziente dove serve.
+class StrutturaGruppo(Base):
+    """Un'altra struttura del gruppo, con i recapiti da dare al paziente. Il nome
+    e' quello della colonna del database delle prestazioni."""
+    __tablename__ = 'strutture_gruppo'
+    id = Column(Integer, primary_key=True)
+    nome = Column(String(80), nullable=False)
+    nome_breve = Column(String(30), default='')        # per le etichette; vuoto = il nome
+    indirizzo = Column(String(160), default='')
+    citta = Column(String(80), default='')
+    telefono = Column(String(40), default='')
+    telefono2 = Column(String(40), default='')
+    email = Column(String(120), default='')
+    sito = Column(String(300), default='')             # prenotazione online
+    orari = Column(String(200), default='')
+    prenotazione = Column(String(400), default='')     # come si prenota: "solo per telefono, al mattino"
+    note = Column(String(400), default='')
+    struttura_id = Column(Integer, ForeignKey('strutture.id'))   # e' una struttura di questo gestionale
+    colore = Column(String(7), default='')
+    ordine = Column(Integer, default=0, nullable=False)
+    attiva = Column(Boolean, default=True, nullable=False)       # spenta: non compare nelle ricerche
+    nel_database = Column(Boolean, default=True, nullable=False)  # c'era nell'ultima importazione
+    creato_il = Column(DateTime, default=datetime.now)
+    modificato_il = Column(DateTime, default=datetime.now)
+    struttura = relationship('Struttura')
+
+    @property
+    def etichetta(self):
+        return (self.nome_breve or '').strip() or self.nome
+
+    @property
+    def con_recapiti(self):
+        return bool((self.telefono or '').strip() or (self.indirizzo or '').strip() or (self.sito or '').strip())
+
+    def __repr__(self):
+        return self.nome
+
+
+class VoceCatalogo(Base):
+    """Una prestazione del database delle prestazioni del gruppo."""
+    __tablename__ = 'catalogo'
+    id = Column(Integer, primary_key=True)
+    branca = Column(String(80), default='')
+    nome = Column(String(160), nullable=False)
+    sinonimi = Column(String(1000), default='')
+    note = Column(String(1000), default='')
+    ordine = Column(Integer, default=0, nullable=False)
+    sedi = relationship('SedeVoce', cascade='all, delete-orphan', back_populates='voce')
+
+    def __repr__(self):
+        return self.nome
+
+
+class SedeVoce(Base):
+    """Dove si fa una prestazione: una X nel database. 'da_confermare' viene
+    dalle note del database ("RAH: ... da confermare")."""
+    __tablename__ = 'catalogo_sedi'
+    voce_id = Column(Integer, ForeignKey('catalogo.id'), primary_key=True)
+    struttura_id = Column(Integer, ForeignKey('strutture_gruppo.id'), primary_key=True)
+    da_confermare = Column(Boolean, default=False, nullable=False)
+    nota = Column(String(400), default='')
+    voce = relationship('VoceCatalogo', back_populates='sedi')
+    struttura = relationship('StrutturaGruppo')
+
+
+class Indirizzato(Base):
+    """Un paziente indirizzato a un'altra struttura del gruppo: il registro.
+    Nomi di prestazione, struttura e paziente sono copiati: il registro resta
+    leggibile anche dopo un database nuovo o una scheda cancellata."""
+    __tablename__ = 'indirizzati'
+    id = Column(Integer, primary_key=True)
+    quando = Column(DateTime, default=datetime.now, nullable=False)
+    struttura_id = Column(Integer, ForeignKey('strutture.id'))          # da quale struttura del gestionale
+    gruppo_id = Column(Integer, ForeignKey('strutture_gruppo.id'))      # verso quale struttura del gruppo
+    gruppo_nome = Column(String(80), default='')
+    voce_id = Column(Integer, ForeignKey('catalogo.id'))
+    prestazione = Column(String(160), default='')
+    branca = Column(String(80), default='')
+    paziente_id = Column(Integer, ForeignKey('pazienti.id'))
+    paziente = Column(String(120), default='')
+    canale = Column(String(12), default='voce')        # voce, telefono, whatsapp, email, stampa
+    note = Column(String(200), default='')
+    gruppo = relationship('StrutturaGruppo')
+    scheda = relationship('Paziente')
+    __table_args__ = (Index('ix_indirizzati_quando', 'quando'),)
+
+
+CANALI_INDIRIZZO = [('voce', 'a voce'), ('telefono', 'al telefono'), ('whatsapp', 'WhatsApp'),
+                    ('email', 'email'), ('stampa', 'foglio stampato')]
+
+
 # ============================================================ aggiornamenti
 # Versione dello schema, scritta in "impostazioni". 1-2 = gestionale 1.1-1.2
 # (senza la tabella impostazioni), 3 = 1.3, 4 = 1.4, 5 = 1.4.1 (appunti da confermare),
 # 6 = 1.4.3 (degenza, checklist, posti letto, giorni di sala dei chirurghi),
 # 7 = 1.5 (indirizzo del paziente, email automatiche, promemoria, registro degli invii),
 # 8 = 1.7 (sesso e luogo di nascita del paziente, per controllare e calcolare il codice fiscale),
-# 9 = 1.8 (turni del personale: persone, tipi di turno, turni, coperture minime).
-VERSIONE_SCHEMA = 9
+# 9 = 1.8 (turni del personale: persone, tipi di turno, turni, coperture minime),
+# 10 = 1.9 (Dove si fa: strutture del gruppo, prestazioni e dove si fanno, pazienti indirizzati).
+VERSIONE_SCHEMA = 10
 
 # Colonne aggiunte dopo la prima versione. create_all crea le tabelle nuove
 # ma non tocca quelle esistenti: su un PC dove il gestionale e' gia'

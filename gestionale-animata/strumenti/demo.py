@@ -323,6 +323,28 @@ if PE is not None:
                CoperturaMinima(ruolo='OSS', tipo_id=T['M'].id, minimo=1, giorni='1111110'),
                CoperturaMinima(ruolo='AMMINISTRATIVO', tipo_id=T['M'].id, minimo=1, giorni='1111100')])
     s.commit(); s.close()
+# ---- 1.9: dove si fa, con un database delle prestazioni inventato (strutture e recapiti finti)
+try:
+    import dovesifa as DS
+except ImportError:
+    DS = None
+if DS is not None:
+    from strumenti.catalogo_prova import libro as libro_prova
+    s = S()
+    DS.importa_catalogo(s, DS.leggi_database(libro_prova(), 'Database delle prestazioni (prova).xlsx'))
+    s.flush()
+    voce_ = {v.nome: v for v in s.scalars(select(VoceCatalogo))}
+    gr_ = {g.nome: g for g in s.scalars(select(StrutturaGruppo))}
+    pz_ = {x.cognome: x for x in s.scalars(select(Paziente).where(Paziente.cognome.in_(['Cuomo', 'Palumbo', 'Sorrentino'])))}
+    adesso_ = datetime.now().replace(second=0, microsecond=0)
+    for ore_fa, cognome_, vn, gn, canale_ in [(3, 'Sorrentino', 'Ecografia renale', 'Centro Sud', 'stampa'),
+                                              (26, 'Cuomo', 'Mammografia', 'Centro Nord', 'whatsapp'),
+                                              (50, 'Palumbo', 'RM ginocchio', 'Diagnostica Lago', 'telefono')]:
+        v_, g_, x_ = voce_[vn], gr_[gn], pz_[cognome_]
+        s.add(Indirizzato(quando=adesso_ - timedelta(hours=ore_fa), struttura_id=1, gruppo_id=g_.id, gruppo_nome=g_.nome,
+                          voce_id=v_.id, prestazione=v_.nome, branca=v_.branca, paziente_id=x_.id,
+                          paziente=x_.etichetta, canale=canale_))
+    s.commit(); s.close()
 # ---- 1.6: un aggiornamento finto gia' scaricato, per la pagina Aggiornamenti (guida e video)
 try:
     import aggiornamenti

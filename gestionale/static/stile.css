@@ -1339,3 +1339,218 @@ table.tabella-schema td .turno { min-width: 26px; height: 22px; padding: 0 3px; 
   .stampa-legenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 9px; margin-top: 6px; }
   .linea-adesso, .segno-riposo { display: none; }
 }
+
+/* ------------------------------------------------------- 1.9: dove si fa */
+/* In quale struttura del gruppo si fa una prestazione. Ogni struttura porta il suo
+   colore in --c (un pallino accanto al nome). La scheda della struttura e' un riquadro
+   fisso a destra; con la scheda aperta la pagina si stringe per lasciarle posto. */
+i.pallino { display: inline-block; flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--primario)); }
+.con-icona-testo { display: inline-flex; align-items: center; gap: 5px; }
+.con-icona-testo .icona { width: 15px; height: 15px; }
+.pagina-dove { max-width: 1040px; transition: margin .18s ease-out; }
+.testa-dove { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 20px; margin-bottom: 14px; }
+.testa-dove h1 { margin: 0; }
+.link-dove { display: flex; gap: 16px; margin: 0; font-size: 13px; }
+.link-dove a { color: var(--primario-scuro); }
+
+/* la ricerca */
+.pagina form.cerca-dove { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; margin: 0 0 8px; }
+.campo-cerca-dove { position: relative; flex: 1 1 380px; }
+.campo-cerca-dove > .icona { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 19px; height: 19px;
+  color: #6A7A84; pointer-events: none; }
+.campo-cerca-dove input { width: 100%; font: 17px var(--testo); color: #16263F; padding: 11px 12px 11px 42px; border: 1px solid #B8C0C4;
+  border-radius: 8px; background: #FFFFFF; }
+.campo-cerca-dove input:focus { outline: 2px solid var(--primario-fuoco); outline-offset: -1px; border-color: var(--primario); }
+.cerca-dove select { font: 14px var(--testo); color: #16263F; padding: 0 10px; border: 1px solid #B8C0C4; border-radius: 8px;
+  background: #FFFFFF; max-width: 250px; min-height: 46px; }
+.cerca-dove .bottone { border-radius: 8px; padding: 0 18px; font-size: 14px; }
+.paziente-dove { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 16px; font-size: 13px; color: #46596A; }
+.paziente-dove > .icona { width: 16px; height: 16px; color: #6A7A84; }
+.paziente-dove label { color: #46596A; }
+.paziente-dove small { color: #6A7A84; font-size: 12px; }
+.paziente-dove .togli-paziente { font-size: 12.5px; }
+.scegli-paziente { position: relative; }
+.scegli-paziente input { width: 230px; font: 13px var(--testo); padding: 5px 9px; border: 1px solid #B8C0C4; border-radius: 6px; background: #FFFFFF;
+  color: #16263F; }
+.scegli-paziente input:focus { outline: 2px solid var(--primario-fuoco); outline-offset: -1px; }
+.suggerimenti.suggerimenti-dove { top: 100%; right: auto; min-width: 320px; margin-top: 2px; z-index: 20; border-radius: 6px; overflow: hidden; }
+
+/* i risultati */
+.risultati-dove[aria-busy="true"] { opacity: .65; transition: opacity .15s .1s; }
+.conta-dove { margin: 0 0 8px; font-size: 13px; color: #46596A; }
+.conta-dove .aiuto-dove { color: #6A7A84; margin-left: 4px; }
+.filtro-sede { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 7px; margin: 0 0 8px; padding: 7px 12px 7px 15px;
+  background: #FFFFFF; border: 1px solid #DDE3E8; box-shadow: inset 4px 0 0 var(--c); border-radius: 6px; font-size: 13.5px; }
+.filtro-sede a { margin-left: auto; font-size: 12.5px; }
+.corretta-dove { margin: 0 0 8px; padding: 7px 12px; background: #FFF8E1; border-left: 4px solid #C89B21; font-size: 13.5px; }
+.nostri-dove { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 12px; padding: 9px 12px; background: #EAF5EC;
+  border-left: 4px solid #2E7D32; font-size: 13.5px; }
+.nostri-dove > .icona { width: 17px; height: 17px; color: #2E7D32; margin-top: 1px; }
+.nostri-dove a { font-weight: 600; }
+.nostri-dove small { color: #46596A; }
+.voci-dove { display: flex; flex-direction: column; gap: 8px; }
+.voce-dove { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 11px 14px; background: #FFFFFF;
+  border: 1px solid #DDE3E8; border-radius: 8px; }
+.voce-dove.evidenziata { border-color: var(--primario); box-shadow: 0 0 0 2px var(--primario-chiaro); }
+.nome-voce { flex: 1 1 260px; min-width: 0; }
+.nome-voce h2 { display: inline; margin: 0 8px 0 0; font: 600 15.5px var(--titoli); color: #16263F; }
+.branca-voce { display: inline-block; font-size: 11.5px; color: #5B6B75; border: 1px solid #DDE3E8; border-radius: 9px; padding: 0 7px;
+  white-space: nowrap; vertical-align: 1px; }
+.sinonimi-voce { margin: 3px 0 0; font-size: 12px; color: #6A7A84; }
+.nota-voce-dove { margin: 3px 0 0; font-size: 12px; color: #7A5A00; }
+.sedi-voce { flex: 2 1 380px; display: flex; flex-wrap: wrap; gap: 6px; }
+a.sede { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 9px; border-width: 1px; border-style: solid;
+  border-color: #CFD5D8; border-radius: 16px; background: #FFFFFF; color: #16263F; text-decoration: none; font-size: 13px;
+  line-height: 1.3; }
+a.sede small { color: #6A7A84; font-size: 11.5px; }
+a.sede:hover { border-color: var(--c); background: #F6F8FB; }
+a.sede:focus-visible { outline: 2px solid var(--primario-fuoco); outline-offset: 1px; }
+a.sede.da-confermare { border-style: dashed; border-color: #CFA640; }
+a.sede.scelta { border-color: var(--primario); background: var(--primario-tenue); box-shadow: 0 0 0 1px var(--primario); }
+.segno-sede { font: 600 10.5px/16px var(--testo); padding: 0 6px; border-radius: 8px; white-space: nowrap; }
+.segno-conferma { background: #FFF1C9; color: #7A5A00; }
+.segno-qui { background: #E1F2E3; color: #1B5E20; }
+.nessuno-dove { padding: 14px 16px; background: #FFFFFF; border: 1px solid #DDE3E8; border-radius: 8px; font-size: 13.5px; }
+.nessuno-dove p { margin: 0 0 6px; }
+.nessuno-dove p:last-child { margin: 0; }
+
+/* senza ricerca: branche, strutture, ultimi */
+.inizio-dove { display: grid; grid-template-columns: 1.15fr 1fr; gap: 10px 28px; align-items: start; }
+.inizio-dove h2.sezione { margin-top: 8px; }
+.branche-dove ul { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 8px; }
+.branche-dove li { break-inside: avoid; }
+.branche-dove a { display: flex; justify-content: space-between; gap: 8px; padding: 5px 9px; border-radius: 6px; color: #16263F;
+  text-decoration: none; font-size: 13px; }
+.branche-dove a small { color: #6A7A84; font-size: 12px; }
+.branche-dove a:hover, .branche-dove a:focus-visible { background: var(--primario-tenue); outline: none; }
+.strutture-dove ul, .recenti-dove ul { list-style: none; margin: 0; padding: 0; }
+a.sede-grande { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; padding: 9px 12px 9px 16px; background: #FFFFFF;
+  border: 1px solid #DDE3E8; box-shadow: inset 4px 0 0 var(--c); border-radius: 8px; color: #16263F; text-decoration: none;
+  font-size: 13.5px; }
+a.sede-grande i.pallino { display: none; }
+a.sede-grande small { display: block; color: #6A7A84; font-size: 12px; margin-top: 1px; }
+a.sede-grande em { color: #9C6B00; font-style: normal; }
+a.sede-grande:hover, a.sede-grande:focus-visible { background: #F6F8FB; outline: none; box-shadow: inset 4px 0 0 var(--c), 0 0 0 1px var(--c); }
+.recenti-dove li { display: flex; gap: 10px; padding: 5px 0; border-bottom: 1px solid #E6EAED; font-size: 13px; }
+.recenti-dove li small { display: block; color: #6A7A84; font-size: 12px; }
+.recenti-dove .quando, .ultimi-scheda .quando { flex: none; width: 76px; color: #6A7A84; font-size: 12px; font-variant-numeric: tabular-nums; }
+.recenti-dove p { font-size: 13px; }
+
+/* la scheda della struttura */
+.scheda-dove { position: fixed; right: 0; top: 0; bottom: 0; z-index: 45; width: min(440px, 100vw); overflow-y: auto; background: #FFFFFF;
+  border-left: 1px solid #CFD5D8; box-shadow: -14px 0 34px rgba(14, 26, 46, .16); padding-bottom: 26px; outline: none; }
+body.scheda-dove-aperta .pagina-dove { margin-right: 460px; }
+.testa-scheda { position: sticky; top: 0; z-index: 1; display: flex; align-items: flex-start; gap: 10px; padding: 16px 14px 12px 18px;
+  background: #FFFFFF; border-bottom: 3px solid var(--c); }
+.testa-scheda i.pallino { width: 14px; height: 14px; margin-top: 6px; }
+.titolo-scheda { flex: 1; min-width: 0; }
+.titolo-scheda h2 { margin: 0; font-size: 19px; line-height: 1.3; }
+.titolo-scheda p { margin: 1px 0 0; color: #5B6B75; font-size: 13px; }
+.chiudi-scheda { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px;
+  border-radius: 8px; color: #46596A; }
+.chiudi-scheda .icona { width: 19px; height: 19px; }
+.chiudi-scheda:hover, .chiudi-scheda:focus-visible { background: #EEF1F4; color: #16263F; outline: none; }
+.voce-scheda { margin: 12px 18px 0; padding: 10px 12px; background: var(--primario-tenue); border-radius: 8px; font-size: 13.5px; }
+.voce-scheda > b { display: block; font: 600 15px var(--titoli); }
+.voce-scheda p { display: flex; gap: 6px; margin: 5px 0 0; font-size: 13px; }
+.voce-scheda p .icona { width: 16px; height: 16px; margin-top: 1px; }
+.voce-scheda.da-confermare { background: #FFF8E1; box-shadow: inset 0 0 0 1px #F0D58A; }
+.voce-scheda.da-confermare p .icona { color: #9C6B00; }
+.voce-scheda.non-si-fa { background: #FDECEA; box-shadow: inset 0 0 0 1px #F2B8B2; }
+.voce-scheda .nota-voce { color: #46596A; }
+.qui-scheda, .avviso-scheda { display: flex; gap: 6px; margin: 10px 18px 0; font-size: 13px; }
+.qui-scheda { color: #1B5E20; }
+.qui-scheda .icona, .avviso-scheda .icona { width: 16px; height: 16px; margin-top: 1px; }
+.avviso-scheda { color: #46596A; }
+ul.recapiti-scheda { list-style: none; margin: 12px 18px 0; padding: 0; }
+.recapiti-scheda li { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px solid #EEF1F3; font-size: 14px; }
+.recapiti-scheda li > .icona { width: 16px; height: 16px; color: var(--primario); align-self: center; }
+.recapiti-scheda li > span { flex: 1; }
+.telefono-scheda b { flex: 1; font: 600 17px var(--titoli); letter-spacing: .02em; }
+.piccolo-link { font-size: 12px; white-space: nowrap; }
+.note-scheda { margin: 10px 18px 0; padding: 8px 10px; background: #F4F5F3; border-radius: 6px; font-size: 13px; }
+.senza-recapiti { display: flex; gap: 8px; margin: 12px 18px 0; padding: 10px 12px; background: #FFF8E1; border-radius: 8px;
+  box-shadow: inset 0 0 0 1px #F0D58A; font-size: 13px; }
+.senza-recapiti .icona { width: 16px; height: 16px; color: #9C6B00; margin-top: 1px; }
+.branche-scheda { margin: 14px 18px 0; }
+.branche-scheda h4 { margin: 0 0 6px; font: 600 13.5px var(--titoli); color: #33475B; }
+.branche-scheda h4 small { font: 500 12px var(--testo); color: #6A7A84; margin-left: 4px; }
+.branche-scheda ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.branche-scheda li { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border: 1px solid #DDE3E8; border-radius: 12px;
+  font-size: 12.5px; }
+.branche-scheda li a { color: #16263F; text-decoration: none; }
+.branche-scheda li a:hover { text-decoration: underline; }
+.branche-scheda li small { color: #6A7A84; }
+.titolo-messaggio { margin: 18px 18px 6px; font-size: 15px; }
+.titolo-messaggio small { font: 500 12.5px var(--testo); color: #5B6B75; margin-left: 4px; }
+textarea.messaggio-dove { display: block; width: calc(100% - 36px); margin: 0 18px; min-height: 160px; resize: vertical;
+  font: 13.5px/1.45 var(--testo); color: #16263F; padding: 9px 11px; border: 1px solid #B8C0C4; border-radius: 8px; background: #FFFFFF; }
+textarea.messaggio-dove:focus { outline: 2px solid var(--primario-fuoco); outline-offset: -1px; }
+.azioni-scheda { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 18px 0; }
+.azioni-scheda .bottone { justify-content: center; border-radius: 6px; padding: 6px 4px; }
+.segna-scheda { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 18px 0; }
+.segna-scheda .bottone { border-radius: 6px; }
+.segna-scheda select { font: 13px var(--testo); padding: 5px 8px; border: 1px solid #B8C0C4; border-radius: 6px; background: #FFFFFF; color: #16263F; }
+.aiuto-segna { flex-basis: 100%; margin: 0; font-size: 12px; color: #6A7A84; }
+.ultimi-scheda { margin: 16px 18px 0; }
+.ultimi-scheda h4 { margin: 0 0 4px; font: 600 12.5px var(--titoli); color: #46596A; }
+.ultimi-scheda ul { list-style: none; margin: 0; padding: 0; }
+.ultimi-scheda li { display: flex; gap: 8px; padding: 3px 0; font-size: 12.5px; }
+.ultimi-scheda li small { color: #6A7A84; }
+.modifica-scheda { margin: 14px 18px 0; font-size: 13px; }
+
+/* registro e strutture del gruppo */
+.barra-mese-dove { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 16px; }
+.barra-mese-dove h2 { margin: 0 6px; min-width: 150px; text-align: center; font-size: 19px; }
+.barra-mese-dove .passo { display: inline-flex; align-items: center; padding: 5px 8px; }
+.barra-mese-dove .bottone { margin-left: auto; }
+table.elenco-indirizzati td { vertical-align: top; }
+table.elenco-indirizzati td.quando { white-space: nowrap; font-variant-numeric: tabular-nums; }
+small.branca-riga, small.nota-riga { display: block; color: #6A7A84; font-size: 12px; }
+.carica-dove { padding: 12px 16px; }
+.stato-catalogo { display: flex; gap: 8px; margin: 0 0 10px; font-size: 14px; }
+.stato-catalogo .icona { width: 17px; height: 17px; color: #2E7D32; margin-top: 1px; }
+.stato-catalogo.vuoto .icona { color: #6A7A84; }
+.pagina form.modulo-carica { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.pagina form.modulo-carica label { flex-basis: 100%; font-size: 13px; color: #46596A; }
+.carica-dove p.aiuto { margin: 8px 0 0; font-size: 12.5px; color: #6A7A84; }
+.sede-elenco { display: inline-flex; align-items: center; gap: 7px; }
+.formato-dove { border-left-color: var(--primario); }
+.formato-dove summary { cursor: pointer; font-weight: 600; padding: 2px 0 8px; }
+.formato-dove ul { margin: 0 0 8px; padding-left: 20px; font-size: 13.5px; }
+.formato-dove li { margin-bottom: 4px; }
+details.cambi-dove { background: #FFFFFF; border: 1px solid #DDE3E8; border-radius: 8px; padding: 8px 12px; margin: 0 0 8px; }
+details.cambi-dove summary { cursor: pointer; font-size: 14px; }
+details.cambi-dove ul { columns: 2; column-gap: 24px; margin: 8px 0 2px; padding-left: 18px; font-size: 13px; }
+details.cambi-dove.tolte summary b { color: #B3261E; }
+.segno-nuova { font: 600 11px/18px var(--testo); padding: 0 7px; border-radius: 9px; background: var(--primario-tenue); color: var(--primario-scuro); }
+.pagina form.conferma-dove { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; }
+.conferma-dove .aiuto { font-size: 12.5px; color: #6A7A84; }
+.pagina-struttura-dove h1 .sede-elenco i.pallino { width: 14px; height: 14px; }
+.pagina-struttura-dove .spiega-modulo { color: #46596A; font-size: 13px; margin: 0 0 14px; }
+
+/* il foglio per il paziente */
+.foglio-dove .per-paziente { margin: 4px 0 12px; font-size: 15px; }
+.riquadro-dove-stampa { border: 2px solid #16263F; border-radius: 6px; padding: 12px 18px; margin: 10px 0; }
+.riquadro-dove-stampa h2 { margin: 0 0 8px; font-size: 21px; }
+table.recapiti-stampa { border-collapse: collapse; font-size: 14.5px; }
+table.recapiti-stampa th { text-align: left; vertical-align: top; color: #46596A; font-weight: 500; padding: 4px 18px 4px 0; white-space: nowrap; }
+table.recapiti-stampa td { padding: 4px 0; }
+.piede-dove-stampa { margin-top: 18px; font-size: 12px; color: #46596A; }
+
+/* con la scheda aperta gli avvisi stanno al centro di quello che resta della pagina */
+body.scheda-dove-aperta #avvisi-dove { left: calc((100vw - 440px) / 2); }
+@media (max-width: 1100px) {
+  body.scheda-dove-aperta .pagina-dove { margin-right: auto; }
+  body.scheda-dove-aperta #avvisi-dove { left: 50%; }
+}
+@media (max-width: 760px) {
+  .inizio-dove { grid-template-columns: 1fr; }
+  .branche-dove ul, details.cambi-dove ul { columns: 1; }
+  .azioni-scheda { grid-template-columns: 1fr 1fr; }
+  .cerca-dove select { max-width: none; flex: 1 1 100%; }
+}
+@media print {
+  .scheda-dove, .cerca-dove, .paziente-dove, #avvisi-dove { display: none !important; }
+  body.scheda-dove-aperta .pagina-dove { margin-right: auto; }
+}

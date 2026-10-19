@@ -59,3 +59,9 @@
   html.scuro table.turni td.cella[data-scrivendo]::after, html.scuro .pista[data-scrivendo]::after { background: #1C242D;
     color: #E1E7ED; }
 }
+@media screen {
+  /* 1.9: dove si fa. Le icone dei recapiti e dei collegamenti, chiare sul fondo scuro */
+  html.scuro .recapiti-scheda li > .icona, html.scuro .con-icona-testo .icona { color: var(--primario-scuro); }
+  html.scuro .scheda-dove { box-shadow: -14px 0 34px rgba(0, 0, 0, .55); }
+  html.scuro a.sede.scelta { box-shadow: 0 0 0 1px var(--primario-scuro); border-color: var(--primario-scuro); }
+}

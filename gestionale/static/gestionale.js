@@ -412,6 +412,7 @@
       if (dati.giorno) { voce('Vai a ' + dati.giorno.etichetta, '', dati.giorno.url, 'giorno'); }
       (dati.pazienti || []).forEach(function (p) { voce(p.etichetta, p.telefono, p.url, 'paziente'); });
       (dati.medici || []).forEach(function (m) { voce(m.etichetta, 'settimana del medico', m.url, 'medico'); });
+      (dati.prestazioni || []).forEach(function (p) { voce(p.etichetta, p.dettaglio, p.url, 'prestazione'); });
       if (!vociRapide.length) {
         var n = document.createElement('div');
         n.className = 'nessuno';
@@ -468,7 +469,7 @@
     if (e.key === 'Escape' && aiuto && !aiuto.hidden) { aiuto.hidden = true; return; }
     if (e.key === '/' && rapida) { e.preventDefault(); rapida.focus(); rapida.select(); return; }
     if (e.key === '?' && aiuto) { aiuto.hidden = !aiuto.hidden; return; }
-    var tasti = { ArrowLeft: 'precedente', ArrowRight: 'successivo', t: 'oggi', n: 'nuovo', g: 'g', e: 'e', c: 'c' };
+    var tasti = { ArrowLeft: 'precedente', ArrowRight: 'successivo', t: 'oggi', n: 'nuovo', g: 'g', e: 'e', c: 'c', d: 'd' };
     var nome = tasti[e.key.length === 1 ? e.key.toLowerCase() : e.key];
     if (nome && clicca(nome)) { e.preventDefault(); }
   });

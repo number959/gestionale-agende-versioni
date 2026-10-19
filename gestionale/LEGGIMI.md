@@ -5,6 +5,20 @@ ogni struttura: nome, logo, società e colori si impostano dal programma. Gira s
 della segreteria, con un solo utente; internet serve solo, in uscita, per le email e i
 WhatsApp ai pazienti e per scaricare gli aggiornamenti. Il database è un file unico.
 
+**Novità della 1.9.** **Dove si fa.** Nuovo menu *Dove si fa* (tasto D): si scrive la
+prestazione come la dice il paziente («risonanza ginocchio», «tac torace», «holter») e si
+vedono subito le **strutture del gruppo** dove si fa, con le sigle d'uso (RM, TC, RX, ECG,
+MOC…), singolari e plurali e le parole scritte male corrette da sole. Un clic sulla struttura
+apre la sua **scheda**: indirizzo con la mappa, telefoni, prenotazione online, orari, come si
+prenota e il **messaggio già scritto per il paziente**, da copiare, mandare su WhatsApp o
+per email, o stampare. Scelto il paziente (anche dalla sua scheda), il messaggio porta il
+suo nome e parte verso i suoi recapiti. I pazienti indirizzati restano in un **registro**
+(con Excel e nelle Statistiche). Il **database delle prestazioni** del gruppo, il file
+Excel con una X per ogni struttura dove si fa una prestazione, si carica da *Configura →
+Strutture del gruppo*, dove si scrivono anche i recapiti; per una versione nuova del file
+basta caricarla, con l'anteprima di cosa cambia. La ricerca in alto (tasto /) trova anche
+le prestazioni (vedi *Dove si fa*).
+
 **Novità della 1.8.** **Turni del personale.** Nuovo menu *Turni*: medici, infermieri, OSS,
 tecnici, accettazione e ausiliari, nel **mese** (il foglio dei turni con i codici M, P,
 N…), nella **settimana** (con orari, aree e le ore di ciascuno contro quelle del contratto)
@@ -852,8 +866,9 @@ confermare.
 
 ## Aiuto e guida
 
-- **Aiuto → Come fare…**: le guide, divise in *Primi passi*, *Tutti i giorni*, *Sala
-  operatoria*, *Cassa e fogli*, *Email e WhatsApp*, *Configurazione*, con una casella per
+- **Aiuto → Come fare…**: le guide, divise in *Primi passi*, *Tutti i giorni*, *Dove si fa*,
+  *Turni del personale*, *Sala operatoria*, *Cassa e fogli*, *Email e WhatsApp*,
+  *Configurazione*, con una casella per
   cercare ("spostare", "backup", "WhatsApp"). Ogni guida ha i passi numerati e un'immagine con gli stessi
   numeri (fatta con dati di prova inventati).
 - **Guarda il video**, in ogni guida: la stessa guida in un video di un minuto o due,
@@ -876,7 +891,7 @@ confermare.
   sola, e per due settimane una notifica la ricorda finché non la si apre. Le novità sono
   scritte in `novita.py`.
 - In fondo a **Come fare…** c'è il numero della versione installata (*Gestionale Agende,
-  versione 1.6*), con i collegamenti a *Configura → Aggiornamenti* e alla guida
+  versione 1.9*), con i collegamenti a *Configura → Aggiornamenti* e alla guida
   *Aggiornare a una versione nuova*.
 
 Le guide sono scritte una volta sola in `guida.py`: gli stessi passi fanno la pagina, la
@@ -995,6 +1010,120 @@ ordine. Le icone delle pagine dei turni sono di Lucide (licenza ISC), scritte de
 pagina, senza niente da internet (`templates/_icone.html`, licenze in
 `static/icone/LICENZE.txt`).
 
+## Dove si fa
+
+Menu **Dove si fa** (tasto **D**, dalla 1.9): in quale struttura del gruppo si fa una
+prestazione, per indirizzarci il paziente quando qui non si fa (o non c'è posto).
+
+**La ricerca.** Si scrive la prestazione come la dice il paziente: «risonanza ginocchio»,
+«tac torace», «eco addome», «holter», «cardiologo». I risultati arrivano mentre si scrive,
+senza ricaricare la pagina. Ogni parola scritta deve trovarsi all'inizio di una parola del
+nome, dei sinonimi del database o della branca, senza badare a maiuscole e accenti; le
+parole come «di», «con», «la» non contano. Valgono anche:
+
+- le sigle d'uso: RM o RMN e risonanza, TC e TAC, RX, lastra e radiografia, eco ed
+  ecografia, ECG, EEG, EMG, MOC e densitometria, EGDS e gastroscopia, mdc e contrasto,
+  doppler; colonna e schiena (rachide), lombare (lombo-sacrale), testa (cranio, encefalo);
+- singolare e plurale: «ginocchio» e «ginocchia», «mano» e «mani», «rene» e «reni»;
+- le parole con il trattino anche unite: «lombo-sacrale» e «lombosacrale»;
+- gli specialisti: «dentista», «oculista», «nutrizionista», «otorino»; chi scrive il nome
+  di uno specialista («cardiologo», «ortopedico») trova per prima la visita;
+- una parola scritta male si corregge da sola: *Nessuna prestazione con «ecocardiogrma»:
+  ecco quelle con «ecocardiogramma»*.
+
+*Tutte le branche* restringe la ricerca a una branca. Senza ricerca la pagina mostra
+l'elenco delle branche (un clic per vederne le prestazioni), le strutture con città e
+numero di prestazioni, e gli ultimi pazienti indirizzati. Le frecce passano dal campo alle
+strutture dei risultati e da una struttura all'altra; Esc nel campo lo svuota.
+
+**I risultati.** Per ogni prestazione: nome, branca, sinonimi e le strutture dove si fa,
+ognuna con il suo colore e la città. *qui* è questa struttura; *da confermare* (bordo
+tratteggiato) vuol dire che il database non ne è sicuro (nella nota di quella struttura c'è
+«da confermare» o «da verificare»): passandoci sopra si legge la nota. Se la prestazione è
+anche nel listino di questo gestionale, sopra i risultati c'è **Si fa anche qui**, con il
+collegamento per prenotarla (con il paziente, se è stato scelto). Al massimo 60 risultati:
+una parola in più restringe la ricerca.
+
+**La scheda della struttura.** Un clic (o Invio) sulla struttura apre la sua scheda, a
+destra; la pagina si stringe per lasciarle posto, Esc o la × la chiudono e si torna al
+risultato. Dentro: la prestazione (con l'avviso se è da confermare o se lì non si fa),
+indirizzo con *mappa* (Google Maps: serve internet), telefoni ed email con *copia*,
+prenotazione online, orari, come si prenota, le note per la segreteria; se mancano i
+recapiti, il collegamento per scriverli. Sotto, il **messaggio per il paziente**, già
+scritto con la prestazione e i recapiti e firmato con il nome della struttura, che si può
+cambiare: *Copia* (negli appunti, si incolla con Ctrl+V), *WhatsApp* (WhatsApp Web o
+l'app, con il testo già scritto), *Email* (il programma della posta, con oggetto e testo),
+*Stampa* (un foglio A4 da dare allo sportello). WhatsApp ed email mandano il testo com'è
+nella casella in quel momento. L'indirizzo della pagina segue la ricerca e la scheda
+aperta: ricaricando si ritrova tutto.
+
+**Per un paziente.** Scegliendo il paziente nella pagina (*Per un paziente in
+anagrafica?*) o arrivando dalla sua scheda (*Dove si fa una prestazione*), il messaggio
+comincia con il suo nome, WhatsApp va al suo cellulare (anche se è il secondo numero) e
+l'email al suo indirizzo. Senza cellulare o senza email si sceglie a chi mandarlo.
+
+**Il registro dei pazienti indirizzati.** *Segna come indirizzato* (al telefono o a voce,
+allo sportello) lo scrive nel registro; WhatsApp, Email e Stampa si segnano da sole, una
+volta per scheda aperta, e l'avviso in basso ha *Annulla* se non serviva. *Pazienti
+indirizzati* (in alto nella pagina) mostra un mese per volta, con i conti per struttura,
+*Togli* e lo scaricamento in Excel; le **Statistiche** hanno *Indirizzati alle altre
+strutture*, anche nel loro Excel. Nel registro nomi del paziente, della prestazione e della
+struttura sono copiati: resta leggibile anche dopo una versione nuova del database o una
+scheda eliminata; unendo due schede dello stesso paziente le righe passano a quella che
+resta.
+
+**Il database delle prestazioni** (*Configura → Strutture del gruppo*) è il file Excel del
+gruppo. Un foglio con l'intestazione **Branca** e **Prestazione** e, se ci sono,
+**Sinonimi** (le altre parole con cui si chiede, separate da virgole) e **Note**; poi una
+colonna per ogni struttura, con il suo nome in intestazione e una **X** dove la prestazione
+si fa (valgono anche x, Sì, 1, ✓). L'intestazione può stare sotto qualche riga di titolo.
+Se i fogli sono più d'uno vale quello con «database» nel nome, altrimenti il primo con
+Branca e Prestazione: gli altri (riepiloghi, fogli per struttura, regole) si saltano. Una
+colonna con altro oltre alle X si salta con un avviso (Codice, Tariffa e simili senza
+avviso); le righe vuote o senza nome si saltano, una prestazione scritta due volte diventa
+una. Nelle **note**, un pezzo che comincia con il nome o la sigla di una struttura (le
+iniziali: «CN: …» per *Centro Nord*) va a quella struttura, se la prestazione lì si fa; più
+pezzi si separano con il punto e virgola; con «da confermare» o «da verificare» la
+prestazione in quella struttura è *da confermare*. Il resto della nota resta sulla
+prestazione e si vede nei risultati. Facoltativo: un foglio **Strutture** con la colonna
+**Struttura** (lo stesso nome delle colonne) e i recapiti (Indirizzo, Città, Telefono,
+Altro telefono, Email, Prenotazione online, Orari, Come si prenota, Note), che riempie i
+recapiti che nel programma mancano.
+
+Caricando il file si vede prima **cosa cambia**: quante prestazioni, branche e strutture,
+le prestazioni nuove, quelle tolte e quelle cambiate di branca, le strutture nuove o
+sparite, gli avvisi. *Importa* fa una copia di sicurezza (*prima del database
+prestazioni*) e porta tutto nel programma; se la copia non riesce, non cambia niente. Per
+una **versione nuova** del database si carica il file nuovo allo stesso modo: le
+prestazioni con lo stesso nome restano le stesse (anche per il registro), quelle tolte
+spariscono dalla ricerca, i recapiti scritti nel programma restano. Una struttura che non
+c'è più nel file resta, con i suoi recapiti ma senza prestazioni, finché non torna. Se nel
+file una struttura cambia nome, per il programma è una struttura nuova: i recapiti si
+riscrivono.
+
+**Recapiti** di ogni struttura: indirizzo e città, telefono (quello per prenotare) e altro
+telefono, email, prenotazione online (un indirizzo web completo, https://…), orari, come
+si prenota (va nel messaggio al paziente), note per la segreteria (non vanno nel messaggio)
+e un nome breve per le etichette. *È una struttura di questo gestionale?*: una struttura
+del database con lo stesso nome di una del gestionale lo è da sola alla prima importazione;
+altrimenti si sceglie qui, e nei risultati porta il segno *qui*. Togliendo *Compare nelle
+ricerche di Dove si fa* la struttura non viene più proposta, senza cancellare niente.
+
+Il file vero del gruppo non è dentro il programma: si carica dalla pagina, una volta, e di
+nuovo a ogni versione.
+
+Dentro: `dovesifa.py` (lettura del file, importazione, ricerca con il suo indice, scheda
+della struttura e messaggio, registro, pagine), le tabelle `strutture_gruppo`, `catalogo`,
+`catalogo_sedi` e `indirizzati` (schema 10), le pagine `templates/dove*.html`,
+`templates/_dove_risultati.html` e `templates/_dove_scheda.html` e `static/dove.js`. I
+risultati e la scheda sono gli stessi modelli per la pagina intera e per i pezzi che la
+pagina chiede mentre si scrive (`/dove-si-fa/risultati` e `/dove-si-fa/scheda/<id>`): il
+disegno è uno solo, e i dati vi arrivano già codificati. La ricerca prepara una volta
+l'indice delle prestazioni e lo rifà solo quando il catalogo cambia (importazione o
+recapiti: impostazione `catalogo_versione`); su 1200 prestazioni risponde in pochi
+millesimi di secondo. `strumenti/catalogo_prova.py` scrive un database inventato, fatto
+come quello vero, per la prova (`strumenti/demo.py`) e per le prove automatiche.
+
 ## Sala operatoria
 
 Un **intervento** è un appuntamento in una stanza di tipo *Sala operatoria* (il tipo si
@@ -1048,10 +1177,11 @@ struttura.
   messaggi ai pazienti non partiti. Le notifiche sono per la segreteria: ai pazienti
   scrivono solo le email e i promemoria di *Email e WhatsApp ai pazienti*, se accesi.
 - **Ricerca rapida** nel menu: un paziente per cognome o telefono, un medico (apre la sua
-  settimana) o un giorno ("oggi", "domani", "lunedì", "24/9", "24 settembre").
+  settimana), un giorno ("oggi", "domani", "lunedì", "24/9", "24 settembre") o, dalla 1.9,
+  una prestazione con le strutture dove si fa (apre *Dove si fa*).
 - **Tasti** (fuori dai campi di testo): `/` cerca, `←` `→` giorno prima e dopo, `T`
-  oggi, `N` nuovo appuntamento, `G` `E` `C` griglia, elenco e conferme, `?` l'elenco dei
-  tasti. In un modulo, **Ctrl+Invio** salva.
+  oggi, `N` nuovo appuntamento, `G` `E` `C` griglia, elenco e conferme, `D` Dove si fa, `?`
+  l'elenco dei tasti. In un modulo, **Ctrl+Invio** salva.
 
 ## Dove stanno i dati
 
@@ -1075,6 +1205,12 @@ pianificazione, ma non serve più.
 
 In più il pulsante *Scarica in Excel* rigenera il planning del giorno nel formato che
 l'accettazione usa già.
+
+**Aggiornamento alla 1.9.** Al primo avvio della 1.9 il programma copia il database in
+`backup\agende-…-prima-della-versione-10.db`, poi aggiunge le quattro tabelle di *Dove si
+fa* (strutture del gruppo, prestazioni del database, dove si fanno, pazienti indirizzati),
+vuote finché non si carica il database delle prestazioni. Niente di quello che c'era viene
+toccato.
 
 **Aggiornamento alla 1.8.** Al primo avvio della 1.8 il programma copia il database in
 `backup\agende-…-prima-della-versione-9.db`, poi aggiunge le quattro tabelle dei turni del
@@ -1135,6 +1271,9 @@ la transazione si annulla e il database resta com'era. Il registro riporta ogni 
 | `cruscotto.py` | La pagina Oggi e il riepilogo del mese per medico |
 | `personale.py` | Turni del personale: regole (sovrapposizioni, riposi), conti, coperture, schema a rotazione, copia della settimana, pagine, Excel del mese |
 | `static/turni.js` | La griglia dei turni come un foglio di calcolo, la scelta del turno, annulla e rifai, la vista del giorno, lo schema a rotazione |
+| `dovesifa.py` | Dove si fa: lettura del database delle prestazioni (Excel), importazione con l'anteprima, ricerca, scheda della struttura con il messaggio per il paziente, registro dei pazienti indirizzati, recapiti |
+| `static/dove.js` | La ricerca mentre si scrive, la scheda della struttura, copia, WhatsApp, email e stampa, il registro con Annulla, il paziente scelto |
+| `strumenti/catalogo_prova.py` | Un database delle prestazioni inventato, fatto come quello vero, per la prova e per le prove |
 | `templates/_icone.html`, `static/icone/LICENZE.txt` | Le icone (Lucide, licenza ISC) scritte dentro le pagine, con le licenze (anche Radix Colors, MIT, per i colori dei turni) |
 | `importa.py` | Importazione da Excel e CSV: riconoscimento, anteprima, esecuzione |
 | `marchio.py` | Controllo e pulizia del logo, colore proposto, contrasto |
@@ -1377,6 +1516,32 @@ Versione 1.8, con gli stessi script (Wine 9, Python 3.14.8, PyInstaller 6.22.3, 
   persone aggiunte, un turno scritto con il tasto M nella griglia del mese, Ctrl+Z e Ctrl+Y,
   il turno ancora lì dopo aver ricaricato la pagina, nessun errore JavaScript.
 
+Versione 1.9, con gli stessi script (Wine 9, Python 3.14.8, PyInstaller 6.22.3, Inno Setup 6.7.3):
+
+- `costruisci.sh` per le due versioni: Setup di circa 56 MB (con i 37 video) e file delle
+  versioni in `Output`.
+- Aggiornamento dalla 1.8.1 installata, con 81 appuntamenti, 81 pazienti e 14 medici: copia di
+  sicurezza *prima della versione 10* identica al database di partenza, schema da 9 a 10, le
+  quattro tabelle di Dove si fa (vuote), *"versione 1.9 avviata la prima volta (prima c'era la
+  1.8.1)"*; tutte le tabelle di prima identiche riga per riga, `integrity_check` e
+  `foreign_key_check` a posto.
+- Sull'eseguibile installato, normale e animato, `prove_installato.py`: 31 controlli a posto
+  (in più rispetto alla 1.8: le pagine di Dove si fa, il tasto D nel menu, `dove.js`, la
+  ricerca rapida con le prestazioni). Poi, sull'eseguibile, il database delle prestazioni
+  inventato caricato dalla pagina, con l'anteprima, l'importazione (56 prestazioni in 6
+  strutture) e la sua copia di sicurezza, la ricerca, una parola scritta male, la scheda
+  della struttura, un paziente segnato e tolto dal registro, la ricerca rapida: 11 controlli
+  su 11; nel browser la ricerca mentre si scrive, la scheda, Esc, nessun errore JavaScript.
+- **Aggiorna adesso per intero** dalla 1.9 a una 1.9.1 di prova in una cartella: pronta in 2
+  secondi, notifica, clic nel browser, Setup silenzioso, gestionale riaperto e pagina passata
+  da sola alle *Novità della versione 1.9.1*, registro *"aggiornamento dalla 1.9 alla 1.9.1
+  riuscito"*, copia di sicurezza, Setup installato tolto al primo giro del controllo, dati
+  identici e il database delle prestazioni ancora lì: 14 controlli su 14.
+- La 1.9 animata installata sopra la 1.8 animata: stessa copia di sicurezza e stesso
+  aggiornamento dello schema, dati identici, gli stessi 31, 11 e 5 controlli a posto.
+- Primo avvio senza dati, come dopo un'installazione nuova: database creato già allo schema
+  10, gli stessi controlli a posto.
+
 Restano fuori, perché si vedono solo su un Windows vero: l'avviso SmartScreen, il
 comportamento dell'antivirus del PC e l'apertura del browser predefinito; per gli
 aggiornamenti, una versione più nuova pubblicata davvero su GitHub (il percorso è lo stesso provato su
@@ -1461,6 +1626,9 @@ python prove_17.py           # 33 prove sulla 1.7: codice fiscale (controllo, om
 python prove_18.py           # 29 prove sulla 1.8: turni del personale (regole contro oracoli scritti a parte, conti,
                              # schema, copia, annulla e rifai, protezioni, 260 modifiche a caso con invarianti,
                              # aggiornamento dalla 8) e registrazione del numero WhatsApp con una finta Meta
+python prove_19.py           # 27 prove sulla 1.9: Dove si fa (lettura del file in tanti modi e con i suoi errori,
+                             # importazione e versioni nuove, ricerca contro un oracolo su 1200 prestazioni
+                             # inventate, pagine, registro, statistiche, protezioni, aggiornamento dalla 9)
 python prove_16.py           # 45 prove sulla 1.6: Aggiorna adesso da una cartella e da un finto GitHub su https
                              # (rimandi, errori del sito, certificati, file delle versioni storpiati, Setup rovinati),
                              # installazione, esito al riavvio, novità, videoguide, installer e file delle versioni,
@@ -1471,15 +1639,18 @@ python prove_16_browser.py http://127.0.0.1:5001   # 19 controlli: finestra dei 
                              # l'indirizzo degli aggiornamenti: su un gestionale di prova a parte)
 python prove_17_browser.py http://127.0.0.1:5001   # 16 controlli: codice fiscale mentre si scrive, calcolo,
                              # suggerimenti del luogo, prenotazione, pagina di controllo (salva pazienti di prova)
-python prove_tendine_browser.py http://127.0.0.1:5001   # 144 controlli: le tendine sopra la pagina e le notifiche, a 1366x657
+python prove_tendine_browser.py http://127.0.0.1:5001   # 150 controlli: le tendine sopra la pagina e le notifiche, a 1366x657
 python prove_18_browser.py http://127.0.0.1:5001   # 46 controlli sui turni: griglia, tastiera, annulla e rifai, scelta del turno
+python prove_19_browser.py http://127.0.0.1:5001   # 37 controlli su Dove si fa: ricerca mentre si scrive, frecce, scheda della
+                             # struttura, messaggio cambiato, Copia, WhatsApp e Stampa, registro con Annulla, paziente,
+                             # ricerca rapida, schermo stretto, tema scuro (segna pazienti indirizzati di prova)
                              # (dove si apre, mai coperta), schema, giorno a ore, schermo stretto, movimento ridotto
-python prove_guida_browser.py http://127.0.0.1:5000   # 50 controlli nel browser, sui dati di prova
+python prove_guida_browser.py http://127.0.0.1:5000   # 52 controlli nel browser, sui dati di prova
 python prove_sicurezza_browser.py http://127.0.0.1:5000   # 5 controlli: moduli mandati da un altro sito
 python campagna.py           # 2550 casi generati, anche sulle pagine della 1.4, circa due minuti
 ```
 
-In tutto 903 prove più 2550 casi generati e 294 controlli nel browser, tutte verdi su Python 3.11 e 3.14.
+In tutto 930 prove più 2550 casi generati e 339 controlli nel browser, tutte verdi su Python 3.11 e 3.14.
 Vanno rilanciate dopo ogni modifica; ognuna crea un database usa e getta. Alcune delle più
 vecchie escono con codice 0 anche se una prova non va: conta la riga finale («0 da
 sistemare»), che è quella che legge `tutte_le_prove.py`.
@@ -1651,6 +1822,28 @@ registro di una giornata):
 | Sala occupata alla stessa ora, stanza non indicata | La riga restava fuori, solo nell'Excel degli scarti | Va fra i da confermare, con i suoi dati |
 | Nome del file e riepilogo nel titolo uniti | "Lippiello Data" preso per un medico | Le celle del titolo restano separate |
 | Menu con la voce nuova | Andava a capo a 1366 pixel | Spaziature e ricerca più strette |
+
+Sedicesimo giro, 1.9, Dove si fa (trovati provando la ricerca sul database vero, letto senza
+copiarlo, e sulla pagina nel browser):
+
+| Difetto | Effetto | Correzione |
+|---|---|---|
+| «nei» (le macchie della pelle) è anche una preposizione | La ricerca «nei» non trovava la mappatura dei nei | Se restano solo parole vuote, si cercano quelle |
+| Parole di quattro lettere al plurale | «rx mani» non trovava *Radiografia mano*, «eco reni» non trovava *Ecografia renale* | Per le parole di quattro lettere vale anche il singolare o il plurale; reni e rene anche come renale |
+| Nomi con il trattino nel database | «rm lombare» e «lombosacrale» non trovavano *RM rachide lombo-sacrale* | Le parole con il trattino valgono anche unite; lombare vale anche lombo |
+| «cardiologo» | Prima *Riabilitazione cardiologica*, poi la visita | Chi scrive uno specialista trova per prima la visita |
+| Recapiti nel foglio *Strutture* di una versione nuova del file | Avrebbero preso il posto di quelli corretti a mano nel programma | Il foglio riempie solo i recapiti che mancano |
+| Tema scuro generato da `stile.css` | La riga colorata a sinistra delle strutture e il bordo tratteggiato di «da confermare» sparivano (il tema scuro riscrive il bordo intero) | Il colore della struttura è un'ombra interna, il bordo si scrive per parti |
+| Avviso «Segnato…» al centro dello schermo | Con la scheda aperta finiva sotto la scheda | Al centro della parte libera della pagina |
+| Testo con il paziente scelto | «WhatsApp ed email vanno a lui» anche per una paziente | «partono verso i suoi recapiti» |
+| Guida sullo schermo della pagina | Sul gestionale vero la scheda della struttura non è aperta: i passi della scheda finivano al centro | La guida apre da sola la scheda della prima struttura |
+| «Cosa si fa qui» nella scheda di una struttura | Un clic su una branca mostrava le prestazioni di tutte le strutture | Le prestazioni di quella struttura (filtro *Solo le prestazioni di…*, che si toglie) |
+
+Delle prove, non del programma: una cercava il testo della correzione dove il programma
+mette in grassetto la parola corretta; un'altra leggeva come una riga sola il testo di un
+riquadro a colonne flessibili (il browser lo dà a righe); nella versione animata una misura
+della scheda veniva presa mentre la scheda stava ancora entrando da destra (ora si aspetta
+la fine del movimento).
 
 Quindicesimo giro, 1.8, turni del personale e tendine (trovati provando, nel browser e con
 le prove nuove):

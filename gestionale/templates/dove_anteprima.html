@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Database delle prestazioni: cosa cambia{% endblock %}
+{% macro elenco_voci(titolo, voci, classe='') %}
+{%- if voci %}
+<details class="cambi-dove {{ classe }}"{% if voci|length <= 12 %} open{% endif %}>
+  <summary><b>{{ voci|length }}</b> {{ titolo }}</summary>
+  <ul>{% for v in voci[:300] %}<li>{{ v }}</li>{% endfor %}{% if voci|length > 300 %}<li class="senza">… e altre {{ voci|length - 300 }}</li>{% endif %}</ul>
+</details>
+{%- endif %}
+{% endmacro %}
+{% block corpo %}
+<div class="pagina larga pagina-anteprima-dove">
+  <h1>{% if diff.primo %}Il database delle prestazioni{% else %}La versione nuova del database{% endif %}</h1>
+  <p class="sotto">File <b>{{ nome }}</b>, foglio «{{ letto.foglio }}». Niente è ancora cambiato: si controlla e si conferma in fondo.</p>
+
+  <ul class="numeri grandi">
+    <li><b>{{ letto.voci|length }}</b> prestazioni</li>
+    <li><b>{{ diff.branche }}</b> branche</li>
+    <li><b>{{ letto.strutture|length }}</b> strutture</li>
+  </ul>
+
+  {% if letto.avvisi %}
+  <div class="avviso avviso-giallo"><b>Da sapere:</b>
+    <ul>{% for a in letto.avvisi %}<li>{{ a }}</li>{% endfor %}</ul></div>
+  {% endif %}
+
+  <h2 class="sezione">Strutture</h2>
+  <table class="elenco">
+    <tr><th>Struttura</th><th>Prestazioni</th><th></th></tr>
+    {% for x in diff.strutture %}
+    <tr><td><b>{{ x.nome }}</b></td>
+      <td>{{ x.voci }}{% if not x.nuova and x.prima != x.voci %} <small class="senza">(prima {{ x.prima }})</small>{% endif %}</td>
+      <td>{% if x.nuova %}<span class="segno-nuova">nuova</span>{% endif %}{% if x.recapiti %} recapiti dal foglio Strutture (solo quelli che mancano){% endif %}</td></tr>
+    {% endfor %}
+  </table>
+  {% if diff.sparite %}
+  <p class="avviso avviso-giallo">Non sono più nel file: <b>{{ diff.sparite|join(', ') }}</b>. Restano con i loro recapiti, ma senza prestazioni.</p>
+  {% endif %}
+
+  {% if not diff.primo %}
+  <h2 class="sezione">Prestazioni</h2>
+  {% if not diff.aggiunte and not diff.tolte and not diff.spostate %}
+  <p>Le stesse prestazioni di prima (può cambiare dove si fanno).</p>
+  {% endif %}
+  {{ elenco_voci('prestazioni nuove', diff.aggiunte) }}
+  {{ elenco_voci('prestazioni che non ci sono più (spariscono dalla ricerca; il registro resta)', diff.tolte, 'tolte') }}
+  {{ elenco_voci('prestazioni cambiate di branca', diff.spostate) }}
+  {% endif %}
+
+  <form method="post" class="conferma-dove" data-attesa="Importazione in corso…">
+    <input type="hidden" name="azione" value="importa">
+    <button class="bottone primario con-icona" type="submit" data-guida="anteprima-importa">{{ icona('check') }}{% if diff.primo %}Importa il database{% else %}Importa la versione nuova{% endif %}</button>
+    <a class="bottone" href="{{ url_for('dovesifa.strutture') }}">Annulla</a>
+    <span class="aiuto">Prima si fa una copia di sicurezza del gestionale.</span>
+  </form>
+</div>
+{% endblock %}

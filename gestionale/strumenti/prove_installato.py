@@ -12,7 +12,8 @@ sua variante e l'indirizzo degli aggiornamenti, stato.json, i tipi dei file
 statici, il codice fiscale (controllo, calcolo e luoghi: il file dei luoghi
 deve essere dentro l'eseguibile), la pagina Controllo dei codici fiscali, i turni
 del personale (pagine, i dieci tipi di turno di partenza, Excel, turni.js, icone e
-loro licenze) e la registrazione del numero WhatsApp."""
+loro licenze), la registrazione del numero WhatsApp e Dove si fa (pagine, dove.js, il
+menu, la ricerca rapida con le prestazioni)."""
 import json
 import os
 import re
@@ -117,6 +118,21 @@ for p, tipo, parola in (('/static/turni.js', 'text/javascript', b'griglia-turni'
               (s, h.get('Content-Type')))
 s, b, _ = get('/invii')
 controlla('WhatsApp: «Registra il numero» nella pagina', s == 200 and 'Registra il numero' in testo(b), s)
+# 1.9: Dove si fa (solo lettura: con o senza il database delle prestazioni caricato)
+s, b, _ = get('/dove-si-fa/')
+t = b.decode('utf-8', 'replace')
+controlla('Dove si fa: la pagina (database aggiornato allo schema 10)',
+          s == 200 and ('id="q-dove"' in t or 'Manca il database delle prestazioni' in t), s)
+controlla('Dove si fa: nel menu, con il tasto D', re.search(r'<a data-tasto="d" href="/dove-si-fa/', t) is not None)
+for p, parola in (('/dove-si-fa/strutture', 'Strutture del gruppo'), ('/dove-si-fa/registro', 'Pazienti indirizzati')):
+    s, b, _ = get(p)
+    controlla('Dove si fa: %s' % p, s == 200 and parola in testo(b), s)
+s, b, h = get('/static/dove.js')
+controlla('Dove si fa: dove.js', s == 200 and h.get('Content-Type', '').startswith('text/javascript') and
+          b'pagina-dove' in b, (s, h.get('Content-Type')))
+s, b, _ = get('/cerca-tutto.json?q=ecografia')
+d = json.loads(b) if s == 200 else {}
+controlla('ricerca rapida: anche le prestazioni', isinstance(d.get('prestazioni'), list), (s, list(d)))
 
 for ok, nome, dettaglio in esiti:
     print(('OK ' if ok else 'KO ') + nome + ('' if ok else '  ' + str(dettaglio)[:300]))

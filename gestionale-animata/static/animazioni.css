@@ -217,6 +217,23 @@ html:not(.anim) .tempo-notifica { display: none; }
 .anim .ruolo-opzione span { transition: background-color .15s, border-color .15s, color .15s, transform .12s var(--curva-molla); }
 .anim .ruolo-opzione input:checked + span { transform: scale(1.03); }
 
+/* ------------------------------------------------------------ 1.9: dove si fa */
+@keyframes a-scheda { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+/* i risultati compaiono piano (arrivano mentre si scrive: niente di lungo); le strutture rispondono al passaggio */
+.anim .voce-dove, .anim .nessuno-dove, .anim .inizio-dove { animation: a-appare .2s ease-out both; }
+.anim .corretta-dove, .anim .nostri-dove { animation: a-scende .25s var(--curva-uscita) both; }
+.anim a.sede { transition: background-color .15s, border-color .15s, box-shadow .15s, transform .14s var(--curva-molla); }
+.anim a.sede:hover { transform: translateY(-1px); }
+.anim a.sede:active { transform: scale(.96); }
+.anim a.sede-grande { transition: background-color .15s, box-shadow .15s, transform .14s var(--curva-molla); }
+.anim a.sede-grande:hover { transform: translateX(2px); }
+/* la scheda della struttura arriva da destra; cambiando struttura il contenuto si rinnova piano */
+.anim .scheda-dove:not([hidden]) { animation: a-scheda .26s var(--curva-uscita) both; }
+.anim .scheda-dove .dentro-scheda { animation: a-appare .2s ease-out both; }
+.anim .pagina-dove { transition: margin .22s var(--curva-uscita); }
+.anim .campo-cerca-dove input { transition: border-color .15s, box-shadow .2s; }
+.anim .campo-cerca-dove input:focus { box-shadow: 0 0 0 4px rgba(21, 67, 129, .14); }
+
 /* --------------------------------------------------------- mai in stampa */
 @media print {
   *, *::before, *::after { animation: none !important; transition: none !important; }

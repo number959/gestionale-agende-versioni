@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Strutture del gruppo{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-strutture-dove">
+  <h1>Strutture del gruppo <small class="sotto-titolo">il database delle prestazioni e i recapiti, per Dove si fa</small></h1>
+  <p class="sotto"><a href="{{ url_for('dovesifa.pagina') }}">Vai a Dove si fa</a></p>
+
+  <div class="riquadro carica-dove" data-guida="gruppo-carica">
+    {% if info %}
+    <p class="stato-catalogo">{{ icona('check') }}<span>Database caricato: <b>{{ info.file or 'file Excel' }}</b>
+      {%- if info.importato %}, il {{ info.importato[8:10] }}/{{ info.importato[5:7] }}/{{ info.importato[:4] }} alle {{ info.importato[11:16] }}{% endif %}
+      — {{ voci }} prestazioni in {{ info.strutture }} strutture.</span></p>
+    {% else %}
+    <p class="stato-catalogo vuoto">{{ icona('info') }}<span>Il database delle prestazioni non è ancora caricato.</span></p>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" class="modulo-carica" data-attesa="Lettura del file…">
+      <label for="file-database">{% if info %}Quando esce una versione nuova del database si carica qui, al posto della vecchia{% else %}Il file Excel del database delle prestazioni{% endif %}:</label>
+      <input type="file" id="file-database" name="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+      <button class="bottone primario con-icona" type="submit">{{ icona('upload') }}{% if info %}Carica la versione nuova{% else %}Carica il database{% endif %}</button>
+    </form>
+    <p class="aiuto">Prima di cambiare qualcosa si vede cosa cambia, e si conferma. I recapiti scritti qui restano,
+      e così il registro dei pazienti indirizzati.</p>
+  </div>
+
+  {% if gruppo %}
+  <h2 class="sezione">Le strutture</h2>
+  <table class="elenco elenco-gruppo" data-guida="gruppo-elenco">
+    <tr><th>Struttura</th><th>Città</th><th>Telefono</th><th>Prestazioni</th><th>In questo gestionale</th><th></th></tr>
+    {% for g in gruppo %}
+    <tr{% if not g.attiva or not g.nel_database %} class="non-attiva"{% endif %}>
+      <td><span class="sede-elenco" style="--c: {{ colore_sicuro(g.colore) }}"><i class="pallino" aria-hidden="true"></i><b>{{ g.nome }}</b></span>
+        {%- if g.nome_breve %} <small>({{ g.nome_breve }})</small>{% endif %}
+        {%- if not g.nel_database %} <span class="etichetta-spenta">non è più nel database</span>
+        {%- elif not g.attiva %} <span class="etichetta-spenta">spenta</span>{% endif %}</td>
+      <td>{{ g.citta or '' }}</td>
+      <td>{% if g.telefono %}{{ g.telefono }}{% else %}<span class="senza">da scrivere</span>{% endif %}</td>
+      <td>{{ conta.get(g.id, 0) }}</td>
+      <td>{% if g.struttura %}<span class="collegato">{{ icona('check') }}{{ g.struttura.nome }}</span>{% else %}<span class="senza">no</span>{% endif %}</td>
+      <td class="azione"><a href="{{ url_for('dovesifa.struttura', gid=g.id) }}">Recapiti</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <details class="guida formato-dove">
+    <summary>Com'è fatto il file del database</summary>
+    <ul>
+      <li>Un foglio con una riga di intestazione con almeno <b>Branca</b> e <b>Prestazione</b>; se ci sono,
+        anche <b>Sinonimi</b> (le altre parole con cui si chiede, separate da virgole) e <b>Note</b>.</li>
+      <li>Poi una colonna per ogni struttura, con il suo nome in intestazione e una <b>X</b> dove la prestazione si fa.</li>
+      <li>Nelle note, un pezzo che comincia con la sigla della struttura (per «Centro Nord»: «CN: …»; più pezzi separati da punto e virgola) va a
+        quella struttura; con «da confermare» o «da verificare» la prestazione lì si vede come <i>da confermare</i>.</li>
+      <li>Se ci sono più fogli si usa quello che ha «database» nel nome, altrimenti il primo con Branca e Prestazione.</li>
+      <li>Facoltativo: un foglio <b>Strutture</b> con una colonna <b>Struttura</b> (lo stesso nome delle colonne)
+        e i recapiti: Indirizzo, Città, Telefono, Altro telefono, Email, Prenotazione online, Orari, Come si prenota, Note.</li>
+    </ul>
+  </details>
+</div>
+{% endblock %}
