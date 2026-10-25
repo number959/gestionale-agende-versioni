@@ -12,8 +12,10 @@ sua variante e l'indirizzo degli aggiornamenti, stato.json, i tipi dei file
 statici, il codice fiscale (controllo, calcolo e luoghi: il file dei luoghi
 deve essere dentro l'eseguibile), la pagina Controllo dei codici fiscali, i turni
 del personale (pagine, i dieci tipi di turno di partenza, Excel, turni.js, icone e
-loro licenze), la registrazione del numero WhatsApp e Dove si fa (pagine, dove.js, il
-menu, la ricerca rapida con le prestazioni)."""
+loro licenze), la registrazione del numero WhatsApp, Dove si fa (pagine, dove.js, il
+menu, la ricerca rapida con le prestazioni) e la pagina dell'email della 1.9.1 (tipo di
+casella, gestionale.js, la guida vecchia che porta a quella nuova). L'invio delle email sul
+programma installato si prova con strumenti/prova_email_installato.py."""
 import json
 import os
 import re
@@ -133,6 +135,26 @@ controlla('Dove si fa: dove.js', s == 200 and h.get('Content-Type', '').startswi
 s, b, _ = get('/cerca-tutto.json?q=ecografia')
 d = json.loads(b) if s == 200 else {}
 controlla('ricerca rapida: anche le prestazioni', isinstance(d.get('prestazioni'), list), (s, list(d)))
+# 1.9.1: l'email con qualsiasi casella (solo lettura)
+s, b, _ = get('/invii')
+h = b.decode('utf-8', 'replace')
+controlla('Email: il tipo di casella, con i quattro tipi e i loro valori',
+          s == 200 and all('<option value="%s"' % c in h for c in ('dominio', 'aruba', 'gmail', 'altro')) and
+          'id="caselle-email"' in h and 'Server e accesso' in h, s)
+s, b, _ = get('/static/gestionale.js')
+controlla('Email: gestionale.js propone il server della casella', s == 200 and b'serverPerTipo' in b, s)
+class _SenzaRimandi(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *a, **k):
+        return None
+
+
+try:
+    r = urllib.request.build_opener(_SenzaRimandi).open(B + '/aiuto/email-gmail', timeout=90)
+    s, posto = r.status, r.headers.get('Location')
+except urllib.error.HTTPError as e:
+    s, posto = e.code, e.headers.get('Location')
+controlla('Email: la guida vecchia porta a quella nuova', s in (301, 302) and
+          (posto or '').endswith('/aiuto/email-casella'), (s, posto))
 
 for ok, nome, dettaglio in esiti:
     print(('OK ' if ok else 'KO ') + nome + ('' if ok else '  ' + str(dettaglio)[:300]))

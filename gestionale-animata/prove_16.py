@@ -1212,7 +1212,8 @@ def v_formato():
 
 def v_novita_con_video():
     S, C, dove = mondo()
-    t = html(C.get('/aiuto/novita'))
+    # i titoli con l'apostrofo (1.9.1: «L'email con…») nella pagina sono scritti &#39;
+    t = unescape(html(C.get('/aiuto/novita')))
     for x in novita.NOVITA[0][1]:
         if x['guida']:
             assert 'href="/static/video/%s.webm" data-video="%s"' % (x['guida'], x['titolo']) in t, x

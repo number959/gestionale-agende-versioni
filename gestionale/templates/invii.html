@@ -58,37 +58,81 @@
 
   {# ------------------------------------------------------------------- email #}
   <h2 class="sezione" id="email">Account email della struttura</h2>
-  <p>Le email partono da questo indirizzo e le risposte dei pazienti arrivano lì. Per Gmail non serve la password normale ma una <b>password per le app</b>, che Google crea apposta per i programmi come questo.</p>
+  <p>Le email ai pazienti partono da questa casella e le risposte arrivano lì. Va bene <b>qualsiasi casella email</b>: quella del sito della clinica, Aruba, Gmail o un altro fornitore. Si sceglie il tipo e il programma propone server, porta e sicurezza.</p>
+  {% set casella = caselle|selectattr('codice', 'equalto', tipo_email)|first %}
+  <script type="application/json" id="caselle-email">{{ caselle|tojson }}</script>
+  <div class="riquadro filtri" data-guida="email-tipo">
+    <label class="largo">Tipo di casella
+      <select id="email_tipo" name="email_tipo" form="modulo-email">
+        {% for c in caselle %}<option value="{{ c.codice }}"{% if c.codice == tipo_email %} selected{% endif %}>{{ c.nome }}</option>{% endfor %}
+      </select></label>
+    <span class="nota-riga" data-casella="dominio"{% if tipo_email != 'dominio' %} hidden{% endif %}>La casella con il dominio del sito (per esempio segreteria@…): bastano indirizzo e password, niente verifica in due passaggi.</span>
+    <span class="nota-riga" data-casella="aruba"{% if tipo_email != 'aruba' %} hidden{% endif %}>Una casella Aruba del proprio dominio: bastano indirizzo e password.</span>
+    <span class="nota-riga" data-casella="gmail"{% if tipo_email != 'gmail' %} hidden{% endif %}>Gmail vuole la password per le app, che Google dà solo con la verifica in due passaggi attiva.</span>
+    <span class="nota-riga" data-casella="altro"{% if tipo_email != 'altro' %} hidden{% endif %}>Server, porta e sicurezza li indica il fornitore della casella o chi gestisce la posta.</span>
+  </div>
   <details class="riquadro" data-guida="email-istruzioni"{% if not email_pronta %} open{% endif %}>
-    <summary><b>Come creare la password per le app di Gmail</b> (una volta sola, 3 minuti)</summary>
-    <ol>
-      <li>Accedere a Gmail con l'account della struttura{% if utente_proposto %} ({{ utente_proposto }}){% endif %}.</li>
-      <li>Aprire <b>myaccount.google.com</b> → <b>Sicurezza</b> e attivare la <b>Verifica in due passaggi</b>, se non è già attiva (serve un cellulare).</li>
-      <li>Aprire <b>myaccount.google.com/apppasswords</b>, scrivere un nome (per esempio <i>Gestionale</i>) e premere <b>Crea</b>.</li>
-      <li>Google mostra 16 lettere in quattro gruppi: copiarle nel campo qui sotto (gli spazi non contano) e salvare.</li>
-      <li>Mandare una prova al proprio indirizzo con il riquadro più sotto.</li>
-    </ol>
-    <p class="aiuto">Se si cambia la password dell'account Google, la password per le app smette di funzionare: se ne crea un'altra e la si riscrive qui. Gmail lascia mandare fino a 500 email al giorno.</p>
+    <summary><b><span data-casella="dominio"{% if tipo_email != 'dominio' %} hidden{% endif %}>Come collegare la casella del sito della clinica</span><span data-casella="aruba"{% if tipo_email != 'aruba' %} hidden{% endif %}>Come collegare una casella Aruba</span><span data-casella="gmail"{% if tipo_email != 'gmail' %} hidden{% endif %}>Come creare la password per le app di Gmail</span><span data-casella="altro"{% if tipo_email != 'altro' %} hidden{% endif %}>Come collegare un altro server</span></b> (una volta sola)</summary>
+    <div data-casella="dominio"{% if tipo_email != 'dominio' %} hidden{% endif %}>
+      <ol>
+        <li>Creare la casella (per esempio <i>segreteria@</i> seguito dal dominio del sito) nel pannello di chi ospita il sito: in cPanel <b>Email → Account email → Crea</b>. Oppure chiederla a chi gestisce il sito.</li>
+        <li>Qui sotto scrivere indirizzo e password della casella. Il server proposto è <b>mail.</b> seguito dal dominio, porta <b>465</b> con <b>SSL</b>, come in quasi tutti gli hosting; se il pannello ne indica un altro (in cPanel: <i>Connetti dispositivi</i>), scriverlo in <i>Server e accesso</i>.</li>
+        <li>Salvare e mandare una prova al proprio indirizzo con il riquadro più sotto.</li>
+      </ol>
+      <p class="aiuto">Non serve la verifica in due passaggi. Le risposte dei pazienti arrivano in quella casella: si leggono dalla webmail dell'hosting o con Outlook. Perché le email non finiscano nello spam, nel pannello (in cPanel: <i>Email Deliverability</i>) SPF e DKIM devono risultare a posto.</p>
+    </div>
+    <div data-casella="aruba"{% if tipo_email != 'aruba' %} hidden{% endif %}>
+      <ol>
+        <li>Server <b>smtps.aruba.it</b>, porta <b>465</b> con <b>SSL</b>: sono già proposti.</li>
+        <li>Qui sotto l'indirizzo completo della casella e la sua password, la stessa della webmail di Aruba.</li>
+        <li>Salvare e mandare una prova al proprio indirizzo con il riquadro più sotto.</li>
+      </ol>
+      <p class="aiuto">Non usare una casella PEC: è fatta per la posta certificata, non per scrivere ai pazienti.</p>
+    </div>
+    <div data-casella="gmail"{% if tipo_email != 'gmail' %} hidden{% endif %}>
+      <ol>
+        <li>Accedere a Gmail con l'account della struttura{% if utente_proposto %} ({{ utente_proposto }}){% endif %}.</li>
+        <li>Aprire <b>myaccount.google.com</b> → <b>Sicurezza</b> e attivare la <b>Verifica in due passaggi</b>, se non è già attiva (serve un cellulare).</li>
+        <li>Aprire <b>myaccount.google.com/apppasswords</b>, scrivere un nome (per esempio <i>Gestionale</i>) e premere <b>Crea</b>.</li>
+        <li>Google mostra 16 lettere in quattro gruppi: copiarle nel campo qui sotto (gli spazi non contano) e salvare.</li>
+        <li>Mandare una prova al proprio indirizzo con il riquadro più sotto.</li>
+      </ol>
+      <p class="aiuto">Se si cambia la password dell'account Google, la password per le app smette di funzionare: se ne crea un'altra e la si riscrive qui. Gmail lascia mandare fino a 500 email al giorno. Senza la verifica in due passaggi Google non dà la password per le app: in quel caso meglio la casella del sito della clinica.</p>
+    </div>
+    <div data-casella="altro"{% if tipo_email != 'altro' %} hidden{% endif %}>
+      <ol>
+        <li>In <i>Server e accesso</i> scrivere il server della posta in uscita (SMTP), la porta e la sicurezza che indica il fornitore o chi gestisce la posta: di solito porta <b>465</b> con <b>SSL</b>, oppure <b>587</b> con <b>STARTTLS</b>.</li>
+        <li>Indirizzo e password della casella. Il nome utente si scrive solo se il fornitore ne dà uno diverso dall'indirizzo (per esempio i servizi di invio come Brevo o Mailjet).</li>
+        <li>Per un server della rete interna che non chiede la password, spuntare <i>Il server non chiede la password</i>.</li>
+        <li>Salvare e mandare una prova al proprio indirizzo con il riquadro più sotto.</li>
+      </ol>
+      <p class="aiuto">Outlook.com e Hotmail non vanno: Microsoft non accetta più la password da programmi come questo. Con Microsoft 365 l'invio con password (SMTP AUTH) deve permetterlo l'amministratore, e Microsoft ha annunciato che lo spegne dalla fine del 2026.</p>
+    </div>
   </details>
-  <form method="post" class="riquadro" autocomplete="off" data-guida="email-account">
+  <form method="post" class="riquadro" autocomplete="off" data-guida="email-account" id="modulo-email">
     <input type="hidden" name="azione" value="salva"><input type="hidden" name="sezione" value="email">
     <div class="campo meta"><label for="email_utente">Indirizzo email</label>
-      <input type="email" id="email_utente" name="email_utente" maxlength="120" value="{{ utente_proposto }}" placeholder="nome@gmail.com"></div>
-    <div class="campo meta"><label for="email_password">Password per le app</label>
-      <input type="password" id="email_password" name="email_password" maxlength="120" autocomplete="new-password"
-             placeholder="{{ '•••• salvata: vuoto per lasciarla' if password_salvata else '16 lettere' }}"></div>
+      <input type="email" id="email_utente" name="email_utente" maxlength="120" value="{{ utente_proposto }}" placeholder="nome@dominio.it"></div>
+    <div class="campo meta"><label for="email_password" id="etichetta-password">{{ casella.password }}</label>
+      <input type="password" id="email_password" name="email_password" maxlength="120" autocomplete="new-password"{% if password_salvata %} data-salvata="1"{% endif %}
+             placeholder="{{ '•••• salvata: vuoto per lasciarla' if password_salvata else ('16 lettere' if tipo_email == 'gmail' else '') }}"></div>
     <div class="campo meta"><label for="email_mittente">Nome del mittente</label>
       <input type="text" id="email_mittente" name="email_mittente" maxlength="80" value="{{ cfg.email_mittente }}" placeholder="{{ struttura.nome if struttura else '' }}">
       <p class="aiuto">Come il paziente vede chi scrive. Vuoto: il nome della struttura.</p></div>
     <div class="campo meta spunta allinea-basso"><label><input type="checkbox" name="email_attiva" value="1"{% if cfg.email_attiva == '1' %} checked{% endif %}> Invio delle email acceso</label>
       {% if password_salvata %}<label><input type="checkbox" name="togli_password" value="1"> Togli la password salvata</label>{% endif %}</div>
-    <details class="campo"><summary>Server (per Gmail va bene così)</summary>
+    <details class="campo" id="email-server" data-guida="email-server"{% if tipo_email == 'altro' or (tipo_email == 'dominio' and not email_pronta) or cfg.email_accesso or cfg.email_senza_password == '1' %} open{% endif %}>
+      <summary>Server e accesso</summary>
       <div class="righe" style="display:flex;gap:12px;flex-wrap:wrap">
-        <div class="campo"><label for="email_server">Server</label><input type="text" id="email_server" name="email_server" maxlength="120" value="{{ cfg.email_server }}"></div>
-        <div class="campo"><label for="email_porta">Porta</label><input type="text" id="email_porta" name="email_porta" maxlength="5" size="6" value="{{ cfg.email_porta }}" inputmode="numeric"></div>
+        <div class="campo"><label for="email_server">Server della posta in uscita (SMTP)</label><input type="text" id="email_server" name="email_server" maxlength="120" size="30" value="{{ modulo_email.server }}" placeholder="per esempio mail.dominio.it" spellcheck="false"></div>
+        <div class="campo"><label for="email_porta">Porta</label><input type="text" id="email_porta" name="email_porta" maxlength="5" size="6" value="{{ modulo_email.porta }}" inputmode="numeric"></div>
         <div class="campo"><label for="email_sicurezza">Sicurezza</label><select id="email_sicurezza" name="email_sicurezza">
-          {% for codice, etichetta in sicurezze %}<option value="{{ codice }}"{% if cfg.email_sicurezza == codice %} selected{% endif %}>{{ etichetta }}</option>{% endfor %}</select></div>
+          {% for codice, etichetta in sicurezze %}<option value="{{ codice }}"{% if modulo_email.sicurezza == codice %} selected{% endif %}>{{ etichetta }}</option>{% endfor %}</select></div>
       </div>
+      <div class="campo"><label for="email_accesso">Nome utente per entrare nel server</label>
+        <input type="text" id="email_accesso" name="email_accesso" maxlength="120" value="{{ cfg.email_accesso }}" placeholder="vuoto: lo stesso indirizzo email" spellcheck="false" autocomplete="off">
+        <p class="aiuto">Quasi sempre è l'indirizzo email: si scrive solo se il fornitore ne dà uno diverso.</p></div>
+      <div class="campo spunta"><label><input type="checkbox" name="email_senza_password" value="1"{% if cfg.email_senza_password == '1' %} checked{% endif %}> Il server non chiede la password (solo per un server della rete interna)</label></div>
     </details>
     <p class="aiuto">La password resta in questo PC, cifrata con la protezione di Windows: in un backup portato su un altro computer non si legge e va riscritta.</p>
     <div class="azioni"><button class="bottone primario" type="submit">Salva l'account email</button></div>
@@ -96,7 +140,7 @@
   <form method="post" class="riquadro filtri" data-attesa="Invio in corso…" data-guida="email-prova">
     <input type="hidden" name="azione" value="prova_email">
     <label class="largo">Manda una prova a <input type="email" name="a" maxlength="120" required value="{{ cfg.email_utente }}" style="width:300px"></label>
-    <button class="bottone" type="submit"{% if not email_pronta %} disabled title="Prima salvare indirizzo e password per le app"{% endif %}>Manda la prova</button>
+    <button class="bottone" type="submit"{% if not email_pronta %} disabled title="Prima salvare indirizzo, password e server della casella"{% endif %}>Manda la prova</button>
   </form>
 
   {# --------------------------------------------------------------- promemoria #}

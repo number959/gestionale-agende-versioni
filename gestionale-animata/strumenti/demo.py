@@ -182,8 +182,10 @@ if invii is not None:
     pz = s.scalars(select(Paziente).where(Paziente.cognome == 'Sepe')).first()
     if pz is not None:
         pz.indirizzo = 'Via Manzoni 12, 80123 Napoli'
-    for k, v in (('email_utente', 'accettazione@example.it'), ('email_password', invii.proteggi('abcdabcdabcdabcd')),
-                 ('promemoria_attivo', '1'), ('promemoria_ora', '10:00')):
+    # la casella del sito (1.9.1): quella consigliata, senza Gmail
+    for k, v in (('email_utente', 'accettazione@example.it'), ('email_password', invii.proteggi('Password-di-prova')),
+                 ('email_tipo', 'dominio'), ('email_server', 'mail.example.it'), ('email_porta', '465'),
+                 ('email_sicurezza', 'ssl'), ('promemoria_attivo', '1'), ('promemoria_ora', '10:00')):
         scrivi_impostazione(s, k, v)
     galasso = s.scalars(select(Operatore).where(Operatore.cognome == 'Galasso')).first()
     regola = invii.crea_regola_pronta(s, galasso)

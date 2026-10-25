@@ -23,7 +23,7 @@ import os
 import re
 from datetime import date
 
-from flask import Blueprint, render_template, abort, url_for, request, Response
+from flask import Blueprint, render_template, abort, url_for, request, Response, redirect
 
 bp = Blueprint('guida', __name__, url_prefix='/aiuto')
 
@@ -541,17 +541,25 @@ ARTICOLI = [
 
 ARTICOLI += [
     # ------------------------------------------------------- email e WhatsApp
-    dict(slug='email-gmail', gruppo='Email e WhatsApp', titolo='Collegare l\'email della clinica',
-         in_breve='Le email ai pazienti partono dall\'account Gmail della clinica, con una "password per le app".',
+    dict(slug='email-casella', gruppo='Email e WhatsApp', titolo='Collegare l\'email della clinica',
+         in_breve='Le email ai pazienti partono da una casella della clinica: quella del sito (bastano indirizzo e '
+                  'password), Aruba, Gmail o un altro server.',
          endpoint='invii.pagina', apri=('invii.pagina', {}), foto='/invii#email',
          passi=[
              P('Apri la pagina', 'Menu Configura → Email e WhatsApp.', 'nav.menu [data-guida="menu-configura"]'),
-             P('La password per le app', 'Gmail non accetta la password normale: con la verifica in due passaggi attiva, in '
-               'myaccount.google.com/apppasswords si crea una password di 16 lettere. I passi sono nella pagina.',
-               '[data-guida="email-istruzioni"]'),
-             P('Indirizzo e password', 'L\'indirizzo è già proposto (quello della struttura): si incolla la password per le '
-               'app e si salva. Resta in questo PC, cifrata con la protezione di Windows.', '[data-guida="email-account"]'),
-             P('Prova', 'Manda la prova al proprio indirizzo: se arriva, le email ai pazienti partono.',
+             P('Il tipo di casella', 'Va bene qualsiasi casella. Quella del sito della clinica (per esempio segreteria@ e '
+               'il dominio del sito) è la più semplice: bastano indirizzo e password, niente verifica in due passaggi. '
+               'Poi Aruba, Gmail (vuole la password per le app) o un altro server.', '[data-guida="email-tipo"]'),
+             P('Come si collega', 'Le istruzioni cambiano con il tipo scelto: dove si crea la casella, quale password '
+               'serve, cosa fare se il fornitore indica un altro server.', '[data-guida="email-istruzioni"]'),
+             P('Indirizzo e password', 'L\'indirizzo è già proposto (quello della struttura): si scrive la password della '
+               'casella (con Gmail la password per le app) e si salva. Resta in questo PC, cifrata con la protezione di '
+               'Windows.', '[data-guida="email-account"]'),
+             P('Server e accesso', 'Server, porta e sicurezza si compilano da soli con il tipo di casella; si cambiano solo '
+               'se il fornitore ne indica altri. Il nome utente serve solo se è diverso dall\'indirizzo.',
+               '[data-guida="email-server"]'),
+             P('Prova', 'Manda la prova al proprio indirizzo: se arriva, le email ai pazienti partono. Se non parte, il '
+               'messaggio dice cosa correggere (password, porta e sicurezza, nome del server).',
                '[data-guida="email-prova"]'),
          ]),
     dict(slug='email-automatiche', gruppo='Email e WhatsApp', titolo='Email automatiche alla prenotazione',
@@ -620,6 +628,9 @@ ARTICOLI += [
 ]
 
 PER_SLUG = {a['slug']: a for a in ARTICOLI}
+# guide che hanno cambiato nome: il vecchio indirizzo porta a quella nuova
+# (1.9.1: «email-gmail» e' diventata «email-casella», l'email va con ogni casella)
+NOMI_VECCHI = {'email-gmail': 'email-casella'}
 GRUPPI = ['Primi passi', 'Tutti i giorni', 'Dove si fa', 'Turni del personale', 'Sala operatoria', 'Cassa e fogli',
           'Email e WhatsApp', 'Configurazione']
 
@@ -712,6 +723,8 @@ def stampa():
 
 @bp.route('/<slug>')
 def articolo(slug):
+    if slug in NOMI_VECCHI:
+        return redirect(url_for('guida.articolo', slug=NOMI_VECCHI[slug]))
     a = PER_SLUG.get(slug)
     if a is None:
         abort(404)
@@ -724,6 +737,8 @@ def articolo(slug):
 @bp.route('/<slug>/passi.json')
 def passi_json(slug):
     """I passi per la guida sullo schermo."""
+    if slug in NOMI_VECCHI:
+        return redirect(url_for('guida.passi_json', slug=NOMI_VECCHI[slug]))
     a = PER_SLUG.get(slug)
     if a is None:
         abort(404)

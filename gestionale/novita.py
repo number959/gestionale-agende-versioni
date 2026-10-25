@@ -13,6 +13,23 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.9.1', [
+        dict(titolo='L\'email con qualsiasi casella, anche senza Gmail',
+             testo='In Configura → Email e WhatsApp si sceglie il tipo di casella: quella del sito della clinica '
+                   '(bastano indirizzo e password, niente verifica in due passaggi), Aruba, Gmail o un altro server. '
+                   'Server, porta e sicurezza si compilano da soli. La casella Gmail già collegata continua a '
+                   'funzionare com\'è.',
+             guida='email-casella'),
+        dict(titolo='Se un\'email non parte, il motivo in chiaro',
+             testo='Il messaggio dice cosa correggere: la password, porta e sicurezza che non vanno insieme, il nome '
+                   'del server sbagliato o con un certificato che non corrisponde. Salvando, il programma avvisa già '
+                   'delle scelte che di solito non funzionano.',
+             guida='email-casella'),
+        dict(titolo='Nome utente diverso e server della rete interna',
+             testo='Per i fornitori che danno un nome utente diverso dall\'indirizzo c\'è il suo campo; per un '
+                   'server della rete interna che non chiede la password basta una spunta.',
+             guida='email-casella'),
+    ]),
     ('1.9', [
         dict(titolo='Dove si fa: in quale struttura del gruppo',
              testo='Nuovo menu Dove si fa (tasto D): si scrive la prestazione come la dice il paziente («risonanza '
@@ -121,7 +138,7 @@ NOVITA = [
         dict(titolo='L\'email della clinica',
              testo='Le email ai pazienti partono dall\'account Gmail della clinica, collegato una volta con la '
                    '«password per le app».',
-             guida='email-gmail'),
+             guida='email-casella'),
         dict(titolo='Nascita, codice fiscale e indirizzo',
              testo='Nel modulo di prenotazione: scritto il codice fiscale, la data di nascita si riempie da sola.',
              guida='prenotare'),

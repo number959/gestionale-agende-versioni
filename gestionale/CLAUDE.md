@@ -5,8 +5,9 @@ stanze, pazienti (con codice fiscale controllato e calcolato), conferme, cassa, 
 operatoria, email e WhatsApp ai pazienti, turni del personale (dalla 1.8), Dove si fa (dalla
 1.9: in quale struttura del gruppo si fa una prestazione, per indirizzarci il paziente). Lo usa una
 persona sola, sul PC Windows 11 della segreteria, tutto in locale (Flask + SQLite,
-waitress su 127.0.0.1:5000). Internet serve solo in uscita, per email (Gmail), WhatsApp
-(Meta) e per scaricare gli aggiornamenti («Aggiorna adesso», dalle versioni su GitHub).
+waitress su 127.0.0.1:5000). Internet serve solo in uscita, per le email (la casella della
+clinica, qualsiasi server SMTP dalla 1.9.1), WhatsApp (Meta) e per scaricare gli
+aggiornamenti («Aggiorna adesso», dalle versioni su GitHub).
 
 Da leggere prima di modificare qualcosa: `../PASSAGGIO_DI_CONSEGNE.md` (nella radice del
 repository: stato, persone, decisioni e perché, cose aperte) e `LEGGIMI.md` (il manuale
@@ -75,10 +76,11 @@ python strumenti/tutte_le_prove.py --browser http://127.0.0.1:5001 --solo prove_
 
 Senza `--solo` e con `--browser` le lancia tutte, anche quelle nel browser (Playwright con
 Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_tendine_browser.py`,
-`prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, `prove_19_browser.py`, nell'animata
-`prove_animazioni.py` e `prove_icone_animate.py`, e per ultima `prove_16_browser.py`, che
-cambia l'indirizzo degli aggiornamenti. Le prove nel browser salvano dati: sempre su un
-gestionale di prova, mai su quello vero.
+`prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, `prove_19_browser.py`,
+`prove_191_browser.py` (salva le impostazioni email della prova e poi rimette quelle di
+partenza), nell'animata `prove_animazioni.py` e `prove_icone_animate.py`, e per ultima
+`prove_16_browser.py`, che cambia l'indirizzo degli aggiornamenti. Le prove nel browser
+salvano dati: sempre su un gestionale di prova, mai su quello vero.
 
 Le prove senza browser: `prove.py`, `prove2.py`, `prove100.py`, `prove200.py`,
 `prove_anagrafiche.py`, `prove_personalizzazione.py`, `prove_funzioni.py`, `prove_14.py`,
@@ -87,12 +89,15 @@ Le prove senza browser: `prove.py`, `prove2.py`, `prove100.py`, `prove200.py`,
 indipendente), `prove_18.py` (turni del personale con oracoli, annulla e rifai, modifiche a
 caso con invarianti; registrazione del numero WhatsApp con una finta Meta), `prove_19.py`
 (Dove si fa: lettura del file in tanti modi, importazione e versioni nuove, ricerca contro
-un oracolo su 1200 prestazioni inventate, pagine, protezioni, aggiornamento dalla 9) e `campagna.py`
-(casi generati con oracoli e invarianti). Alcune delle più vecchie escono con codice 0
-anche se qualcosa non va: conta la riga finale («0 da sistemare»), ed è quella che legge
-`tutte_le_prove.py`. `PROVE_SOLO=nome1,nome2 python
-prove_15.py` rifà solo alcune prove di una raccolta. Le due cartelle si possono provare
-insieme: ogni giro di `tutte_le_prove.py` ha la sua cartella temporanea.
+un oracolo su 1200 prestazioni inventate, pagine, protezioni, aggiornamento dalla 9),
+`prove_191.py` (l'email con qualsiasi casella: tipi e server proposti, modulo con errori e
+avvisi, invio con nome utente diverso e senza password, ogni errore con il suo consiglio, con
+lo stesso finto server di posta di `prove_15.py`) e `campagna.py` (casi generati con oracoli e
+invarianti). Alcune delle più vecchie escono con codice 0 anche se qualcosa non va: conta la
+riga finale («0 da sistemare»), ed è quella che legge `tutte_le_prove.py`.
+`PROVE_SOLO=nome1,nome2 python prove_15.py` rifà solo alcune prove di una raccolta. Le due
+cartelle si possono provare insieme: ogni giro di `tutte_le_prove.py` ha la sua cartella
+temporanea.
 
 ## Regole tecniche da non rompere
 
@@ -130,6 +135,19 @@ insieme: ogni giro di `tutte_le_prove.py` ha la sua cartella temporanea.
   del foglio Strutture solo dove mancano, prestazioni tolte con `voce_id` messo a vuoto nel
   registro (`Indirizzato` copia i nomi). Eliminando o unendo pazienti, anche `Indirizzato`
   segue (in `pazienti.py`).
+- Email (dalla 1.9.1): qualsiasi casella SMTP. I tipi di casella (`invii.CASELLE`: casella del
+  sito della clinica, Aruba, Gmail, altro server) servono solo a proporre server, porta e
+  sicurezza e a scegliere istruzioni e consigli: si salva quello che c'è nei campi. Le
+  impostazioni salvate con la 1.9 non hanno il tipo: `tipo_casella` lo ricava dal server (Gmail
+  resta Gmail), quindi non serve migrazione. Non c'è un server di partenza (fino alla 1.9 era
+  smtp.gmail.com). Gli spazi si tolgono dalla password solo per Gmail (la password per le
+  app); `email_accesso` vuoto vuol dire l'indirizzo; con `email_senza_password` non si fa
+  l'accesso. Il server proposto per la casella del sito (mail. + il dominio) si calcola in
+  `invii.server_proposto` e, mentre si scrive, in `serverPerTipo()` di `gestionale.js`: se si
+  cambia uno, va cambiato l'altro (i valori dei tipi arrivano alla pagina in `#caselle-email`).
+  `manda_email` traduce ogni errore in un testo che dice cosa correggere e decide se riprovare
+  (`permanente`: password, SSL sulla porta sbagliata, certificato di un altro nome, mittente o
+  destinatario rifiutati); `spiega_accesso_rifiutato` dà il consiglio secondo il fornitore.
 - WhatsApp: «Registra il numero» (`invii.registra_numero`) manda il PIN a Meta e non lo
   salva mai, nemmeno nel registro; cambiando l'ID del numero `wa_registrato` si azzera.
 - Icone: `templates/_icone.html` lo scrive `strumenti/genera_icone.py` (Lucide, licenza
@@ -198,9 +216,13 @@ bash strumenti/wine/ferma.sh
 sicurezza e schema nuovo). «Aggiorna adesso» per intero: una copia della cartella con un
 numero di versione più alto (comune.py, installer.iss, una voce in novita.py), costruita
 con `costruisci.sh`, messa in una cartella del Windows finto, e
-`python strumenti/prova_aggiorna_adesso.py` (le istruzioni sono in testa al file). Per
-aggiornare la clinica: «Aggiorna adesso» dal programma, oppure il Setup nuovo avviato
-sopra il vecchio; non serve disinstallare.
+`python strumenti/prova_aggiorna_adesso.py` (le istruzioni sono in testa al file). L'invio
+delle email sull'eseguibile: `python strumenti/prova_email_installato.py --certificato DIR
+--database <agende.db del programma>`, con finti server di posta su 127.0.0.1 (cambia le
+impostazioni email: solo nel Windows finto; per gli invii riusciti con SSL e STARTTLS il
+programma va avviato con `SSL_CERT_FILE` sul certificato scritto in DIR). Per aggiornare la
+clinica: «Aggiorna adesso» dal programma, oppure il Setup nuovo avviato sopra il vecchio; non
+serve disinstallare.
 
 ## Pubblicare una versione nuova
 
@@ -214,8 +236,8 @@ sopra il vecchio; non serve disinstallare.
    cartelle (il tag è la versione con una "v" davanti) e segnata come ultima ("latest"):
 
    ```
-   gh release create v1.9 --repo number959/gestionale-agende-versioni --latest \
-     --title "Gestionale Agende 1.9" --notes "…" \
+   gh release create v1.9.1 --repo number959/gestionale-agende-versioni --latest \
+     --title "Gestionale Agende 1.9.1" --notes "…" \
      gestionale/Output/GestionaleAgende-setup.exe gestionale/Output/aggiornamento.json \
      gestionale-animata/Output/GestionaleAgende-animata-setup.exe gestionale-animata/Output/aggiornamento-animata.json
    ```

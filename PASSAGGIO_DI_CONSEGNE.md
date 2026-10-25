@@ -7,7 +7,10 @@ cose aperte. Si legge una volta per intero. Poi servono `CLAUDE.md` (le regole, 
 delle due cartelle) e `LEGGIMI.md` (il manuale completo, con le prove e lo storico dei
 difetti).
 
-Scritto il 5 ottobre 2026 alla versione 1.7, aggiornato il 12 ottobre 2026 alla versione **1.9**.
+Scritto il 5 ottobre 2026 alla versione 1.7, aggiornato il 12 ottobre 2026 alla versione 1.9
+(il 19 ottobre: come una sessione di Claude può pubblicare su GitHub) e il 25 ottobre 2026 alla
+versione **1.9.1** (l'email con qualsiasi casella, senza bisogno della verifica in due passaggi
+di Gmail).
 
 ## In breve
 
@@ -19,8 +22,8 @@ fiscale, turni del personale (medici, infermieri, OSS e gli altri) e *Dove si fa
 struttura del gruppo si fa una prestazione, per indirizzarci il paziente.
 
 - Python, Flask e SQLite, con il server waitress su `127.0.0.1:5000`. Un solo utente, sul PC
-  Windows 11 della segreteria, tutto in locale. Internet serve solo in uscita: Gmail,
-  WhatsApp di Meta e gli aggiornamenti da GitHub.
+  Windows 11 della segreteria, tutto in locale. Internet serve solo in uscita: la casella
+  email della clinica (qualsiasi server SMTP), WhatsApp di Meta e gli aggiornamenti da GitHub.
 - Arriva alla clinica come **un solo Setup** (Inno Setup), che contiene l'eseguibile
   PyInstaller con Python dentro. "Click e via".
 - Ci sono **due varianti con le stesse funzioni**: `gestionale/` (normale) e
@@ -43,8 +46,10 @@ struttura del gruppo si fa una prestazione, per indirizzarci il paziente.
   da WhatsApp. Il programma parla a lei: le parole devono essere semplici, mai da tecnico.
 - Nei dati di partenza (`seed.py`) e in alcuni testi ci sono medici veri della clinica: il
   Dr. Galasso (endoscopia, con l'email di preparazione già pronta) e la Dr.ssa Lippiello. Le
-  email partono dalla Gmail della clinica, medicinamigliorenapolisrl@gmail.com
-  (`servizi.EMAIL_POSILLIPO`).
+  email sono partite finora dalla Gmail della clinica, medicinamigliorenapolisrl@gmail.com
+  (`servizi.EMAIL_POSILLIPO`, che è anche l'email della struttura); dalla 1.9.1 va bene
+  qualsiasi casella, e per non dipendere dalla verifica in due passaggi di Gmail è consigliata
+  una casella del sito (vedi *Cose aperte*).
 
 ## Dove sta ogni cosa
 
@@ -83,7 +88,20 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
-- **Versione 1.9**, pronta: **Dove si fa** (menu Dove si fa, tasto D): si scrive la
+- **Versione 1.9.1**, pronta: **l'email con qualsiasi casella**. In *Configura → Email e
+  WhatsApp* si sceglie il tipo di casella (quella del sito della clinica, consigliata; Aruba;
+  Gmail; un altro server) e il programma propone server, porta e sicurezza, con le istruzioni
+  di quel tipo; c'è il campo del nome utente per i fornitori che ne danno uno diverso
+  dall'indirizzo e la spunta per un server della rete interna senza password; se un'email non
+  parte, il messaggio dice cosa correggere, e salvando il programma avvisa già delle scelte che
+  di solito non vanno. Il database non cambia (schema 10) e la Gmail già collegata continua a
+  funzionare com'è. Tutte le prove sono verdi (951 prove, 2550 casi generati, 361 controlli
+  nel browser nella normale e 428 nell'animata); eseguibile e due Setup costruiti e provati in
+  Wine: «Aggiorna adesso» dalla 1.9 vera (il Setup consegnato il 12 ottobre) alla 1.9.1, con la
+  casella collegata dalla 1.9 che continua a mandare; la 1.9.1 animata sopra la 1.9 animata;
+  l'invio delle email sull'eseguibile con finti server di posta (SSL, STARTTLS, senza password,
+  errori spiegati); primo avvio senza dati.
+- La **1.9** (dentro la 1.9.1): **Dove si fa** (menu Dove si fa, tasto D): si scrive la
   prestazione come la dice il paziente e si vedono le strutture del gruppo dove si fa; la
   scheda della struttura ha recapiti, mappa, orari e il messaggio già scritto per il paziente
   (copia, WhatsApp, email, stampa); il paziente si sceglie dalla pagina o dalla sua scheda; i
@@ -105,21 +123,32 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   segnalato Federica: era stata corretta come 1.7.1, mai pubblicata, ed è dentro la 1.8).
 - **Pubblicazione su GitHub**: da fare a mano, da Giovanni o da una sessione che abbia
   accesso in scrittura al progetto delle versioni. Nemmeno le sessioni della 1.8 e della 1.9
-  l'avevano ("GitHub access to this repository is not enabled for this session"). L'11
-  ottobre 2026 il progetto era ancora **vuoto** (né file né release): serve prima un file,
-  per esempio un README, poi la release `v1.9` con i quattro file (vedi *Pubblicare una
-  versione*); se la 1.8 non è stata pubblicata nel frattempo, si salta: la 1.9 la contiene.
+  l'avevano ("GitHub access to this repository is not enabled for this session"): l'account
+  GitHub collegato era `number959`, ma alla sessione non era collegato nessun progetto e
+  la sessione non aveva modo di collegarne. Perché una sessione pubblichi da sola servono
+  l'app Claude installata su GitHub sui due progetti
+  (https://github.com/apps/claude/installations/new, *Only select repositories*:
+  `gestionale-agende` e `gestionale-agende-versioni`) e la sessione aperta con i due
+  progetti scelti, per esempio da
+  https://claude.ai/code?repositories=number959/gestionale-agende,number959/gestionale-agende-versioni
+  (come si fa la release da lì: *Pubblicare una versione*). Una sessione nuova parte da
+  zero: il codice lo prende dal progetto privato, che quindi deve esserci. L'11 ottobre 2026
+  il progetto delle versioni era ancora **vuoto** (né file né release) e il 19 ottobre
+  l'indirizzo pubblico del file delle versioni rispondeva ancora 404: serve prima un file,
+  per esempio un README, poi la release `v1.9.1` con i quattro file (vedi *Pubblicare una
+  versione*); se la 1.8 e la 1.9 non sono state pubblicate nel frattempo, si saltano: la 1.9.1
+  le contiene.
   Appena pubblicata si controlla che l'indirizzo pubblico risponda.
 - **Alla clinica** potrebbe esserci ancora la 1.5, che non ha «Aggiorna adesso». La prima
-  volta il Setup della 1.9 si avvia a mano sopra il vecchio: non si disinstalla e i dati
+  volta il Setup della 1.9.1 si avvia a mano sopra il vecchio: non si disinstalla e i dati
   restano. Dalla 1.6 in poi gli aggiornamenti arrivano dal programma, ogni sei ore o con
   «Controlla adesso».
-- La 1.6 e la 1.7 non sono mai state pubblicate: la prima release su GitHub sarà la 1.8 o
-  la 1.9.
+- La 1.6 e la 1.7 non sono mai state pubblicate: la prima release su GitHub sarà la 1.9.1
+  (o la 1.8 o la 1.9, se nel frattempo pubblicate).
 - Il **codice** (questo repository) è nel pacchetto `gestionale-agende.bundle` consegnato
-  con la 1.9 (storia: un commit per la 1.7, uno per la 1.8, uno per la 1.9, con i tag `v1.7`,
-  `v1.8` e `v1.9`): va messo in un progetto **privato** su GitHub (vedi *Consegnare file a
-  Giovanni*).
+  con la 1.9.1 (storia: un commit per versione dalla 1.7 alla 1.9.1, con i tag `v1.7`,
+  `v1.8`, `v1.9` e `v1.9.1`): va messo in un progetto **privato** su GitHub (vedi *Consegnare
+  file a Giovanni*).
 
 ## Storia in breve
 
@@ -138,6 +167,7 @@ Il dettaglio di ogni versione è in `LEGGIMI.md` (paragrafi *Novità della …* 
 | 1.7 | Codice fiscale controllato e calcolato, luoghi di nascita, controllo dell'archivio, indirizzo GitHub predefinito |
 | 1.8 | Turni del personale (mese, settimana, giorno a ore, schema, coperture, controlli dei riposi, Excel), «In servizio oggi», registrazione del numero WhatsApp dal programma, tendine sempre sopra la pagina (la 1.7.1 mai pubblicata) |
 | 1.9 | Dove si fa: ricerca delle prestazioni nelle strutture del gruppo (sigle, plurali, correzioni), scheda della struttura con recapiti e messaggio per il paziente (copia, WhatsApp, email, stampa), registro dei pazienti indirizzati, database delle prestazioni importato dall'Excel del gruppo con l'anteprima |
+| 1.9.1 | L'email con qualsiasi casella: tipo di casella con server, porta e sicurezza proposti (sito della clinica, Aruba, Gmail, altro server), nome utente diverso dall'indirizzo, server senza password, errori che dicono cosa correggere |
 
 Idee messe da parte da Giovanni: un **PIN** per aprire il programma ("ignora il PIN": non
 fatto, non richiesto per ora).
@@ -198,6 +228,18 @@ fatto, non richiesto per ora).
 - **WhatsApp: il PIN non si salva mai.** «Registra il numero» lo manda a Meta
   (`POST /{id del numero}/register`) e lo dimentica, anche nel registro; Meta accetta al
   massimo 10 registrazioni in 72 ore per numero.
+- **L'email va con qualsiasi casella SMTP, senza OAuth** (1.9.1). Gmail accetta i programmi
+  esterni solo con la password per le app, che vuole la verifica in due passaggi, o con
+  l'accesso con Google (OAuth). OAuth con un account Gmail personale vorrebbe un'app
+  «External» registrata da Google: in prova l'accesso scade ogni 7 giorni, pubblicata senza
+  verifica mostra gli avvisi di Google e ha un tetto di 100 utenti; Outlook.com non accetta più
+  la password e Microsoft ha annunciato che la spegne anche per Microsoft 365 dalla fine del
+  2026. Per questo la casella consigliata è quella del sito della clinica (cPanel e simili),
+  che vuole solo indirizzo e password. I tipi di casella (`invii.CASELLE`) servono solo a
+  proporre server, porta e sicurezza e a scegliere istruzioni e consigli: si salva quello che
+  c'è nei campi, quindi le impostazioni della 1.9 valgono senza migrazione (il tipo si ricava
+  dal server). Gli errori da correggere (password, SSL sulla porta sbagliata, certificato di
+  un altro nome) fermano subito il messaggio; quelli di rete si riprovano.
 - **Risorse di terze parti: poche e dentro il programma**, che gira senza internet: le icone
   Lucide (licenza ISC, quelle derivate da Feather MIT) scritte in `templates/_icone.html`, i
   colori dei turni presi dalle scale di Radix Colors (MIT), i caratteri Inter e Manrope
@@ -241,8 +283,8 @@ python strumenti/tutte_le_prove.py --browser http://127.0.0.1:5001   # tutte, an
 python strumenti/tutte_le_prove.py --solo prove_17,campagna     # solo alcune
 ```
 
-In totale: 930 prove e 2550 casi generati (`campagna.py`), più 339 controlli nel browser
-nella normale e 406 nell'animata (che ha anche `prove_animazioni.py` e
+In totale: 951 prove e 2550 casi generati (`campagna.py`), più 361 controlli nel browser
+nella normale e 428 nell'animata (che ha anche `prove_animazioni.py` e
 `prove_icone_animate.py`). Le prove nel browser (Playwright con Chromium) salvano dati:
 sempre sul server di prova, mai su quello vero; `prove_16_browser.py` cambia l'indirizzo
 degli aggiornamenti e per questo il giro la lancia per ultima. Ogni prova si può anche
@@ -253,7 +295,9 @@ riga finale («0 da sistemare»), ed è quella che legge `tutte_le_prove.py`. Og
 sua cartella temporanea, quindi le due cartelle si possono provare insieme. `prove_17.py`
 confronta il codice fiscale con il pacchetto indipendente python-codicefiscale
 (`pip install python-codicefiscale`); senza il pacchetto quelle prove si saltano e lo
-dicono. Tutto verde alla 1.9 su Python 3.11 e 3.14 (le prove nel browser su 3.11).
+dicono. Tutto verde alla 1.9.1 su Python 3.13 (alla 1.9 su 3.11 e 3.14). `prove_191.py` prova
+l'email con lo stesso finto server di posta di `prove_15.py` (STARTTLS, SSL e accesso veri su
+127.0.0.1) e con un finto `smtplib` per gli errori che un server locale non sa fare.
 `prove_19.py` confronta la ricerca di Dove si fa con un oracolo scritto a parte su 1200
 prestazioni inventate (ogni risultato contiene tutte le parole cercate, ogni prestazione si
 trova con l'inizio delle sue parole).
@@ -300,8 +344,19 @@ bash strumenti/wine/ferma.sh
 3. Si lancia:
 
 ```
-python strumenti/prova_aggiorna_adesso.py 'C:\aggiornamenti-prova' 1.9.1 "$WINEPREFIX/drive_c/users/$(id -un)/AppData/Local/GestionaleAgende"
+python strumenti/prova_aggiorna_adesso.py 'C:\aggiornamenti-prova' 1.9.2 "$WINEPREFIX/drive_c/users/$(id -un)/AppData/Local/GestionaleAgende"
 ```
+
+L'email sul programma installato (dalla 1.9.1), con finti server di posta su 127.0.0.1:
+
+```
+python strumenti/prova_email_installato.py --certificato DIR --database "$CARTELLA_DATI/agende.db"
+```
+
+Cambia le impostazioni email del programma installato: solo nel Windows finto. Per gli invii
+con SSL e STARTTLS riusciti il programma va avviato con `SSL_CERT_FILE` che punta al
+certificato scritto in `DIR` (visto da Windows, con `Z:` davanti); senza, quelle due prove lo
+dicono e le altre valgono lo stesso.
 
 Alla 1.7 così, partendo da un Windows finto nuovo: `prepara.sh`, le due versioni costruite,
 la 1.7 installata sopra la 1.6 con 81 appuntamenti (copia di sicurezza, schema da 7 a 8,
@@ -323,6 +378,16 @@ due e su un database nuovo; sull'eseguibile, il database delle prestazioni inven
 caricato dalla pagina e provato (anteprima, importazione con la copia di sicurezza, ricerca,
 scheda, registro); «Aggiorna adesso» dalla 1.9 a una 1.9.1 di prova con 14 controlli su 14,
 con il database delle prestazioni ancora lì dopo.
+
+Alla 1.9.1 così: le due versioni costruite nello stesso Windows finto; in un Windows finto nuovo
+la 1.9 normale installata con il Setup consegnato, con il database inventato di
+`strumenti/demo.py` della 1.9 (46 appuntamenti, 30 pazienti, 8 medici, turni, regole) e la
+casella collegata con il modulo della 1.9 a un finto server di posta; «Aggiorna adesso» dalla
+1.9 alla 1.9.1 con 14 controlli su 14, le 28 tabelle identiche riga per riga dopo, la prova
+dell'email partita con la password salvata dalla 1.9; la 1.9.1 animata installata con il Setup
+sopra la 1.9 animata, stessi risultati; 34 controlli di `prove_installato.py` a posto su
+tutte e due e su un database nuovo; `prova_email_installato.py` con 12 controlli su 12 su
+tutte e due.
 
 Il programma installato nel Windows finto ha i suoi dati in
 `$WINEPREFIX/drive_c/users/<utente>/AppData/Local/GestionaleAgende`. Sono dati delle prove,
@@ -361,6 +426,24 @@ Cose imparate con Wine, da non riscoprire:
    con
    `gh release create vX.Y --repo number959/gestionale-agende-versioni --latest …`.
    I nomi dei file devono essere proprio questi.
+
+   In una sessione nel cloud di Claude il `gh` è un altro (fa solo `gh api`) e il
+   collegamento a GitHub rifiuta sia il push dei tag con git sia le richieste GraphQL. La
+   release si crea con l'API REST, che crea anche il tag:
+
+   ```
+   gh api repos/number959/gestionale-agende-versioni/releases -f tag_name=vX.Y \
+     -f name="Gestionale Agende X.Y" -f body="…" -f make_latest=true     # risponde con "id"
+   curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Content-Type: application/octet-stream" \
+     --data-binary @Output/GestionaleAgende-setup.exe \
+     "https://uploads.github.com/repos/number959/gestionale-agende-versioni/releases/ID/assets?name=GestionaleAgende-setup.exe"
+   ```
+
+   e lo stesso per gli altri tre file. Nella sessione `$GITHUB_TOKEN` vale `proxy-injected`:
+   la credenziale vera la mette il collegamento. Il 19 ottobre 2026 uploads.github.com
+   risultava gestito dal collegamento, ma il caricamento non era ancora stato provato. Nel
+   progetto del codice i tag si creano allo stesso modo:
+   `gh api repos/number959/gestionale-agende/git/refs -f ref=refs/tags/vX.Y -f sha=$(git rev-parse HEAD)`.
 5. Controllo:
    `curl -sL https://github.com/number959/gestionale-agende-versioni/releases/latest/download/aggiornamento.json`
    deve dire la versione nuova, e l'impronta del Setup scaricato da lì deve essere quella
@@ -376,7 +459,7 @@ grossi in pezzi e scrive `RICOMPONI.bat`, che su Windows li rimette insieme e co
 dimensione e impronta. Su GitHub invece i Setup vanno interi.
 
 Il codice viaggia come `gestionale-agende.bundle`: un solo file di git con tutta la storia
-(ramo `main`, tag `v1.7`, `v1.8` e `v1.9`). Per metterlo in un progetto **privato** su GitHub (per
+(ramo `main`, tag `v1.7`, `v1.8`, `v1.9` e `v1.9.1`). Per metterlo in un progetto **privato** su GitHub (per
 esempio `number959/gestionale-agende`, creato vuoto e privato dalla pagina di GitHub, senza
 README):
 
@@ -393,13 +476,24 @@ le sole release: lì il codice non va.
 
 ## Cose aperte
 
-- Pubblicare la 1.9 su GitHub (se la 1.8 non è stata pubblicata, basta la 1.9) e
+- Pubblicare la 1.9.1 su GitHub (contiene la 1.8 e la 1.9) e
   controllare l'indirizzo pubblico (vedi *Stato alla consegna*); mettere il codice
   (`gestionale-agende.bundle`) in un progetto privato.
-- Installare la 1.9 alla clinica la prima volta a mano, se c'è ancora la 1.5.
+- Installare la 1.9.1 alla clinica la prima volta a mano, se c'è ancora la 1.5.
 - WhatsApp: quando Giovanni avrà numero, ID del numero e token di Meta, registrare il
   numero una volta dal programma (Configura → Email e WhatsApp → «Registra il numero», con
   il PIN a sei cifre della verifica in due passaggi) e mandare un messaggio di prova.
+- **Email senza la verifica in due passaggi di Gmail** (richiesta di Giovanni del 25 ottobre
+  2026): fatta nella 1.9.1, la pagina accetta qualsiasi casella. Da fare alla clinica: creare
+  una casella dedicata sul dominio del gruppo (nefrocenter.it, cPanel di Netsons; server e porta
+  in «Connetti dispositivi», sezione SSL/TLS), sceglierla come *Casella del sito della
+  clinica* (il programma propone mail. e il dominio, 465 con SSL; se il pannello indica un
+  altro server, si scrive quello, e se il certificato non corrisponde il messaggio della prova
+  lo dice), mandare la prova e controllare il recapito con mail-tester.com, sistemando se serve
+  SPF e DKIM da *Email Deliverability* di cPanel. Le risposte dei pazienti arrivano alla
+  casella che manda, o all'email della struttura se è diversa (il programma la mette come
+  Reply-To). Finché resta la Gmail, funziona com'è. OAuth resta sconsigliato (vedi *Le
+  decisioni*).
 - Dove si fa: caricare il database delle prestazioni vero dal programma (*Configura →
   Strutture del gruppo*) e scrivere i recapiti delle sei strutture (indirizzo, telefono per
   prenotare, prenotazione online, orari): finché mancano, la scheda della struttura lo dice

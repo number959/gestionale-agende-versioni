@@ -1505,7 +1505,8 @@ def d_errori_permanenti():
     POSTA.ripristina(password='un-altra-password')
     prenota(C, I)
     esito = invii.elabora(fabbrica)[0]
-    assert esito[1] == 'ERRORE' and 'password per le app' in esito[2], esito
+    # 1.9.1: il messaggio dipende dal fornitore; qui il server e' 127.0.0.1, uno qualsiasi
+    assert esito[1] == 'ERRORE' and 'non ha accettato nome utente e password' in esito[2], esito
     x = invii_tutti(S)[0]
     assert x['tentativi'] == 1 and invii.elabora(fabbrica, adesso=datetime.now() + timedelta(days=1)) == []
     POSTA.ripristina(rifiuta_rcpt=True)
@@ -1732,11 +1733,11 @@ def d_registro_e_notifiche():
     with A.app.test_request_context('/'):
         n = invii.notifiche(s)
     s.close()
-    assert len(n) == 1 and n[0]['titolo'] == 'Messaggi non partiti' and 'password per le app' in n[0]['testo'], n
+    assert len(n) == 1 and n[0]['titolo'] == 'Messaggi non partiti' and 'non ha accettato' in n[0]['testo'], n
     dati = json.loads(C.get('/notifiche.json').get_data(as_text=True))
     assert any(y['titolo'] == 'Messaggi non partiti' for y in dati), dati
     pagina = testo(C.get('/invii'))
-    assert 'non partito' in pagina and 'password per le app' in pagina and 'Riprova' in pagina
+    assert 'non partito' in pagina and 'non ha accettato nome utente e password' in pagina and 'Riprova' in pagina
     POSTA.ripristina()
     C.post('/invii', data={'azione': 'riprova', 'invio': str(x['id'])})
     y = invii_tutti(S)[0]
@@ -1904,7 +1905,7 @@ area('promemoria del giorno prima')
 
 def f_canale():
     cfg = dict(invii.PREDEFINITI, email_utente=UTENTE, email_password='chiaro:eA==', wa_token='chiaro:eA==',
-               wa_numero_id='1')
+               wa_numero_id='1', email_server='smtp.example.com')    # dalla 1.9.1 nessun server di partenza
     assert invii.email_pronta(cfg) and invii.whatsapp_pronto(cfg)
 
     def p(telefono='333 000 0001', email_='mara@example.com', canale='WHATSAPP', promemoria=True):

@@ -15,8 +15,11 @@ durante l'invio: un server lento non ferma le prenotazioni. Per lo stesso
 motivo, mentre si spedisce, la sessione non ha modifiche in sospeso (che
 SQLAlchemy scriverebbe da sola alla prima lettura, fuori dal lucchetto).
 
-Le email partono dall'account Gmail della struttura, con la "password per
-le app" di Google (serve la verifica in due passaggi). I WhatsApp automatici
+Le email partono dalla casella della struttura, qualsiasi casella con un
+server di posta in uscita (SMTP): quella del sito della clinica (dominio
+proprio, bastano indirizzo e password), Aruba, Gmail (con la "password per le
+app", che richiede la verifica in due passaggi) o un altro server, anche
+della rete interna senza password (CASELLE). I WhatsApp automatici
 richiedono la WhatsApp Business Platform di Meta: un numero dedicato, un
 modello di messaggio approvato e il suo token; finche' mancano, i promemoria
 vanno per email a chi ce l'ha e il resto resta nella pagina Conferme."""
@@ -63,15 +66,36 @@ MOTIVI = {'PREPARAZIONE': 'Email automatica', 'PROMEMORIA': 'Promemoria', 'PROVA
 STATI = {'DA_INVIARE': 'in coda', 'IN_CORSO': 'in partenza', 'INVIATO': 'inviato', 'ERRORE': 'non partito',
          'ANNULLATO': 'annullato'}
 VIVI = ('DA_INVIARE', 'IN_CORSO', 'INVIATO')     # un messaggio cosi' non va rimesso in coda
-SICUREZZE = [('starttls', 'STARTTLS, porta 587 (Gmail)'), ('ssl', 'SSL, porta 465'), ('nessuna', 'Nessuna')]
+SICUREZZE = [('ssl', 'SSL (di solito porta 465)'), ('starttls', 'STARTTLS (di solito porta 587)'),
+             ('nessuna', 'Nessuna (solo un server della rete interna)')]
+# I tipi di casella, con server, porta e sicurezza gia' pronti; la pagina li
+# propone scegliendo il tipo. 'dominio' e' la casella del sito della clinica:
+# il server e' mail. + il dominio dell'indirizzo, come nei pannelli cPanel
+# degli hosting (lo si corregge se il fornitore ne indica un altro).
+CASELLE = [
+    dict(codice='dominio', nome='Casella del sito della clinica (consigliata)', server='', porta='465', sicurezza='ssl',
+         password='Password della casella'),
+    dict(codice='aruba', nome='Aruba', server='smtps.aruba.it', porta='465', sicurezza='ssl',
+         password='Password della casella'),
+    dict(codice='gmail', nome='Gmail (serve la verifica in due passaggi)', server='smtp.gmail.com', porta='587',
+         sicurezza='starttls', password='Password per le app'),
+    dict(codice='altro', nome='Altro server', server='', porta='', sicurezza='', password='Password'),
+]
+PER_CODICE = {c['codice']: c for c in CASELLE}
+# un SSLError con uno di questi motivi, collegandosi con SSL: dall'altra parte
+# non c'e' SSL (per esempio la porta 587, che vuole STARTTLS)
+SENZA_SSL = {'WRONG_VERSION_NUMBER', 'RECORD_LAYER_FAILURE', 'PACKET_LENGTH_TOO_LONG', 'UNKNOWN_PROTOCOL'}
 # dopo un errore di rete si riprova dopo questi minuti; poi ci si ferma
 ATTESE = [2, 10, 30, 120, 360]
 MINUTI_BLOCCATO = 15          # "in partenza" da piu' di tanto: il programma si e' fermato a meta'
 MASSIMO_ALLEGATO = 10 * 1024 * 1024
 MASSIMO_TESTO = 10000
+# email: nessun server di partenza (fino alla 1.9 era quello di Gmail, che chi
+# l'usava ha comunque salvato con il modulo); email_accesso e' il nome utente
+# per entrare nel server quando non e' l'indirizzo (vuoto: l'indirizzo)
 PREDEFINITI = {
-    'email_server': 'smtp.gmail.com', 'email_porta': '587', 'email_sicurezza': 'starttls', 'email_utente': '',
-    'email_password': '', 'email_mittente': '', 'email_attiva': '1',
+    'email_tipo': '', 'email_server': '', 'email_porta': '587', 'email_sicurezza': 'starttls', 'email_utente': '',
+    'email_accesso': '', 'email_password': '', 'email_senza_password': '0', 'email_mittente': '', 'email_attiva': '1',
     'promemoria_attivo': '0', 'promemoria_ora': '10:00', 'promemoria_whatsapp': '1', 'promemoria_email': '1',
     'wa_token': '', 'wa_numero_id': '', 'wa_modello': 'promemoria_appuntamento', 'wa_lingua': 'it',
     'wa_parametri': 'paziente,giorno,ora,struttura,recapito', 'wa_versione': 'v25.0',
@@ -189,7 +213,51 @@ def impostazioni(s):
 
 
 def email_pronta(cfg):
-    return cfg['email_attiva'] == '1' and bool(cfg['email_server'] and cfg['email_utente'] and cfg['email_password'])
+    """Si possono mandare email: invio acceso, server, indirizzo e password
+    (o un server che non la chiede)."""
+    return cfg['email_attiva'] == '1' and bool(cfg['email_server'] and cfg['email_utente'] and (
+        cfg['email_password'] or cfg.get('email_senza_password') == '1'))
+
+
+def _dominio(indirizzo):
+    return (indirizzo or '').strip().rpartition('@')[2].strip().lower().rstrip('.')
+
+
+def _di_google(server):
+    s = (server or '').strip().lower().rstrip('.')
+    return s.endswith('gmail.com') or s.endswith('googlemail.com')
+
+
+def _di_microsoft(server):
+    s = (server or '').strip().lower().rstrip('.')
+    return any(s.endswith(d) for d in ('office365.com', 'outlook.com', 'hotmail.com', 'live.com'))
+
+
+def tipo_casella(cfg, indirizzo=''):
+    """Il tipo di casella: quello scelto nella pagina; se non c'e' (salvato
+    con la 1.9, o mai salvato) si ricava dal server e, senza server,
+    dall'indirizzo. Una casella @gmail.com e' Gmail, il resto la casella del
+    sito della clinica."""
+    if cfg.get('email_tipo') in PER_CODICE:
+        return cfg['email_tipo']
+    server = (cfg.get('email_server') or '').strip().lower().rstrip('.')
+    dominio = _dominio(indirizzo or cfg.get('email_utente'))
+    if server:
+        if _di_google(server):
+            return 'gmail'
+        if server in ('smtps.aruba.it', 'smtp.aruba.it'):
+            return 'aruba'
+        return 'dominio' if dominio and server == 'mail.' + dominio else 'altro'
+    return 'gmail' if dominio in ('gmail.com', 'googlemail.com') else 'dominio'
+
+
+def server_proposto(tipo, indirizzo=''):
+    """Il server da proporre per il tipo: quello del fornitore, o per la
+    casella del sito mail. + il dominio dell'indirizzo; vuoto se non si sa."""
+    if tipo == 'dominio':
+        dominio = _dominio(indirizzo)
+        return 'mail.' + dominio if re.fullmatch(r'[a-z0-9.\-]{1,110}\.[a-z]{2,}', dominio) else ''
+    return PER_CODICE.get(tipo, {}).get('server', '')
 
 
 def whatsapp_pronto(cfg):
@@ -665,53 +733,125 @@ def componi_email(s, x, cfg, oggetto, testo, allegati, st):
     return m
 
 
+def _risposta(e, quanto=120):
+    """La risposta del server, codice e testo, in una riga accorciata
+    («535 5.7.8 Username and Password not accepted»)."""
+    grezza = getattr(e, 'smtp_error', b'') or b''
+    testo = grezza.decode('utf-8', 'replace') if isinstance(grezza, bytes) else str(grezza)
+    codice = getattr(e, 'smtp_code', None)
+    testo = ' '.join(('%s %s' % (codice, testo) if isinstance(codice, int) and codice > 0 else testo).split())
+    return testo if len(testo) <= quanto else testo[:quanto - 1] + '…'
+
+
+def spiega_accesso_rifiutato(cfg, e=None):
+    """Il server non ha accettato nome utente e password: cosa controllare,
+    secondo il fornitore, con la risposta del server per chi ne sa."""
+    if _di_google(cfg.get('email_server')):
+        testo = ('Gmail non ha accettato indirizzo e password: serve la "password per le app" (16 lettere), non la '
+                 'password normale dell\'account')
+    elif _di_microsoft(cfg.get('email_server')):
+        testo = ('Microsoft non ha accettato l\'accesso: con Outlook.com e Hotmail non si entra più con la password da '
+                 'un programma come questo, con Microsoft 365 l\'invio con password (SMTP AUTH) deve permetterlo '
+                 'l\'amministratore. Meglio la casella del sito della clinica o Aruba')
+    else:
+        testo = ('il server email non ha accettato nome utente e password: controllare la password della casella (la '
+                 'stessa della webmail) e, se il fornitore ne dà uno diverso dall\'indirizzo, il nome utente')
+    risposta = _risposta(e) if e is not None else ''
+    return testo + (' (risposta del server: %s)' % risposta if risposta else '')
+
+
 def manda_email(cfg, messaggio):
-    """Con l'account della struttura. Gli errori diventano ErroreInvio, con un
-    testo che la segreteria capisce."""
-    password = svela(cfg['email_password'])
+    """Con la casella della struttura. Gli errori diventano ErroreInvio, con un
+    testo che la segreteria capisce e che dice cosa correggere; permanente
+    quando riprovare non serve (va cambiato qualcosa nelle impostazioni)."""
+    senza_password = cfg.get('email_senza_password') == '1'
+    password = '' if senza_password else svela(cfg['email_password'])
     try:
         porta = int(cfg['email_porta'] or 587)
     except ValueError:
         raise ErroreInvio('porta del server email non valida', permanente=True)
+    nome_server = (cfg['email_server'] or '').strip()
+    sicurezza = cfg['email_sicurezza']
     # il nome del PC per il saluto al server: senza, smtplib lo chiede al DNS, e su
     # certe reti la risposta si fa attendere
     nome_pc = re.sub(r'[^A-Za-z0-9.\-]', '', socket.gethostname()) or 'gestionale'
     try:
-        if cfg['email_sicurezza'] == 'ssl':
-            server = smtplib.SMTP_SSL(cfg['email_server'], porta, local_hostname=nome_pc, timeout=30,
-                                      context=contesto_tls())
+        if sicurezza == 'ssl':
+            server = smtplib.SMTP_SSL(nome_server, porta, local_hostname=nome_pc, timeout=30, context=contesto_tls())
         else:
-            server = smtplib.SMTP(cfg['email_server'], porta, local_hostname=nome_pc, timeout=30)
+            server = smtplib.SMTP(nome_server, porta, local_hostname=nome_pc, timeout=30)
         try:
-            if cfg['email_sicurezza'] == 'starttls':
+            if sicurezza == 'starttls':
                 server.starttls(context=contesto_tls())
             if password:
-                server.login(cfg['email_utente'], password)
+                server.login((cfg.get('email_accesso') or '').strip() or cfg['email_utente'], password)
             server.send_message(messaggio)
         finally:
             try:
                 server.quit()
             except Exception:
                 pass
-    except smtplib.SMTPAuthenticationError:
-        raise ErroreInvio('il server email non ha accettato indirizzo e password: per Gmail serve la "password per '
-                          'le app" (16 lettere), non quella normale', permanente=True)
+    except smtplib.SMTPAuthenticationError as e:
+        raise ErroreInvio(spiega_accesso_rifiutato(cfg, e), permanente=True)
     except smtplib.SMTPNotSupportedError as e:
-        raise ErroreInvio('il server non offre questa sicurezza o l\'accesso con password (%s): controllare '
-                          'server, porta e sicurezza' % e, permanente=True)
-    except smtplib.SMTPRecipientsRefused as e:
-        raise ErroreInvio('indirizzo del destinatario rifiutato: %s' % ', '.join(e.recipients), permanente=True)
-    except smtplib.SMTPSenderRefused as e:
-        raise ErroreInvio('mittente rifiutato dal server: %s' % (e.smtp_error or b'').decode('utf-8', 'replace')[:120],
+        if 'STARTTLS' in str(e).upper():
+            raise ErroreInvio('il server non offre STARTTLS su questa porta: provare la porta 465 con SSL, o chiedere '
+                              'a chi gestisce la casella porta e sicurezza giuste', permanente=True)
+        raise ErroreInvio('il server non accetta l\'accesso con nome utente e password così (%s): controllare porta e '
+                          'sicurezza (molti server lo accettano solo con SSL o STARTTLS); per un server della rete '
+                          'interna che non chiede la password, spuntare «Il server non chiede la password»' % e,
                           permanente=True)
+    except smtplib.SMTPRecipientsRefused as e:
+        risposte = [x for x in e.recipients.values() if isinstance(x, tuple) and len(x) == 2]
+        risposta = _risposta(SimpleNamespace(smtp_code=risposte[0][0], smtp_error=risposte[0][1])) if risposte else ''
+        testo = 'indirizzo del destinatario rifiutato: %s' % ', '.join(e.recipients)
+        if risposta:
+            testo += ' (risposta del server: %s)' % risposta
+        if 'relay' in risposta.lower():
+            testo += ('. Il server non lascia mandare a indirizzi di fuori: di solito si entra con nome utente e '
+                      'password della casella%s' % (' (togliere la spunta «Il server non chiede la password»)'
+                                                    if senza_password else ''))
+        raise ErroreInvio(testo, permanente=True)
+    except smtplib.SMTPSenderRefused as e:
+        if e.smtp_code == 530 or (senza_password and e.smtp_code in (550, 553, 554) and
+                                  'auth' in _risposta(e).lower()):
+            raise ErroreInvio('il server vuole nome utente e password prima di mandare: scrivere la password della '
+                              'casella%s (risposta del server: %s)' % (
+                                  ' e togliere la spunta «Il server non chiede la password»' if senza_password else '',
+                                  _risposta(e)), permanente=True)
+        raise ErroreInvio('mittente rifiutato dal server: %s. Di solito l\'indirizzo del mittente deve essere quello '
+                          'della casella con cui si entra nel server' % _risposta(e), permanente=True)
     except smtplib.SMTPDataError as e:
-        testo = (e.smtp_error or b'').decode('utf-8', 'replace')[:160]
         # 4xx: il server e' occupato o ha un limite momentaneo, si riprova
-        raise ErroreInvio('messaggio rifiutato dal server: %s' % testo, permanente=e.smtp_code >= 500)
+        raise ErroreInvio('messaggio rifiutato dal server: %s' % _risposta(e, 160), permanente=e.smtp_code >= 500)
+    except ssl.SSLCertVerificationError as e:
+        # 62 e 64: il certificato e' di un altro nome (o indirizzo), va corretto il server;
+        # gli altri (scaduto, autofirmato...) possono sistemarsi dal fornitore: si riprova
+        sbagliato = getattr(e, 'verify_code', None) in (62, 64)
+        raise ErroreInvio('connessione protetta non riuscita: il certificato del server «%s» non va bene (%s)%s' % (
+            nome_server, getattr(e, 'verify_message', '') or e,
+            ': scrivere il nome del server esatto che indica il fornitore della casella (negli hosting a volte è il '
+            'nome del server, non mail. seguito dal dominio)' if sbagliato else ''), permanente=sbagliato)
     except ssl.SSLError as e:
+        if sicurezza == 'ssl' and getattr(e, 'reason', '') in SENZA_SSL:
+            raise ErroreInvio('sulla porta %d il server non usa SSL: con la porta 587 scegliere STARTTLS (oppure la '
+                              'porta 465 con SSL)' % porta, permanente=True)
         raise ErroreInvio('connessione protetta non riuscita: %s' % e, permanente=False)
+    except socket.gaierror:
+        raise ErroreInvio('server email non raggiungibile: «%s» non si trova (controllare il nome del server e la '
+                          'connessione a internet)' % nome_server, permanente=False)
+    except ConnectionRefusedError:
+        raise ErroreInvio('server email non raggiungibile: «%s» rifiuta il collegamento sulla porta %d (controllare la '
+                          'porta: di solito 465 con SSL o 587 con STARTTLS)' % (nome_server, porta), permanente=False)
+    except (TimeoutError, socket.timeout) as e:
+        consiglio = ('con la porta 465 la sicurezza è SSL' if porta == 465 and sicurezza != 'ssl' else
+                     'controllare server e porta, e la connessione a internet')
+        raise ErroreInvio('server email non raggiungibile: «%s» non risponde (%s)' % (nome_server, consiglio),
+                          permanente=False)
     except (smtplib.SMTPException, OSError) as e:
-        raise ErroreInvio('server email non raggiungibile: %s' % (e or e.__class__.__name__), permanente=False)
+        consiglio = ' (con la porta 465 la sicurezza è SSL)' if porta == 465 and sicurezza != 'ssl' else ''
+        raise ErroreInvio('server email non raggiungibile: %s%s' % (e or e.__class__.__name__, consiglio),
+                          permanente=False)
 
 
 def manda_whatsapp(cfg, numero, parametri):
@@ -1086,32 +1226,67 @@ def pannello(s, a):
 
 
 def _cfg_modulo(f, cfg):
-    """Le impostazioni dal modulo; password e token restano quelli salvati se
-    il campo e' vuoto."""
-    errori, nuovi = [], {}
+    """Le impostazioni dal modulo: (nuove impostazioni, errori, avvisi).
+    Password e token restano quelli salvati se il campo e' vuoto. Server,
+    porta e sicurezza lasciati vuoti si prendono dal tipo di casella."""
+    errori, avvisi, nuovi = [], [], {}
     if f.get('sezione') == 'email':
         utente = (f.get('email_utente') or '').strip()
         if utente and (len(utente) > 120 or not pazienti.email_valida(utente)):
             errori.append('Indirizzo email non valido.')
-        server = (f.get('email_server') or '').strip()
-        if not re.fullmatch(r'[A-Za-z0-9.\-]{1,120}', server or PREDEFINITI['email_server']):
-            errori.append('Server non valido.')
-        porta = (f.get('email_porta') or '').strip() or PREDEFINITI['email_porta']
+        server = (f.get('email_server') or '').strip().rstrip('.')
+        tipo = f.get('email_tipo') or ''
+        if tipo and tipo not in PER_CODICE:
+            errori.append('Tipo di casella: scelta non valida.')
+            tipo = ''
+        if not tipo:                     # un modulo senza il tipo (come quello della 1.9): dal server
+            tipo = tipo_casella({'email_server': server}, utente)
+        if tipo == 'dominio' and _dominio(utente) in ('gmail.com', 'googlemail.com'):
+            tipo = 'gmail'               # una casella @gmail.com non e' quella del sito
+        preset = PER_CODICE[tipo]
+        if not server:
+            server = server_proposto(tipo, utente)
+        if server and not re.fullmatch(r'[A-Za-z0-9.\-]{1,120}', server):
+            errori.append('Server non valido: solo il nome, per esempio mail.dominio.it, senza spazi né «smtp://».')
+        elif not server and utente:
+            errori.append('Manca il server della posta in uscita (SMTP): lo indica il fornitore della casella.')
+        porta = (f.get('email_porta') or '').strip() or preset['porta'] or PREDEFINITI['email_porta']
         if not porta.isdigit() or not 0 < int(porta) < 65536:
             errori.append('Porta non valida.')
-        sicurezza = f.get('email_sicurezza') or 'starttls'
+        sicurezza = f.get('email_sicurezza') or preset['sicurezza'] or PREDEFINITI['email_sicurezza']
         if sicurezza not in dict(SICUREZZE):
             errori.append('Sicurezza: scelta non valida.')
+        accesso = (f.get('email_accesso') or '').strip()
+        if accesso and (len(accesso) > 120 or not re.fullmatch(r'\S+', accesso)):
+            errori.append('Nome utente non valido: senza spazi, al massimo 120 caratteri.')
+        if accesso.lower() == utente.lower():
+            accesso = ''                 # uguale all'indirizzo: e' gia' quello che si usa
+        senza_password = '1' if f.get('email_senza_password') in ('1', 'on') else '0'
         mittente = ' '.join((f.get('email_mittente') or '').split())[:80]
-        nuovi.update(email_utente=utente, email_server=server or PREDEFINITI['email_server'], email_porta=porta,
-                     email_sicurezza=sicurezza, email_mittente=mittente,
-                     email_attiva='1' if f.get('email_attiva') in ('1', 'on') else '0')
-        # Google mostra la password per le app a gruppi di quattro: gli spazi non contano
-        password = re.sub(r'\s', '', f.get('email_password') or '')
+        nuovi.update(email_tipo=tipo, email_utente=utente, email_server=server, email_porta=porta,
+                     email_sicurezza=sicurezza, email_accesso=accesso, email_senza_password=senza_password,
+                     email_mittente=mittente, email_attiva='1' if f.get('email_attiva') in ('1', 'on') else '0')
+        gmail = tipo == 'gmail' or _di_google(server)
+        grezza = f.get('email_password') or ''
+        # Google mostra la password per le app a gruppi di quattro: gli spazi non contano.
+        # Le altre password si tengono come sono, tolti solo gli spazi copiati prima e dopo.
+        password = re.sub(r'\s', '', grezza) if gmail else grezza.strip()
         if password:
             nuovi['email_password'] = proteggi(password[:100])
+            if gmail and not re.fullmatch(r'[A-Za-z]{16}', password):
+                avvisi.append('La password per le app di Gmail sono 16 lettere: questa non lo sembra. Se la prova non '
+                              'parte, crearne una nuova in myaccount.google.com/apppasswords.')
         elif f.get('togli_password') in ('1', 'on'):
             nuovi['email_password'] = ''
+        if porta.isdigit() and sicurezza in dict(SICUREZZE):
+            if int(porta) == 465 and sicurezza != 'ssl':
+                avvisi.append('Con la porta 465 la sicurezza di solito è SSL: se la prova non parte, scegliere SSL.')
+            elif int(porta) == 587 and sicurezza == 'ssl':
+                avvisi.append('Con la porta 587 la sicurezza di solito è STARTTLS: se la prova non parte, scegliere '
+                              'STARTTLS.')
+            elif sicurezza == 'nessuna' and senza_password != '1':
+                avvisi.append('Senza sicurezza la password viaggia in chiaro: se il server offre SSL o STARTTLS, '
+                              'meglio usarli.')
     elif f.get('sezione') == 'promemoria':
         ora = (f.get('promemoria_ora') or '10:00').strip()
         if not re.fullmatch(r'([01]\d|2[0-3]):[0-5]\d', ora):
@@ -1153,7 +1328,7 @@ def _cfg_modulo(f, cfg):
             nuovi['wa_token'] = ''
     else:
         errori.append('Sezione sconosciuta.')
-    return nuovi, errori
+    return nuovi, errori, avvisi
 
 
 def regola_pronta_possibile(s):
@@ -1225,7 +1400,7 @@ def pagina():
     if request.method == 'POST':
         azione = request.form.get('azione')
         if azione == 'salva':
-            nuovi, errori = _cfg_modulo(request.form, cfg)
+            nuovi, errori, avvisi = _cfg_modulo(request.form, cfg)
             for e in errori:
                 flash(e, 'errore')
             if not errori:
@@ -1234,6 +1409,8 @@ def pagina():
                         scrivi_impostazione(s, k, v)
                     s.commit()
                 flash('Impostazioni salvate.', 'ok')
+                for a in avvisi:
+                    flash(a, 'avviso')
                 sveglia()
             return redirect(url_for('invii.pagina') + '#' + re.sub(r'\W', '', request.form.get('sezione') or ''))
         if azione == 'prova_email':
@@ -1242,7 +1419,7 @@ def pagina():
                 flash('Scrivere un indirizzo email valido per la prova.', 'errore')
                 return redirect(url_for('invii.pagina') + '#email')
             if not email_pronta(cfg):
-                flash('Prima salvare indirizzo e password per le app, con l\'invio acceso.', 'errore')
+                flash('Prima salvare indirizzo, password e server della casella, con l\'invio acceso.', 'errore')
                 return redirect(url_for('invii.pagina') + '#email')
             st = struttura_di(s)
             with _lucchetto:
@@ -1345,8 +1522,18 @@ def pagina():
     st = struttura_di(s)
     # l'indirizzo da proporre la prima volta: quello della struttura
     utente_proposto = cfg['email_utente'] or ((st.email or '').strip() if st is not None else '')
+    # il tipo di casella e, se la casella non e' mai stata salvata, server, porta e
+    # sicurezza proposti per quel tipo
+    tipo_email = tipo_casella(cfg, utente_proposto)
+    modulo_email = {'server': cfg['email_server'], 'porta': cfg['email_porta'], 'sicurezza': cfg['email_sicurezza']}
+    if not cfg['email_server']:
+        preset = PER_CODICE[tipo_email]
+        modulo_email = {'server': server_proposto(tipo_email, utente_proposto),
+                        'porta': preset['porta'] or cfg['email_porta'],
+                        'sicurezza': preset['sicurezza'] or cfg['email_sicurezza']}
     ultimo_giro = leggi_impostazione(s, 'promemoria_ultimo_giro', '')
     return render_template('invii.html', cfg=cfg, email_pronta=email_pronta(cfg),
+                           caselle=CASELLE, tipo_email=tipo_email, modulo_email=modulo_email,
                            whatsapp_pronto=whatsapp_pronto(cfg), regole=regole, prestazioni=prestazioni,
                            gruppi=gruppi, note=note, medici_attivi=[o for o in medici if o.attivo],
                            registro=registro, sicurezze=SICUREZZE, canali=CANALI, motivi=MOTIVI, stati=STATI,

@@ -297,6 +297,71 @@
     });
   });
 
+  /* ------------------------------------------ invii: il tipo di casella email */
+  // Scegliendo il tipo si mostrano le sue istruzioni e si propongono server,
+  // porta e sicurezza (i valori sono quelli di invii.CASELLE, nella pagina in
+  // #caselle-email). Per la casella del sito il server e' mail. + il dominio
+  // dell'indirizzo e segue l'indirizzo mentre si scrive, finche' non lo si
+  // cambia a mano. Il programma rifa' gli stessi conti salvando.
+  var tipoEmail = $('email_tipo');
+  if (tipoEmail && $('caselle-email')) {
+    var caselleEmail = {};
+    try {
+      JSON.parse($('caselle-email').textContent).forEach(function (c) { caselleEmail[c.codice] = c; });
+    } catch (e) { caselleEmail = {}; }
+    var indirizzoEmail = $('email_utente'), serverEmail = $('email_server'), portaEmail = $('email_porta');
+    var sicurezzaEmail = $('email_sicurezza'), passwordEmail = $('email_password');
+    var etichettaPassword = $('etichetta-password'), dettagliServer = $('email-server');
+    var dominioEmail = function (x) { return ((x || '').split('@')[1] || '').trim().toLowerCase().replace(/\.$/, ''); };
+    var serverPerTipo = function (tipo) {
+      if (tipo === 'dominio') {
+        var d = dominioEmail(indirizzoEmail ? indirizzoEmail.value : '');
+        return /^[a-z0-9.\-]{1,110}\.[a-z]{2,}$/.test(d) ? 'mail.' + d : '';
+      }
+      return (caselleEmail[tipo] || {}).server || '';
+    };
+    // l'ultimo server proposto: se il campo contiene ancora quello, non e' stato scritto a mano
+    var serverProposto = serverPerTipo(tipoEmail.value);
+    var mostraTipoCasella = function () {
+      var c = caselleEmail[tipoEmail.value] || {};
+      document.querySelectorAll('[data-casella]').forEach(function (x) {
+        x.hidden = x.getAttribute('data-casella') !== tipoEmail.value;
+      });
+      if (etichettaPassword && c.password) { etichettaPassword.textContent = c.password; }
+      if (passwordEmail && !passwordEmail.getAttribute('data-salvata')) {
+        passwordEmail.placeholder = tipoEmail.value === 'gmail' ? '16 lettere' : '';
+      }
+    };
+    var proponiCasella = function () {
+      var c = caselleEmail[tipoEmail.value] || {};
+      if (serverEmail) {
+        var nuovo = serverPerTipo(tipoEmail.value);
+        if (nuovo || serverEmail.value === serverProposto) { serverEmail.value = nuovo; }
+        serverProposto = serverEmail.value;
+      }
+      if (portaEmail && c.porta) { portaEmail.value = c.porta; }
+      if (sicurezzaEmail && c.sicurezza) { sicurezzaEmail.value = c.sicurezza; }
+      if (dettagliServer && (tipoEmail.value === 'altro' || tipoEmail.value === 'dominio')) { dettagliServer.open = true; }
+    };
+    tipoEmail.addEventListener('change', function () { mostraTipoCasella(); proponiCasella(); });
+    if (indirizzoEmail) {
+      indirizzoEmail.addEventListener('input', function () {
+        var d = dominioEmail(indirizzoEmail.value);
+        if (tipoEmail.value === 'dominio' && (d === 'gmail.com' || d === 'googlemail.com')) {
+          tipoEmail.value = 'gmail';      // una casella @gmail.com non e' quella del sito
+          mostraTipoCasella();
+          proponiCasella();
+          return;
+        }
+        if (tipoEmail.value === 'dominio' && serverEmail && (serverEmail.value === serverProposto || !serverEmail.value)) {
+          serverEmail.value = serverPerTipo('dominio');
+          serverProposto = serverEmail.value;
+        }
+      });
+    }
+    mostraTipoCasella();
+  }
+
   /* ------------------------------------------ campi in piu' secondo la prestazione */
   var prestazione = $('prestazione');
   if (prestazione) {

@@ -5,6 +5,16 @@ ogni struttura: nome, logo, società e colori si impostano dal programma. Gira s
 della segreteria, con un solo utente; internet serve solo, in uscita, per le email e i
 WhatsApp ai pazienti e per scaricare gli aggiornamenti. Il database è un file unico.
 
+**Novità della 1.9.1.** **L'email con qualsiasi casella, anche senza Gmail.** In *Configura →
+Email e WhatsApp* si sceglie il tipo di casella: quella del **sito della clinica** (bastano
+indirizzo e password, niente verifica in due passaggi), **Aruba**, **Gmail** o un **altro
+server**; server, porta e sicurezza si compilano da soli e le istruzioni sono quelle del
+tipo scelto. Per i fornitori che danno un nome utente diverso dall'indirizzo c'è il suo
+campo, per un server della rete interna che non chiede la password una spunta. Se un'email
+non parte, il messaggio dice cosa correggere (la password, porta e sicurezza che non vanno
+insieme, il nome del server). La Gmail già collegata continua a funzionare com'è (vedi
+*Email e WhatsApp ai pazienti*).
+
 **Novità della 1.9.** **Dove si fa.** Nuovo menu *Dove si fa* (tasto D): si scrive la
 prestazione come la dice il paziente («risonanza ginocchio», «tac torace», «holter») e si
 vedono subito le **strutture del gruppo** dove si fa, con le sigle d'uso (RM, TC, RX, ECG,
@@ -493,25 +503,58 @@ promemoria.
 Menu **Configura → Email e WhatsApp**. In alto quattro spie dicono cosa è pronto; sotto, le
 email automatiche, l'account, il promemoria, WhatsApp e il registro.
 
-**L'account email.** Le email partono dalla Gmail della clinica, e le risposte dei
-pazienti arrivano lì. Gmail non accetta la password normale da un programma: serve una
-*password per le app*, una volta sola.
+**L'account email.** Le email partono da una casella della clinica e le risposte dei
+pazienti arrivano lì. Dalla 1.9.1 va bene **qualsiasi casella** con un server di posta in
+uscita (SMTP): si sceglie il **tipo di casella** e il programma propone server, porta e
+sicurezza, con le istruzioni di quel tipo.
 
-1. Accedere a Gmail con l'account della clinica (medicinamigliorenapolisrl@gmail.com).
-2. In **myaccount.google.com → Sicurezza** attivare la **Verifica in due passaggi**, se
-   non c'è già (serve un cellulare).
-3. Aprire **myaccount.google.com/apppasswords**, scrivere un nome (*Gestionale*) e
-   premere **Crea**: Google mostra 16 lettere.
-4. Nel gestionale, *Password per le app*: incollarle (gli spazi non contano) e salvare.
-   L'indirizzo è già proposto, preso dalla struttura.
-5. **Manda la prova** al proprio indirizzo: se arriva, le email ai pazienti partono.
+- **Casella del sito della clinica** (consigliata): una casella con il dominio del sito,
+  per esempio *segreteria@* e il dominio, creata nel pannello di chi ospita il sito (in
+  cPanel *Email → Account email → Crea*). Bastano indirizzo e password della casella,
+  **senza verifica in due passaggi**. Il server proposto è *mail.* seguito dal dominio,
+  porta 465 con SSL, come in quasi tutti gli hosting; se il pannello ne indica un altro (in
+  cPanel *Connetti dispositivi*) lo si scrive in *Server e accesso*. Perché le email non
+  finiscano nello spam, nel pannello SPF e DKIM devono risultare a posto (in cPanel *Email
+  Deliverability*).
+- **Aruba**: server smtps.aruba.it, porta 465 con SSL, l'indirizzo completo e la password
+  della casella (la stessa della webmail). Non una casella PEC.
+- **Gmail**: Gmail non accetta la password normale da un programma, vuole una *password per
+  le app*, che Google dà solo con la verifica in due passaggi attiva.
+  1. Accedere a Gmail con l'account della clinica (medicinamigliorenapolisrl@gmail.com).
+  2. In **myaccount.google.com → Sicurezza** attivare la **Verifica in due passaggi**, se
+     non c'è già (serve un cellulare).
+  3. Aprire **myaccount.google.com/apppasswords**, scrivere un nome (*Gestionale*) e
+     premere **Crea**: Google mostra 16 lettere.
+  4. Nel gestionale, *Password per le app*: incollarle (gli spazi non contano) e salvare.
+
+  Cambiando la password dell'account Google, la password per le app smette di funzionare:
+  se ne crea un'altra. Gmail permette circa 500 email al giorno.
+- **Altro server**: server, porta e sicurezza li indica il fornitore o chi gestisce la posta
+  (di solito 465 con SSL, oppure 587 con STARTTLS). In *Server e accesso* ci sono anche il
+  **nome utente**, da scrivere solo se il fornitore ne dà uno diverso dall'indirizzo (i
+  servizi di invio come Brevo o Mailjet), e la spunta **Il server non chiede la password**,
+  per un server della rete interna che manda senza accesso. Outlook.com e Hotmail non vanno
+  (Microsoft non accetta più la password da un programma); con Microsoft 365 l'invio con
+  password (SMTP AUTH) deve permetterlo l'amministratore, e Microsoft ha annunciato che lo
+  spegne dalla fine del 2026.
+
+L'indirizzo è già proposto, preso dalla struttura; il tipo si propone da solo (una casella
+@gmail.com è Gmail, le altre la casella del sito). Poi **Manda la prova** al proprio
+indirizzo: se arriva, le email ai pazienti partono. Se non parte, il messaggio dice cosa
+correggere: password non accettata (con il consiglio giusto per Gmail e per Microsoft, e la
+risposta del server), SSL scelto su una porta che vuole STARTTLS, certificato del server
+fatto per un altro nome (va scritto il nome esatto del server), server che non si trova, che
+rifiuta il collegamento o che non risponde (con la porta 465 la sicurezza è SSL), mittente
+diverso dalla casella, invio a indirizzi di fuori non permesso senza accesso. Salvando, il
+programma avvisa già delle combinazioni che di solito non vanno (porta 465 senza SSL, 587
+con SSL, password senza sicurezza) e di una password di Gmail che non sembra una password
+per le app. Gli errori da correggere fermano subito il messaggio (*non partito*, poi
+*Riprova* quando è corretto); quelli di rete si riprovano da soli.
 
 La password resta nel database cifrata con la protezione dati di Windows (DPAPI): la
 legge solo lo stesso utente sullo stesso PC. Un backup portato su un altro computer non
-la contiene in chiaro e lì va riscritta. Cambiando la password dell'account Google, la
-password per le app smette di funzionare: se ne crea un'altra. Gmail permette circa 500
-email al giorno. Server, porta e sicurezza sono già quelli di Gmail; con un'altra casella
-(Aruba, Microsoft 365) si cambiano in *Server*.
+la contiene in chiaro e lì va riscritta. La casella collegata con la 1.9 (Gmail) continua a
+funzionare com'è: il tipo si ricava dal server salvato.
 
 **Email automatiche.** Una *regola* dice per quale medico e quali prestazioni parte
 un'email, con oggetto, testo e PDF allegati (fino a 10 MB ciascuno). Nella pagina le email
@@ -1206,6 +1249,12 @@ pianificazione, ma non serve più.
 In più il pulsante *Scarica in Excel* rigenera il planning del giorno nel formato che
 l'accettazione usa già.
 
+**Aggiornamento alla 1.9.1.** Il database non cambia (resta allo schema 10): niente copia di
+sicurezza in più e nessuna tabella nuova. Le impostazioni dell'email salvate con la 1.9
+valgono come prima (il tipo di casella si ricava dal server salvato, Gmail resta Gmail); le
+tre impostazioni nuove (tipo, nome utente, server senza password) si scrivono la prima
+volta che si salva la casella.
+
 **Aggiornamento alla 1.9.** Al primo avvio della 1.9 il programma copia il database in
 `backup\agende-…-prima-della-versione-10.db`, poi aggiunge le quattro tabelle di *Dove si
 fa* (strutture del gruppo, prestazioni del database, dove si fanno, pazienti indirizzati),
@@ -1260,7 +1309,7 @@ la transazione si annulla e il database resta com'era. Il registro riporta ogni 
 | `segreteria.py` | Chiusura della giornata, lista d'attesa, sposta, serie, note del giorno, cose da fare, notifiche, ricerca rapida, agenda dei medici |
 | `cassa.py` | Listino, tariffe per convenzione, pagamenti, cassa del giorno e del mese |
 | `documenti.py` | Documenti allegati alla scheda, moduli da stampare |
-| `invii.py` | Email e WhatsApp ai pazienti: regole, coda con i nuovi tentativi, promemoria del giorno prima, Gmail, WhatsApp Business Platform, registro |
+| `invii.py` | Email e WhatsApp ai pazienti: regole, coda con i nuovi tentativi, promemoria del giorno prima, la casella della struttura (tipi di casella, invio SMTP, errori spiegati), WhatsApp Business Platform, registro |
 | `modelli_email/` | Le due informative della regola già pronta (gastroscopia e colonscopia) |
 | `guida.py` | Le guide: testi, passi, pagine Aiuto, versione da stampare, videoguide |
 | `static/guida.js`, `static/guida/` | La guida sullo schermo, la finestra dei video, le immagini delle guide |
@@ -1542,6 +1591,36 @@ Versione 1.9, con gli stessi script (Wine 9, Python 3.14.8, PyInstaller 6.22.3, 
 - Primo avvio senza dati, come dopo un'installazione nuova: database creato già allo schema
   10, gli stessi controlli a posto.
 
+Versione 1.9.1, con gli stessi script (Wine 9, Python 3.14.8, PyInstaller 6.22.3, Inno Setup 6.7.3):
+
+- `costruisci.sh` per le due versioni: Setup di circa 57 MB e file delle versioni in `Output`.
+- **Aggiorna adesso per intero dalla 1.9 vera alla 1.9.1.** La 1.9 normale installata con il
+  Setup consegnato il 12 ottobre, con dati inventati (46 appuntamenti, 30 pazienti, 8 medici,
+  turni, email automatiche e messaggi) e la casella collegata con il modulo della 1.9; la
+  1.9.1 in una cartella: pronta in 2 secondi, notifica, clic nel browser, Setup silenzioso,
+  programma riaperto e pagina passata da sola alle *Novità della versione 1.9.1* in 9 secondi,
+  registro *"aggiornamento dalla 1.9 alla 1.9.1 riuscito"*, copia di sicurezza *prima di
+  aggiornare*, Setup installato tolto al primo giro del controllo: 14 controlli su 14. Dopo,
+  le 28 tabelle identiche riga per riga e cambiate solo le impostazioni della versione
+  (nessuna copia *prima della versione*: lo schema resta 10), `integrity_check` e
+  `foreign_key_check` a posto; la prova dell'email parte subito con la casella e la password
+  salvate dalla 1.9 (cifrate con DPAPI), senza toccare niente.
+- La 1.9.1 animata installata con il Setup sopra la 1.9 animata, con gli stessi dati: tabelle
+  identiche, cambiate solo le impostazioni della versione, la casella della 1.9 che manda.
+- Sull'eseguibile installato, normale e animato, `prove_installato.py`: 34 controlli a posto
+  (in più rispetto alla 1.9: la pagina dell'email con i tipi di casella, `gestionale.js`, il
+  vecchio indirizzo della guida che porta al nuovo). `prova_email_installato.py`, con finti
+  server di posta: 12 controlli su 12 su tutte e due (modulo e avvisi, password cifrata con
+  DPAPI, prova arrivata con il nome utente e il mittente giusti, password sbagliata spiegata
+  con la risposta del server, nome utente diverso dall'indirizzo, server senza password, SSL
+  sulla porta che non lo usa, certificato sconosciuto, invii riusciti con SSL diretto e con
+  STARTTLS).
+- Primo avvio senza dati: 34 controlli a posto; nella pagina dell'email il tipo proposto è la
+  casella del sito, con il server che arriva appena si scrive l'indirizzo.
+- Le stesse prove hanno mostrato dal vero il difetto della 1.9 sulle password con gli spazi:
+  salvata con il modulo della 1.9, una password con uno spazio non entrava (la 1.9 toglieva
+  gli spazi); salvata con la 1.9.1, entra.
+
 Restano fuori, perché si vedono solo su un Windows vero: l'avviso SmartScreen, il
 comportamento dell'antivirus del PC e l'apertura del browser predefinito; per gli
 aggiornamenti, una versione più nuova pubblicata davvero su GitHub (il percorso è lo stesso provato su
@@ -1562,10 +1641,20 @@ la prenotazione non si salva (fascia presa), non resta nemmeno l'email.
   anche senza riavvio.
 - Testo e allegati si compongono al momento dell'invio: se l'appuntamento è stato
   spostato nello stesso giorno, l'email ha l'ora giusta.
-- Si controlla il certificato del server (Gmail, Meta) con i certificati di Windows.
-- Gli errori si dividono in due: da correggere (password, indirizzo rifiutato, modello
-  WhatsApp sbagliato: niente nuovi tentativi) e momentanei (rete, server occupato, 4xx
-  SMTP, 429 e 5xx di Meta: nuovi tentativi).
+- Si controlla il certificato del server (posta, Meta) con i certificati di Windows. Un
+  certificato fatto per un altro nome è un errore da correggere (il nome del server); uno
+  scaduto o sconosciuto si riprova, perché può sistemarlo il fornitore.
+- Gli errori si dividono in due: da correggere (password, indirizzo rifiutato, SSL sulla
+  porta che vuole STARTTLS, modello WhatsApp sbagliato: niente nuovi tentativi) e
+  momentanei (rete, server che non si trova o non risponde, server occupato, 4xx SMTP, 429
+  e 5xx di Meta: nuovi tentativi). Il testo dice cosa correggere e, per chi ne sa, riporta
+  la risposta del server (`spiega_accesso_rifiutato`, `manda_email`).
+- Il tipo di casella (`CASELLE`, `tipo_casella`, `server_proposto`) serve solo a proporre
+  server, porta e sicurezza e a scegliere le istruzioni e i consigli: si salva quello che
+  c'è nei campi. Le impostazioni salvate con la 1.9, senza tipo, valgono come prima: il
+  tipo si ricava dal server. Nessun server di partenza (prima era quello di Gmail). Il
+  nome utente per l'accesso (`email_accesso`) vuoto vuol dire l'indirizzo;
+  `email_senza_password` fa mandare senza accesso.
 - Un messaggio mandato a comando non riprova da solo: chi l'ha mandato vede subito
   l'esito.
 - Le email hanno testo semplice e HTML, il logo della struttura come immagine interna
@@ -1585,7 +1674,7 @@ autorizzazioni al primo avvio. Dalla 1.4.6 risponde solo se l'indirizzo è `127.
 accetta un modulo solo se arriva da una sua pagina: `Origin`, `Referer` e
 `Sec-Fetch-Site` devono dirlo, e "null" non basta. Un programma che manda richieste senza
 queste intestazioni (le prove, `curl`) passa: un browser le mette sempre. Le email e i
-WhatsApp della 1.5 sono collegamenti in uscita verso Gmail e Meta: il gestionale non apre
+WhatsApp della 1.5 sono collegamenti in uscita verso il server di posta e Meta: il gestionale non apre
 porte e nessuno lo raggiunge da fuori.
 
 **Il giornale classico di SQLite, non il WAL.** Con il WAL le ultime modifiche restano in
@@ -1629,6 +1718,10 @@ python prove_18.py           # 29 prove sulla 1.8: turni del personale (regole c
 python prove_19.py           # 27 prove sulla 1.9: Dove si fa (lettura del file in tanti modi e con i suoi errori,
                              # importazione e versioni nuove, ricerca contro un oracolo su 1200 prestazioni
                              # inventate, pagine, registro, statistiche, protezioni, aggiornamento dalla 9)
+python prove_191.py          # 21 prove sulla 1.9.1: l'email con qualsiasi casella (tipi, server proposti, modulo con
+                             # errori e avvisi, anche quello della 1.9 senza tipo, pagina, nome utente diverso, server
+                             # senza password, password con spazi, ogni errore con il suo consiglio e se riprovare,
+                             # certificati, impostazioni della 1.9 che restano), con lo stesso finto server di prove_15
 python prove_16.py           # 45 prove sulla 1.6: Aggiorna adesso da una cartella e da un finto GitHub su https
                              # (rimandi, errori del sito, certificati, file delle versioni storpiati, Setup rovinati),
                              # installazione, esito al riavvio, novità, videoguide, installer e file delle versioni,
@@ -1641,16 +1734,20 @@ python prove_17_browser.py http://127.0.0.1:5001   # 16 controlli: codice fiscal
                              # suggerimenti del luogo, prenotazione, pagina di controllo (salva pazienti di prova)
 python prove_tendine_browser.py http://127.0.0.1:5001   # 150 controlli: le tendine sopra la pagina e le notifiche, a 1366x657
 python prove_18_browser.py http://127.0.0.1:5001   # 46 controlli sui turni: griglia, tastiera, annulla e rifai, scelta del turno
+                             # (dove si apre, mai coperta), schema, giorno a ore, schermo stretto, movimento ridotto
 python prove_19_browser.py http://127.0.0.1:5001   # 37 controlli su Dove si fa: ricerca mentre si scrive, frecce, scheda della
                              # struttura, messaggio cambiato, Copia, WhatsApp e Stampa, registro con Annulla, paziente,
                              # ricerca rapida, schermo stretto, tema scuro (segna pazienti indirizzati di prova)
-                             # (dove si apre, mai coperta), schema, giorno a ore, schermo stretto, movimento ridotto
+python prove_191_browser.py http://127.0.0.1:5001   # 22 controlli sull'email della 1.9.1: tipo di casella con server,
+                             # porta, sicurezza e istruzioni proposti, server che segue l'indirizzo, @gmail.com che passa
+                             # a Gmail, tendina del tipo salvata con il modulo, schermo stretto (salva le impostazioni
+                             # email della prova e poi rimette quelle di partenza)
 python prove_guida_browser.py http://127.0.0.1:5000   # 52 controlli nel browser, sui dati di prova
 python prove_sicurezza_browser.py http://127.0.0.1:5000   # 5 controlli: moduli mandati da un altro sito
 python campagna.py           # 2550 casi generati, anche sulle pagine della 1.4, circa due minuti
 ```
 
-In tutto 930 prove più 2550 casi generati e 339 controlli nel browser, tutte verdi su Python 3.11 e 3.14.
+In tutto 951 prove più 2550 casi generati e 361 controlli nel browser, tutte verdi su Python 3.11 e 3.14.
 Vanno rilanciate dopo ogni modifica; ognuna crea un database usa e getta. Alcune delle più
 vecchie escono con codice 0 anche se una prova non va: conta la riga finale («0 da
 sistemare»), che è quella che legge `tutte_le_prove.py`.
@@ -1822,6 +1919,23 @@ registro di una giornata):
 | Sala occupata alla stessa ora, stanza non indicata | La riga restava fuori, solo nell'Excel degli scarti | Va fra i da confermare, con i suoi dati |
 | Nome del file e riepilogo nel titolo uniti | "Lippiello Data" preso per un medico | Le celle del titolo restano separate |
 | Menu con la voce nuova | Andava a capo a 1366 pixel | Spaziature e ricerca più strette |
+
+Diciassettesimo giro, 1.9.1, l'email con qualsiasi casella (trovati rileggendo l'invio
+della 1.9 per le caselle che non sono Gmail):
+
+| Difetto | Effetto | Correzione |
+|---|---|---|
+| Spazi tolti da tutte le password | Gli spazi contano solo nella password per le app di Gmail: una password di casella con uno spazio dentro non sarebbe mai stata accettata | Spazi tolti solo per Gmail; per le altre solo quelli copiati prima e dopo |
+| Server vuoto | Diventava da solo smtp.gmail.com, anche per una casella di un altro fornitore | Il server si propone secondo il tipo di casella; per un altro server senza nome, errore che lo chiede |
+| Password non accettata | Il messaggio parlava sempre della password per le app di Gmail | Il consiglio giusto per Gmail, Microsoft e le altre caselle, con la risposta del server |
+| SSL sulla porta 587, porta 465 senza SSL, certificato di un altro nome | Errori tecnici («WRONG_VERSION_NUMBER», «timed out»), riprovati per ore | Il messaggio dice cosa scegliere; quelli da correggere si fermano subito; salvando, un avviso |
+| Server della rete interna senza password | «Email: da configurare» e la prova spenta finché non si scriveva una password | La spunta *Il server non chiede la password* |
+| Nome utente diverso dall'indirizzo (servizi di invio) | Non si poteva entrare: si usava sempre l'indirizzo | Il campo *Nome utente per entrare nel server* |
+
+Delle prove, non del programma: `prove_icone_animate.py` nella versione animata può non
+trovare le icone se gira mentre la stessa macchina fa anche le prove nel browser dell'altra
+versione (il lettore delle animazioni non fa in tempo a partire): da sola, o dopo le altre,
+passa.
 
 Sedicesimo giro, 1.9, Dove si fa (trovati provando la ricerca sul database vero, letto senza
 copiarlo, e sulla pagina nel browser):
