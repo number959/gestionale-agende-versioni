@@ -23,6 +23,8 @@
   html.scuro .voce .scarto { color: #E8A8A5; }
   html.scuro .voce + .voce { border-top: 1px solid #445C3B; }
   html.scuro .voce .dettaglio { color: #A2B0BC; }
+  html.scuro tbody.fasce-miste td.aperta a.posa.con-ora { color: #7C8A96; }
+  html.scuro .voce .ora-voce { color: #A9B7C4; }
   html.scuro .pagina p.sotto { color: #9AA8B4; }
   html.scuro .campo label { color: #A9B7C4; }
   html.scuro .campo input, html.scuro .campo select, html.scuro .campo textarea { color: #E1E7ED; border: 1px solid #45525F; background: #1C242D; }

@@ -64,7 +64,7 @@
     {% set scaduto = t.valido_a and t.valido_a < oggi %}
     <tr{% if scaduto %} class="spento"{% endif %}>
       <td>{{ giorni[t.giorno_settimana] }}</td>
-      <td>{{ t.ora_inizio.strftime('%H:%M') }}–{{ t.ora_fine.strftime('%H:%M') }}</td>
+      <td>{{ t.ora_inizio.strftime('%H:%M') }}–{{ t.ora_fine.strftime('%H:%M') }}{% if t.passo_proprio %} <small class="fasce-turno">fasce da {{ t.passo_proprio }}'</small>{% endif %}</td>
       <td>{{ t.operatore.etichetta }}</td>
       <td>{{ t.risorsa.nome }}</td>
       <td>{% if scaduto %}scaduto il {{ t.valido_a.strftime('%d/%m/%Y') }}
@@ -89,7 +89,7 @@
     {% for t in turni_giorno %}
     <tr{% if t.valido_da < oggi %} class="spento"{% endif %}>
       <td>{{ giorni[t.giorno_settimana] }} {{ t.valido_da.strftime('%d/%m/%Y') }}</td>
-      <td>{{ t.ora_inizio.strftime('%H:%M') }}–{{ t.ora_fine.strftime('%H:%M') }}</td>
+      <td>{{ t.ora_inizio.strftime('%H:%M') }}–{{ t.ora_fine.strftime('%H:%M') }}{% if t.passo_proprio %} <small class="fasce-turno">fasce da {{ t.passo_proprio }}'</small>{% endif %}</td>
       <td>{{ t.operatore.etichetta }}</td>
       <td>{{ t.risorsa.nome }}</td>
       <td class="azione"><a href="{{ url_for('anagrafiche.turno', tid=t.id) }}">Modifica</a></td>

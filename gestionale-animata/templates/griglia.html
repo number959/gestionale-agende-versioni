@@ -80,25 +80,26 @@
             {{ col.turni | map(attribute='operatore') | map(attribute='cognome') | unique | join(', ') }}
           {%- elif not col.assenti -%}nessun turno{%- endif -%}
           {%- for o, motivo in col.assenti %}{% if loop.first and col.turni %} · {% elif not loop.first %}, {% endif %}<span class="assente">{{ o.cognome }} assente</span>{% endfor -%}
+          {%- if col.fasce_proprie %} · <span class="fasce-turno" title="Le fasce di questo turno: ogni prestazione occupa fasce intere">fasce da {{ col.fasce_proprie|join("', ") }}'</span>{% endif -%}
         </span>
       </th>
       {% endfor %}
     </tr>
   </thead>
-  <tbody>
+  <tbody{% if misto %} class="fasce-miste" style="--riga: {{ altezza_riga }}px"{% endif %}>
     {% for f in fasce %}{% set idx = loop.index0 %}
-    <tr{% if f.minute %} class="mezzora"{% endif %}>
+    <tr{% if f.minute or (misto and not etichette[idx]) %} class="{{ 'mezzora' if f.minute }}{{ ' sotto-fascia' if misto and not etichette[idx] }}"{% endif %}>
       <th class="ora">{{ '%02d:%02d' % (f.hour, f.minute) }}</th>
       {% for col in colonne %}
         {% set cella = col.celle[idx] %}
         {% if cella.stato == 'coperta' %}
-        {% elif cella.stato == 'occupata' %}
-          <td class="occupata" rowspan="{{ cella.righe }}">
+        {% elif cella.stato == 'occupata' %}{% set alta = cella.righe * (altezza_riga if misto else 36) %}
+          <td class="occupata{{ ' bassa' if misto and alta < 37 }}" rowspan="{{ cella.righe }}">
             {% for a in cella.apps %}
             <a class="voce stato-{{ a.stato|lower }}" style="border-left-color: {{ a.operatore.colore_sicuro }}"
                href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}"
                title="{{ a.etichetta_stato }}{% if a.paziente and a.paziente.telefono %} · {{ a.paziente.telefono }}{% endif %}">
-              <span class="medico">{{ a.operatore.cognome }}{% if a.inizio.time() != cella.ora %} <b class="scarto">{{ a.inizio.strftime('%H:%M') }}</b>{% endif %}
+              <span class="medico">{{ a.operatore.cognome }}{% if a.inizio.time() != cella.ora %} <b class="scarto">{{ a.inizio.strftime('%H:%M') }}</b>{% elif misto and not etichette[idx] %} <b class="ora-voce">{{ a.inizio.strftime('%H:%M') }}</b>{% endif %}
                 {%- if a.stato == 'CONFERMATO' %} <i class="segno confermato" title="Confermato">✓</i>
                 {%- elif a.stato == 'ARRIVATO' %} <i class="segno arrivato" title="Arrivato">arrivato{% if a.arrivato_alle %} {{ a.arrivato_alle.strftime('%H:%M') }}{% endif %}</i>{% endif %}</span>
               {% if a.paziente %}<span class="paziente">{{ a.paziente.etichetta }}</span>{% endif %}
@@ -106,15 +107,20 @@
               {%- if ck or a.notti_letto %}<span class="segni-sala">
                 {%- if ck %}<span class="checklist-voce {{ 'completa' if ck.completa else 'incompleta' }}" title="Checklist: {{ ('manca ' ~ ck.mancanti|join(', ')) if ck.mancanti else 'completa' }}">{{ '✓' if ck.completa else ck.fatte ~ '/' ~ ck.totale }}</span>{% endif %}
                 {%- if a.notti_letto %} <span class="degenza-voce" title="{{ a.etichetta_degenza }}">{{ a.etichetta_degenza|lower }}</span>{% endif %}</span>{% endif %}
-              {% if cella.righe > 1 and cella.apps|length == 1 and a.prestazione %}<span class="dettaglio">{{ a.prestazione.nome }}</span>{% endif %}
+              {% if alta >= 52 and cella.apps|length == 1 and a.prestazione %}<span class="dettaglio">{{ a.prestazione.nome }}</span>{% endif %}
             </a>
             {% endfor %}
           </td>
         {% elif cella.stato == 'aperta' %}
-          <td class="aperta"><a class="posa"
+          {% if misto %}{% set ora_fascia = '%02d:%02d' % (cella.ora.hour, cella.ora.minute) %}
+          <td class="aperta"{% if cella.righe > 1 %} rowspan="{{ cella.righe }}"{% endif %}><a class="posa{{ ' con-ora' if cella.turno.passo_proprio }}" style="height: {{ cella.righe * altezza_riga - 2 }}px"
+             href="{{ url_for('appuntamento', data=g.isoformat(), ora=ora_fascia, risorsa=col.risorsa.id, struttura=sid) }}" title="Libero dalle {{ ora_fascia }} alle {{ '%02d:%02d' % (cella.fine.hour, cella.fine.minute) }}">{% if cella.turno.passo_proprio %}{{ ora_fascia }}<span> libero</span>{% else %}libero{% endif %}</a></td>
+          {% else %}
+          <td class="aperta"{% if cella.righe > 1 %} rowspan="{{ cella.righe }}"{% endif %}><a class="posa"
              href="{{ url_for('appuntamento', data=g.isoformat(), ora='%02d:%02d' % (f.hour, f.minute), risorsa=col.risorsa.id, struttura=sid) }}">libero</a></td>
+          {% endif %}
         {% else %}
-          <td class="chiusa"></td>
+          <td class="chiusa"{% if cella.righe > 1 %} rowspan="{{ cella.righe }}"{% endif %}></td>
         {% endif %}
       {% endfor %}
     </tr>

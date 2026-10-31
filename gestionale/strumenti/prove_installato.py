@@ -14,8 +14,10 @@ deve essere dentro l'eseguibile), la pagina Controllo dei codici fiscali, i turn
 del personale (pagine, i dieci tipi di turno di partenza, Excel, turni.js, icone e
 loro licenze), la registrazione del numero WhatsApp, Dove si fa (pagine, dove.js, il
 menu, la ricerca rapida con le prestazioni) e la pagina dell'email della 1.9.1 (tipo di
-casella, gestionale.js, la guida vecchia che porta a quella nuova). L'invio delle email sul
-programma installato si prova con strumenti/prova_email_installato.py."""
+casella, gestionale.js, la guida vecchia che porta a quella nuova), le fasce dei turni della 1.10
+(giorno, settimana e mese con il database aggiornato, la durata delle fasce nel modulo del turno,
+lo stile, la guida). L'invio delle email sul programma installato si prova con
+strumenti/prova_email_installato.py."""
 import json
 import os
 import re
@@ -155,6 +157,28 @@ except urllib.error.HTTPError as e:
     s, posto = e.code, e.headers.get('Location')
 controlla('Email: la guida vecchia porta a quella nuova', s in (301, 302) and
           (posto or '').endswith('/aiuto/email-casella'), (s, posto))
+# 1.10: le fasce di ogni turno (solo lettura)
+import datetime  # noqa: E402
+oggi = datetime.date.today()
+for p in ('/giorno/%s?struttura=1' % oggi.isoformat(), '/settimana/%s?struttura=1' % oggi.isoformat(),
+          '/mese/%04d-%02d?struttura=1' % (oggi.year, oggi.month)):
+    s, b, _ = get(p)
+    controlla('fasce dei turni: %s (database aggiornato allo schema 11)' % p.split('?')[0].rsplit('/', 1)[0], s == 200, s)
+s, b, _ = get('/anagrafiche/turni/nuovo')
+h = b.decode('utf-8', 'replace')
+scelta = re.search(r'<select[^>]*name="passo".*?</select>', h, re.S)
+if scelta:
+    valori = re.findall(r'<option value="([^"]*)"', scelta.group(0))
+    controlla('fasce dei turni: «Durata delle fasce» nel modulo del turno',
+              s == 200 and valori == ['0', '10', '15', '20', '30', '40', '45', '60'], (s, valori))
+else:
+    # senza medici in archivio (primo avvio) il modulo del turno rimanda a quello del medico
+    controlla('fasce dei turni: senza medici, il modulo del turno rimanda a quello del medico',
+              s == 200 and 'name="cognome"' in h, s)
+s, b, h = get('/static/stile.css')
+controlla('fasce dei turni: lo stile della griglia a fasce miste', s == 200 and b'fasce-miste' in b and b'con-ora' in b, s)
+s, b, _ = get('/aiuto/fasce-turno')
+controlla('fasce dei turni: la guida «Le fasce di ogni ambulatorio»', s == 200 and 'Le fasce di ogni ambulatorio' in testo(b), s)
 
 for ok, nome, dettaglio in esiti:
     print(('OK ' if ok else 'KO ') + nome + ('' if ok else '  ' + str(dettaglio)[:300]))

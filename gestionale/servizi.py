@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Logica applicativa: griglia, turni e assenze, conflitti, viste di
 settimana e mese, prima disponibilita', statistiche, export."""
+import bisect
 import json
 import os
 from datetime import datetime, date, time, timedelta
+from math import gcd
 
 from sqlalchemy import select, func
 from modelli import (Struttura, Risorsa, Operatore, Turno, Appuntamento, Modifica,
@@ -170,6 +172,171 @@ def fasce(appuntamenti=None, apertura=APERTURA, ultima=CHIUSURA, passo=PASSO):
     return [time(m // 60, m % 60) for m in range(da, a + passo, passo)]
 
 
+# ================================================= fasce dei turni (1.10)
+# Un turno puo' avere fasce sue (Turno.passo): dall'ora di inizio, ogni tot
+# minuti. La griglia allora ha righe piu' fitte, il massimo comun divisore
+# fra le fasce della struttura e quelle dei turni (e i loro orari), e ogni
+# colonna e' divisa in "pezzi": le fasce dei turni con fasce proprie, e per
+# il resto le fasce della struttura come fino alla 1.9 (aperte se un turno
+# senza fasce proprie copre il loro inizio). Un appuntamento sta nel pezzo
+# dove comincia e blocca i pezzi interi che tocca. Senza turni a fasce
+# proprie le righe sono le fasce della struttura e tutto e' come prima.
+MINIMA_RIGA = 5
+
+
+def _ora(m):
+    m = max(0, min(int(m), 24 * 60 - 1))
+    return time(m // 60, m % 60)
+
+
+def base_righe(passo, apertura, turni):
+    """I minuti di una riga della tabella: il passo della struttura, oppure il
+    massimo comun divisore con le fasce dei turni che ne hanno di proprie e
+    con i loro orari (contati dall'apertura), cosi' ogni fascia comincia e
+    finisce su una riga. Mai meno di 5 minuti."""
+    propri = [t for t in turni if t.passo_proprio]
+    if not propri:
+        return passo
+    a = _minuti(apertura)
+    b = passo
+    for t in propri:
+        for x in (t.passo_proprio, _minuti(t.ora_inizio) - a, _minuti(t.ora_fine) - a):
+            b = gcd(b, abs(x))
+    return max(MINIMA_RIGA, b)
+
+
+def ultima_riga(ultima, passo, base):
+    """L'inizio dell'ultima riga con righe di 'base' minuti: la tabella finisce
+    dove finiva con le fasce della struttura."""
+    if base == passo:
+        return ultima
+    return _ora(_minuti(ultima) + passo - base)
+
+
+def pezzi_colonna(primo, fine, passo, apertura, turni):
+    """La colonna divisa in pezzi [inizio, fine, turno] (minuti dalla
+    mezzanotte), in ordine e senza buchi da 'primo' a 'fine'. I turni con
+    fasce proprie hanno le loro, dall'ora di inizio del turno (l'ultima si
+    ferma alla fine del turno); il resto della colonna segue le fasce della
+    struttura dall'apertura, con il turno senza fasce proprie che copre il
+    loro inizio (aperte) o nessuno (chiuse)."""
+    a = _minuti(apertura)
+    normali = [t for t in turni if not t.passo_proprio]
+    pezzi = []
+    s = a + ((primo - a) // passo) * passo
+    while s < fine:
+        t = next((x for x in normali if _minuti(x.ora_inizio) <= s < _minuti(x.ora_fine)), None)
+        pezzi.append([max(s, primo), min(s + passo, fine), t])
+        s += passo
+    for t in sorted((x for x in turni if x.passo_proprio), key=lambda x: (x.ora_inizio, x.id or 0)):
+        ts, te, c = _minuti(t.ora_inizio), _minuti(t.ora_fine), t.passo_proprio
+        da, a_ = max(ts, primo), min(te, fine)
+        if da >= a_:
+            continue
+        resto = []
+        for p in pezzi:
+            if p[1] <= da or p[0] >= a_:
+                resto.append(p)
+                continue
+            if p[0] < da:
+                resto.append([p[0], da, p[2]])
+            if p[1] > a_:
+                resto.append([a_, p[1], p[2]])
+        m = ts
+        while m < te:
+            x0, x1 = max(m, primo), min(m + c, te, fine)
+            if x0 < x1:
+                resto.append([x0, x1, t])
+            m += c
+        pezzi = sorted(resto, key=lambda p: p[0])
+    return pezzi
+
+
+def _fine_nel_giorno(a, g):
+    return _minuti(a.fine.time()) if a.fine.date() == g else 24 * 60
+
+
+def celle_colonna(elenco, base, pezzi, appuntamenti, g):
+    """Le celle di una colonna, una per riga della tabella, come le usa la
+    griglia: 'occupata' (gli appuntamenti che cominciano nel pezzo, 'righe'
+    fino alla fine dell'ultimo pezzo che toccano, senza coprire il pezzo di
+    un altro appuntamento), 'aperta' (con il turno) o 'chiusa' per un pezzo
+    senza appuntamenti, 'coperta' per le righe dentro una cella che comincia
+    sopra. 'ora' e' l'inizio del pezzo (della fascia)."""
+    n = len(elenco)
+    primo = _minuti(elenco[0])
+    righe = []                       # (prima riga, riga dopo l'ultima, pezzo)
+    prec = 0
+    for p in pezzi:
+        i0 = max(prec, (p[0] - primo) // base)
+        i1 = min(n, -(-(p[1] - primo) // base))
+        if i1 > i0:
+            righe.append((i0, i1, p))
+            prec = i1
+    if not righe:
+        righe = [(0, n, [primo, primo + n * base, None])]
+    elif righe[-1][1] < n:                     # orari strani: l'ultimo pezzo arriva in fondo
+        i0, _, p = righe[-1]
+        righe[-1] = (i0, n, p)
+    inizi = [r[2][0] for r in righe]
+    per_pezzo = {}
+    for a in sorted(appuntamenti, key=lambda x: x.inizio):
+        k = max(0, bisect.bisect_right(inizi, _minuti(a.inizio.time())) - 1)
+        per_pezzo.setdefault(k, []).append(a)
+    celle = [None] * n
+    k = 0
+    while k < len(righe):
+        i0, i1, p = righe[k]
+        lista = per_pezzo.get(k)
+        if lista:
+            fine_app = max(_fine_nel_giorno(x, g) for x in lista)
+            j = k
+            while j + 1 < len(righe) and righe[j + 1][2][0] < fine_app and (j + 1) not in per_pezzo:
+                j += 1
+            fino = righe[j][1]
+            celle[i0] = {'stato': 'occupata', 'ora': _ora(p[0]), 'apps': lista, 'righe': fino - i0,
+                         'turno': p[2]}
+            k = j + 1
+        else:
+            fino = i1
+            celle[i0] = {'stato': 'aperta' if p[2] is not None else 'chiusa', 'ora': _ora(p[0]),
+                         'turno': p[2], 'righe': i1 - i0, 'fine': _ora(p[1])}
+            k += 1
+        for r in range(i0 + 1, fino):
+            celle[r] = {'stato': 'coperta', 'ora': elenco[r], 'righe': 1}
+    for i in range(n):
+        if celle[i] is None:
+            celle[i] = {'stato': 'chiusa', 'ora': elenco[i], 'turno': None, 'righe': 1}
+    return celle
+
+
+def blocco(t, inizio, fine):
+    """Il tempo che un appuntamento [inizio, fine) occupa nel turno t con
+    fasce proprie: dall'inizio della fascia in cui comincia alla fine
+    dell'ultima fascia che tocca (dentro il turno; fuori, gli orari veri).
+    Senza fasce proprie, gli orari veri."""
+    c = t.passo_proprio if t is not None else None
+    if not c:
+        return inizio, fine
+    g = inizio.date()
+    ts, te = datetime.combine(g, t.ora_inizio), datetime.combine(g, t.ora_fine)
+    passo = timedelta(minutes=c)
+    b0 = inizio
+    if ts <= inizio < te:
+        b0 = ts + ((inizio - ts) // passo) * passo
+    b1 = fine
+    if ts < fine <= te:
+        b1 = min(te, ts + (-((ts - fine) // passo)) * passo)
+    return b0, max(b1, fine)
+
+
+def turno_con_fasce(regole, st, risorsa_id, quando):
+    """Il turno a fasce proprie della stanza che copre quel momento, o None."""
+    g, ora = quando.date(), quando.time()
+    return next((t for t in regole.turni_effettivi(g, st, risorsa_id)
+                 if t.passo_proprio and t.ora_inizio <= ora < t.ora_fine), None)
+
+
 def etichetta_giorno(g):
     return '%s %d %s %d' % (GIORNI[g.weekday()], g.day, MESI[g.month - 1], g.year)
 
@@ -275,10 +442,13 @@ def griglia(ses, g, struttura_id, regole=None):
     annullati = sorted([a for a in appuntamenti if a.risorsa_id in ids and a.stato not in STATI_ATTIVI],
                        key=lambda x: x.inizio)
     apertura, ultima, passo = orario(st)
-    elenco = fasce(del_giorno, apertura, ultima, passo)
-    primo = _minuti(elenco[0])
     effettivi = regole.turni_effettivi(g, st, info=info)
     validi = regole.turni_validi(g, st)
+    # con un turno a fasce proprie le righe sono piu' fitte (vedi base_righe)
+    base = base_righe(passo, apertura, effettivi)
+    elenco = fasce(del_giorno, apertura, ultima_riga(ultima, passo, base), base)
+    primo = _minuti(elenco[0])
+    fine_tabella = primo + len(elenco) * base
 
     colonne = []
     for r in risorse:
@@ -287,56 +457,76 @@ def griglia(ses, g, struttura_id, regole=None):
         turni_r = [t for t in effettivi if t.risorsa_id == r.id]
         assenti = [(t.operatore, info['assenze'][t.operatore_id]) for t in validi
                    if t.risorsa_id == r.id and t.operatore_id in info['assenze']]
-
-        per_fascia = {}
-        for a in app_r:
-            i = (_minuti(a.inizio.time()) - primo) // passo
-            per_fascia.setdefault(max(0, min(i, len(elenco) - 1)), []).append(a)
-
-        celle, copre_fino = [], -1
-        for i, f in enumerate(elenco):
-            lista = per_fascia.get(i)
-            if lista:
-                fine = max(_minuti(x.fine.time()) if x.fine.date() == g else 24 * 60
-                           for x in lista)
-                n = max(1, -(-(fine - (primo + i * passo)) // passo))
-                n = min(n, len(elenco) - i)          # non sfora la fine tabella
-                invaso = next((k for k in range(i + 1, i + n) if k in per_fascia), None)
-                if invaso:
-                    n = invaso - i                   # non copre un altro appuntamento
-                celle.append({'stato': 'occupata', 'ora': f, 'apps': lista, 'righe': n})
-                copre_fino = i + n - 1
-            elif i <= copre_fino:
-                celle.append({'stato': 'coperta', 'ora': f, 'righe': 1})
-            else:
-                dentro = next((t for t in turni_r if t.ora_inizio <= f < t.ora_fine), None)
-                celle.append({'stato': 'aperta' if dentro else 'chiusa',
-                              'ora': f, 'turno': dentro, 'righe': 1})
+        celle = celle_colonna(elenco, base, pezzi_colonna(primo, fine_tabella, passo, apertura, turni_r),
+                              app_r, g)
         colonne.append({'risorsa': r, 'celle': celle, 'turni': turni_r, 'assenti': assenti,
                         'occupate': len(app_r),
-                        'libere': sum(1 for c in celle if c['stato'] == 'aperta')})
+                        'libere': sum(1 for c in celle if c['stato'] == 'aperta'),
+                        'fasce_proprie': sorted({t.passo_proprio for t in turni_r if t.passo_proprio})})
     return {'fasce': elenco, 'colonne': colonne, 'annullati': annullati, 'giorno': info,
-            'struttura': st, 'passo': passo}
+            'struttura': st, 'passo': passo, 'base': base,
+            # con un turno a fasce proprie: ogni fascia libera dice la sua ora, righe in proporzione
+            'misto': any(t.passo_proprio for t in effettivi),
+            'etichette': [((_minuti(f) - _minuti(apertura)) % passo == 0) for f in elenco],
+            'altezza_riga': altezza_riga(passo, base, effettivi)}
+
+
+def altezza_riga(passo, base, turni):
+    """I pixel di una riga della griglia: 36 per una fascia della struttura
+    (come fino alla 1.9); con fasce piu' brevi in qualche turno, quanto basta
+    perche' la fascia piu' breve sia alta almeno 24 pixel."""
+    if base == passo:
+        return 36
+    minima = min([passo] + [t.passo_proprio for t in turni if t.passo_proprio])
+    per_minuto = max(36.0 / passo, 24.0 / minima)
+    return max(8, int(round(base * per_minuto)))
 
 
 # ============================================================= controlli
 def conflitti(ses, risorsa_id, operatore_id, inizio, fine, escludi_id=None):
     """Restituisce l'elenco dei motivi per cui l'appuntamento non si puo salvare.
-    Contano solo gli appuntamenti attivi: un disdetto libera la fascia."""
+    Contano solo gli appuntamenti attivi: un disdetto libera la fascia.
+
+    Dalla 1.10, nei turni con fasce proprie un appuntamento occupa le fasce
+    intere che tocca (blocco): nella stessa stanza un altro non ci sta, anche
+    se gli orari veri non si toccano. Modificando un appuntamento gia'
+    prenotato (escludi_id) non contano le fasce che divideva gia' con un altro
+    (orari presi prima che il turno avesse le sue fasce): solo quelle nuove,
+    cosi' cambiare una nota o il medico non viene mai rifiutato."""
     motivi = []
-    q = select(Appuntamento).where(Appuntamento.inizio < fine,
-                                   Appuntamento.fine > inizio,
+    stanza = ses.get(Risorsa, risorsa_id) if risorsa_id else None
+    t_fasce = None
+    if stanza is not None:
+        t_fasce = turno_con_fasce(Regole(ses, inizio.date(), inizio.date()), stanza.struttura, risorsa_id, inizio)
+    b0, b1 = blocco(t_fasce, inizio, fine)
+    prima = None                     # le fasce che l'appuntamento modificato occupava gia'
+    if t_fasce is not None and escludi_id:
+        x = ses.get(Appuntamento, escludi_id)
+        if x is not None and x.stato in STATI_ATTIVI and x.risorsa_id == risorsa_id:
+            prima = blocco(t_fasce, x.inizio, x.fine)
+    q = select(Appuntamento).where(Appuntamento.inizio < max(fine, b1),
+                                   Appuntamento.fine > min(inizio, b0),
                                    Appuntamento.stato.in_(STATI_ATTIVI))
     if escludi_id:
         q = q.where(Appuntamento.id != escludi_id)
     sovrapposti = ses.scalars(q).all()
 
     for a in sovrapposti:
+        reale = a.inizio < fine and a.fine > inizio
         if a.risorsa_id == risorsa_id:
-            motivi.append('La stanza %s è già occupata dalle %s alle %s da %s.'
-                          % (a.risorsa.nome, a.inizio.strftime('%H:%M'),
-                             a.fine.strftime('%H:%M'), a.operatore.etichetta))
-        elif a.operatore_id == operatore_id:
+            if reale:
+                motivi.append('La stanza %s è già occupata dalle %s alle %s da %s.'
+                              % (a.risorsa.nome, a.inizio.strftime('%H:%M'),
+                                 a.fine.strftime('%H:%M'), a.operatore.etichetta))
+                continue
+            a0, a1 = blocco(t_fasce, a.inizio, a.fine)
+            if a0 < b1 and a1 > b0 and not (prima and a0 < prima[1] and a1 > prima[0]):
+                motivi.append('In %s la fascia delle %s è già occupata dall\'appuntamento delle %s-%s di %s: '
+                              'nel turno di %s le fasce sono da %d minuti e ogni prestazione occupa fasce intere.'
+                              % (a.risorsa.nome, max(a0, b0).strftime('%H:%M'), a.inizio.strftime('%H:%M'),
+                                 a.fine.strftime('%H:%M'), a.operatore.etichetta, t_fasce.operatore.etichetta,
+                                 t_fasce.passo_proprio))
+        elif a.operatore_id == operatore_id and reale:
             motivi.append('%s è già in %s dalle %s alle %s.'
                           % (a.operatore.etichetta, a.risorsa.nome,
                              a.inizio.strftime('%H:%M'), a.fine.strftime('%H:%M')))
@@ -345,7 +535,8 @@ def conflitti(ses, risorsa_id, operatore_id, inizio, fine, escludi_id=None):
 
 def fuori_turno(ses, risorsa_id, operatore_id, inizio, fine):
     """Avvisi non bloccanti: medico assente, struttura chiusa, festivo, fascia
-    fuori dai turni. None se non c'e' niente da segnalare."""
+    fuori dai turni, orario che non e' l'inizio di una fascia di un turno con
+    fasce proprie. None se non c'e' niente da segnalare."""
     stanza = ses.get(Risorsa, risorsa_id)
     st = stanza.struttura if stanza is not None else None
     g = inizio.date()
@@ -360,12 +551,21 @@ def fuori_turno(ses, risorsa_id, operatore_id, inizio, fine):
         avvisi.append('La struttura risulta chiusa il %s (%s).' % (g.strftime('%d/%m'), info['chiusura']))
     elif info['festivo']:
         avvisi.append('Il %s è festivo: %s.' % (g.strftime('%d/%m'), info['festivo']))
+    effettivi = regole.turni_effettivi(g, st, risorsa_id, info=info)
     if operatore_id not in info['assenze'] and not info['chiusura']:
         dentro = any(t.operatore_id == operatore_id and t.ora_inizio <= inizio.time()
                      and fine.time() <= t.ora_fine and fine.date() == g
-                     for t in regole.turni_effettivi(g, st, risorsa_id, info=info))
+                     for t in effettivi)
         if not dentro:
             avvisi.append('Fascia fuori dai turni previsti per questa stanza.')
+    # le fasce sono della stanza: valgono per chiunque ci prenoti, anche con il medico assente
+    t = next((t for t in effettivi if t.passo_proprio and t.ora_inizio <= inizio.time() < t.ora_fine), None)
+    if t is not None and (_minuti(inizio.time()) - _minuti(t.ora_inizio)) % t.passo_proprio:
+        b0, b1 = blocco(t, inizio, fine)
+        avvisi.append('Le fasce di questo turno sono da %d minuti dalle %s: alle %s non ne comincia una, '
+                      'l\'appuntamento occupa la fascia intera (%s-%s).' % (
+                          t.passo_proprio, t.ora_inizio.strftime('%H:%M'), inizio.strftime('%H:%M'),
+                          b0.strftime('%H:%M'), b1.strftime('%H:%M')))
     return ' '.join(avvisi) or None
 
 
@@ -428,7 +628,14 @@ def settimana(ses, lunedi, struttura_id):
 
 def settimana_medico(ses, lunedi, operatore_id, struttura_id):
     """Agenda della settimana di un medico, nelle stanze della struttura:
-    righe = fasce, colonne = giorni. Come le agende Excel per medico."""
+    righe = fasce, colonne = giorni. Come le agende Excel per medico.
+
+    Ogni giorno e' una colonna divisa come quelle della griglia (vedi
+    pezzi_colonna): con i turni a fasce proprie le righe sono piu' fitte e una
+    fascia occupa piu' righe ('righe'). Ogni cella ha anche le chiavi di prima:
+    'apps' (gli appuntamenti che cominciano li'), 'copre' (l'appuntamento
+    cominciato sopra che la occupa) e 'turno' (il turno, se la fascia e' libera
+    o comincia li' un appuntamento)."""
     st = ses.get(Struttura, struttura_id) if struttura_id else None
     giorni = [lunedi + timedelta(days=i) for i in range(7)]
     regole = Regole(ses, giorni[0], giorni[-1])
@@ -439,35 +646,50 @@ def settimana_medico(ses, lunedi, operatore_id, struttura_id):
         Appuntamento.inizio < inizio + timedelta(days=7),
         Appuntamento.stato.in_(STATI_ATTIVI))) if a.risorsa_id in stanze]
     apertura, ultima, passo = orario(st)
-    elenco = fasce(apps, apertura, ultima, passo)
-    primo = _minuti(elenco[0])
     turni = {g: [t for t in regole.turni_effettivi(g, st) if t.operatore_id == operatore_id]
              for g in giorni}
+    base = base_righe(passo, apertura, [t for g in giorni for t in turni[g]])
+    elenco = fasce(apps, apertura, ultima_riga(ultima, passo, base), base)
+    primo = _minuti(elenco[0])
+    fine_tabella = primo + len(elenco) * base
     info = {g: regole.giorno(g, st) for g in giorni}
     aperti = st.giorni_aperti if st is not None else set(range(6))
     giorni = [g for g in giorni if g.weekday() in aperti or turni[g]
               or any(a.inizio.date() == g for a in apps)]
-    def fine_nel_giorno(a):
-        return _minuti(a.fine.time()) if a.fine.date() == a.inizio.date() else 24 * 60
-
+    colonne = {}
+    for g in giorni:
+        del_giorno = sorted([a for a in apps if a.inizio.date() == g], key=lambda x: x.inizio)
+        colonne[g] = celle_colonna(elenco, base, pezzi_colonna(primo, fine_tabella, passo, apertura, turni[g]),
+                                   del_giorno, g)
     righe = []
     for i, f in enumerate(elenco):
         celle = []
-        m = _minuti(f)
         for g in giorni:
-            del_giorno = [a for a in apps if a.inizio.date() == g]
-            qui = [a for a in del_giorno
-                   if max(0, min((_minuti(a.inizio.time()) - primo) // passo, len(elenco) - 1)) == i]
-            # la fascia dentro un appuntamento cominciato prima non e' libera,
-            # anche se il turno c'e': come nella griglia del giorno
-            copre = next((a for a in del_giorno if a not in qui
-                          and _minuti(a.inizio.time()) < m < fine_nel_giorno(a)), None)
-            turno = None if copre else next((t for t in turni[g] if t.ora_inizio <= f < t.ora_fine), None)
-            celle.append({'data': g, 'ora': f, 'apps': sorted(qui, key=lambda x: x.inizio),
-                          'turno': turno, 'copre': copre})
+            c = colonne[g][i]
+            stato = c['stato']
+            copre = None
+            if stato == 'coperta':
+                # dentro un appuntamento cominciato sopra? (risalendo fino alla sua cella)
+                k = i - 1
+                while k >= 0 and colonne[g][k]['stato'] == 'coperta':
+                    k -= 1
+                sopra = colonne[g][k] if k >= 0 else None
+                if sopra is not None and sopra['stato'] == 'occupata':
+                    copre = max(sopra['apps'], key=lambda x: x.fine)
+                    turno = None
+                else:
+                    turno = sopra['turno'] if sopra is not None else None
+            else:
+                turno = c.get('turno')
+            celle.append({'data': g, 'ora': f, 'apps': c['apps'] if stato == 'occupata' else [],
+                          'turno': turno, 'copre': copre, 'stato': stato, 'righe': c['righe'],
+                          'inizio': c['ora']})
         righe.append({'ora': f, 'celle': celle})
     return {'giorni': giorni, 'righe': righe, 'info': info, 'turni': turni,
-            'totale': len(apps), 'passo': passo}
+            'totale': len(apps), 'passo': passo, 'base': base,
+            'misto': any(t.passo_proprio for g in giorni for t in turni[g]),
+            'etichette': [((_minuti(f) - _minuti(apertura)) % passo == 0) for f in elenco],
+            'altezza_riga': altezza_riga(passo, base, [t for g in giorni for t in turni[g]])}
 
 
 # ================================================================== mese
@@ -554,8 +776,10 @@ def disponibilita(ses, operatore_id, durata, dal, struttura_id=None, giorni=60, 
     """I primi posti liberi per un medico: fascia dentro un suo turno
     effettivo, stanza e medico liberi per tutta la durata, mai nel passato.
 
-    Le ore di inizio seguono il passo della struttura a partire dall'inizio
-    del turno. dalle/alle limitano l'ora di inizio (mattina, pomeriggio)."""
+    Le ore di inizio seguono le fasce del turno, se ne ha di proprie (1.10:
+    allora nella stanza contano le fasce intere occupate, vedi blocco),
+    altrimenti il passo della struttura a partire dall'inizio del turno.
+    dalle/alle limitano l'ora di inizio (mattina, pomeriggio)."""
     trovati = []
     adesso = datetime.now()
     durata = max(5, int(durata or 30))
@@ -580,17 +804,21 @@ def disponibilita(ses, operatore_id, durata, dal, struttura_id=None, giorni=60, 
             Appuntamento.stato.in_(STATI_ATTIVI))).all()
         visti, del_giorno = set(), []
         for st, t in candidati:
-            passo = st.passo_min
+            # le fasce del turno (1.10), o il passo della struttura dall'inizio del turno
+            passo = t.passo_proprio or st.passo_min
+            # nella stanza, con le fasce del turno, contano le fasce intere occupate
+            stanza = [blocco(t, a.inizio, a.fine) for a in occupati if a.risorsa_id == t.risorsa_id]
             m = _minuti(t.ora_inizio)
             while m + durata <= _minuti(t.ora_fine):
                 inizio = inizio_g + timedelta(minutes=m)
                 fine = inizio + timedelta(minutes=durata)
+                b0, b1 = blocco(t, inizio, fine)
                 ora = inizio.time()
                 if (inizio > adesso and (dalle is None or ora >= dalle)
                         and (alle is None or ora < alle)
                         and (inizio, t.risorsa_id) not in visti
-                        and not any(a.inizio < fine and a.fine > inizio and
-                                    (a.risorsa_id == t.risorsa_id or a.operatore_id == operatore_id)
+                        and not any(x0 < b1 and x1 > b0 for x0, x1 in stanza)
+                        and not any(a.inizio < fine and a.fine > inizio and a.operatore_id == operatore_id
                                     for a in occupati)):
                     visti.add((inizio, t.risorsa_id))
                     del_giorno.append({'inizio': inizio, 'fine': fine, 'risorsa': t.risorsa,

@@ -5,6 +5,20 @@ ogni struttura: nome, logo, società e colori si impostano dal programma. Gira s
 della segreteria, con un solo utente; internet serve solo, in uscita, per le email e i
 WhatsApp ai pazienti e per scaricare gli aggiornamenti. Il database è un file unico.
 
+**Novità della 1.10.** **Le fasce di ogni ambulatorio.** Ogni turno può avere la sua **durata
+delle fasce** (*Configura → Anagrafiche*, il turno, *Durata delle fasce*): visite ogni 20 minuti
+in un ambulatorio, esami ogni 15 nella sala endoscopia, mentre il resto della clinica resta con
+le fasce della struttura. La prestazione occupa le **fasce intere** che le servono: una
+colonscopia da 45 minuti con fasce da 15 ne occupa tre, una visita da 30 con fasce da 20 ne
+occupa due (fino a 40 minuti), un esame più corto della fascia la occupa tutta, così non
+restano buchi da 10 minuti prenotabili per sbaglio. La griglia lo mostra (in testa alla colonna
+*fasce da 15'*, ogni fascia libera con la sua ora, righe alte in proporzione al tempo), e
+**Prima disponibilità** e **Sposta** propongono le ore delle fasce. Un'ora scritta a mano a
+metà fascia si salva con un avviso; nella stessa fascia il programma non mette un secondo
+appuntamento. Gli appuntamenti già presi restano dove sono: salvando il turno il programma
+dice quanti non stanno nelle fasce nuove, e si possono sempre modificare. Senza fasce
+proprie nei turni tutto resta come prima (vedi *Fasce dei turni*).
+
 **Novità della 1.9.1.** **L'email con qualsiasi casella, anche senza Gmail.** In *Configura →
 Email e WhatsApp* si sceglie il tipo di casella: quella del **sito della clinica** (bastano
 indirizzo e password, niente verifica in due passaggi), **Aruba**, **Gmail** o un **altro
@@ -260,13 +274,13 @@ A ogni versione:
    il file delle versioni (`GestionaleAgende-setup.exe` e `aggiornamento.json`;
    nell'animata `GestionaleAgende-animata-setup.exe` e `aggiornamento-animata.json`);
 4. la versione su GitHub con i quattro file: dalla pagina del progetto, *Releases → Create
-   a new release* (tag `v1.7`, titolo *Gestionale Agende 1.7*, i quattro file trascinati
+   a new release* (tag `v1.10`, titolo *Gestionale Agende 1.10*, i quattro file trascinati
    nel riquadro dei file, *Set as the latest release* lasciato acceso, *Publish release*),
    oppure con la riga di comando `gh`:
 
    ```
-   gh release create v1.7 --repo number959/gestionale-agende-versioni --latest ^
-     --title "Gestionale Agende 1.7" --notes "Codice fiscale controllato e calcolato" ^
+   gh release create v1.10 --repo number959/gestionale-agende-versioni --latest ^
+     --title "Gestionale Agende 1.10" --notes "Le fasce di ogni ambulatorio" ^
      gestionale\Output\GestionaleAgende-setup.exe gestionale\Output\aggiornamento.json ^
      gestionale-animata\Output\GestionaleAgende-animata-setup.exe gestionale-animata\Output\aggiornamento-animata.json
    ```
@@ -299,6 +313,54 @@ Regole controllate dal programma:
   disattiva, e resta visibile negli appuntamenti già presi;
 - non si disattiva una stanza con prenotazioni da oggi in poi, perché sparirebbero dalla
   griglia.
+
+## Fasce dei turni
+
+Fino alla 1.9.1 le fasce erano una misura sola per tutta la struttura (*Configura →
+Anagrafiche*, la struttura, *Fasce*: 10, 15, 20, 30 o 60 minuti). Dalla 1.10 ogni turno può
+averne di sue: nel modulo del turno, **Durata delle fasce** (10, 15, 20, 30, 40, 45 o 60
+minuti; *Come la struttura* lascia quelle di tutta la clinica). Le fasce di un turno
+cominciano dall'ora di inizio del turno: un turno dalle 9 alle 12 con fasce da 20 ha le fasce
+delle 9:00, 9:20, 9:40… fino a quella delle 11:40. È la "programmazione" dell'ambulatorio.
+
+- **Fasce intere.** Un appuntamento occupa tutte le fasce che tocca, dall'inizio della prima
+  alla fine dell'ultima: una visita da 30 minuti alle 9:00 con fasce da 20 occupa 9:00-9:40, un
+  esame da 10 minuti alle 10:20 occupa 10:20-10:40. Nella stessa stanza un altro appuntamento
+  non entra in una fascia occupata, anche se gli orari veri non si toccano: il programma lo
+  dice («la fascia delle 09:20 è già occupata dall'appuntamento delle 09:00-09:30…») e non
+  salva. Il medico invece conta con i suoi orari veri, come prima.
+- **Griglia.** In testa alla colonna, *fasce da 15'*. Le righe diventano più fitte (la misura
+  comune alle fasce della struttura e a quelle dei turni: con fasce da 30 e da 15, righe da 15
+  minuti; con 30 e 20, righe da 10) e sono alte in proporzione al tempo, con l'ora scritta
+  sulle fasce della struttura. Ogni fascia libera di un turno con fasce sue dice la sua ora
+  («09:40»; *libero* compare passando con il mouse) e un clic apre il modulo a quell'ora, con
+  il medico di turno. Le colonne senza fasce proprie restano a fasce della struttura. In una
+  fascia corta medico e paziente stanno su una riga sola. Lo stesso nell'agenda della
+  settimana del medico (che in testa al giorno dice anche le fasce del turno); nell'Excel del
+  giorno le righe sono quelle fitte, con le celle unite.
+- **Prima disponibilità e Sposta** propongono gli inizi delle fasce libere. Nei turni senza
+  fasce proprie, come prima: il passo della struttura dall'inizio del turno.
+- **Orario a mano.** Un'ora che non è l'inizio di una fascia si può scrivere (un paziente in
+  ritardo, un esame infilato): si salva, con l'avviso «alle 09:30 non ne comincia una,
+  l'appuntamento occupa la fascia intera (09:20-10:00)».
+- **Appuntamenti già presi.** Cambiando le fasce di un turno, gli appuntamenti già prenotati
+  restano dove sono, nella fascia in cui cominciano. Se qualcuno comincia a metà di una fascia
+  o ne divide una con un altro, salvando il turno il programma lo dice («Ci sono 2
+  appuntamenti già prenotati in questo turno che non stanno nelle fasce da 20 minuti…», con
+  il primo), da controllare nella griglia. Si possono sempre modificare (nota, paziente,
+  medico): contano solo le fasce nuove che un appuntamento prenderebbe, non quelle che
+  divideva già. Rimettere attivo un disdetto, invece, controlla tutto. L'importazione da
+  Excel guarda solo gli orari veri: le prenotazioni già decise nei fogli entrano come sono,
+  come quelle prese prima delle fasce.
+- Senza turni con fasce proprie tutto è come nella 1.9.1, griglia compresa: le prove lo
+  confrontano con le funzioni della 1.9.1 su centinaia di giorni inventati.
+
+Dentro: la colonna `turni.passo` (schema 11; vuota = come la struttura) e
+`Turno.passo_proprio`; in `servizi.py` `base_righe` (le righe della tabella), `pezzi_colonna`
+(la colonna divisa nelle sue fasce), `celle_colonna` (le celle della griglia e dell'agenda del
+medico), `blocco` (le fasce intere di un appuntamento) e `turno_con_fasce`, usate da
+`griglia`, `settimana_medico`, `conflitti`, `fuori_turno` e `disponibilita`; nei modelli
+`griglia.html` e `settimana.html` la tabella a righe fitte (`tbody.fasce-miste`).
 
 ## Nome, logo e colori
 
@@ -462,7 +524,8 @@ promemoria al paziente.
 - **Elenco** (del giorno): gli appuntamenti in ordine d'ora, con telefono, stato e
   pulsanti. È la vista da tenere aperta in accettazione.
 - **Settimana**: sette colonne con gli appuntamenti; con *Medico* si vede la settimana di
-  un medico solo, fascia per fascia, come le agende Excel per medico.
+  un medico solo, fascia per fascia, come le agende Excel per medico (con le fasce dei suoi
+  turni e un appuntamento alto quanto le fasce che occupa, come nella griglia).
 - **Mese**: per ogni giorno il numero di appuntamenti, i medici, i festivi e la **sala
   operatoria**: quanti interventi e di quali chirurghi (*Sala 3: Borrelli (2), Lippi*) e,
   da oggi in poi, chi opera di solito quel giorno ed è ancora libero (*sala libera*). Con
@@ -472,8 +535,8 @@ promemoria al paziente.
   lista operatoria). Dal modulo, *Promemoria* stampa il foglietto da dare al paziente, con
   indirizzo e preparazione.
 - **Disponibilità** (la prima): medico, durata ed eventualmente fascia oraria o stanza;
-  dà le prime fasce libere nei prossimi 60 giorni rispettando turni, assenze, chiusure e
-  festivi. Un clic apre il modulo già compilato.
+  dà le prime fasce libere nei prossimi 60 giorni rispettando turni (con le loro fasce, se
+  ne hanno di proprie), assenze, chiusure e festivi. Un clic apre il modulo già compilato.
 - **Statistiche**: per un periodo, saturazione di ogni stanza (ore prenotate su ore di
   turno), appuntamenti per medico con il tasso di mancate presenze, per prestazione,
   tipo e giorno della settimana, pazienti nuovi. Si scaricano in Excel. L'export del
@@ -1249,6 +1312,11 @@ pianificazione, ma non serve più.
 In più il pulsante *Scarica in Excel* rigenera il planning del giorno nel formato che
 l'accettazione usa già.
 
+**Aggiornamento alla 1.10.** Al primo avvio della 1.10 il programma copia il database in
+`backup\agende-…-prima-della-versione-11.db`, poi aggiunge ai turni la colonna della durata
+delle fasce, vuota: tutti i turni restano con le fasce della struttura finché non se ne sceglie
+una. Niente di quello che c'era viene toccato.
+
 **Aggiornamento alla 1.9.1.** Il database non cambia (resta allo schema 10): niente copia di
 sicurezza in più e nessuna tabella nuova. Le impostazioni dell'email salvate con la 1.9
 valgono come prima (il tipo di casella si ricava dal server salvato, Gmail resta Gmail); le
@@ -1326,7 +1394,7 @@ la transazione si annulla e il database resta com'era. Il registro riporta ogni 
 | `templates/_icone.html`, `static/icone/LICENZE.txt` | Le icone (Lucide, licenza ISC) scritte dentro le pagine, con le licenze (anche Radix Colors, MIT, per i colori dei turni) |
 | `importa.py` | Importazione da Excel e CSV: riconoscimento, anteprima, esecuzione |
 | `marchio.py` | Controllo e pulizia del logo, colore proposto, contrasto |
-| `servizi.py` | Griglia, turni effettivi (assenze, chiusure, festivi), conflitti, disponibilità, statistiche, export in Excel |
+| `servizi.py` | Griglia (con le fasce dei turni), turni effettivi (assenze, chiusure, festivi), conflitti (fasce intere), disponibilità, statistiche, export in Excel |
 | `modelli.py` | Le tabelle del database e il suo aggiornamento da una versione all'altra |
 | `comune.py` | Le funzioni di servizio di tutte le pagine: numeri e date dall'indirizzo, ritorno sicuro, struttura scelta, JSON, Excel da scaricare, collegamenti email |
 | `templates/`, `static/` | Interfaccia; `static/tema-scuro.css` è generato |
@@ -1621,6 +1689,36 @@ Versione 1.9.1, con gli stessi script (Wine 9, Python 3.14.8, PyInstaller 6.22.3
   salvata con il modulo della 1.9, una password con uno spazio non entrava (la 1.9 toglieva
   gli spazi); salvata con la 1.9.1, entra.
 
+Versione 1.10, con gli stessi script (Wine 9, Python 3.14.8, PyInstaller 6.22.3, Inno Setup 6.7.3):
+
+- `costruisci.sh` per le due versioni: Setup di circa 57 MB e file delle versioni in `Output`.
+- **Aggiorna adesso per intero dalla 1.9.1 alla 1.10.** La 1.9.1 normale installata nelle prove
+  della 1.9.1, con i dati inventati (46 appuntamenti, 30 pazienti, 8 medici, 27 turni); la 1.10
+  in una cartella: pronta in 2 secondi, notifica, clic nel browser, Setup silenzioso, programma
+  riaperto e pagina passata da sola alle *Novità della versione 1.10* in 16 secondi, registro
+  *"aggiornamento dalla 1.9.1 alla 1.10 riuscito"*, Setup installato tolto al primo giro del
+  controllo: 14 controlli su 14. Nel registro del programma: *"colonne aggiunte: turni.passo"*,
+  *"versione dello schema: da 10 a 11"*. La copia *prima della versione 11* è identica al
+  database di prima; dopo, le 28 tabelle identiche riga per riga (i turni con la colonna nuova,
+  vuota), cambiate solo le impostazioni della versione, `integrity_check` e
+  `foreign_key_check` a posto.
+- Sull'eseguibile aggiornato, nel browser: un turno passato a fasce da 20 dal modulo, la sua
+  griglia a righe fitte con *fasce da 20'* in testa e l'ora in ogni fascia libera, il clic che
+  apre il modulo a quell'ora, il turno rimesso come la struttura e la griglia di sempre: 7
+  controlli su 7.
+- La 1.10 animata installata con il Setup sopra la 1.9.1 animata, con i suoi dati: tabelle
+  identiche, cambiate solo le impostazioni della versione, la colonna nuova; le stesse 7 prove
+  delle fasce.
+- Sull'eseguibile installato, normale e animato, `prove_installato.py`: 40 controlli a posto (in
+  più rispetto alla 1.9.1: giorno, settimana e mese con il database allo schema 11, la durata
+  delle fasce nel modulo del turno, lo stile della griglia a righe fitte, la guida).
+- Primo avvio senza dati: database creato già allo schema 11, 40 controlli a posto; poi
+  dall'interfaccia un medico, un turno con fasce da 20 (fasce libere 9:00, 9:20, 9:40…), una
+  visita da 30 minuti alle 9 che occupa due fasce (la prima libera diventa 9:40) e una seconda
+  prenotazione alle 9:30 rifiutata con *«la fascia delle 09:20 è già occupata»*: 7 controlli su 7.
+- L'invio delle email non è cambiato dalla 1.9.1: `prova_email_installato.py` non è stata
+  rilanciata.
+
 Restano fuori, perché si vedono solo su un Windows vero: l'avviso SmartScreen, il
 comportamento dell'antivirus del PC e l'apertura del browser predefinito; per gli
 aggiornamenti, una versione più nuova pubblicata davvero su GitHub (il percorso è lo stesso provato su
@@ -1722,6 +1820,12 @@ python prove_191.py          # 21 prove sulla 1.9.1: l'email con qualsiasi casel
                              # errori e avvisi, anche quello della 1.9 senza tipo, pagina, nome utente diverso, server
                              # senza password, password con spazi, ogni errore con il suo consiglio e se riprovare,
                              # certificati, impostazioni della 1.9 che restano), con lo stesso finto server di prove_15
+python prove_110.py          # 22 prove sulla 1.10: le fasce dei turni. Senza fasce proprie griglia, agenda del medico,
+                             # controlli, avvisi e prima disponibilità identici alle funzioni della 1.9.1 (copiate e
+                             # ferme) su centinaia di giorni inventati; con le fasce proprie colonne e celle contro un
+                             # calcolo minuto per minuto e riga per riga, controlli contro le fasce toccate calcolate a
+                             # parte, prima disponibilità contro il controllo vero ora per ora; casi scritti a mano,
+                             # appuntamenti presi prima delle fasce, pagine, modulo, Excel, aggiornamento dalla 10
 python prove_16.py           # 45 prove sulla 1.6: Aggiorna adesso da una cartella e da un finto GitHub su https
                              # (rimandi, errori del sito, certificati, file delle versioni storpiati, Setup rovinati),
                              # installazione, esito al riavvio, novità, videoguide, installer e file delle versioni,
@@ -1742,12 +1846,15 @@ python prove_191_browser.py http://127.0.0.1:5001   # 22 controlli sull'email de
                              # porta, sicurezza e istruzioni proposti, server che segue l'indirizzo, @gmail.com che passa
                              # a Gmail, tendina del tipo salvata con il modulo, schermo stretto (salva le impostazioni
                              # email della prova e poi rimette quelle di partenza)
-python prove_guida_browser.py http://127.0.0.1:5000   # 52 controlli nel browser, sui dati di prova
+python prove_110_browser.py http://127.0.0.1:5001   # 20 controlli sulle fasce dei turni (il martedi della prova):
+                             # righe e celle alte quanto le loro fasce, ore nelle fasce libere, clic che apre il modulo
+                             # a quell'ora, guida sullo schermo, agenda del medico, modulo del turno, tema scuro
+python prove_guida_browser.py http://127.0.0.1:5000   # 53 controlli nel browser, sui dati di prova
 python prove_sicurezza_browser.py http://127.0.0.1:5000   # 5 controlli: moduli mandati da un altro sito
 python campagna.py           # 2550 casi generati, anche sulle pagine della 1.4, circa due minuti
 ```
 
-In tutto 951 prove più 2550 casi generati e 361 controlli nel browser, tutte verdi su Python 3.11 e 3.14.
+In tutto 973 prove più 2550 casi generati e 382 controlli nel browser, tutte verdi su Python 3.13 (alla 1.9 anche su 3.11 e 3.14).
 Vanno rilanciate dopo ogni modifica; ognuna crea un database usa e getta. Alcune delle più
 vecchie escono con codice 0 anche se una prova non va: conta la riga finale («0 da
 sistemare»), che è quella che legge `tutte_le_prove.py`.
@@ -1919,6 +2026,24 @@ registro di una giornata):
 | Sala occupata alla stessa ora, stanza non indicata | La riga restava fuori, solo nell'Excel degli scarti | Va fra i da confermare, con i suoi dati |
 | Nome del file e riepilogo nel titolo uniti | "Lippiello Data" preso per un medico | Le celle del titolo restano separate |
 | Menu con la voce nuova | Andava a capo a 1366 pixel | Spaziature e ricerca più strette |
+
+Diciottesimo giro, 1.10, le fasce di ogni turno (trovati provando con i calcoli a parte e
+guardando la griglia nel browser):
+
+| Difetto | Effetto | Correzione |
+|---|---|---|
+| Durata delle fasce come elenco obbligatorio con la prima scelta vuota | Il browser non avrebbe lasciato salvare il turno con *Come la struttura* | La prima scelta vale «0» |
+| Righe fitte solo quando la misura delle righe cambia | Con un turno a fasce da 60 in una struttura da 30 le celle libere non coprivano le loro righe e la tabella si sfasava | La griglia a righe fitte vale per ogni turno con fasce proprie; ogni cella libera copre le sue righe |
+| Appuntamenti presi prima delle fasce | Cambiare una nota a una visita che divideva una fascia con un'altra veniva rifiutato («fascia già occupata») | Modificando contano solo le fasce nuove; salvando il turno arriva l'avviso con quanti non stanno nelle fasce |
+| Avviso dell'orario a metà fascia | Mancava se il medico scelto era assente quel giorno | Le fasce sono della stanza: l'avviso c'è sempre |
+| Nome della prestazione nelle celle alte due righe | Con righe da 15 minuti ogni visita da 30 lo mostrava e allungava le righe: la griglia non era più in proporzione | Il nome compare solo dove c'è spazio (come prima); in una fascia corta medico e paziente su una riga |
+
+Delle prove, non del programma: i giorni inventati mettevano due appuntamenti attivi alla
+stessa ora nella stessa stanza, che il database non accetta (ora si saltano); nell'agenda del
+medico della 1.9.1 «copre» poteva valere anche in una fascia dove comincia un altro
+appuntamento, e lì la pagina mostrava comunque l'appuntamento (il confronto lo guarda solo
+dove non comincia niente); la guida sullo schermo si leggeva dalla prima riga del fumetto,
+che è il pulsante per chiudere (ora dal titolo).
 
 Diciassettesimo giro, 1.9.1, l'email con qualsiasi casella (trovati rileggendo l'invio
 della 1.9 per le caselle che non sono Gmail):

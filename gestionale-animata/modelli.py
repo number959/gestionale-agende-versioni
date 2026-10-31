@@ -45,6 +45,8 @@ COLORE_PREDEFINITO = '#154381'
 APERTURA_PREDEFINITA = time(8, 0)
 CHIUSURA_PREDEFINITA = time(20, 0)      # l'ultima fascia da 30' parte alle 19:30
 PASSI_AMMESSI = (10, 15, 20, 30, 60)
+# 1.10: le durate delle fasce che un turno (la programmazione di un ambulatorio) puo' avere
+PASSI_TURNO = (10, 15, 20, 30, 40, 45, 60)
 GIORNI_PREDEFINITI = '1111110'          # da lunedi a sabato
 
 # stato dell'appuntamento: solo quelli "attivi" occupano la stanza
@@ -337,8 +339,16 @@ class Turno(Base):
     ora_fine = Column(Time, nullable=False)
     valido_da = Column(Date, nullable=False, default=date.today)
     valido_a = Column(Date)                              # None = a tempo indeterminato
+    # 1.10: la durata delle fasce di questo turno, dall'ora di inizio (vuoto = le fasce della
+    # struttura): la "programmazione" dell'ambulatorio. Una prestazione occupa le fasce intere
+    passo = Column(Integer)
     operatore = relationship('Operatore')
     risorsa = relationship('Risorsa')
+
+    @property
+    def passo_proprio(self):
+        """La durata delle fasce scelta per questo turno, o None: valgono quelle della struttura."""
+        return self.passo if self.passo in PASSI_TURNO else None
 
     def vale_il(self, g):
         if self.giorno_settimana != g.weekday():
@@ -1058,8 +1068,9 @@ CANALI_INDIRIZZO = [('voce', 'a voce'), ('telefono', 'al telefono'), ('whatsapp'
 # 7 = 1.5 (indirizzo del paziente, email automatiche, promemoria, registro degli invii),
 # 8 = 1.7 (sesso e luogo di nascita del paziente, per controllare e calcolare il codice fiscale),
 # 9 = 1.8 (turni del personale: persone, tipi di turno, turni, coperture minime),
-# 10 = 1.9 (Dove si fa: strutture del gruppo, prestazioni e dove si fanno, pazienti indirizzati).
-VERSIONE_SCHEMA = 10
+# 10 = 1.9 (Dove si fa: strutture del gruppo, prestazioni e dove si fanno, pazienti indirizzati),
+# 11 = 1.10 (la durata delle fasce di ogni turno).
+VERSIONE_SCHEMA = 11
 
 # Colonne aggiunte dopo la prima versione. create_all crea le tabelle nuove
 # ma non tocca quelle esistenti: su un PC dove il gestionale e' gia'
@@ -1129,6 +1140,10 @@ COLONNE_AGGIUNTE = {
         ('degenza', "VARCHAR(12) DEFAULT ''"),
         ('notti', 'INTEGER'),
         ('checklist', "TEXT DEFAULT ''"),
+    ],
+    'turni': [
+        # 1.10: vuoto per i turni di prima, che restano con le fasce della struttura
+        ('passo', 'INTEGER'),
     ],
 }
 

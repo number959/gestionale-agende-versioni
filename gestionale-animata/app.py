@@ -216,6 +216,9 @@ def giorno(iso):
     nessun_medico = ses().scalars(select(Operatore.id).where(Operatore.attivo == True)).first() is None
     nessun_turno = ses().scalars(select(Turno.id)).first() is None
     return render_template('griglia.html', g=g, colonne=colonne, fasce=vista['fasce'],
+                           passo=vista['passo'], base=vista['base'], misto=vista['misto'],
+                           etichette=vista['etichette'],
+                           altezza_riga=vista['altezza_riga'],
                            strutture=strutture, sid=sid,
                            nessun_medico=nessun_medico, nessun_turno=nessun_turno,
                            titolo=servizi.etichetta_giorno(g),

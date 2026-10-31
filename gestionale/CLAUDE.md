@@ -1,13 +1,14 @@
 # Gestionale Agende — istruzioni per Claude Code
 
-Programma per l'accettazione della Clinica Posillipo (Gruppo NefroCenter): agenda delle
-stanze, pazienti (con codice fiscale controllato e calcolato), conferme, cassa, sala
-operatoria, email e WhatsApp ai pazienti, turni del personale (dalla 1.8), Dove si fa (dalla
-1.9: in quale struttura del gruppo si fa una prestazione, per indirizzarci il paziente). Lo usa una
-persona sola, sul PC Windows 11 della segreteria, tutto in locale (Flask + SQLite,
+Programma per l'accettazione della Clinica Posillipo (Gruppo NefroCenter): agenda delle stanze,
+pazienti (con codice fiscale controllato e calcolato), conferme, cassa, sala operatoria, email
+e WhatsApp ai pazienti, turni del personale (dalla 1.8), Dove si fa (dalla 1.9: in quale
+struttura del gruppo si fa una prestazione, per indirizzarci il paziente), le fasce di ogni
+turno (dalla 1.10: la programmazione dell'ambulatorio, la prestazione occupa fasce intere). Lo
+usa una persona sola, sul PC Windows 11 della segreteria, tutto in locale (Flask + SQLite,
 waitress su 127.0.0.1:5000). Internet serve solo in uscita, per le email (la casella della
-clinica, qualsiasi server SMTP dalla 1.9.1), WhatsApp (Meta) e per scaricare gli
-aggiornamenti («Aggiorna adesso», dalle versioni su GitHub).
+clinica, qualsiasi server SMTP dalla 1.9.1), WhatsApp (Meta) e per scaricare gli aggiornamenti
+(«Aggiorna adesso», dalle versioni su GitHub).
 
 Da leggere prima di modificare qualcosa: `../PASSAGGIO_DI_CONSEGNE.md` (nella radice del
 repository: stato, persone, decisioni e perché, cose aperte) e `LEGGIMI.md` (il manuale
@@ -78,21 +79,24 @@ Senza `--solo` e con `--browser` le lancia tutte, anche quelle nel browser (Play
 Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_tendine_browser.py`,
 `prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, `prove_19_browser.py`,
 `prove_191_browser.py` (salva le impostazioni email della prova e poi rimette quelle di
-partenza), nell'animata `prove_animazioni.py` e `prove_icone_animate.py`, e per ultima
-`prove_16_browser.py`, che cambia l'indirizzo degli aggiornamenti. Le prove nel browser
-salvano dati: sempre su un gestionale di prova, mai su quello vero.
+partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova), nell'animata
+`prove_animazioni.py` e `prove_icone_animate.py`, e per ultima `prove_16_browser.py`, che
+cambia l'indirizzo degli aggiornamenti. Le prove nel browser salvano dati: sempre su un
+gestionale di prova, mai su quello vero.
 
 Le prove senza browser: `prove.py`, `prove2.py`, `prove100.py`, `prove200.py`,
 `prove_anagrafiche.py`, `prove_personalizzazione.py`, `prove_funzioni.py`, `prove_14.py`,
-`prove_143.py`, `prove_145.py`, `prove_146.py`, `prove_guida.py`, `prove_15.py`,
-`prove_16.py`, `prove_17.py` (codice fiscale, confrontato anche con una libreria
-indipendente), `prove_18.py` (turni del personale con oracoli, annulla e rifai, modifiche a
-caso con invarianti; registrazione del numero WhatsApp con una finta Meta), `prove_19.py`
-(Dove si fa: lettura del file in tanti modi, importazione e versioni nuove, ricerca contro
-un oracolo su 1200 prestazioni inventate, pagine, protezioni, aggiornamento dalla 9),
-`prove_191.py` (l'email con qualsiasi casella: tipi e server proposti, modulo con errori e
-avvisi, invio con nome utente diverso e senza password, ogni errore con il suo consiglio, con
-lo stesso finto server di posta di `prove_15.py`) e `campagna.py` (casi generati con oracoli e
+`prove_143.py`, `prove_145.py`, `prove_146.py`, `prove_guida.py`, `prove_15.py`, `prove_16.py`,
+`prove_17.py` (codice fiscale, confrontato anche con una libreria indipendente), `prove_18.py`
+(turni del personale con oracoli, annulla e rifai, modifiche a caso con invarianti;
+registrazione del numero WhatsApp con una finta Meta), `prove_19.py` (Dove si fa: lettura del
+file in tanti modi, importazione e versioni nuove, ricerca contro un oracolo su 1200
+prestazioni inventate, pagine, protezioni, aggiornamento dalla 9), `prove_191.py` (l'email con
+qualsiasi casella: tipi e server proposti, modulo con errori e avvisi, invio con nome utente
+diverso e senza password, ogni errore con il suo consiglio, con lo stesso finto server di posta
+di `prove_15.py`), `prove_110.py` (le fasce dei turni: senza fasce proprie tutto identico alle
+funzioni della 1.9.1 copiate dentro la prova, con le fasce proprie contro calcoli fatti a
+parte; `PROVE_GIRI=500` per più giorni inventati) e `campagna.py` (casi generati con oracoli e
 invarianti). Alcune delle più vecchie escono con codice 0 anche se qualcosa non va: conta la
 riga finale («0 da sistemare»), ed è quella che legge `tutte_le_prove.py`.
 `PROVE_SOLO=nome1,nome2 python prove_15.py` rifà solo alcune prove di una raccolta. Le due
@@ -106,13 +110,27 @@ temporanea.
   modifiche in sospeso fuori dal lucchetto.
 - Un difetto nei messaggi non deve mai far perdere una prenotazione (try/except intorno a
   `invii.dopo_salvataggio`).
-- Schema del database: `modelli.VERSIONE_SCHEMA` (10 dalla 1.9) e `COLONNE_AGGIUNTE`;
+- Schema del database: `modelli.VERSIONE_SCHEMA` (11 dalla 1.10) e `COLONNE_AGGIUNTE`;
   l'aggiornamento fa prima una copia di sicurezza («prima-della-versione-N») e aggiunge
   colonne e tabelle senza toccare i dati. `_migra_a_8` ricava sesso, data e luogo di
   nascita dai codici fiscali validi già in archivio, senza cambiare quelli scritti. Alla 9
   si aggiungono le tabelle dei turni e, una volta sola (impostazione
   `tipi_turno_iniziali`), i dieci tipi di turno di partenza (`_prepara_tipi_turno`). Alla 10
-  le quattro tabelle di Dove si fa, vuote.
+  le quattro tabelle di Dove si fa, vuote. Alla 11 la colonna `turni.passo`, vuota.
+- Fasce dei turni (dalla 1.10): `Turno.passo` (vuoto = le fasce della struttura) e
+  `Turno.passo_proprio` (solo i valori di `PASSI_TURNO`, altrimenti None). Tutto in
+  `servizi.py`: `base_righe` (righe della tabella = massimo comun divisore fra le fasce della
+  struttura, quelle dei turni e i loro orari dall'apertura, mai sotto i 5 minuti),
+  `pezzi_colonna` (la colonna divisa nelle sue fasce), `celle_colonna` (le celle, per
+  `griglia` e `settimana_medico`), `blocco` (le fasce intere di un appuntamento, per
+  `conflitti`, `fuori_turno`, `disponibilita`). `conflitti` e `disponibilita` devono restare
+  d'accordo (`prove_110.py` prova la seconda con la prima, ora per ora); modificando un
+  appuntamento (`escludi_id`, attivo) non contano le fasce che divideva già con un altro.
+  Senza turni a fasce proprie tutto deve restare identico alla 1.9.1: `prove_110.py` lo
+  confronta con copie ferme delle funzioni della 1.9.1 (da non toccare). Nei modelli
+  `griglia.html` (tutte e due le versioni) e `settimana.html` la tabella a righe fitte è
+  `tbody.fasce-miste` con l'altezza in `--riga`; il nome della prestazione compare solo in
+  una cella alta almeno 52 pixel, una cella sotto i 37 è `bassa` (una riga sola).
 - Turni del personale: le regole stanno solo in `personale.py` (sovrapposizioni anche con
   la notte del giorno prima, riposi e assenze tutto il giorno, riposo sotto le 11 ore solo
   avvisato); `static/turni.js` manda la richiesta a `POST /personale/turni/cambia` e
@@ -236,8 +254,8 @@ serve disinstallare.
    cartelle (il tag è la versione con una "v" davanti) e segnata come ultima ("latest"):
 
    ```
-   gh release create v1.9.1 --repo number959/gestionale-agende-versioni --latest \
-     --title "Gestionale Agende 1.9.1" --notes "…" \
+   gh release create v1.10 --repo number959/gestionale-agende-versioni --latest \
+     --title "Gestionale Agende 1.10" --notes "…" \
      gestionale/Output/GestionaleAgende-setup.exe gestionale/Output/aggiornamento.json \
      gestionale-animata/Output/GestionaleAgende-animata-setup.exe gestionale-animata/Output/aggiornamento-animata.json
    ```

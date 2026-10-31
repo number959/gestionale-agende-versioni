@@ -49,6 +49,12 @@ ven = mar + timedelta(days=3)
 med = {o.cognome: o for o in s.scalars(select(Operatore))}
 amb = {r.nome: r for r in s.scalars(select(Risorsa))}
 pr = {x.nome: x for x in s.scalars(select(Prestazione))}
+# ---- 1.10: la seduta di endoscopia del martedi ha fasce sue, da 15 minuti: una colonscopia
+# (45') ne occupa tre, una EGDS (30') due; il resto della struttura resta a 30'
+if hasattr(Turno, 'passo'):
+    for t_ in s.scalars(select(Turno).where(Turno.risorsa_id == amb['Sala endoscopia'].id,
+                                            Turno.giorno_settimana == 1)):
+        t_.passo = 15
 nomi = [('Esposito', 'Anna', 'anna.esposito@example.it', '3331234500'), ('Russo', 'Giovanni', '', '3339876543'),
         ('Coppola', 'Maria', 'm.coppola@example.it', '3471112233'), ('Barbato', 'Luca', '', '3285556677'),
         ('Sorrentino', 'Teresa', 'teresa.s@example.it', '081 555 1234'), ('De Luca', 'Ciro', '', '3401234567'),

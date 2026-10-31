@@ -26,4 +26,8 @@ Sempre:
 - Prima di consegnare, se ci sono file veri della clinica: `strumenti/cerca_dati_veri.py`
   (vedi `PASSAGGIO_DI_CONSEGNE.md`).
 - Le versioni si pubblicano nel progetto pubblico `number959/gestionale-agende-versioni`,
-  da cui il programma della clinica le scarica da solo.
+  da cui il programma della clinica le scarica da solo. Niente pubblicazioni, push o modifiche
+  al programma installato in clinica senza il via di Giovanni.
+- Dal 31 ottobre 2026 (versione 1.10) il lavoro continua con Claude Code sul PC Windows di
+  Giovanni: vedi *Passare a Claude Code* in `PASSAGGIO_DI_CONSEGNE.md`. Le prove sono state
+  fatte girare finora solo su Linux: se su Windows qualcosa non va, prima si capisce perché.

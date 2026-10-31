@@ -140,7 +140,9 @@ def gu_menu():
     # le guide della pagina arrivano alla guida sullo schermo
     m = re.search(r'data-guide="([^"]*)"', t)
     guide = json.loads(m.group(1).replace('&#34;', '"').replace('&quot;', '"').replace('&#39;', "'"))
-    assert {g['slug'] for g in guide} == {'stampare-giornata', 'griglia'}, guide
+    # (dalla 1.10 anche le fasce di ogni ambulatorio, ma solo dove un turno ha le sue fasce)
+    assert {g['slug'] for g in guide} == {'fasce-turno', 'stampare-giornata', 'griglia'} and \
+        {g['condizione'] for g in guide if g['slug'] == 'fasce-turno'} == {'thead .fasce-turno'}, guide
     t = html(C.get('/appuntamento?data=%s' % date.today().isoformat()))
     m = re.search(r'data-guide="([^"]*)"', t)
     guide = json.loads(m.group(1).replace('&#34;', '"').replace('&quot;', '"').replace('&#39;', "'"))

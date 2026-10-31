@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 from modelli import (Struttura, Risorsa, Operatore, Prestazione, Turno,
                      Appuntamento, Assenza, Chiusura, Appunto, RegolaEmail, COLORE_PREDEFINITO, PASSI_AMMESSI,
-                     STATI_ATTIVI)
+                     PASSI_TURNO, STATI_ATTIVI)
 import servizi
 from comune import PALETTE, PRIMA, ULTIMA, colore_libero      # PALETTE: la leggono anche le prove
 import marchio
@@ -145,7 +145,7 @@ def carica(modello, ident):
     return oggetto
 
 
-def salva_e_torna(s, oggetto, entita, messaggio):
+def salva_e_torna(s, oggetto, entita, messaggio, avviso=None):
     try:
         s.flush()
         servizi.registra(s, entita, oggetto.id, 'SALVATO', messaggio)
@@ -155,6 +155,8 @@ def salva_e_torna(s, oggetto, entita, messaggio):
         flash('Salvataggio non riuscito: esiste già un elemento con lo stesso nome.', 'errore')
         return redirect(request.url)
     flash(messaggio, 'ok')
+    if avviso:
+        flash(avviso, 'avviso')
     return redirect(url_for('anagrafiche.elenco'))
 
 
@@ -496,6 +498,11 @@ def turno(tid=None):
         return redirect(url_for('anagrafiche.stanza'))
     piu_strutture = len({x.struttura_id for x in stanze}) > 1
     v = request.form if request.method == 'POST' else None
+    # le fasce della struttura, da dire nella prima scelta (se le strutture sono piu' d'una e
+    # hanno fasce diverse, senza numero)
+    passi_strutture = {x.struttura.passo_min for x in stanze}
+    come_struttura = ('Come la struttura (%d minuti)' % passi_strutture.pop() if len(passi_strutture) == 1
+                      else 'Come la struttura')
 
     def campi(errore=False):
         dati = v if errore else None
@@ -529,6 +536,13 @@ def turno(tid=None):
             campo('valido_a', 'Fino al', tipo='date', meta=True, facoltativo=True, classe='solo-settimanale',
                   valore=dati.get('valido_a') if dati else (t.valido_a.isoformat() if t and t.valido_a else ''),
                   aiuto='Vuoto: a tempo indeterminato.'),
+            campo('passo', 'Durata delle fasce', tipo='select',
+                  # '0' e non '': un elenco obbligatorio non accetta una prima scelta vuota
+                  opzioni=[('0', come_struttura)] + [(str(p), '%d minuti' % p) for p in PASSI_TURNO],
+                  valore=dati.get('passo', '0') if dati else (str(t.passo_proprio) if t and t.passo_proprio else '0'),
+                  aiuto='La programmazione dell\'ambulatorio: ogni quanto comincia una fascia, dall\'ora di inizio del '
+                        'turno. Una prestazione più lunga occupa più fasce intere; una più corta occupa comunque la '
+                        'fascia intera.'),
         ]
 
     if request.method == 'POST':
@@ -563,6 +577,16 @@ def turno(tid=None):
             fine = m.ora('ora_fine', 'Alle')
             if inizio and fine and fine <= inizio:
                 m.errori.append('L\'ora di fine deve venire dopo quella di inizio.')
+            # 1.10: la durata delle fasce; un modulo di una versione precedente, senza il campo, la lascia com'e'
+            passo = t.passo if t else None
+            if 'passo' in request.form:
+                grezzo = request.form.get('passo') or ''
+                if grezzo in ('', '0'):
+                    passo = None
+                elif grezzo in [str(p) for p in PASSI_TURNO]:
+                    passo = int(grezzo)
+                else:
+                    m.errori.append('Durata delle fasce: scelta non valida.')
             if da and a and a < da:
                 m.errori.append('La data di fine validità viene prima di quella di inizio.')
             if not m.errori:
@@ -591,16 +615,20 @@ def turno(tid=None):
                 s.add(t)
             t.operatore_id, t.risorsa_id, t.giorno_settimana = int(oid), int(rid), int(giorno)
             t.ora_inizio, t.ora_fine, t.valido_da, t.valido_a = inizio, fine, da, a
+            t.passo = passo
             # il nome si prende dall'elenco e non da t.operatore: cambiando medico
             # la relazione puo' ancora contenere quello di prima
             scelto = next(x for x in medici if x.id == int(oid))
             quando = ('il %s' % da.strftime('%d/%m/%Y')) if singolo else servizi.GIORNI[int(giorno)]
-            return salva_e_torna(s, t, 'Turno', 'Turno salvato: %s, %s dalle %s alle %s.' % (
-                scelto.etichetta, quando, inizio.strftime('%H:%M'), fine.strftime('%H:%M')))
+            return salva_e_torna(s, t, 'Turno', 'Turno salvato: %s, %s dalle %s alle %s%s.' % (
+                scelto.etichetta, quando, inizio.strftime('%H:%M'), fine.strftime('%H:%M'),
+                ', fasce da %d minuti' % passo if passo else ''), avviso=avviso_fasce(s, t))
 
     return scheda(titolo, campi(), eliminabile=bool(t), conferma='Eliminare questo turno?',
                   nota='I turni decidono quali fasce compaiono libere nella griglia. Quelli '
                        'settimanali si ripetono nel giorno scelto; quelli di un giorno valgono solo quel giorno. '
+                       'Ogni turno può avere fasce sue (Durata delle fasce): per esempio visite ogni 20 minuti o '
+                       'esami ogni 15, mentre il resto della struttura resta con le sue. '
                        'Per chiudere un turno da una certa data senza cambiare le statistiche passate '
                        '(le ore di turno contano anche nei mesi già fatti), basta scrivere la data in '
                        '"Fino al" invece di eliminarlo.')
@@ -627,6 +655,53 @@ def appuntamenti_senza_turno(s, t):
             continue
         dentro.append(a)
     return dentro
+
+
+def appuntamenti_fuori_fascia(s, t):
+    """Gli appuntamenti attivi, da adesso in poi, nella stanza e negli orari del
+    turno t con fasce proprie che non stanno nelle sue fasce: cominciano a meta'
+    di una fascia, o ne dividono una con un altro (presi prima che il turno
+    avesse quelle fasce). Restano dove sono: la griglia li mostra nella fascia
+    in cui cominciano."""
+    c = t.passo_proprio
+    if not c:
+        return []
+    q = select(Appuntamento).where(
+        Appuntamento.risorsa_id == t.risorsa_id, Appuntamento.stato.in_(STATI_ATTIVI),
+        Appuntamento.inizio >= max(datetime.now(), datetime.combine(t.valido_da, time(0, 0))))
+    if t.valido_a:
+        q = q.where(Appuntamento.inizio < datetime.combine(t.valido_a + timedelta(days=1), time(0, 0)))
+    per_giorno = {}
+    for a in s.scalars(q.order_by(Appuntamento.inizio, Appuntamento.id)):
+        if t.vale_il(a.inizio.date()) and t.ora_inizio <= a.inizio.time() < t.ora_fine:
+            per_giorno.setdefault(a.inizio.date(), []).append(a)
+    fuori = []
+    for lista in per_giorno.values():
+        blocchi = [servizi.blocco(t, a.inizio, a.fine) for a in lista]
+        for i, a in enumerate(lista):
+            storto = (servizi._minuti(a.inizio.time()) - servizi._minuti(t.ora_inizio)) % c
+            diviso = any(j != i and b[0] < blocchi[i][1] and b[1] > blocchi[i][0] for j, b in enumerate(blocchi))
+            if storto or diviso:
+                fuori.append(a)
+    return sorted(fuori, key=lambda a: (a.inizio, a.id))
+
+
+def avviso_fasce(s, t):
+    """Dopo aver salvato un turno con fasce proprie: quanti appuntamenti gia'
+    prenotati non stanno nelle sue fasce (None se nessuno)."""
+    fuori = appuntamenti_fuori_fascia(s, t)
+    if not fuori:
+        return None
+    primo = fuori[0].inizio
+    if len(fuori) == 1:
+        return ('C\'è un appuntamento già prenotato in questo turno che non sta nelle fasce da %d minuti '
+                '(comincia a metà di una fascia o ne divide una con un altro): il %s alle %s. Resta dov\'è; '
+                'conviene controllarlo nella griglia.' % (t.passo_proprio, primo.strftime('%d/%m'),
+                                                          primo.strftime('%H:%M')))
+    return ('Ci sono %d appuntamenti già prenotati in questo turno che non stanno nelle fasce da %d minuti '
+            '(cominciano a metà di una fascia o ne dividono una con un altro), il primo il %s alle %s. Restano '
+            'dove sono; conviene controllarli nella griglia.' % (len(fuori), t.passo_proprio,
+                                                                  primo.strftime('%d/%m'), primo.strftime('%H:%M')))
 
 
 # ============================================================= struttura

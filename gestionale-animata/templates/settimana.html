@@ -71,23 +71,23 @@
       {% for g in vista.giorni %}{% set i = vista.info[g] %}
       <th class="{% if g == oggi %}oggi{% endif %}">
         <a href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">{{ giorni_nomi[g.weekday()] }} {{ g.day }}/{{ g.month }}</a>
-        <span class="sotto">{% if medico.id in i.assenze %}assente: {{ i.assenze[medico.id] }}{% elif i.chiusura %}chiusa: {{ i.chiusura }}{% elif i.festivo %}{{ i.festivo }}{% elif vista.turni[g] %}{% for t in vista.turni[g] %}{{ t.risorsa.nome }} {{ t.ora_inizio.strftime('%H:%M') }}–{{ t.ora_fine.strftime('%H:%M') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}nessun turno{% endif %}</span>
+        <span class="sotto">{% if medico.id in i.assenze %}assente: {{ i.assenze[medico.id] }}{% elif i.chiusura %}chiusa: {{ i.chiusura }}{% elif i.festivo %}{{ i.festivo }}{% elif vista.turni[g] %}{% for t in vista.turni[g] %}{{ t.risorsa.nome }} {{ t.ora_inizio.strftime('%H:%M') }}–{{ t.ora_fine.strftime('%H:%M') }}{% if t.passo_proprio %} <span class="fasce-turno" title="Le fasce di questo turno: ogni prestazione occupa fasce intere">fasce da {{ t.passo_proprio }}'</span>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}nessun turno{% endif %}</span>
       </th>{% endfor %}
     </tr>
   </thead>
-  <tbody>
-    {% for riga in vista.righe %}
-    <tr{% if riga.ora.minute %} class="mezzora"{% endif %}>
+  {% set misto = vista.misto %}
+  <tbody{% if misto %} class="fasce-miste" style="--riga: {{ vista.altezza_riga }}px"{% endif %}>
+    {% for riga in vista.righe %}{% set idx = loop.index0 %}
+    <tr{% if riga.ora.minute or (misto and not vista.etichette[idx]) %} class="{{ 'mezzora' if riga.ora.minute }}{{ ' sotto-fascia' if misto and not vista.etichette[idx] }}"{% endif %}>
       <th class="ora">{{ '%02d:%02d' % (riga.ora.hour, riga.ora.minute) }}</th>
       {% for c in riga.celle %}
-        {% if c.apps %}
-        <td class="occupata">{% for a in c.apps %}<a class="voce stato-{{ a.stato|lower }}" style="border-left-color: {{ medico.colore_sicuro }}" href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}"><span class="medico">{{ a.inizio.strftime('%H:%M') }} {{ a.paziente.etichetta if a.paziente else '' }}</span><span class="dettaglio">{{ a.prestazione.nome if a.prestazione else '' }} · {{ a.risorsa.nome }}</span></a>{% endfor %}</td>
-        {% elif c.copre %}
-        <td class="occupata" title="Occupato: appuntamento delle {{ c.copre.inizio.strftime('%H:%M') }} fino alle {{ c.copre.fine.strftime('%H:%M') }}"></td>
-        {% elif c.turno %}
-        <td class="aperta"><a class="posa" href="{{ url_for('appuntamento', data=c.data.isoformat(), ora='%02d:%02d' % (c.ora.hour, c.ora.minute), risorsa=c.turno.risorsa_id, struttura=sid, medico=medico.id) }}">libero</a></td>
+        {% if c.stato == 'coperta' %}
+        {% elif c.apps %}
+        <td class="occupata{{ ' bassa' if misto and c.righe * vista.altezza_riga < 37 }}"{% if c.righe > 1 %} rowspan="{{ c.righe }}"{% endif %}>{% for a in c.apps %}<a class="voce stato-{{ a.stato|lower }}" style="border-left-color: {{ medico.colore_sicuro }}" href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}"><span class="medico">{{ a.inizio.strftime('%H:%M') }} {{ a.paziente.etichetta if a.paziente else '' }}</span><span class="dettaglio">{{ a.prestazione.nome if a.prestazione else '' }} · {{ a.risorsa.nome }}</span></a>{% endfor %}</td>
+        {% elif c.stato == 'aperta' %}{% set ora_fascia = '%02d:%02d' % (c.inizio.hour, c.inizio.minute) %}
+        <td class="aperta"{% if c.righe > 1 %} rowspan="{{ c.righe }}"{% endif %}><a class="posa{{ ' con-ora' if c.turno.passo_proprio }}"{% if misto %} style="height: {{ c.righe * vista.altezza_riga - 2 }}px"{% endif %} href="{{ url_for('appuntamento', data=c.data.isoformat(), ora=ora_fascia, risorsa=c.turno.risorsa_id, struttura=sid, medico=medico.id) }}">{% if c.turno.passo_proprio %}{{ ora_fascia }}<span> libero</span>{% else %}libero{% endif %}</a></td>
         {% else %}
-        <td class="chiusa"></td>
+        <td class="chiusa"{% if c.righe > 1 %} rowspan="{{ c.righe }}"{% endif %}></td>
         {% endif %}
       {% endfor %}
     </tr>

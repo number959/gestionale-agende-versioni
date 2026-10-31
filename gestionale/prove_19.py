@@ -1046,8 +1046,8 @@ def d_migrazione():
     c.close()
     S = crea_sessione('sqlite:///' + percorso)
     note = ' | '.join(S.migrazioni)
-    assert S.versione_precedente == 9 and VERSIONE_SCHEMA == 10, (S.versione_precedente, VERSIONE_SCHEMA)
-    assert 'prima-della-versione-10' in note and 'da 9 a 10' in note, note
+    assert S.versione_precedente == 9 and VERSIONE_SCHEMA >= 10, (S.versione_precedente, VERSIONE_SCHEMA)
+    assert 'prima-della-versione-%d' % VERSIONE_SCHEMA in note and 'da 9 a %d' % VERSIONE_SCHEMA in note, note
     assert os.listdir(os.path.join(os.path.dirname(percorso), 'backup')), 'copia di sicurezza mancante'
     s = S()
     assert s.scalars(select(Paziente)).one().cognome == 'Testabianca'

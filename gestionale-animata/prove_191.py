@@ -564,11 +564,12 @@ def c_guida():
     t = testo(C.get('/aiuto/email-casella'))
     assert a['titolo'] in t and 'Aruba' in t and 'password per le app' in t
     assert C.get('/aiuto/non-esiste').status_code == 404
-    assert [v for v, _ in novita.NOVITA][0] == comune.VERSIONE == '1.9.1', (novita.NOVITA[0][0], comune.VERSIONE)
+    assert novita.NOVITA[0][0] == comune.VERSIONE, (novita.NOVITA[0][0], comune.VERSIONE)
     for v, voci in novita.NOVITA:
         for x in voci:
             assert not x.get('guida') or x['guida'] in guida.PER_SLUG, (v, x['guida'])
-    assert all(x['guida'] == 'email-casella' for x in novita.NOVITA[0][1])
+    voci_191 = dict(novita.NOVITA)['1.9.1']
+    assert voci_191 and all(x['guida'] == 'email-casella' for x in voci_191), voci_191
 
 
 prova('casella mai salvata: tipo e valori dall\'indirizzo della struttura', c_pagina_nuova)
@@ -763,7 +764,9 @@ area('aggiornamento dalla 1.9')
 
 def e_impostazioni_19():
     """Un database della 1.9 con Gmail collegato: nessun cambio di schema, stesse impostazioni, stesso invio."""
-    assert VERSIONE_SCHEMA == 10, 'la 1.9.1 non cambia il database'
+    # la 1.9.1 non ha cambiato il database (la 1.10 aggiunge solo la durata delle fasce dei turni):
+    # le impostazioni email della 1.9 restano quelle
+    assert VERSIONE_SCHEMA >= 10, VERSIONE_SCHEMA
     S, C = mondo(email_utente='segreteria@example.com', email_password=invii.proteggi('Una password lunga'),
                  email_server='127.0.0.1', email_porta=str(POSTA.porta), email_sicurezza='starttls',
                  email_attiva='1')

@@ -19,9 +19,10 @@ senza 'sel' e' un fumetto al centro. Le immagini le produce
 strumenti/genera_immagini_guida.py dai dati di prova, con gli stessi 'sel'.
 """
 import json
+import logging
 import os
 import re
-from datetime import date
+from datetime import date, timedelta
 
 from flask import Blueprint, render_template, abort, url_for, request, Response, redirect
 
@@ -38,7 +39,8 @@ def P(titolo, testo, sel=None, contiene=None):
 
 
 # endpoint: la pagina dove si fa (per la guida sullo schermo)
-# apri: come aprirla dal programma (endpoint, argomenti; 'OGGI' = la data di oggi, 'MESE' = il mese)
+# apri: come aprirla dal programma (endpoint, argomenti; 'OGGI' = la data di oggi, 'MESE' = il mese,
+#   'FASCE' = il primo giorno da oggi con un turno a fasce proprie, nella sua struttura)
 # condizione: la guida vale solo se nella pagina c'e' questo elemento
 # foto: la pagina da fotografare sui dati di prova ({martedi}, {domani}, {oggi})
 ARTICOLI = [
@@ -80,7 +82,8 @@ ARTICOLI = [
              P('Aggiungi il medico', 'Cognome, nome, specialità e colore (serve a riconoscerlo nella griglia). '
                'Email e telefono servono per mandargli la sua agenda.', 'a.bottone.aggiungi', 'Aggiungi medico'),
              P('Aggiungi un turno', 'Medico, stanza, giorno della settimana e orario: per esempio Lippiello, Ambulatorio 1, '
-               'lunedì dalle 8 alle 14. Si ripete ogni settimana.', 'a.bottone.aggiungi', 'Aggiungi turno'),
+               'lunedì dalle 8 alle 14. Si ripete ogni settimana. "Durata delle fasce" dice ogni quanto comincia una '
+               'visita in quel turno (vedi Le fasce di ogni ambulatorio).', 'a.bottone.aggiungi', 'Aggiungi turno'),
              P('Chi viene senza giorno fisso', 'Per una sostituzione o per chi viene ogni tanto c\'è il turno di un giorno solo.',
                'a.bottone.aggiungi', 'Aggiungi turno di un giorno'),
              P('Ferie e assenze', 'Nei giorni di assenza i turni del medico non aprono fasce, e il programma elenca gli '
@@ -89,6 +92,25 @@ ARTICOLI = [
                'sue ore anche dalle statistiche dei mesi già passati.'),
              P('Le sue email', 'Aprendo il medico, in fondo ci sono le email automatiche ai suoi pazienti e "Nuova email '
                'per questo medico", se ha informative sue.'),
+         ]),
+    dict(slug='fasce-turno', gruppo='Primi passi', titolo='Le fasce di ogni ambulatorio',
+         in_breve='Ogni turno può avere fasce sue (visite ogni 20 minuti, endoscopia ogni 15): la prestazione '
+                  'occupa le fasce intere che le servono.',
+         endpoint='giorno', apri=('giorno', {'iso': 'FASCE'}), condizione='thead .fasce-turno',
+         foto='/giorno/{martedi}?struttura=1',
+         passi=[
+             P('La durata delle fasce', 'Configura → Anagrafiche, Modifica sul turno, "Durata delle fasce": ogni quanto '
+               'comincia una fascia, dall\'ora di inizio del turno. "Come la struttura" lascia le fasce di tutta la '
+               'clinica, che si scelgono nella struttura.'),
+             P('Nella griglia', 'La colonna lo dice in alto: "fasce da 15\'". Le altre stanze restano come prima.',
+               'thead .fasce-turno'),
+             P('Le fasce libere', 'Ogni fascia libera mostra la sua ora: un clic e il modulo si apre con quell\'orario e '
+               'il medico di turno.', 'td.aperta a.con-ora'),
+             P('Fasce intere', 'La prestazione occupa tutte le fasce che tocca: una colonscopia da 45 minuti con fasce da '
+               '15 ne occupa tre, una visita più corta della fascia la occupa tutta. Nella stessa fascia il programma '
+               'non salva un altro appuntamento.', 'td.occupata', 'Colonscopia'),
+             P('Prima disponibilità e orari a mano', 'Prima disponibilità e Sposta propongono le ore delle fasce. Un\'ora '
+               'scritta a mano che non è l\'inizio di una fascia si salva, con un avviso che lo dice.'),
          ]),
     # --------------------------------------------------------- tutti i giorni
     dict(slug='prenotare', gruppo='Tutti i giorni', titolo='Prenotare un appuntamento',
@@ -643,9 +665,37 @@ def collega(app):
         return {'guide_della_pagina': guide_della_pagina, 'video_guida': video}
 
 
+def giorno_con_fasce(entro=21):
+    """(data, id della struttura) del primo giorno, da oggi e per tre settimane, in cui
+    un turno ha fasce sue: "Mostrami sullo schermo" della guida sulle fasce apre quel
+    giorno, dove ci sono i punti da illuminare. (oggi, None) se non ce n'e'."""
+    oggi = date.today()
+    try:
+        from sqlalchemy import select
+        import servizi
+        import viste
+        from modelli import Struttura
+        s = viste.ses()
+        strutture = s.scalars(select(Struttura).where(Struttura.attiva == True).order_by(Struttura.id)).all()
+        regole = servizi.Regole(s, oggi, oggi + timedelta(days=entro))
+        for n in range(entro + 1):
+            g = oggi + timedelta(days=n)
+            for st in strutture:
+                if any(t.passo_proprio for t in regole.turni_effettivi(g, st)):
+                    return g, st.id
+    except Exception:              # la pagina della guida si apre comunque, su oggi
+        logging.exception('guida: ricerca del giorno con le fasce dei turni')
+    return oggi, None
+
+
 def indirizzo_apri(a, guida=True):
     endpoint, argomenti = a['apri']
     valori = {'OGGI': date.today().isoformat(), 'MESE': date.today().strftime('%Y-%m')}
+    if 'FASCE' in argomenti.values():
+        g, sid = giorno_con_fasce()
+        valori['FASCE'] = g.isoformat()
+        if sid:
+            argomenti = dict(argomenti, struttura=sid)
     argomenti = {k: valori.get(v, v) if isinstance(v, str) else v for k, v in argomenti.items()}
     if guida and a['endpoint'] == endpoint:
         argomenti['guida'] = a['slug']

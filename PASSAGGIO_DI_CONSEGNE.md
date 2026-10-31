@@ -8,9 +8,11 @@ delle due cartelle) e `LEGGIMI.md` (il manuale completo, con le prove e lo stori
 difetti).
 
 Scritto il 5 ottobre 2026 alla versione 1.7, aggiornato il 12 ottobre 2026 alla versione 1.9
-(il 19 ottobre: come una sessione di Claude può pubblicare su GitHub) e il 25 ottobre 2026 alla
-versione **1.9.1** (l'email con qualsiasi casella, senza bisogno della verifica in due passaggi
-di Gmail).
+(il 19 ottobre: come una sessione di Claude può pubblicare su GitHub), il 25 ottobre 2026 alla
+versione 1.9.1 (l'email con qualsiasi casella, senza bisogno della verifica in due passaggi
+di Gmail) e il 31 ottobre 2026 alla versione **1.10** (le fasce di ogni ambulatorio), quando
+Giovanni ha chiesto di continuare il lavoro con **Claude Code** sul suo PC (vedi *Passare a
+Claude Code*).
 
 ## In breve
 
@@ -18,8 +20,9 @@ Gestionale degli appuntamenti per l'accettazione della **Clinica Posillipo** di 
 (Gruppo NefroCenter). Prende il posto dei file Excel con cui si gestivano le agende: stanze,
 medici e turni, prenotazioni, pazienti, conferme, cassa, sala operatoria con posti letto,
 email e WhatsApp ai pazienti, guide con videoguide, aggiornamenti dal programma, codice
-fiscale, turni del personale (medici, infermieri, OSS e gli altri) e *Dove si fa*: in quale
-struttura del gruppo si fa una prestazione, per indirizzarci il paziente.
+fiscale, turni del personale (medici, infermieri, OSS e gli altri), *Dove si fa* (in quale
+struttura del gruppo si fa una prestazione, per indirizzarci il paziente) e le fasce di ogni
+ambulatorio (ogni turno con la sua durata delle fasce; la prestazione occupa fasce intere).
 
 - Python, Flask e SQLite, con il server waitress su `127.0.0.1:5000`. Un solo utente, sul PC
   Windows 11 della segreteria, tutto in locale. Internet serve solo in uscita: la casella
@@ -88,20 +91,28 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
-- **Versione 1.9.1**, pronta: **l'email con qualsiasi casella**. In *Configura → Email e
+- **Versione 1.10**, pronta: **le fasce di ogni ambulatorio**. Ogni turno può avere la sua
+  durata delle fasce (*Configura → Anagrafiche*, il turno, *Durata delle fasce*); la prestazione
+  occupa le fasce intere che tocca, la griglia e l'agenda del medico le mostrano a righe fitte
+  con l'ora in ogni fascia libera, prima disponibilità e Sposta le seguono, un orario a metà
+  fascia si salva con un avviso, gli appuntamenti già presi restano (e salvando il turno il
+  programma dice quanti non stanno nelle fasce nuove). Senza fasce proprie tutto come nella
+  1.9.1. Il database passa allo schema 11 (una colonna nuova nei turni, vuota). Tutte le prove
+  sono verdi (973 prove, 2550 casi generati, 382 controlli nel browser nella normale e 449
+  nell'animata); eseguibile e due Setup costruiti e provati in Wine: «Aggiorna adesso» dalla
+  1.9.1 installata alla 1.10 (14 controlli su 14, dati identici), la 1.10 animata sopra la 1.9.1
+  animata, le fasce provate sull'eseguibile dal modulo del turno alla griglia, primo avvio senza
+  dati con un turno a fasce da 20 e una prenotazione rifiutata a metà fascia.
+- La **1.9.1** (dentro la 1.10): **l'email con qualsiasi casella**. In *Configura → Email e
   WhatsApp* si sceglie il tipo di casella (quella del sito della clinica, consigliata; Aruba;
   Gmail; un altro server) e il programma propone server, porta e sicurezza, con le istruzioni
   di quel tipo; c'è il campo del nome utente per i fornitori che ne danno uno diverso
   dall'indirizzo e la spunta per un server della rete interna senza password; se un'email non
   parte, il messaggio dice cosa correggere, e salvando il programma avvisa già delle scelte che
-  di solito non vanno. Il database non cambia (schema 10) e la Gmail già collegata continua a
-  funzionare com'è. Tutte le prove sono verdi (951 prove, 2550 casi generati, 361 controlli
-  nel browser nella normale e 428 nell'animata); eseguibile e due Setup costruiti e provati in
-  Wine: «Aggiorna adesso» dalla 1.9 vera (il Setup consegnato il 12 ottobre) alla 1.9.1, con la
-  casella collegata dalla 1.9 che continua a mandare; la 1.9.1 animata sopra la 1.9 animata;
-  l'invio delle email sull'eseguibile con finti server di posta (SSL, STARTTLS, senza password,
-  errori spiegati); primo avvio senza dati.
-- La **1.9** (dentro la 1.9.1): **Dove si fa** (menu Dove si fa, tasto D): si scrive la
+  di solito non vanno. La Gmail già collegata continua a funzionare com'è. Provata alla sua
+  consegna (25 ottobre) anche sull'eseguibile: «Aggiorna adesso» dalla 1.9 vera, l'invio delle
+  email con finti server di posta (SSL, STARTTLS, senza password, errori spiegati).
+- La **1.9** (dentro la 1.10): **Dove si fa** (menu Dove si fa, tasto D): si scrive la
   prestazione come la dice il paziente e si vedono le strutture del gruppo dove si fa; la
   scheda della struttura ha recapiti, mappa, orari e il messaggio già scritto per il paziente
   (copia, WhatsApp, email, stampa); il paziente si sceglie dalla pagina o dalla sua scheda; i
@@ -135,20 +146,21 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   zero: il codice lo prende dal progetto privato, che quindi deve esserci. L'11 ottobre 2026
   il progetto delle versioni era ancora **vuoto** (né file né release) e il 19 ottobre
   l'indirizzo pubblico del file delle versioni rispondeva ancora 404: serve prima un file,
-  per esempio un README, poi la release `v1.9.1` con i quattro file (vedi *Pubblicare una
-  versione*); se la 1.8 e la 1.9 non sono state pubblicate nel frattempo, si saltano: la 1.9.1
-  le contiene.
+  per esempio un README, poi la release `v1.10` con i quattro file (vedi *Pubblicare una
+  versione*); se la 1.8, la 1.9 e la 1.9.1 non sono state pubblicate nel frattempo, si saltano:
+  la 1.10 le contiene. Dal PC di Giovanni, con Claude Code, il `gh` vero dopo `gh auth login`
+  basta (vedi *Passare a Claude Code*).
   Appena pubblicata si controlla che l'indirizzo pubblico risponda.
 - **Alla clinica** potrebbe esserci ancora la 1.5, che non ha «Aggiorna adesso». La prima
-  volta il Setup della 1.9.1 si avvia a mano sopra il vecchio: non si disinstalla e i dati
+  volta il Setup della 1.10 si avvia a mano sopra il vecchio: non si disinstalla e i dati
   restano. Dalla 1.6 in poi gli aggiornamenti arrivano dal programma, ogni sei ore o con
   «Controlla adesso».
-- La 1.6 e la 1.7 non sono mai state pubblicate: la prima release su GitHub sarà la 1.9.1
-  (o la 1.8 o la 1.9, se nel frattempo pubblicate).
+- La 1.6 e la 1.7 non sono mai state pubblicate: la prima release su GitHub sarà la 1.10
+  (o una precedente, se nel frattempo pubblicata).
 - Il **codice** (questo repository) è nel pacchetto `gestionale-agende.bundle` consegnato
-  con la 1.9.1 (storia: un commit per versione dalla 1.7 alla 1.9.1, con i tag `v1.7`,
-  `v1.8`, `v1.9` e `v1.9.1`): va messo in un progetto **privato** su GitHub (vedi *Consegnare
-  file a Giovanni*).
+  con la 1.10 dentro lo zip per Claude Code (storia: un commit per versione dalla 1.7 alla
+  1.10, con i tag `v1.7`, `v1.8`, `v1.9`, `v1.9.1` e `v1.10`): va messo in un progetto
+  **privato** su GitHub (vedi *Consegnare file a Giovanni* e *Passare a Claude Code*).
 
 ## Storia in breve
 
@@ -168,6 +180,7 @@ Il dettaglio di ogni versione è in `LEGGIMI.md` (paragrafi *Novità della …* 
 | 1.8 | Turni del personale (mese, settimana, giorno a ore, schema, coperture, controlli dei riposi, Excel), «In servizio oggi», registrazione del numero WhatsApp dal programma, tendine sempre sopra la pagina (la 1.7.1 mai pubblicata) |
 | 1.9 | Dove si fa: ricerca delle prestazioni nelle strutture del gruppo (sigle, plurali, correzioni), scheda della struttura con recapiti e messaggio per il paziente (copia, WhatsApp, email, stampa), registro dei pazienti indirizzati, database delle prestazioni importato dall'Excel del gruppo con l'anteprima |
 | 1.9.1 | L'email con qualsiasi casella: tipo di casella con server, porta e sicurezza proposti (sito della clinica, Aruba, Gmail, altro server), nome utente diverso dall'indirizzo, server senza password, errori che dicono cosa correggere |
+| 1.10 | Le fasce di ogni ambulatorio: ogni turno con la sua durata delle fasce, la prestazione occupa fasce intere (blocco), griglia a righe fitte con l'ora in ogni fascia libera, prima disponibilità e Sposta sulle fasce, avviso per un orario a metà fascia e per gli appuntamenti già presi che non stanno nelle fasce nuove |
 
 Idee messe da parte da Giovanni: un **PIN** per aprire il programma ("ignora il PIN": non
 fatto, non richiesto per ora).
@@ -246,6 +259,26 @@ fatto, non richiesto per ora).
   (OFL) e, nell'animata, lottie-web (MIT) per le animazioni degli stati vuoti. I testi delle
   licenze sono in `static/icone/LICENZE.txt` e accanto ai caratteri. Niente librerie di
   animazione: bastano le animazioni CSS, che si spengono con «riduci movimento».
+- **Le fasce sono del turno, non della clinica né della prestazione** (1.10). Federica aveva
+  segnalato, tramite Giovanni, l'«incompatibilità tra durata prestazione e programmazione
+  ambulatorio scadenzata con blocco e unica per tutta la clinica»: fino alla 1.9.1 c'era una
+  sola misura di fascia per struttura (30 minuti), mentre ogni ambulatorio ha la sua
+  programmazione (visite ogni 20, endoscopie ogni 15) e una prestazione deve bloccare le fasce
+  intere. Fra le soluzioni proposte Giovanni ha scelto le **fasce per turno**: ogni turno
+  (medico, stanza, giorno, orario) può avere la sua durata, dall'ora di inizio del turno; gli
+  altri turni restano con quella della struttura. Un appuntamento occupa tutte le fasce che
+  tocca: una prestazione più corta della fascia la blocca intera («mai buchi da 10 minuti
+  prenotabili per sbaglio»), una più lunga ne prende più d'una. Il blocco vale per la stanza;
+  il medico conta con gli orari veri. Un orario a metà fascia si accetta con un avviso (i
+  ritardi e gli esami infilati esistono): rifiutarlo avrebbe obbligato a cambiare le fasce per
+  un caso solo. Gli appuntamenti presi prima delle fasce non si spostano da soli (sarebbe
+  cambiare l'orario detto al paziente): restano, salvando il turno il programma dice quanti non
+  stanno nelle fasce nuove, e modificandoli contano solo le fasce nuove che prenderebbero, così
+  una nota o un cambio di medico non vengono mai rifiutati. La griglia ha una sola colonna delle
+  ore per tutte le stanze: le righe diventano il massimo comun divisore delle fasce (con 30 e
+  15, righe da 15; con 30 e 20, da 10), alte in proporzione al tempo. Senza turni a fasce
+  proprie il programma deve restare identico alla 1.9.1, e `prove_110.py` lo controlla con le
+  funzioni della 1.9.1 copiate e ferme dentro la prova.
 - **Le prove servono quanto il codice.** Ogni difetto trovato diventa una prova che lo
   riproduce. Le prove nuove si verificano introducendo apposta un errore nel codice (un
   "mutante") e controllando che la prova lo segnali.
@@ -283,8 +316,8 @@ python strumenti/tutte_le_prove.py --browser http://127.0.0.1:5001   # tutte, an
 python strumenti/tutte_le_prove.py --solo prove_17,campagna     # solo alcune
 ```
 
-In totale: 951 prove e 2550 casi generati (`campagna.py`), più 361 controlli nel browser
-nella normale e 428 nell'animata (che ha anche `prove_animazioni.py` e
+In totale: 973 prove e 2550 casi generati (`campagna.py`), più 382 controlli nel browser
+nella normale e 449 nell'animata (che ha anche `prove_animazioni.py` e
 `prove_icone_animate.py`). Le prove nel browser (Playwright con Chromium) salvano dati:
 sempre sul server di prova, mai su quello vero; `prove_16_browser.py` cambia l'indirizzo
 degli aggiornamenti e per questo il giro la lancia per ultima. Ogni prova si può anche
@@ -295,12 +328,22 @@ riga finale («0 da sistemare»), ed è quella che legge `tutte_le_prove.py`. Og
 sua cartella temporanea, quindi le due cartelle si possono provare insieme. `prove_17.py`
 confronta il codice fiscale con il pacchetto indipendente python-codicefiscale
 (`pip install python-codicefiscale`); senza il pacchetto quelle prove si saltano e lo
-dicono. Tutto verde alla 1.9.1 su Python 3.13 (alla 1.9 su 3.11 e 3.14). `prove_191.py` prova
+dicono. Tutto verde alla 1.10 e alla 1.9.1 su Python 3.13 (alla 1.9 su 3.11 e 3.14). `prove_191.py` prova
 l'email con lo stesso finto server di posta di `prove_15.py` (STARTTLS, SSL e accesso veri su
 127.0.0.1) e con un finto `smtplib` per gli errori che un server locale non sa fare.
 `prove_19.py` confronta la ricerca di Dove si fa con un oracolo scritto a parte su 1200
 prestazioni inventate (ogni risultato contiene tutte le parole cercate, ogni prestazione si
-trova con l'inizio delle sue parole).
+trova con l'inizio delle sue parole). `prove_110.py` prova le fasce dei turni in tre modi: senza
+fasce proprie griglia, agenda del medico, controlli, avvisi e prima disponibilità devono essere
+identici a quelli della 1.9.1 (le cinque funzioni della 1.9.1 sono copiate nella prova e non si
+toccano più; una prova controlla con git che la copia sia fedele e che le funzioni che usano
+non siano cambiate); con le fasce proprie colonne e celle si confrontano con un calcolo minuto
+per minuto e riga per riga, i controlli con le fasce toccate calcolate a parte, la prima
+disponibilità con il controllo vero ora per ora; e poi i casi scritti a mano. Con
+`PROVE_GIRI=500` usa più giorni inventati (predefinito 120); su Linux è passata anche così.
+Finora tutte le prove sono state lanciate solo su Linux: su Windows le prove con i certificati
+(`prove_15.py`, `prove_16.py`, `prove_191.py`) cercano il comando `openssl`, che c'è nella
+riga di comando di Git for Windows.
 
 ## Guide: immagini e video
 
@@ -317,7 +360,17 @@ Tutte e due devono finire senza "non trovati". Si fa in tutte e due le versioni:
 dell'animata hanno le sue icone. `prove_guida.py` controlla che ogni guida abbia immagine e
 video. Il PDF della guida (`/aiuto/stampa` in A4, circa 43 pagine):
 `python strumenti/genera_pdf_guida.py http://127.0.0.1:5001`, che scrive
-«Guida Gestionale Agende <versione>.pdf».
+«Guida Gestionale Agende <versione>.pdf» (alla 1.10, 48 pagine).
+
+Le pagine fotografate usano i segnaposto `{martedi}` (il martedì di questa settimana),
+`{domani}` e `{oggi}`, come i dati di `strumenti/demo.py`, che sono costruiti attorno a oggi.
+Attenzione al giorno in cui si rigenera: la guida *Leggere la griglia del giorno* fotografa
+`{domani}`, e di sabato domani è domenica, senza turni (i passi non trovano le fasce libere).
+Alla 1.10, rigenerate di sabato, sono state rifatte solo le guide delle pagine cambiate
+(*Le fasce di ogni ambulatorio*, nuova, *Stampare la giornata* e *Aggiungere un medico e i
+suoi turni*). Il martedì della prova la sala endoscopia ha le fasce da 15 minuti: è il giorno
+che mostra le fasce dei turni. «Mostrami sullo schermo» della guida sulle fasce apre il primo
+giorno, da oggi, con un turno a fasce proprie (segnaposto `FASCE` in `guida.py`).
 
 ## Costruire e provare l'installatore
 
@@ -389,6 +442,18 @@ sopra la 1.9 animata, stessi risultati; 34 controlli di `prove_installato.py` a 
 tutte e due e su un database nuovo; `prova_email_installato.py` con 12 controlli su 12 su
 tutte e due.
 
+Alla 1.10 così: le due versioni costruite nello stesso Windows finto; la 1.9.1 normale installata
+nelle prove della 1.9.1 (con i suoi 46 appuntamenti inventati e 27 turni) aggiornata con
+«Aggiorna adesso» alla 1.10: 14 controlli su 14, copia *prima della versione 11* identica al
+database di prima, le 28 tabelle identiche riga per riga dopo (i turni con la colonna nuova
+vuota); la 1.10 animata installata con il Setup sopra la 1.9.1 animata, stessi risultati; 40
+controlli di `prove_installato.py` a posto su tutte e due e su un database nuovo; sull'eseguibile,
+nel browser, un turno passato a fasce da 20 e la sua griglia (7 controlli), e sul database nuovo
+il primo giorno con un turno a fasce da 20, una visita da 30 minuti su due fasce e una
+prenotazione alle 9:30 rifiutata (7 controlli). Gli script delle due prove sull'eseguibile non
+sono nel repository (erano nella cartella di lavoro della sessione): le stesse cose le fanno
+`prove_110_browser.py` e `prove_110.py` sul programma di prova.
+
 Il programma installato nel Windows finto ha i suoi dati in
 `$WINEPREFIX/drive_c/users/<utente>/AppData/Local/GestionaleAgende`. Sono dati delle prove,
 in parte importati dalle agende vere: mai nelle immagini né nei file consegnati.
@@ -459,7 +524,7 @@ grossi in pezzi e scrive `RICOMPONI.bat`, che su Windows li rimette insieme e co
 dimensione e impronta. Su GitHub invece i Setup vanno interi.
 
 Il codice viaggia come `gestionale-agende.bundle`: un solo file di git con tutta la storia
-(ramo `main`, tag `v1.7`, `v1.8`, `v1.9` e `v1.9.1`). Per metterlo in un progetto **privato** su GitHub (per
+(ramo `main`, tag `v1.7`, `v1.8`, `v1.9`, `v1.9.1` e `v1.10`). Per metterlo in un progetto **privato** su GitHub (per
 esempio `number959/gestionale-agende`, creato vuoto e privato dalla pagina di GitHub, senza
 README):
 
@@ -474,12 +539,47 @@ Con un bundle nuovo, nella stessa cartella: `git pull ../gestionale-agende.bundl
 poi `git push origin main --tags`. Il progetto delle versioni resta un altro, pubblico, con
 le sole release: lì il codice non va.
 
+## Passare a Claude Code
+
+Il 31 ottobre 2026 Giovanni ha chiesto di continuare il lavoro con Claude Code, sul suo PC
+Windows, invece che nella sessione di Claude nel cloud dove il progetto è nato. Gli è stato
+consegnato lo zip **GestionaleAgende-1.10-per-Claude-Code** (a pezzi, con `RICOMPONI.bat`), che
+contiene: `LEGGIMI PRIMA - Passare a Claude Code.txt` (cosa installare: Git for Windows, Python
+3.13 o 3.14, Claude Code con `irm https://claude.ai/install.ps1 | iex`, Inno Setup 6 per i
+Setup; come aprire il progetto; GitHub; come pubblicare la 1.10), `PROMPT per Claude Code.txt`
+(il primo messaggio da incollare), `gestionale-agende.bundle` (questo repository con la storia e
+i tag fino a `v1.10`), la cartella `Setup` con i quattro file della release 1.10 e la guida PDF.
+
+Il prompt chiede a Claude Code, nell'ordine: clonare il bundle in `gestionale-agende`, leggere
+questo file e `gestionale/CLAUDE.md`, preparare Python (`python -m pip install -r
+gestionale/requirements.txt playwright python-codicefiscale`, `python -m playwright install
+chromium`), lanciare `python strumenti/tutte_le_prove.py` nelle due cartelle e fermarsi a
+spiegare se su Windows qualcosa non va, poi riassumere lo stato e proporre i passi; niente
+pubblicazioni né push senza il via di Giovanni. Claude Code legge da solo `CLAUDE.md` della
+cartella in cui parte e delle cartelle sopra; quello di `gestionale/` lo carica quando lavora
+lì dentro.
+
+Su Windows non serve Wine: `CREA_EXE.bat` e `CREA_SETUP.bat` dentro ciascuna cartella. La
+riga di comando di Claude Code su Windows è quella di Git for Windows (bash): gli script di
+`strumenti/wine/` non servono, i `.bat` si lanciano con `cmd //c CREA_EXE.bat` o da Esplora
+risorse. Per GitHub c'è il vero `gh` (`winget install GitHub.cli`, poi `gh auth login`): la
+release si fa con `gh release create` come in *Pubblicare una versione*.
+
 ## Cose aperte
 
-- Pubblicare la 1.9.1 su GitHub (contiene la 1.8 e la 1.9) e
-  controllare l'indirizzo pubblico (vedi *Stato alla consegna*); mettere il codice
-  (`gestionale-agende.bundle`) in un progetto privato.
-- Installare la 1.9.1 alla clinica la prima volta a mano, se c'è ancora la 1.5.
+- In Claude Code, per prima cosa: le prove su Windows, mai lanciate finora (vedi *Passare a
+  Claude Code*); quello che dipende dall'ambiente si sistema nelle prove, non nel programma.
+- Pubblicare la 1.10 su GitHub (contiene la 1.8, la 1.9 e la 1.9.1) e controllare l'indirizzo
+  pubblico (vedi *Stato alla consegna*); mettere il codice (`gestionale-agende.bundle`) in un
+  progetto privato.
+- Installare la 1.10 alla clinica la prima volta a mano, se c'è ancora la 1.5.
+- **Fasce dei turni**: con Federica, scegliere la durata delle fasce dei turni che ne hanno
+  bisogno (per esempio le sedute di endoscopia e gli ambulatori con le visite ogni 20 minuti),
+  da *Configura → Anagrafiche*, il turno, *Durata delle fasce*. Salvando ogni turno il programma
+  dice quanti appuntamenti già presi non stanno nelle fasce nuove: vanno guardati nella griglia
+  (restano dove sono finché non si spostano). Federica non ha ancora visto la 1.10; se chiede
+  fasce diverse nello stesso turno (per esempio la prima visita più lunga), è una funzione
+  nuova: oggi la durata è una per turno.
 - WhatsApp: quando Giovanni avrà numero, ID del numero e token di Meta, registrare il
   numero una volta dal programma (Configura → Email e WhatsApp → «Registra il numero», con
   il PIN a sei cifre della verifica in due passaggi) e mandare un messaggio di prova.
@@ -517,8 +617,10 @@ le sole release: lì il codice non va.
 
 1. Leggi questo file, poi `gestionale/CLAUDE.md` e le parti di `gestionale/LEGGIMI.md` che
    riguardano il lavoro da fare.
-2. `pip install -r gestionale/requirements.txt playwright python-codicefiscale`, poi
-   `playwright install chromium` (se non c'è già un Chromium).
+2. `python -m pip install -r gestionale/requirements.txt playwright python-codicefiscale`, poi
+   `python -m playwright install chromium` (se non c'è già un Chromium). Su Windows servono
+   anche Git for Windows (la riga di comando bash e `openssl`, che usano alcune prove) e, per
+   i Setup, Inno Setup 6.
 3. Lancia le prove di tutte e due le cartelle (`python strumenti/tutte_le_prove.py` dentro
    ciascuna): devono essere tutte verdi prima di toccare qualcosa.
 4. Per vedere il programma: `python strumenti/demo.py` dentro `gestionale/`, poi

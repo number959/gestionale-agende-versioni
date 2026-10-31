@@ -13,6 +13,27 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.10', [
+        dict(titolo='Fasce di ogni ambulatorio',
+             testo='Ogni turno può avere fasce sue: Configura → Anagrafiche → il turno → «Durata delle fasce» '
+                   '(per esempio visite ogni 20 minuti, endoscopia ogni 15). Prima la durata era una sola per tutta '
+                   'la clinica; il resto della struttura resta com\'era.',
+             guida='fasce-turno'),
+        dict(titolo='La prestazione occupa fasce intere',
+             testo='Nella griglia una colonscopia da 45 minuti con fasce da 15 ne occupa tre; una visita più corta '
+                   'della fascia la occupa tutta. Così non restano buchi da prenotare per sbaglio, e un altro '
+                   'appuntamento nella stessa fascia non si salva.',
+             guida='fasce-turno'),
+        dict(titolo='Prima disponibilità e spostamenti seguono le fasce',
+             testo='Prima disponibilità e Sposta propongono gli orari delle fasce di ogni turno. Un orario scritto a '
+                   'mano che non è l\'inizio di una fascia si salva con un avviso.',
+             guida='fasce-turno'),
+        dict(titolo='Gli appuntamenti già presi restano',
+             testo='Cambiando le fasce di un turno gli appuntamenti già prenotati non si spostano: salvando il turno '
+                   'il programma dice quanti non stanno nelle fasce nuove, da controllare nella griglia. Si possono '
+                   'sempre modificare.',
+             guida='fasce-turno'),
+    ]),
     ('1.9.1', [
         dict(titolo='L\'email con qualsiasi casella, anche senza Gmail',
              testo='In Configura → Email e WhatsApp si sceglie il tipo di casella: quella del sito della clinica '
