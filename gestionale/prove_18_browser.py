@@ -10,7 +10,11 @@ avviato con i dati di prova (strumenti/demo.py):
 - settimana: copia della settimana prima; schema a rotazione con anteprima;
 - giorno a ore: scelta sulla riga, «Turno a...», Annulla dopo il ricaricare;
 - tipi di turno e scheda di una persona; Oggi; schermo stretto; movimento
-  ridotto; nessun errore JavaScript.
+  ridotto; nessun errore JavaScript;
+- dalla 1.11: Ctrl+Z mentre si scrive un codice lo lascia perdere, e mentre
+  una modifica si sta ancora salvando (programma lento) annulla quella, nella
+  griglia e nella vista del giorno; con il filtro per area il codice scritto
+  compare e il turno nascosto di un'altra area resta.
 Cambia i turni di un mese lontano scelto a caso (si puo' rifare sullo stesso
 gestionale): usarla su un gestionale di prova, mai su quello vero."""
 import os
@@ -219,6 +223,121 @@ with sync_playwright() as p:
        cella(A1, 5).get_attribute('role') == 'gridcell' and A1 in (cella(A1, 5).get_attribute('aria-label') or '') and
        pg.get_attribute('#griglia-turni', 'aria-multiselectable') == 'true' and
        pg.locator('.avvisi-turni[aria-live="polite"]').count() == 1)
+
+    # ------------------------------------------------ 1.11: Ctrl+Z mentre si scrive un codice o si salva
+    A5, A6, A7 = nomi[4].split()[0], nomi[5].split()[0], nomi[6].split()[0]
+    pid5 = riga(A5).get_attribute('data-persona')
+    chiudi_avvisi()
+    cella(A5, 2).click()
+    pg.keyboard.press('Escape')
+    pg.keyboard.press('g')
+    quieta()
+    pg.keyboard.press('m')
+    pg.wait_for_timeout(120)
+    scritto = pg.evaluate("(document.querySelector('[data-scrivendo]') || {getAttribute: () => ''}).getAttribute('data-scrivendo')")
+    pg.keyboard.press('Control+z')
+    pg.wait_for_timeout(1200)            # piu' dell'attesa di M (che potrebbe diventare MA)
+    quieta()
+    ok('Ctrl+Z mentre si scrive M: il codice si lascia perdere, la G di prima resta',
+       scritto == 'M' and codici(cella(A5, 2)) == ['G'] and codici(cella(A5, 3)) == [],
+       (scritto, codici(cella(A5, 2)), codici(cella(A5, 3)), avviso()))
+    pg.keyboard.press('Control+z')
+    pg.wait_for_timeout(200)
+    quieta()
+    ok('... e il Ctrl+Z dopo annulla la G', codici(cella(A5, 2)) == [] and 'Annullato: Giornata' in avviso(), avviso())
+    cella(A6, 2).click()
+    pg.keyboard.press('Escape')
+    pg.keyboard.press('n')
+    quieta()
+    chiudi_avvisi()
+    # un programma lento: la risposta a «metti» arriva dopo un secondo e mezzo
+    pg.evaluate("""() => { window.__fetchVero = window.__fetchVero || window.fetch;
+      window.fetch = function (url, o) {
+        var p = window.__fetchVero.apply(this, arguments);
+        if (!o || !o.body || o.body.indexOf('"azione":"metti"') < 0) { return p; }
+        return p.then(function (r) { return new Promise(function (fatto) { setTimeout(function () { fatto(r); }, 1500); }); });
+      }; }""")
+    pg.keyboard.press('g')
+    pg.wait_for_timeout(150)
+    in_volo = pg.locator('#griglia-turni td.cella.in-attesa').count()
+    pg.keyboard.press('Control+z')
+    pg.wait_for_timeout(1800)
+    quieta()
+    pg.evaluate("() => { window.fetch = window.__fetchVero; }")
+    ok('Ctrl+Z mentre la G si sta ancora salvando: annulla la G, non la N di prima',
+       in_volo == 1 and codici(cella(A6, 2)) == ['N'] and codici(cella(A6, 3)) == [] and 'Annullato: Giornata' in avviso(),
+       (in_volo, codici(cella(A6, 2)), codici(cella(A6, 3)), avviso()))
+    pg.goto(B + '/personale/turni/mese/' + AAAAMM)
+    salvati = [codici(cella(A5, 2)), codici(cella(A5, 3)), codici(cella(A6, 2)), codici(cella(A6, 3))]
+    ok('... anche nel database: la M lasciata perdere non c\'e\', la N si', salvati == [[], [], ['N'], []], salvati)
+
+    # ------------------------------------------------ 1.11: con il filtro per area
+    cella(A7, 3).click()
+    pg.locator('#scelta-altro summary').click()
+    pg.fill('#scelta-area', 'Ambulatori')
+    pg.fill('#scelta-nota', 'cambio con collega')
+    pop.locator('.scelta-tipo[data-codice="P"]').click()
+    quieta()
+    pg.goto(B + '/personale/turni/mese/' + AAAAMM + '?area=Degenza')
+    vuota = codici(cella(A7, 3))
+    cella(A7, 3).click()
+    pg.keyboard.press('Escape')
+    pg.keyboard.press('n')
+    quieta()
+    ok('filtro Degenza: in una cella che sembra vuota il codice scritto compare', vuota == [] and
+       codici(cella(A7, 3)) == ['N'], (vuota, codici(cella(A7, 3))))
+    pg.goto(B + '/personale/turni/mese/' + AAAAMM)
+    titolo = cella(A7, 3).get_attribute('title') or ''
+    ok('... e il turno nascosto dell\'altra area resta, con la sua nota; il nuovo e\' della Degenza',
+       codici(cella(A7, 3)) == ['P', 'N'] and 'Pomeriggio 14–21, Ambulatori (cambio con collega)' in titolo and
+       'Notte 21–7, Degenza' in titolo, (codici(cella(A7, 3)), titolo))
+    pg.goto(B + '/personale/turni/mese/' + AAAAMM + '?area=Degenza')
+    cella(A7, 3).click()
+    pg.keyboard.press('Escape')
+    pg.keyboard.press('Delete')
+    quieta()
+    tolta = codici(cella(A7, 3))
+    pg.goto(B + '/personale/turni/mese/' + AAAAMM)
+    ok('Canc con il filtro toglie solo il turno che si vede', tolta == [] and codici(cella(A7, 3)) == ['P'],
+       (tolta, codici(cella(A7, 3))))
+
+    # ------------------------------------------------ 1.11: la vista del giorno, Ctrl+Z mentre si scrive o si salva
+    cella(A5, 20).click()
+    pg.keyboard.press('Escape')
+    pg.keyboard.press('g')
+    quieta()
+    g20 = (MESE + timedelta(days=19)).isoformat()
+    pg.goto(B + '/personale/turni/giorno/' + g20)
+    pista = pg.locator('.pista[data-k="%s_%s"]' % (pid5, g20))
+    pista.focus()
+    pg.keyboard.press('m')
+    pg.wait_for_timeout(120)
+    pg.keyboard.press('Control+z')
+    pg.wait_for_timeout(1300)
+    pg.goto(B + '/personale/turni/giorno/' + g20)
+    etichetta = pista.get_attribute('aria-label') or ''
+    ok('giorno: Ctrl+Z mentre si scrive M lascia perdere il codice', 'Giornata' in etichetta and 'Mattina' not in etichetta,
+       etichetta)
+    pista.focus()
+    with pg.expect_navigation():
+        pg.keyboard.press('f')
+    pg.evaluate("""() => { var vero = window.fetch;
+      window.fetch = function (url, o) {
+        var p = vero.apply(this, arguments);
+        if (!o || !o.body || o.body.indexOf('"azione":"metti"') < 0) { return p; }
+        return p.then(function (r) { return new Promise(function (fatto) { setTimeout(function () { fatto(r); }, 1500); }); });
+      }; }""")
+    pista.focus()
+    with pg.expect_navigation(timeout=10000):
+        pg.keyboard.press('n')
+        pg.wait_for_timeout(150)
+        pg.keyboard.press('Control+z')
+        aspetta = avviso('avviso')
+    pg.wait_for_timeout(1000)
+    pg.goto(B + '/personale/turni/giorno/' + g20)
+    etichetta = pista.get_attribute('aria-label') or ''
+    ok('giorno: Ctrl+Z mentre la N si salva non annulla la modifica di prima (la N resta)',
+       'Un momento' in aspetta and 'Notte' in etichetta, (aspetta, etichetta))
 
     # ------------------------------------------------ la settimana: copia e schema
     lun = lunedi_dopo(MESE + timedelta(days=1))
