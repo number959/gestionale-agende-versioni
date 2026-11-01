@@ -1,0 +1,7 @@
+Gestionale Agende 1.11
+
+**Il programma si ripara da solo.** Il database si controlla all'avvio e ogni mezz'ora: se si rovina (per esempio dopo che è saltata la corrente) il programma lo ripara senza perdere niente quando si può, altrimenti rimette l'ultima copia di sicurezza buona e dice da che ora ricontrollare. Il file rovinato non si cancella mai. Se il programma si blocca, basta cliccare di nuovo l'icona: quello bloccato si chiude e se ne apre uno nuovo. Le copie di sicurezza si fanno anche ogni due ore se ci sono modifiche. Tutto in *Impostazioni → Controllo del programma*, con la sua guida.
+
+**Difetti corretti** (40, ciascuno con la sua prova): nei messaggi ai pazienti (un messaggio in attesa di riprovare non arriva più al paziente di prima; la password con lettere accentate; una serie riceve l'email una volta sola), nell'agenda (una stanza disattivata non si propone più; l'anno a due cifre; la sostituzione di un giorno non blocca più il turno del medico assente; le fasce intere), nelle schede dei pazienti, nell'importazione da Excel (orari scritti come numeri, «Dott.» nella colonna del medico, la stessa sala con maiuscole diverse, le righe disdette, la reimportazione), nei turni del personale (Annulla, il filtro per area, Ctrl+Z mentre si scrive), nelle copie di sicurezza e nelle pagine (nessuna pagina si mostra dentro un altro sito).
+
+Contiene anche la 1.8, la 1.9, la 1.9.1 e la 1.10, mai pubblicate qui. Il database non cambia rispetto alla 1.10. Appuntamenti, pazienti e impostazioni restano dove sono.
