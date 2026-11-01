@@ -35,7 +35,7 @@ from sqlalchemy.orm import joinedload
 
 import calendario
 import servizi
-from comune import (PRIMA, ULTIMA, data_da, destinazione_sicura, intero, json_sicuro, mese_da, scarica_excel,
+from comune import (PRIMA, ULTIMA, data_da, destinazione_sicura, intero, json_sicuro, mese_da, scarica_excel, testo_excel,
                     struttura_scelta)
 from modelli import (CATEGORIE_TURNO, ETICHETTA_CATEGORIA, ETICHETTA_RUOLO, ORDINE_RUOLO, RUOLI, CoperturaMinima,
                      Operatore, Persona, TipoTurno, TurnoPersonale, testo_su)
@@ -71,7 +71,7 @@ def ses():
 # ================================================================ orari
 def leggi_ora(testo):
     """'7', '7:30', '07.30', '0730' -> time; None se non e' un'ora."""
-    t = (testo or '').strip().replace('.', ':')
+    t = (str(testo) if testo is not None and not isinstance(testo, (list, dict)) else '').strip().replace('.', ':')
     m = re.fullmatch(r'(\d{1,2})(?::?(\d{2}))?', t)
     if not m:
         return None
@@ -1343,7 +1343,7 @@ def esporta_mese(s, st, primo, ultimo, ruolo='', area=''):
         titolo += ' · ' + ETICHETTA_RUOLO[ruolo]
     if area:
         titolo += ' · ' + area
-    ws.cell(row=1, column=1, value=titolo).font = Font(bold=True, size=14, color=blu)
+    ws.cell(row=1, column=1, value=testo_excel(titolo)).font = Font(bold=True, size=14, color=blu)
     riga = 3
     intestazioni = ['Cognome e nome', 'Qualifica'] + ['%s\n%d' % (GIORNI_CORTI[g.weekday()], g.day) for g in giorni] + \
                    ['Ore', 'Notti', 'Festivi', 'Assenze']
@@ -1428,8 +1428,8 @@ def esporta_mese(s, st, primo, ultimo, ruolo='', area=''):
             el.cell(row=n, column=7, value=t.inizio).number_format = 'DD/MM/YYYY HH:MM'
             el.cell(row=n, column=8, value=t.fine).number_format = 'DD/MM/YYYY HH:MM'
             el.cell(row=n, column=9, value=round(t.minuti / 60, 2))
-        el.cell(row=n, column=10, value=t.area or '')
-        el.cell(row=n, column=11, value=t.note or '')
+        el.cell(row=n, column=10, value=testo_excel(t.area or ''))
+        el.cell(row=n, column=11, value=testo_excel(t.note or ''))
         n += 1
     for i, w in enumerate((12, 8, 26, 16, 8, 22, 17, 17, 7, 18, 30), 1):
         el.column_dimensions[get_column_letter(i)].width = w

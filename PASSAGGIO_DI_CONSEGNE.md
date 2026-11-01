@@ -94,7 +94,7 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 - **Versione 1.11**, in lavorazione sul ramo `ccr-07f8e160-7j5lup` del progetto pubblico
   `number959/gestionale-agende-versioni` (scelta di Giovanni del 1° novembre: il codice sta lì,
-  non in un progetto privato). Porta **l'autoriparazione** e **34 difetti corretti** trovati con una
+  non in un progetto privato). Porta **l'autoriparazione** e **40 difetti corretti** trovati con una
   revisione del codice per parti, ciascuno riprodotto da un controllo indipendente prima di
   correggerlo e con una prova che fallisce sul codice della 1.10. Tutte le prove sono verdi nelle
   due cartelle (vedi *La 1.11* per i numeri e per cosa resta da fare prima di pubblicarla).
@@ -188,7 +188,7 @@ Il dettaglio di ogni versione è in `LEGGIMI.md` (paragrafi *Novità della …* 
 | 1.9 | Dove si fa: ricerca delle prestazioni nelle strutture del gruppo (sigle, plurali, correzioni), scheda della struttura con recapiti e messaggio per il paziente (copia, WhatsApp, email, stampa), registro dei pazienti indirizzati, database delle prestazioni importato dall'Excel del gruppo con l'anteprima |
 | 1.9.1 | L'email con qualsiasi casella: tipo di casella con server, porta e sicurezza proposti (sito della clinica, Aruba, Gmail, altro server), nome utente diverso dall'indirizzo, server senza password, errori che dicono cosa correggere |
 | 1.10 | Le fasce di ogni ambulatorio: ogni turno con la sua durata delle fasce, la prestazione occupa fasce intere (blocco), griglia a righe fitte con l'ora in ogni fascia libera, prima disponibilità e Sposta sulle fasce, avviso per un orario a metà fascia e per gli appuntamenti già presi che non stanno nelle fasce nuove |
-| 1.11 | L'autoriparazione (il database controllato e riparato da solo senza perdere dati, un gestionale solo, il programma bloccato che si chiude e si riapre, i lavori in sottofondo che ripartono, le copie ogni due ore, la pagina Controllo del programma) e 34 difetti corretti nei messaggi, nell'agenda, nelle schede, nell'importazione, nei turni del personale e nelle copie di sicurezza |
+| 1.11 | L'autoriparazione (il database controllato e riparato da solo senza perdere dati, un gestionale solo, il programma bloccato che si chiude e si riapre, i lavori in sottofondo che ripartono, le copie ogni due ore, la pagina Controllo del programma) e 40 difetti corretti nei messaggi, nell'agenda, nelle schede, nell'importazione, nei turni del personale, nelle copie di sicurezza e nelle pagine |
 
 Idee messe da parte da Giovanni: un **PIN** per aprire il programma ("ignora il PIN": non
 fatto, non richiesto per ora).
@@ -594,13 +594,14 @@ pagina rimasta fuori dall'albero dopo una corrente saltata si riparava dicendo �
 niente»). `prove_autoriparazione.py`: 60 prove, verdi su Linux e con il Python di Windows in Wine;
 25 mutanti su 25 presi.
 
-**I difetti corretti** (34, tutti nello storico del `LEGGIMI.md`, con la prova in `prove_111*.py`):
+**I difetti corretti** (40, tutti nello storico del `LEGGIMI.md`, con la prova in `prove_111*.py`):
 sette nei messaggi ai pazienti (il più grave: un messaggio in attesa di riprovare arrivava
 all'indirizzo del paziente di prima con il testo del paziente nuovo), cinque nell'agenda (una stanza
 disattivata proposta e usata, l'anno a due cifre, la sostituzione che bloccava il turno del
 sostituito, due nelle fasce intere), tre nelle schede dei pazienti (unione, omocodia, scheda
 sovrascritta), dieci nell'importazione da Excel, tre nei turni del personale, sei nelle copie e
-nel ripristino. Le prove nuove sono state lanciate anche sul codice della 1.10: falliscono.
+nel ripristino, sei nelle pagine e nella sicurezza (una pagina del gestionale non si mostra più dentro
+la cornice di un altro sito: un sito ostile avrebbe potuto far cliccare «Disdetto»). Le prove nuove sono state lanciate anche sul codice della 1.10: falliscono.
 
 **Le prove alla 1.11**: 25 raccolte senza browser nelle due cartelle, tutte verdi (1121 prove e
 2550 casi generati), più le prove nel browser (10 raccolte nella normale, 12 nell'animata, tutte

@@ -82,7 +82,7 @@ Filename: "{app}\{#Eseguibile}"; Description: "Apri il gestionale adesso"; Flags
 Filename: "{app}\{#Eseguibile}"; Parameters: "--avvio-automatico"; Flags: nowait; Check: WizardSilent
 
 [UninstallRun]
-Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM {#Eseguibile}"; Flags: runhidden; RunOnceId: "ChiudiGestionale"
+Filename: "{sys}\taskkill.exe"; Parameters: "/F /T /IM {#Eseguibile}"; Flags: runhidden; RunOnceId: "ChiudiGestionale"
 
 ; Il database e il registro stanno in %LOCALAPPDATA%\GestionaleAgende e non
 ; vengono toccati: ne' dall'aggiornamento ne' dalla disinstallazione.
@@ -214,10 +214,11 @@ procedure ChiudiGestionale();
 var
   Codice: Integer;
 begin
-  { se e' aperto il file e' in uso e non si puo' sostituire. /IM chiude tutti e due i
-    processi dell'eseguibile a file unico (hanno lo stesso nome); senza /T, che
-    chiuderebbe anche il browser aperto dal gestionale (1.11) }
-  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM {#Eseguibile}', '',
+  { se e' aperto il file e' in uso e non si puo' sostituire; /T chiude anche il
+    processo figlio che l'eseguibile a file unico avvia: senza, uno dei due resta
+    e tiene il file (provato nel Windows finto alla 1.11). Il browser aperto dal
+    gestionale qui non c'e': il Setup lo lancia Aggiorna adesso dal programma }
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /T /IM {#Eseguibile}', '',
        SW_HIDE, ewWaitUntilTerminated, Codice);
   Sleep(700);
 end;

@@ -31,7 +31,8 @@ from modelli import (crea_sessione, aggiorna_database, VERSIONE_SCHEMA, percorso
                      METODI_PAGAMENTO, PROVENIENZE, leggi_impostazione, importo_in_testo,
                      DEGENZE, ETICHETTA_DEGENZA, MASSIMO_NOTTI, MASSIMO_IMPORTO)
 import servizi
-from comune import MASSIMO_ID, PRIMA, ULTIMA, VERSIONE, data_da, destinazione_sicura, intero, scarica_excel
+from comune import (MASSIMO_ID, PRIMA, ULTIMA, VERSIONE, data_da, destinazione_sicura, intero, scarica_excel,
+                    testo_pulito)
 data_da_stringa = data_da              # il nome di sempre, nel resto del file
 import anagrafiche
 import pazienti
@@ -137,6 +138,22 @@ def solo_dal_gestionale():
     return None
 
 
+@app.after_request
+def mai_in_una_cornice(risposta):
+    """Le pagine del gestionale non si mostrano dentro la cornice (iframe) di un
+    altro sito: un sito ostile, con la cornice trasparente sopra un pulsante
+    esca, farebbe cliccare «Disdetto» alla segreteria (1.11). I moduli da
+    dentro una cornice passerebbero il controllo dell'origine, perche' li' sono
+    della stessa origine."""
+    risposta.headers.setdefault('X-Frame-Options', 'DENY')
+    csp = risposta.headers.get('Content-Security-Policy')
+    if csp is None:
+        risposta.headers['Content-Security-Policy'] = "frame-ancestors 'none'"
+    elif 'frame-ancestors' not in csp:
+        risposta.headers['Content-Security-Policy'] = csp.rstrip('; ') + "; frame-ancestors 'none'"
+    return risposta
+
+
 @app.before_request
 def segna_inizio():
     # per /salute: un gestionale con tutti i fili fermi su una pagina e' bloccato
@@ -205,6 +222,14 @@ def momento(giorno, ora):
 def troppo_grande(_):
     # invece della pagina di errore del server, si torna al modulo con una spiegazione
     flash('Il file è troppo grande: al massimo 10 MB per un documento o un\'importazione, 3 MB per il logo.', 'errore')
+    # un indirizzo che accetta solo i moduli (i documenti del paziente) risponderebbe «405»:
+    # si torna alla pagina da cui si e' partiti (1.11)
+    regola = next((r for r in app.url_map.iter_rules() if r.rule == request.url_rule.rule), None) \
+        if request.url_rule else None
+    if regola is not None and 'GET' not in (regola.methods or ()):
+        provenienza = request.headers.get('Referer') or ''
+        m = re.match(r'https?://[^/]+(/[^#]*)', provenienza)
+        return redirect(destinazione_sicura(m.group(1) if m else '', request.path.rsplit('/', 1)[0] or '/'))
     return redirect(request.path)
 
 
@@ -637,7 +662,7 @@ def salva(s, a, aid, rid, oid, pid, inizio, fine, sid_form, nuovi=None, extra=No
     a.risorsa_id, a.operatore_id, a.prestazione_id = rid, oid, pid
     a.paziente_id = paz.id if paz else None
     a.inizio, a.fine = inizio, fine
-    a.note = request.form.get('note', '')
+    a.note = testo_pulito(request.form.get('note', ''))
     for k, v in (nuovi or {}).items():
         setattr(a, k, v)
     a.extra = json.dumps(extra, ensure_ascii=False) if extra else ''

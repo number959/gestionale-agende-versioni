@@ -12,7 +12,7 @@ from sqlalchemy import select
 from modelli import (Struttura, Risorsa, Operatore, Appuntamento, Attivita, STATI_ATTIVI, ETICHETTA_STATO,
                      ETICHETTA_PAGAMENTO, importo_in_testo)
 import servizi
-from comune import indirizzo_mail, mese_da, scarica_excel
+from comune import indirizzo_mail, mese_da, scarica_excel, testo_excel
 import segreteria
 import sala
 import cassa
@@ -275,7 +275,8 @@ def riepilogo_excel(aaaamm):
                       ETICHETTA_STATO.get(a.stato, a.stato), a.convenzione or '',
                       (a.importo_cent / 100.0) if a.importo_cent is not None else None,
                       (a.pagato_cent / 100.0) if a.pagato else None,
-                      ETICHETTA_PAGAMENTO.get(a.pagamento or '', '') if a.pagato else '', a.note or ''])
+                      ETICHETTA_PAGAMENTO.get(a.pagamento or '', '') if a.pagato else '',
+                      testo_excel(a.note or '')])
         for riga in w.iter_rows(min_row=3):
             riga[0].number_format = 'dd/mm/yyyy'
             riga[9].number_format = riga[10].number_format = '#,##0.00'

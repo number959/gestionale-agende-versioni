@@ -13,6 +13,8 @@ prove sono state verificate anche rimettendo il difetto: devono fallire).
 L'autoriparazione ha le sue prove in prove_autoriparazione.py."""
 import base64
 import email as libemail
+import io
+import re
 import logging
 import os
 import shutil
@@ -758,6 +760,139 @@ def p7_scelto_poi_cambiato():
 for nome, f in [('unire due schede: nessun telefono perso', p0_unisci_telefoni),
                 ('codice fiscale calcolato e omocodia: niente doppioni', p6_omocodia),
                 ('scelto dall\'elenco e poi cambiato: la scheda non si sovrascrive', p7_scelto_poi_cambiato)]:
+    prova(nome, f)
+
+
+# ================================================================ pagine e sicurezza
+area('pagine e sicurezza')
+import dovesifa  # noqa: E402
+from modelli import StrutturaGruppo, Indirizzato  # noqa: E402
+
+
+def w1_mai_in_cornice():
+    """Nessuna pagina si mostra dentro la cornice di un altro sito: un sito
+    ostile con la cornice trasparente sopra un pulsante esca farebbe cliccare
+    «Disdetto»."""
+    S, I, c = mondo()
+    for p in ('/', '/oggi', '/impostazioni', '/salute', '/static/stile.css', '/pazienti', '/pagina-che-non-esiste'):
+        r = c.get(p)
+        assert r.headers.get('X-Frame-Options') == 'DENY', (p, dict(r.headers))
+        assert "frame-ancestors 'none'" in r.headers.get('Content-Security-Policy', ''), (p, dict(r.headers))
+    # la CSP delle immagini dei documenti resta, con frame-ancestors in piu'
+    from modelli import Documento
+    s = S()
+    p = Paziente(cognome='Fintini', nome='Mara')
+    s.add(p)
+    s.flush()
+    d = Documento(paziente_id=p.id, nome='x.png', tipo='image/png', dati=b'\x89PNG', dimensione=4)
+    s.add(d)
+    s.commit()
+    r = c.get('/documenti/%d' % d.id)
+    s.close()
+    csp = r.headers.get('Content-Security-Policy', '')
+    assert "default-src 'none'" in csp and "frame-ancestors 'none'" in csp, csp
+
+
+def w2_indirizzato_alla_struttura_giusta():
+    """Con due strutture, il paziente indirizzato dalla pagina della seconda
+    finiva nel registro della prima (statistiche sbagliate)."""
+    S, I, c = mondo()
+    s = S()
+    s.add(Struttura(nome='Seconda sede'))
+    s.add(StrutturaGruppo(nome='Centro Nord', ordine=1))
+    s.commit()
+    seconda = s.scalars(select(Struttura.id).where(Struttura.nome == 'Seconda sede')).first()
+    gruppo = s.scalars(select(StrutturaGruppo.id)).first()
+    s.close()
+    t = c.get('/dove-si-fa?struttura=%d' % seconda, follow_redirects=True).get_data(as_text=True)
+    m = re.search(r'data-indirizza="([^"]+)"', t)
+    assert m and ('struttura=%d' % seconda) in m.group(1).replace('&amp;', '&'), m and m.group(1)
+    r = c.post(m.group(1).replace('&amp;', '&'), json={'gruppo': gruppo, 'canale': 'telefono'})
+    assert r.status_code == 200, r.get_data(as_text=True)[:200]
+    s = S()
+    x = s.scalars(select(Indirizzato).order_by(Indirizzato.id.desc())).first()
+    assert x is not None and x.struttura_id == seconda, (x and x.struttura_id, seconda)
+    s.close()
+
+
+def w3_nota_con_carattere_di_controllo():
+    """Una nota incollata da Word (con l'«a capo manuale» \x0b) faceva cadere
+    l'Excel del planning e il riepilogo del mese."""
+    S, I, c = mondo()
+    d = modulo(I, QUANDO, medico='Lippiello', prestazione='Prima visita', stanza='Ambulatorio 1',
+               note='prima riga\x0bseconda riga\x00fine')
+    assert c.post('/appuntamento', data=d).status_code == 302, avvisi(c)
+    s = S()
+    a = s.get(Appuntamento, ultimo(S))
+    assert a.note == 'prima riga\nseconda rigafine', repr(a.note)
+    # anche una nota gia' salvata prima della pulizia (dal database) non rompe gli Excel
+    a.note = 'vecchia\x0bnota\x01'
+    s.commit()
+    s.close()
+    assert c.get('/esporta/%s?struttura=1' % QUANDO.date().isoformat()).status_code == 200
+    assert c.get('/riepilogo-medici/%04d-%02d/excel?struttura=1' % (QUANDO.year, QUANDO.month)).status_code in (200, 404)
+
+
+def w4_documento_troppo_grande():
+    """Un documento oltre il massimo rispondeva «405 Method Not Allowed»: ora si
+    torna alla scheda del paziente con il messaggio."""
+    S, I, c = mondo()
+    s = S()
+    p = Paziente(cognome='Fintini', nome='Mara')
+    s.add(p)
+    s.commit()
+    pid = p.id
+    s.close()
+    grosso = (io.BytesIO(b'%PDF-1.4 ' + b'0' * (13 * 1024 * 1024)), 'grosso.pdf')
+    r = c.post('/pazienti/%d/documenti' % pid, data={'file': grosso, 'nome': 'grosso'},
+               content_type='multipart/form-data', headers={'Referer': 'http://localhost/pazienti/%d' % pid})
+    assert r.status_code == 302 and r.headers['Location'].endswith('/pazienti/%d' % pid), (r.status_code, r.headers.get('Location'))
+    assert 'troppo grande' in avvisi(c)
+
+
+def w5_dove_si_fa_con_apostrofo():
+    """«ecografia dell'addome», «rx dell'anca»: zero risultati, perche' «dell»
+    non era fra le parole vuote."""
+    S, I, c = mondo()
+    s = S()
+    g = StrutturaGruppo(nome='Centro Nord', ordine=1)
+    s.add(g)
+    s.flush()
+    from modelli import VoceCatalogo, SedeVoce
+    for i, (nome, branca) in enumerate((('Ecografia addome completo', 'Radiologia'), ('Rx anca', 'Radiologia'),
+                                        ('Rm encefalo', 'Radiologia'))):
+        v = VoceCatalogo(nome=nome, branca=branca, ordine=i)
+        s.add(v)
+        s.flush()
+        s.add(SedeVoce(voce_id=v.id, struttura_id=g.id))
+    dovesifa.segna_cambio(s)
+    s.commit()
+    for q, atteso in (("ecografia dell'addome", 'Ecografia addome'), ("rx dell'anca", 'Rx anca'),
+                      ("rm dell'encefalo", 'Rm encefalo')):
+        trovati = [str(v.get('nome', v)) for v in dovesifa.cerca(s, q)['risultati']]
+        assert any(atteso in x for x in trovati), (q, trovati)
+    s.close()
+
+
+def w6_json_di_forma_inattesa():
+    """Un JSON che non e' un dizionario (o un campo che e' una lista) dava un
+    errore del server."""
+    S, I, c = mondo()
+    for corpo in ('[1, 2]', '"testo"', '5', 'null'):
+        r = c.post('/dove-si-fa/indirizza', data=corpo, content_type='application/json')
+        assert r.status_code in (400, 404), (corpo, r.status_code)
+    r = c.post('/dove-si-fa/indirizza', json={'gruppo': 'x', 'canale': ['email']})
+    assert r.status_code in (400, 404), r.status_code
+    r = c.post('/personale/turni/cambia?struttura=1', json={'celle': ['1_2026-01-05'], 'ora_inizio': ['8'], 'ora_fine': ['12']})
+    assert r.status_code != 500, r.status_code
+
+
+for nome, f in [('mai dentro la cornice di un altro sito', w1_mai_in_cornice),
+                ('Dove si fa: indirizzato alla struttura giusta', w2_indirizzato_alla_struttura_giusta),
+                ('nota con un carattere di controllo: gli Excel non cadono', w3_nota_con_carattere_di_controllo),
+                ('documento troppo grande: si torna alla scheda', w4_documento_troppo_grande),
+                ('Dove si fa: «dell\'addome» trova', w5_dove_si_fa_con_apostrofo),
+                ('JSON di forma inattesa: niente errore del server', w6_json_di_forma_inattesa)]:
     prova(nome, f)
 
 

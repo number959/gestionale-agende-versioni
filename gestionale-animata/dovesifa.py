@@ -441,7 +441,9 @@ def segna_cambio(s):
 PAROLE_VUOTE = {'di', 'del', 'della', 'dello', 'dei', 'degli', 'delle', 'da', 'dal', 'dalla', 'dallo', 'dai',
                 'dagli', 'dalle', 'con', 'per', 'e', 'ed', 'il', 'lo', 'la', 'i', 'gli', 'le', 'un', 'una', 'uno',
                 'al', 'alla', 'allo', 'ai', 'agli', 'alle', 'in', 'nel', 'nella', 'nello', 'nei', 'negli', 'nelle',
-                'su', 'sul', 'sulla', 'a', 'ad', 'o', 'od', 'l', 'd', 'fare', 'esame', 'esami'}
+                'su', 'sul', 'sulla', 'a', 'ad', 'o', 'od', 'l', 'd', 'fare', 'esame', 'esami',
+                # con l'apostrofo (che chiave() cambia in spazio): «dell'addome», «all'anca» (1.11)
+                'dell', 'all', 'nell', 'sull', 'dall', 'coll', 'quest'}
 # abbreviazioni e parole d'uso: la parola cercata vale anche come le altre della lista
 ESPANSIONI = {
     'rm': ['rm', 'risonanza'], 'rmn': ['rm', 'risonanza'], 'risonanza': ['risonanza', 'rm'],
@@ -945,14 +947,16 @@ def stampa():
 def indirizza():
     """Segna un paziente indirizzato (dalla scheda della struttura)."""
     s = ses()
-    dati = request.get_json(silent=True) or request.form
+    dati = request.get_json(silent=True)
+    if not isinstance(dati, dict):            # un JSON che non e' un dizionario non ha campi (1.11)
+        dati = request.form
     st, _ = struttura_scelta(s)
     g = s.get(StrutturaGruppo, intero(dati.get('gruppo')))
     if g is None:
         return json_sicuro({'errore': 'Struttura non trovata: ricaricare la pagina.'}), 400
     voce = _voce(s, dati.get('voce'))
     paziente = _paziente(s, dati.get('paziente'))
-    canale = dati.get('canale') if dati.get('canale') in CANALI else 'telefono'
+    canale = dati.get('canale') if isinstance(dati.get('canale'), str) and dati.get('canale') in CANALI else 'telefono'
     with _lucchetto:
         x = Indirizzato(quando=datetime.now(), struttura_id=st.id if st else None, gruppo_id=g.id,
                         gruppo_nome=g.nome[:80], voce_id=voce.id if voce else None,

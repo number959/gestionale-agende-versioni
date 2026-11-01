@@ -2434,6 +2434,12 @@ falliscono, cioè il difetto c'era davvero.
 | Avvio con la cartella delle copie su un NAS spento | L'avvio aspettava la risposta della rete | All'avvio si guarda solo la cartella accanto al database |
 | Riavvio da solo non riuscito | Il programma restava aperto senza il lucchetto: un secondo clic apriva un altro gestionale sullo stesso database | Il lucchetto torna al programma |
 | Processo riconosciuto dal solo nome | «Gestionale.exe» può essere un altro programma; un numero di processo riusato | Percorso intero e ora di avvio del processo |
+| Pagine dentro la cornice di un altro sito | Un sito ostile con la cornice trasparente sopra un pulsante esca faceva cliccare «Disdetto» | Nessuna pagina si mostra in una cornice (`X-Frame-Options`, `frame-ancestors`) |
+| Dove si fa con più strutture | Ogni paziente indirizzato finiva nel registro della prima struttura | La struttura della pagina va nella richiesta |
+| Nota con un carattere di controllo (incollata da Word) | L'Excel del planning e il riepilogo del mese davano un errore del server finché nessuno trovava la nota | La nota si pulisce al salvataggio; le celle di tutti gli Excel ripuliscono anche le note vecchie |
+| Documento oltre il massimo | Rispondeva «405 Method Not Allowed» invece del messaggio | Si torna alla scheda del paziente con il messaggio |
+| Dove si fa: «ecografia dell'addome», «rx dell'anca» | Zero risultati: «dell'» non era fra le parole vuote | Aggiunte le parole con l'apostrofo |
+| Richieste JSON di forma inattesa | Errore del server (solo a mano) | Un JSON che non è un dizionario non ha campi |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo

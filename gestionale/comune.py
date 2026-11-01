@@ -40,6 +40,26 @@ MIME_XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 MASSIMO_MAILTO = 1900
 
 
+# i caratteri di controllo che openpyxl rifiuta (resta solo quello che un testo puo' avere: a
+# capo, ritorno e tabulazione). \x0b e \x0c sono gli «a capo manuali» di Word, che un Ctrl+V
+# porta in una casella di testo: diventano un a capo
+_CONTROLLO = re.compile(r'[\x00-\x08\x0e-\x1f\x7f]')
+
+
+def testo_pulito(testo):
+    """Un testo scritto in un modulo, senza i caratteri di controllo che poi
+    farebbero cadere l'Excel del planning o del riepilogo (1.11)."""
+    if not testo:
+        return testo
+    return _CONTROLLO.sub('', str(testo).replace('\x0b', '\n').replace('\x0c', '\n'))
+
+
+def testo_excel(valore):
+    """Un valore per una cella di openpyxl: i testi senza caratteri di
+    controllo (anche quelli gia' salvati prima della 1.11), il resto com'e'."""
+    return testo_pulito(valore) if isinstance(valore, str) else valore
+
+
 def intero(valore, difetto=0):
     """Gli id arrivano dalla barra degli indirizzi: possono essere qualunque cosa,
     anche un numero di trenta cifre che SQLite non sa confrontare."""

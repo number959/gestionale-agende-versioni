@@ -9,7 +9,7 @@
     nella pagina intera e nei pezzi che static/dove.js chiede mentre si scrive. -#}
 <div class="pagina larga pagina-dove" id="pagina-dove"
      data-risultati="{{ url_for('dovesifa.risultati') }}" data-scheda="{{ url_for('dovesifa.scheda', gid=0) }}"
-     data-indirizza="{{ url_for('dovesifa.indirizza') }}" data-pazienti="{{ url_for('pazienti.cerca_json') }}"
+     data-indirizza="{{ url_for('dovesifa.indirizza', struttura=sid if strutture|length > 1 and sid else none) }}" data-pazienti="{{ url_for('pazienti.cerca_json') }}"
      data-pagina="{{ url_for('dovesifa.pagina') }}" data-paziente="{{ paziente.id if paziente else '' }}"
      data-struttura="{{ sid if strutture|length > 1 and sid else '' }}">
   <p class="marchio" style="border:0;margin-bottom:16px">{% include "_marchio.html" %}</p>

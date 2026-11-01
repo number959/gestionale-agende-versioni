@@ -1083,6 +1083,7 @@ def esporta_giorno(ses, g, struttura_id, percorso):
 def _foglio_elenco(wb, ses, g, struttura_id, box, ciano):
     """Secondo foglio: una riga per appuntamento, con le colonne delle agende
     Excel dell'accettazione. Anche disdetti e non presentati, con lo stato."""
+    from comune import testo_excel        # qui dentro: comune importa questo modulo
     from openpyxl.styles import Font, Alignment
     from openpyxl.utils import get_column_letter
     ws = wb.create_sheet('Elenco')
@@ -1114,7 +1115,7 @@ def _foglio_elenco(wb, ses, g, struttura_id, box, ciano):
                   (a.importo_cent / 100.0) if a.importo_cent is not None else None,
                   a.etichetta_stato, a.note or ''] + [a.valori_extra.get(e, '') for e in extra]
         for c, v in enumerate(valori, start=1):
-            x = ws.cell(r, c, v)
+            x = ws.cell(r, c, testo_excel(v))
             x.border = box
             x.font = Font(size=10)
             if c in (1, 2):
