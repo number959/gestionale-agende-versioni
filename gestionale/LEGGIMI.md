@@ -1943,6 +1943,8 @@ python prove_autoriparazione.py  # 54 prove sulla 1.11: l'autoriparazione. Ogni 
                              # fermi, poco spazio, copie con la cartella irraggiungibile, l'orologio indietro, il
                              # ripristino sopra un database rovinato; e il programma vero (app.principale) avviato,
                              # bloccato, sostituito, riparato e riavviato da solo
+python prove_111.py          # le correzioni della 1.11, una prova per difetto (messaggi, agenda, schede,
+                             # importazione), ognuna fallisce con il codice della 1.10
 python prove_16.py           # 45 prove sulla 1.6: Aggiorna adesso da una cartella e da un finto GitHub su https
                              # (rimandi, errori del sito, certificati, file delle versioni storpiati, Setup rovinati),
                              # installazione, esito al riavvio, novità, videoguide, installer e file delle versioni,
@@ -2352,6 +2354,37 @@ non del programma: in questi giri è successo più volte, e va sempre isolato pr
 toccare il codice. Nel quinto giro tre rossi su cinque erano della prova: un apostrofo
 cercato nell'HTML dove compare come `&#39;`, la misura del logo letta dall'immagine invece
 che dall'ancoraggio nel foglio, i bordi sfumati del JPG.
+
+Giro della 1.11 (novembre 2026, con Claude Code): una revisione del codice per parti
+(agenda, pazienti, importazione, messaggi, turni del personale), uno studio dei guasti per
+l'autoriparazione e, per ogni difetto, una riproduzione fatta da un controllo indipendente
+prima di correggerlo. Ogni correzione ha la sua prova in `prove_111.py` (o in
+`prove_autoriparazione.py`), e le prove sono state lanciate anche sul codice della 1.10:
+falliscono, cioè il difetto c'era davvero.
+
+| Difetto | Effetto | Correzione |
+|---|---|---|
+| Ripristino dalle impostazioni con il database rovinato | Si fermava: la copia di sicurezza del database attuale non passava il controllo, proprio quando serviva ripristinare | Il database rovinato si copia così com'è fra i danneggiati e il ripristino va avanti |
+| Riga `versione_schema` mancante | Le migrazioni vecchie si rifacevano e ogni *Confermato* tornava *Prenotato* | La versione si ricava da tabelle e colonne, e la riga si riscrive |
+| Orologio del PC indietro | La copia appena fatta era la più vecchia e la rotazione la cancellava subito, ogni ora, senza dire niente | La copia appena fatta non si cancella mai; la pagina dice che l'orologio è indietro |
+| Copia che non si scrive (disco pieno, chiavetta tolta) | Restava il suo `.parziale`, uno in più a ogni tentativo | Il `.parziale` si toglie sempre; all'avvio si tolgono quelli rimasti |
+| Copie della cartella accanto al database | Con un'altra cartella scelta non si vedevano (le *prima della versione*, per esempio) | La pagina mostra e rimette le copie di tutte e due le cartelle |
+| Porta 5000 occupata, o riservata da Windows | Il browser si apriva su una pagina morta; due copie del programma potevano servire la stessa porta | Un gestionale solo (lucchetto), il server lega la porta prima di aprire il browser, porta di riserva |
+| Messaggio in attesa di riprovare, paziente cambiato | L'indirizzo di prima riceveva la preparazione con il nome e la prestazione del paziente nuovo | Il messaggio si annulla e si rimette in coda per il paziente e il recapito di adesso (anche i promemoria) |
+| Promemoria per il giorno di prima | Spostato l'appuntamento, Conferme diceva «inviato» e toglieva *Manda* | Conta solo il promemoria del giorno dell'appuntamento |
+| Disdetto rimesso in agenda con un clic | L'email annullata quando era disdetto non ripartiva più | Rimesso attivo, riprende le sue email automatiche |
+| Password della casella con lettere accentate o € | Ogni email si fermava con «errore inatteso: ascii codec» | Accesso in UTF-8 (AUTH PLAIN); se il server non lo offre, l'errore dice cosa correggere |
+| Email di un appuntamento poi eliminato | Non contava più: la stessa email partiva una seconda volta | Conta anche senza appuntamento |
+| Modifica di un appuntamento di una serie | Ripartiva l'email automatica, che per la serie deve essere una | Una per regola e paziente in tutta la serie |
+| Indirizzo del paziente con una lettera accentata | La colpa andava alle impostazioni dell'accesso | L'errore dice che l'indirizzo va corretto nella scheda del paziente |
+| Stanza disattivata con i suoi turni | Prima disponibilità, Sposta, spostamento in blocco e agenda del medico la proponevano: l'appuntamento spariva dalla griglia | Non si propone e non si sceglie; i turni restano per le statistiche |
+| Anno fuori calendario nel modulo | 0026 (anno a due cifre) si salvava invisibile; 31/12/9999 dava un errore del server | Accettati solo dal 2000 al 2100, anche nel campo della data |
+| Sostituzione di un giorno | Il turno del medico sostituito non si salvava più (fasce, *Fino al*) | La sovrapposizione con la sostituzione nel giorno della sua assenza non conta |
+| Fasce intere, modificando | Si perdonavano tutte le fasce dell'altro appuntamento, non solo quelle già divise | Solo le fasce già divise |
+| Fasce intere, prima del turno | Un appuntamento iniziato prima del turno e finito in una fascia occupata passava o no secondo l'ordine | Conta il turno a fasce che l'appuntamento tocca |
+| Unione di due schede | Il cellulare dell'altra scheda si perdeva | I numeri in ordine, senza doppioni; quelli in più nelle note |
+| Codice fiscale calcolato e omocodia | La scheda giusta veniva scartata e nasceva un doppione | Confronto senza le lettere dell'omocodia |
+| Paziente scelto e poi cambiato | Con nome e data di nascita di un altro, la scheda scelta veniva sovrascritta | È un'altra persona: la scheda scelta resta |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo
