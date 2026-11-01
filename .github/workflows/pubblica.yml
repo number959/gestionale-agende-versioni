@@ -1,0 +1,160 @@
+# Costruisce eseguibile e Setup delle due versioni su un Windows di GitHub e crea la
+# release: gli stessi passi di CREA_EXE.bat e CREA_SETUP.bat, senza un PC con Python
+# e Inno Setup. Si avvia a mano dalla pagina Actions del progetto («Run workflow»),
+# scegliendo il ramo: la versione e' quella scritta in comune.py / installer.iss.
+# Il file delle versioni (aggiornamento.json) porta l'impronta del Setup costruito
+# qui, come quando lo scrive CREA_SETUP.bat.
+name: Pubblica una versione
+
+on:
+  workflow_dispatch:
+    inputs:
+      ultima:
+        description: "Segnare la release come ultima (quella che il programma scarica)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  costruisci:
+    name: Costruisci ${{ matrix.cartella }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - cartella: gestionale
+            setup: GestionaleAgende-setup.exe
+            manifesto: aggiornamento.json
+          - cartella: gestionale-animata
+            setup: GestionaleAgende-animata-setup.exe
+            manifesto: aggiornamento-animata.json
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Inno Setup 6
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Librerie (solo pacchetti gia' compilati, come CREA_EXE.bat)
+        shell: cmd
+        working-directory: ${{ matrix.cartella }}
+        run: |
+          python -m pip install --upgrade pip --quiet --disable-pip-version-check
+          python -m pip install --only-binary=:all: -r requirements-build.txt --quiet --disable-pip-version-check
+
+      - name: Eseguibile (PyInstaller, gestionale.spec)
+        shell: cmd
+        working-directory: ${{ matrix.cartella }}
+        run: |
+          python -m PyInstaller --clean --noconfirm --log-level WARN gestionale.spec
+          if not exist dist\Gestionale.exe exit /b 1
+
+      - name: Setup (Inno Setup, installer.iss) e file delle versioni
+        shell: cmd
+        working-directory: ${{ matrix.cartella }}
+        run: |
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+          if not exist Output\${{ matrix.setup }} exit /b 1
+          python strumenti\prepara_aggiornamento.py
+          if not exist Output\${{ matrix.manifesto }} exit /b 1
+
+      - name: Controllo (l'impronta nel file delle versioni e' quella del Setup)
+        shell: python
+        working-directory: ${{ matrix.cartella }}
+        run: |
+          import hashlib, json, os
+          m = json.load(open(os.path.join('Output', '${{ matrix.manifesto }}'), encoding='utf-8'))
+          exe = os.path.join('Output', '${{ matrix.setup }}')
+          h = hashlib.sha256(open(exe, 'rb').read()).hexdigest()
+          assert m['sha256'] == h, 'impronta diversa: %s / %s' % (m['sha256'], h)
+          assert m['byte'] == os.path.getsize(exe), 'dimensione diversa'
+          assert m['file'] == '${{ matrix.setup }}', m['file']
+          print('versione', m['versione'], m['variante'], '| byte', m['byte'], '| sha256', h[:16])
+          open(os.path.join('Output', 'VERSIONE'), 'w').write(m['versione'])
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.cartella }}
+          path: |
+            ${{ matrix.cartella }}/Output/${{ matrix.setup }}
+            ${{ matrix.cartella }}/Output/${{ matrix.manifesto }}
+            ${{ matrix.cartella }}/Output/VERSIONE
+          if-no-files-found: error
+
+  release:
+    name: Release su GitHub
+    needs: costruisci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: file
+
+      - name: Versione e controlli
+        id: v
+        shell: bash
+        run: |
+          set -e
+          V=$(cat file/gestionale/VERSIONE)
+          VA=$(cat file/gestionale-animata/VERSIONE)
+          [ "$V" = "$VA" ] || { echo "le due versioni non coincidono: $V / $VA"; exit 1; }
+          grep -q "VERSIONE = '$V'" gestionale/comune.py || { echo "comune.py non dice $V"; exit 1; }
+          echo "versione=$V" >> "$GITHUB_OUTPUT"
+          ls -la file/gestionale file/gestionale-animata
+          # le note: il file NOTE-RELEASE-<versione>.md se c'e', altrimenti le novita' dal file delle versioni
+          if [ -f "NOTE-RELEASE-$V.md" ]; then cp "NOTE-RELEASE-$V.md" note.md
+          else python3 - "$V" <<'PY' > note.md
+          import json, sys
+          m = json.load(open('file/gestionale/aggiornamento.json', encoding='utf-8'))
+          print('Gestionale Agende %s\n' % sys.argv[1])
+          for v in m['novita']:
+              if v['versione'] == sys.argv[1]:
+                  for x in v['voci']:
+                      print('- **%s.** %s' % (x['titolo'], x['testo']))
+          PY
+          fi
+
+      - name: Release v${{ steps.v.outputs.versione }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -e
+          V=${{ steps.v.outputs.versione }}
+          ULTIMA=${{ inputs.ultima }}
+          FLAG="--latest=$ULTIMA"
+          if gh release view "v$V" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "la release v$V esiste gia': i quattro file vengono sostituiti"
+            gh release upload "v$V" --repo "$GITHUB_REPOSITORY" --clobber \
+              file/gestionale/GestionaleAgende-setup.exe file/gestionale/aggiornamento.json \
+              file/gestionale-animata/GestionaleAgende-animata-setup.exe file/gestionale-animata/aggiornamento-animata.json
+            gh release edit "v$V" --repo "$GITHUB_REPOSITORY" $FLAG
+          else
+            gh release create "v$V" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" $FLAG \
+              --title "Gestionale Agende $V" --notes-file note.md \
+              file/gestionale/GestionaleAgende-setup.exe file/gestionale/aggiornamento.json \
+              file/gestionale-animata/GestionaleAgende-animata-setup.exe file/gestionale-animata/aggiornamento-animata.json
+          fi
+
+      - name: Controllo dall'indirizzo pubblico (come fa il programma)
+        shell: bash
+        run: |
+          set -e
+          V=${{ steps.v.outputs.versione }}
+          sleep 20
+          for f in aggiornamento.json aggiornamento-animata.json; do
+            curl -sSL "https://github.com/$GITHUB_REPOSITORY/releases/download/v$V/$f" -o "scaricato-$f"
+            python3 -c "import json,sys; m=json.load(open('scaricato-$f')); assert m['versione']=='$V', m['versione']; print('$f ->', m['versione'], m['file'])"
+          done
+          if [ "${{ inputs.ultima }}" = "true" ]; then
+            curl -sSL "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/aggiornamento.json" -o ultima.json
+            python3 -c "import json; m=json.load(open('ultima.json')); assert m['versione']=='$V', 'latest dice %s' % m['versione']; print('latest ->', m['versione'])"
+          fi

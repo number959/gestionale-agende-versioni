@@ -487,6 +487,10 @@ Cose imparate con Wine, da non riscoprire:
 
 ## Pubblicare una versione
 
+Dalla 1.11 c'è la via senza PC: l'automazione `.github/workflows/pubblica.yml` dalla pagina
+*Actions* del progetto (vedi *La 1.11*, «Pubblicare senza un PC con Python e Inno Setup»). I passi
+qui sotto sono quelli a mano.
+
 1. Il numero nuovo va in `comune.py` (`VERSIONE`) e in `installer.iss` (`#define Versione`)
    di tutte e due le cartelle. In `novita.py` va una voce per ogni novità, con la guida
    che la spiega.
@@ -621,12 +625,27 @@ resta e tiene il file: l'installazione si fermava); e nel Windows finto lo scher
 molte ore smette di rispondere e il Setup muore con «Invalid window handle» senza avere
 colpa: si riavvia lo schermo (per numero di processo, mai con `pkill -f`) e si riprova.
 
+**Pubblicare senza un PC con Python e Inno Setup** (1° novembre 2026): dalla sessione nel cloud
+non si possono creare release né tag (il collegamento a GitHub lo vieta: «Creating, editing, or
+deleting releases is not permitted for this session type», e anche `git push` dei tag e l'API dei
+riferimenti sono rifiutati), e Giovanni non ha Git né Python sul suo PC. Per questo nel ramo c'è
+`.github/workflows/pubblica.yml`, un'automazione di GitHub («Actions») che fa tutto sui computer
+di GitHub: un Windows vero con Python 3.13 e Inno Setup rifà i passi di `CREA_EXE.bat` e
+`CREA_SETUP.bat` nelle due cartelle, controlla che l'impronta scritta in ogni `aggiornamento.json`
+sia quella del suo Setup, crea la release `vX.Y` (la versione è quella di `comune.py`) segnata come
+ultima, con le note prese da `NOTE-RELEASE-X.Y.md` se c'è, e alla fine scarica dall'indirizzo
+pubblico come fa il programma e controlla che dica la versione nuova. Si avvia a mano dalla pagina
+*Actions* del progetto: «Pubblica una versione» → *Run workflow* → scegliere il ramo → *Run
+workflow*. Dura una decina di minuti. Se la release esiste già, i quattro file vengono sostituiti.
+I Setup costruiti così sono diversi byte per byte da quelli costruiti in Wine o sul PC (li fa un
+altro Python), ed è normale: vale la coppia Setup + file delle versioni.
+
 **Da fare prima di pubblicare la 1.11**:
 
-1. rigenerare il PDF della guida (c'è una guida in più: *Il programma si ripara da solo*);
-2. la release `v1.11` nel progetto delle versioni, con i quattro file di `Output` delle due
-   cartelle (quelli costruiti in questa sessione, o rifatti sul PC di Giovanni con `CREA_EXE.bat` e
-   `CREA_SETUP.bat`), e il controllo dell'indirizzo pubblico.
+1. rigenerare il PDF della guida (c'è una guida in più: *Il programma si ripara da solo*); non
+   blocca la pubblicazione, le guide sono dentro il programma;
+2. la release `v1.11`: dalla pagina *Actions* (sopra), oppure a mano con i quattro file di
+   `Output` delle due cartelle, e il controllo dell'indirizzo pubblico.
 
 ## Cose aperte
 
