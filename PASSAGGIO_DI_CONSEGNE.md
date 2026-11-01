@@ -92,9 +92,14 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
-- **Versione 1.11**, in lavorazione sul ramo `ccr-07f8e160-7j5lup` del progetto pubblico
-  `number959/gestionale-agende-versioni` (scelta di Giovanni del 1° novembre: il codice sta lì,
-  non in un progetto privato). Porta **l'autoriparazione** e **40 difetti corretti** trovati con una
+- **Versione 1.11, pubblicata il 1° novembre 2026**: la release `v1.11` nel progetto delle versioni,
+  segnata come ultima, con i quattro file costruiti dall'automazione di GitHub (vedi *La 1.11*).
+  L'indirizzo pubblico risponde «1.11» e i Setup pubblicati sono stati provati sopra la 1.10 con i
+  dati (46 controlli e i 10 dell'autoriparazione sull'eseguibile vero). È la **prima release** del
+  progetto: contiene anche la 1.8, la 1.9, la 1.9.1 e la 1.10, mai pubblicate. Il programma in
+  clinica la trova da solo (dalla 1.6; con la 1.5 il Setup si avvia a mano la prima volta). Il codice
+  è sul ramo `ccr-07f8e160-7j5lup` dello stesso progetto pubblico (scelta di Giovanni del 1°
+  novembre: non in un progetto privato). Porta **l'autoriparazione** e **40 difetti corretti** trovati con una
   revisione del codice per parti, ciascuno riprodotto da un controllo indipendente prima di
   correggerlo e con una prova che fallisce sul codice della 1.10. Tutte le prove sono verdi nelle
   due cartelle (vedi *La 1.11* per i numeri e per cosa resta da fare prima di pubblicarla).
@@ -640,12 +645,13 @@ workflow*. Dura una decina di minuti. Se la release esiste già, i quattro file 
 I Setup costruiti così sono diversi byte per byte da quelli costruiti in Wine o sul PC (li fa un
 altro Python), ed è normale: vale la coppia Setup + file delle versioni.
 
-**Da fare prima di pubblicare la 1.11**:
-
-1. rigenerare il PDF della guida (c'è una guida in più: *Il programma si ripara da solo*); non
-   blocca la pubblicazione, le guide sono dentro il programma;
-2. la release `v1.11`: dalla pagina *Actions* (sopra), oppure a mano con i quattro file di
-   `Output` delle due cartelle, e il controllo dell'indirizzo pubblico.
+**La 1.11 è stata pubblicata così**, il 1° novembre 2026: l'automazione avviata dalla sessione con
+lo strumento GitHub della sessione (l'API diretta era vietata), esecuzione n. 1 riuscita; poi dalla
+sessione il controllo dall'indirizzo pubblico (`latest` dice 1.11, le impronte dei due Setup
+scaricati coincidono con i file delle versioni) e i Setup pubblicati, scaricati da GitHub,
+installati in Wine sopra la 1.10 consegnata con i dati inventati: tabelle identiche, 46 controlli e
+i 10 dell'autoriparazione a posto. Resta da rigenerare il **PDF della guida** (c'è una guida in più,
+*Il programma si ripara da solo*): non blocca niente, le guide sono dentro il programma.
 
 ## Cose aperte
 
@@ -666,10 +672,8 @@ altro Python), ed è normale: vale la coppia Setup + file delle versioni.
   con DPAPI, una cartella non scrivibile, il pid di un venv, la prova delle icone animate di
   domenica); `prove_15.py`, `prove_16.py` e `prove_191.py` vogliono `openssl` sul PATH (c'è nella
   riga di comando di Git for Windows, non in PowerShell).
-- Pubblicare la 1.10 su GitHub (contiene la 1.8, la 1.9 e la 1.9.1) e controllare l'indirizzo
-  pubblico (vedi *Stato alla consegna*); mettere il codice (`gestionale-agende.bundle`) in un
-  progetto privato.
-- Installare la 1.10 alla clinica la prima volta a mano, se c'è ancora la 1.5.
+- Installare la 1.11 alla clinica la prima volta a mano, se c'è ancora la 1.5 (dalla 1.6 arriva da
+  sola). Il PDF della guida da rigenerare.
 - **Fasce dei turni**: con Federica, scegliere la durata delle fasce dei turni che ne hanno
   bisogno (per esempio le sedute di endoscopia e gli ambulatori con le visite ogni 20 minuti),
   da *Configura → Anagrafiche*, il turno, *Durata delle fasce*. Salvando ogni turno il programma
