@@ -23,6 +23,7 @@ import difflib
 import hashlib
 import io
 import json
+import math
 import os
 import re
 import secrets
@@ -44,6 +45,7 @@ from modelli import (Struttura, Risorsa, Operatore, Prestazione, Paziente, Appun
 import servizi
 from comune import colore_libero
 import pazienti
+import segreteria
 import backup
 
 bp = Blueprint('importa', __name__)
@@ -205,8 +207,9 @@ def leggi_file(dati, nome):
     nome = nome or ''
     estensione = os.path.splitext(nome)[1].lower()
     if estensione in ('.csv', '.txt'):
-        return [{'nome': os.path.splitext(os.path.basename(nome))[0] or 'CSV', 'righe': _leggi_csv(dati),
-                 'file': os.path.basename(nome)}]
+        righe, oltre = _leggi_csv(dati)
+        return [{'nome': os.path.splitext(os.path.basename(nome))[0] or 'CSV', 'righe': righe,
+                 'file': os.path.basename(nome), 'oltre': oltre}]
     if estensione == '.xls':
         raise ValueError('Il formato .xls del vecchio Excel non si legge: aprirlo in Excel e salvarlo come '
                          '"Cartella di lavoro di Excel (.xlsx)".')
@@ -232,7 +235,14 @@ def leggi_file(dati, nome):
                     righe[r - 1][c - 1] = v
         while righe and all(v in (None, '') for v in righe[-1]):
             righe.pop()
-        fogli.append({'nome': ws.title, 'righe': righe, 'file': os.path.basename(nome)})
+        # le righe oltre il massimo non si leggono, ma si contano per dirlo. Solo
+        # quelle scritte: max_row conta anche le righe vuote con un formato
+        oltre = 0
+        if (ws.max_row or 0) > max_r:
+            for riga in ws.iter_rows(min_row=max_r + 1, max_col=max_c or None, values_only=True):
+                if any(not vuoto(v) for v in riga):
+                    oltre += 1
+        fogli.append({'nome': ws.title, 'righe': righe, 'file': os.path.basename(nome), 'oltre': oltre})
     # il planning esportato dal gestionale ha la data nel nome del primo foglio
     data_libro = next((d for d in (data_dal_nome(f['nome']) for f in fogli) if d), None)
     for f in fogli:
@@ -241,6 +251,8 @@ def leggi_file(dati, nome):
 
 
 def _leggi_csv(dati):
+    """(righe, oltre): le righe della tabella e quante righe scritte restano
+    fuori perche' oltre il massimo che si legge."""
     # Excel "Testo Unicode (.txt)" scrive UTF-16 con il BOM e le tabulazioni;
     # "CSV UTF-8" ha il suo BOM; il CSV di sempre e' Windows-1252
     codifiche = ('utf-8-sig', 'cp1252', 'latin-1')
@@ -259,18 +271,22 @@ def _leggi_csv(dati):
         separatore = dialetto.delimiter
     except csv.Error:
         separatore = ';' if campione.count(';') >= campione.count(',') else ','
-    righe = []
+    righe, oltre = [], 0
     # newline='': gli a capo li riconosce il modulo csv, anche quelli del Mac (\r)
     try:
         for riga in csv.reader(io.StringIO(testo, newline=''), delimiter=separatore):
+            if len(righe) >= MASSIMO_RIGHE + 30:
+                # oltre il massimo non si tiene niente, ma le righe scritte si
+                # contano: l'anteprima deve dire che non vengono lette
+                if any(x.strip() for x in riga):
+                    oltre += 1
+                continue
             righe.append([x if x.strip() != '' else None for x in riga][:MASSIMO_COLONNE])
-            if len(righe) > MASSIMO_RIGHE + 30:
-                break
     except csv.Error as e:
         raise ValueError('Il file di testo non si legge come tabella (%s): salvarlo da Excel come '
                          '"CSV (delimitato dal separatore di elenco)".' % e)
     larghezza = max((len(r) for r in righe), default=0)
-    return [r + [None] * (larghezza - len(r)) for r in righe]
+    return [r + [None] * (larghezza - len(r)) for r in righe], oltre
 
 
 # ============================================================ valori
@@ -305,9 +321,36 @@ def come_data(v):
     return d if date(1900, 1, 1) <= d <= date(2100, 12, 31) else None
 
 
+ANNO_DUE_CIFRE = re.compile(r'\s*\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2}(?: .*)?\s*')
+
+
+def come_nascita(v, avvisi):
+    """La data di nascita. Con l'anno a due cifre ("12/03/65") il secolo non
+    c'e', e come_data (fatta per gli appuntamenti) darebbe il 2065: qui, come
+    per il codice fiscale, vale la data piu' recente che non sia nel futuro
+    (65 -> 1965, 24 -> 2024). Dal 2000 in poi un bambino e una persona nata
+    cento anni prima non si distinguono: la riga si segnala da controllare."""
+    d = come_data(v)
+    if d is None or not (isinstance(v, str) and ANNO_DUE_CIFRE.fullmatch(v)):
+        return d
+    oggi = date.today()
+    for secolo in (2000, 1900):
+        try:
+            scelta = d.replace(year=secolo + d.year % 100)
+        except ValueError:                  # il 29 febbraio di un anno che non lo ha
+            continue
+        if scelta <= oggi:
+            if secolo == 2000:
+                avvisi.append('data di nascita con l\'anno a due cifre: letta come %s, controllarla'
+                              % scelta.strftime('%d/%m/%Y'))
+            return scelta
+    return None
+
+
 def come_ora(v):
     """time o None. Accetta orari di Excel, frazioni di giorno, '9:30',
-    '09.30', '9', '9,30'."""
+    '09.30', '9', '9,30', e i numeri: in Excel chi scrive 9,30 in una cella
+    normale salva il numero 9.3, che e' 9:30 (come 9.45 e' 9:45)."""
     if isinstance(v, time):
         return v.replace(second=0, microsecond=0)
     if isinstance(v, datetime):
@@ -315,14 +358,55 @@ def come_ora(v):
     if isinstance(v, float) and 0 <= v < 1:
         minuti = int(round(v * 24 * 60))
         return time(minuti // 60 % 24, minuti % 60)
+    if isinstance(v, float) and 1 <= v < 24:
+        # 9.0 -> 9:00, 9.3 -> 9:30, 9.45 -> 9:45: le cifre dopo la virgola sono i
+        # minuti. Con piu' di due cifre (9.333) non e' un orario scritto a mano
+        centesimi = v * 100
+        if abs(centesimi - round(centesimi)) > 1e-6:
+            return None
+        h = int(v)
+        mi = int(round(centesimi)) - h * 100
+        return time(h, mi) if 0 <= mi <= 59 else None
     t = str(v if v is not None else '').strip().lower().replace('ore', '').strip()
-    m = re.fullmatch(r'(\d{1,2})(?:[:.,h](\d{2}))?', t)
+    # "9,3" e' il 9,30 di una cella numerica salvata in un CSV: una cifra sola
+    # dopo la virgola o il punto sono le decine dei minuti
+    m = re.fullmatch(r'(\d{1,2})(?:[:.,h](\d{2})|[.,](\d))?', t)
     if not m:
         return None
-    h, mi = int(m.group(1)), int(m.group(2) or 0)
+    h = int(m.group(1))
+    mi = int(m.group(2) or 0) if m.group(3) is None else int(m.group(3)) * 10
     if h > 23 or mi > 59:
         return None
     return time(h, mi)
+
+
+def come_minuti(v):
+    """La durata in minuti o None se non si legge. 45 e '45' sono minuti; una
+    cella di Excel con l'orario (0:45, 1:30) o con la durata ([h]:mm) e il
+    testo '1:30' sono ore e minuti. 'INF', 'nan', '1e999' non sono durate."""
+    if isinstance(v, bool) or v is None:
+        return None
+    if isinstance(v, datetime):
+        return None                      # una data non e' una durata
+    if isinstance(v, time):
+        return v.hour * 60 + v.minute
+    if isinstance(v, timedelta):
+        return int(v.total_seconds() // 60)
+    if isinstance(v, (int, float)):
+        numero = float(v)
+    else:
+        t = str(v).strip()
+        m = re.fullmatch(r'(\d{1,2})\s*[:h]\s*(\d{2})', t, re.I)
+        if m:
+            return int(m.group(1)) * 60 + int(m.group(2)) if int(m.group(2)) < 60 else None
+        try:
+            numero = float(t.replace(',', '.'))
+        except ValueError:
+            return None
+    # "inf" e "nan" sono numeri per Python, ma non durate (e int() si fermerebbe)
+    if not math.isfinite(numero):
+        return None
+    return int(numero)
 
 
 def come_telefono(v):
@@ -373,7 +457,8 @@ def come_importo(v):
 def testo_di(v):
     if vuoto(v):
         return ''
-    if isinstance(v, float) and v == int(v):
+    # math.isfinite: int() di un numero infinito si fermerebbe con un errore
+    if isinstance(v, float) and math.isfinite(v) and v == int(v):
         v = int(v)
     if isinstance(v, datetime):
         return v.strftime('%d/%m/%Y %H:%M') if v.time() != time(0, 0) else v.strftime('%d/%m/%Y')
@@ -844,12 +929,17 @@ class IndicePazienti:
             self.aggiungi(p)
 
     def aggiungi(self, p):
+        """Si puo' chiamare di nuovo per la stessa scheda, quando si completa: non
+        compare due volte (sembrerebbero due schede con lo stesso nome)."""
+        def metti(lista):
+            if not any(x is p for x in lista):
+                lista.append(p)
         if p.codice_fiscale:
             self.per_cf[p.codice_fiscale.upper()] = p
-        self.per_nome.setdefault(pazienti.semplifica(p.cognome) + '|' + pazienti.semplifica(p.nome), []).append(p)
+        metti(self.per_nome.setdefault(pazienti.semplifica(p.cognome) + '|' + pazienti.semplifica(p.nome), []))
         for t in (p.telefono, p.telefono2):
             if t:
-                self.per_tel.setdefault(pazienti.telefono_confronto(t), []).append(p)
+                metti(self.per_tel.setdefault(pazienti.telefono_confronto(t), []))
 
     def trova(self, cognome, nome, telefono, cf):
         """(paziente o None, avviso)"""
@@ -1108,7 +1198,7 @@ def _paziente_da(campi, opzioni, avvisi):
     if cf and not pazienti.codice_fiscale_valido(cf):
         avvisi.append('codice fiscale non valido: tolto')
         cf = ''
-    nascita = come_data(primo('data_nascita')) if primo('data_nascita') is not None else None
+    nascita = come_nascita(primo('data_nascita'), avvisi) if primo('data_nascita') is not None else None
     if nascita and nascita > date.today():
         avvisi.append('data di nascita nel futuro: tolta')
         nascita = None
@@ -1141,12 +1231,17 @@ def prepara_pazienti(s, analisi, opzioni):
                 avvisi.append(avviso)
             if esistente is not None and getattr(esistente, 'riga', None):
                 r['esito'], r['motivo'] = 'doppio', 'stessa persona della riga %d' % esistente.riga
+                # all'importazione questa riga completa la scheda della prima: qui
+                # si fa lo stesso, cosi' le righe dopo la trovano come la troveranno
+                if completa_campi(esistente, p):
+                    indice.aggiungi(esistente)
             elif esistente is not None:
                 r['esito'], r['esistente'] = 'esistente', esistente
             else:
                 # nell'indice come se esistesse gia': le righe dopo la trovano
                 indice.aggiungi(SimpleNamespace(riga=n, **{k: p[k] for k in (
-                    'cognome', 'nome', 'telefono', 'telefono2', 'codice_fiscale')}))
+                    'cognome', 'nome', 'telefono', 'telefono2', 'codice_fiscale', 'email', 'data_nascita',
+                    'indirizzo')}))
         righe.append(r)
     return {'tipo': 'pazienti', 'righe': righe, 'conteggi': conta(righe),
             'nuovi_medici': [], 'nuove_prestazioni': [], 'nuove_stanze': [], 'unioni': [],
@@ -1172,10 +1267,24 @@ def prepara_appuntamenti(s, analisi, opzioni):
     adesso = datetime.now()
     indice = IndicePazienti(s)
 
-    # stanza di ciascun blocco: scelta a mano, trovata per nome o da creare
+    # il nome di una stanza nuova, come si salvera': al massimo 60 caratteri
+    def nome_stanza(testo):
+        return bello(' '.join(testo.split()))[:60].strip()
+
+    # stanza di ciascun blocco: scelta a mano, trovata per nome o da creare. Un
+    # nome lungo e' salvato tagliato a 60 caratteri: il mese dopo si deve
+    # ritrovare anche cosi', altrimenti si crea di nuovo e il database rifiuta
     def stanza_per_nome(nome):
-        chiave = pazienti.semplifica(nome)
-        return next((r for r in stanze.values() if pazienti.semplifica(r.nome) == chiave), None)
+        chiavi = {pazienti.semplifica(nome), pazienti.semplifica(nome_stanza(nome))}
+        return next((r for r in stanze.values() if pazienti.semplifica(r.nome) in chiavi), None)
+
+    # "Sala Rossa" e "sala rossa" nello stesso file sono una stanza sola (come i
+    # medici): ogni stanza nuova ha il nome della prima volta che compare
+    nomi_stanze_nuove = {}
+
+    def stanza_nuova(testo):
+        nome = nome_stanza(testo)
+        return nomi_stanze_nuove.setdefault(pazienti.semplifica(nome), nome)
 
     # il medico di tutto il file: scelto nell'anteprima, oppure cercato nel titolo
     mappati = set(analisi['campi'].values())
@@ -1197,7 +1306,7 @@ def prepara_appuntamenti(s, analisi, opzioni):
         elif g['nome'] and stanza_per_nome(g['nome']):
             scelta_stanze[k] = ('esistente', stanza_per_nome(g['nome']))
         elif g['nome']:
-            scelta_stanze[k] = ('nuova', bello(g['nome'].strip())[:60])
+            scelta_stanze[k] = ('nuova', stanza_nuova(g['nome']))
         elif 'stanza' not in mappati and stanza_dal_titolo(stanze.values(), analisi.get('titolo', '')) \
                 and not (scelta or '').isdigit():
             scelta_stanze[k] = ('esistente', stanza_dal_titolo(stanze.values(), analisi.get('titolo', '')))
@@ -1253,8 +1362,8 @@ def prepara_appuntamenti(s, analisi, opzioni):
                 r['esito'], r['motivo'] = 'scartato', 'manca l\'ora'
                 continue
             r['inizio'] = datetime.combine(data, ora)
-            # medico
-            medico_testo = testo_di(primo('medico'))
+            # medico ("Dott. Galasso" e' Galasso: il titolo non e' una parte del nome)
+            medico_testo = senza_titolo(testo_di(primo('medico')))
             if not medico_testo and medico_file is not None:
                 medico_testo = medico_file.etichetta
             elif not medico_testo and medico_titolo_nuovo:
@@ -1309,7 +1418,7 @@ def prepara_appuntamenti(s, analisi, opzioni):
                 else:
                     stanza = stanza_per_nome(testo_stanza)
                     r['stanza'] = stanza
-                    r['stanza_nuova'] = None if stanza else bello(testo_stanza)[:60]
+                    r['stanza_nuova'] = None if stanza else stanza_nuova(testo_stanza)
             elif modo == 'esistente':
                 r['stanza'], r['stanza_nuova'] = stanza, None
             else:
@@ -1320,12 +1429,13 @@ def prepara_appuntamenti(s, analisi, opzioni):
             if ora_fine and ora_fine > ora:
                 fine = datetime.combine(data, ora_fine)
             elif primo('durata') is not None:
-                try:
-                    minuti = int(float(str(primo('durata')).replace(',', '.')))
-                    if 5 <= minuti <= 24 * 60:
-                        fine = r['inizio'] + timedelta(minutes=minuti)
-                except ValueError:
-                    avvisi.append('durata non valida')
+                # una durata che non si legge, o fuori misura (meno di 5 minuti, piu'
+                # di un giorno), si segnala: vale quella della prestazione o del file
+                minuti = come_minuti(primo('durata'))
+                if minuti is not None and 5 <= minuti <= 24 * 60:
+                    fine = r['inizio'] + timedelta(minutes=minuti)
+                else:
+                    avvisi.append('durata non valida: "%s"' % testo_di(primo('durata'))[:20])
             r['durata_esplicita'] = fine is not None
             if fine is None:
                 minuti = r['prestazione'].durata_min if r['prestazione'] else opzioni['durata']
@@ -1467,7 +1577,11 @@ def prepara_appuntamenti(s, analisi, opzioni):
     passo_file = passo_orari(analisi)
     for chiave, lista in per_stanza.items():
         lista.sort(key=lambda x: x['inizio'])
-        for a, b in zip(lista, lista[1:]):
+        # un appuntamento disdetto (o non presentato) non occupa la stanza, come
+        # in agenda: non accorcia quello prima, non ne blocca un altro alla stessa
+        # ora e non e' mai in conflitto. Si importa com'e'
+        attivi = [x for x in lista if x.get('stato') in STATI_ATTIVI]
+        for a, b in zip(attivi, attivi[1:]):
             if not a['durata_esplicita'] and a['inizio'] < b['inizio'] < a['fine']:
                 a['fine'] = b['inizio']
                 # nelle agende a righe da un quarto d'ora la riga dopo e' il posto dopo:
@@ -1478,7 +1592,7 @@ def prepara_appuntamenti(s, analisi, opzioni):
         # Il confronto e' con l'ultima entrata, non con la riga prima: quella
         # puo' essere a sua volta in conflitto (tre righe alle 9:00)
         entrata = None
-        for b in lista:
+        for b in attivi:
             if b['esito'] != 'nuovo':
                 continue
             if entrata is None or b['inizio'] >= entrata['fine']:
@@ -1494,9 +1608,16 @@ def prepara_appuntamenti(s, analisi, opzioni):
     for r in righe:
         if r['esito'] != 'nuovo' or not r.get('stanza'):
             continue
-        presenti = s.scalars(select(Appuntamento).where(
-            Appuntamento.risorsa_id == r['stanza'].id, Appuntamento.inizio < r['fine'],
-            Appuntamento.fine > r['inizio'], Appuntamento.stato.in_(STATI_ATTIVI))).all()
+        attiva = r.get('stato') in STATI_ATTIVI
+        if attiva:
+            presenti = s.scalars(select(Appuntamento).where(
+                Appuntamento.risorsa_id == r['stanza'].id, Appuntamento.inizio < r['fine'],
+                Appuntamento.fine > r['inizio'], Appuntamento.stato.in_(STATI_ATTIVI))).all()
+        else:
+            # una riga disdetta non trova mai la stanza occupata; si cerca solo se e'
+            # gia' stata importata (in qualunque stato), per non metterla due volte
+            presenti = s.scalars(select(Appuntamento).where(
+                Appuntamento.risorsa_id == r['stanza'].id, Appuntamento.inizio == r['inizio'])).all()
         if presenti:
             def stesso(a):
                 """La riga e' questo appuntamento, gia' importato: stessa ora e
@@ -1513,15 +1634,17 @@ def prepara_appuntamenti(s, analisi, opzioni):
             uguale = next((a for a in presenti if stesso(a)), None)
             if uguale is not None:
                 r['esito'], r['motivo'] = 'presente', 'già in agenda'
-            else:
+                r['appuntamento_presente'] = uguale
+            elif attiva:
                 a = presenti[0]
                 r['esito'], r['motivo'] = 'conflitto', 'stanza già occupata dalle %s alle %s%s' % (
                     a.inizio.strftime('%H:%M'), a.fine.strftime('%H:%M'),
                     ' (%s)' % a.paziente.etichetta if a.paziente else '')
 
-    # stesso medico in due stanze alla stessa ora: si importa, ma si segnala
+    # stesso medico in due stanze alla stessa ora: si importa, ma si segnala (un
+    # appuntamento disdetto non occupa il medico, come non occupa la stanza)
     medici_doppi = 0
-    buoni = [r for r in righe if r['esito'] == 'nuovo']
+    buoni = [r for r in righe if r['esito'] == 'nuovo' and r.get('stato') in STATI_ATTIVI]
     for i, a in enumerate(buoni):
         chi_a = a['medico'].id if a.get('medico') else a.get('medico_chiave')
         for b in buoni[i + 1:]:
@@ -1529,7 +1652,30 @@ def prepara_appuntamenti(s, analisi, opzioni):
             if chi_a == chi_b and a['inizio'] < b['fine'] and b['inizio'] < a['fine']:
                 b['avvisi'].append('%s è anche in un\'altra stanza alla stessa ora (riga %d)' % (b['medico_testo'], a['n']))
                 medici_doppi += 1
+
+    # i da confermare di un'importazione di prima (lo stesso file importato di
+    # nuovo, o aggiornato): una riga che andrebbe fra i da confermare e c'e' gia'
+    # non si aggiunge un'altra volta, nemmeno se quello e' stato chiuso (chi l'ha
+    # chiuso non lo vuole di nuovo); una riga che ora entra in agenda, o c'e' gia',
+    # chiude il suo da confermare ancora aperto. L'anteprima lo dice, l'importazione
+    # fa questo e niente altro
+    vecchi = appunti_importati(s, st, [r['inizio'] for r in righe if r.get('inizio')])
+    da_chiudere = set()
+    for r in righe:
+        if not r.get('inizio'):
+            continue
+        uguali = [x for x in vecchi.get((r['inizio'].date(), r['inizio'].time()), []) if stesso_appunto(x, r)]
+        if not uguali:
+            continue
+        if r['esito'] in ('scartato', 'conflitto') and opzioni.get('appunti', True):
+            aperto = any(x.aperto for x in uguali)
+            r['esito'], r['motivo'] = 'appunto', 'già fra i da confermare%s: %s' % (
+                '' if aperto else ' (chiuso)', r['motivo'])
+        elif r['esito'] in ('nuovo', 'presente') and r.get('stato') in STATI_ATTIVI:
+            r['chiude_appunti'] = [x for x in uguali if x.aperto]
+            da_chiudere.update(x.id for x in r['chiude_appunti'])
     return {'tipo': 'appuntamenti', 'righe': righe, 'conteggi': conta(righe), 'struttura': st,
+            'appunti_da_chiudere': len(da_chiudere),
             'nuovi_medici': nuovi_medici if opzioni['crea_medici'] else [],
             'nuove_prestazioni': nuove_prestazioni if opzioni['crea_prestazioni'] else [],
             'nuove_stanze': sorted({r['stanza_nuova'] for r in righe if r.get('stanza_nuova') and r['esito'] == 'nuovo'}),
@@ -1537,6 +1683,40 @@ def prepara_appuntamenti(s, analisi, opzioni):
             'appunti': opzioni.get('appunti', True),
             'medico_file': medico_file, 'medico_titolo_nuovo': medico_titolo_nuovo, 'senza_pazienti': not ({'cognome_nome', 'cognome'} & mappati),
             'stanze_scelte': {k: (v[1].id if v[0] == 'esistente' else None) for k, v in scelta_stanze.items()}}
+
+
+def appunti_importati(s, st, inizi):
+    """{(giorno, ora): [appunti]}: i da confermare nati da un'importazione (di
+    qualunque file: il nome cambia, "agenda (2).xlsx") nei giorni del file,
+    aperti e chiusi."""
+    if not inizi or st is None:
+        return {}
+    giorni = [x.date() for x in inizi]
+    uscita = {}
+    for x in s.scalars(select(Appunto).where(
+            Appunto.origine.like('Importazione %'), Appunto.struttura_id == st.id,
+            Appunto.giorno >= min(giorni), Appunto.giorno <= max(giorni))):
+        if x.ora is not None:
+            uscita.setdefault((x.giorno, x.ora.replace(second=0, microsecond=0)), []).append(x)
+    return uscita
+
+
+def stesso_appunto(x, r):
+    """L'appunto x (dello stesso giorno e della stessa ora) e' quello di questa
+    riga: stesso paziente, e medico e stanza uguali quando li hanno tutti e due.
+    Un appunto senza stanza o senza medico ("manca la stanza") e' della riga che
+    ora li ha. Il numero di riga non conta: aggiungendo righe al file cambia."""
+    medico, stanza = r.get('medico'), r.get('stanza')
+    if medico is not None and x.operatore_id is not None and x.operatore_id != medico.id:
+        return False
+    if stanza is not None and x.risorsa_id is not None and x.risorsa_id != stanza.id:
+        return False
+    p = r.get('paziente') or {}
+    if not p.get('cognome'):
+        return x.paziente_id is None and not x.cognome
+    if r.get('esistente') is not None:
+        return x.paziente_id == r['esistente'].id
+    return x.paziente_id is None and pazienti.semplifica(x.cognome) == pazienti.semplifica(p['cognome'])
 
 
 def parole_titolo(titolo):
@@ -1552,8 +1732,21 @@ def medico_dal_titolo(operatori, titolo):
     return trovati[0] if len(trovati) == 1 else None
 
 
+# anche "D.SSA", come la scrive l'accettazione ("?D.SSA LIPPIELLO BLOCCA")
 TITOLI_MEDICO = re.compile(
-    r"\b(?:dott(?:\.?\s?ssa|oressa|ore|or)?|dr(?:\.?\s?ssa)?|prof(?:\.?\s?ssa|essoressa|essore)?)\b\.?", re.I)
+    r"\b(?:d\.\s?ssa|dott(?:\.?\s?ssa|oressa|ore|or)?|dr(?:\.?\s?ssa)?|prof(?:\.?\s?ssa|essoressa|essore)?)\b\.?",
+    re.I)
+
+
+def senza_titolo(testo):
+    """Il nome del medico senza "Dott.", "Dott.ssa", "D.SSA", "Dr.", "Prof.":
+    "DOTT.SSA GALASSO" -> "GALASSO". Senza togliere il titolo, nella colonna
+    del medico diventava un medico nuovo "Galasso Dott." accanto a quello che
+    c'era. Una cella con il solo titolo resta vuota (manca il medico); un nome
+    senza titolo resta com'e'."""
+    if not TITOLI_MEDICO.search(testo or ''):
+        return testo
+    return ' '.join(TITOLI_MEDICO.sub(' ', testo).split()).lstrip(' .')
 NON_NOMI = {'gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic',
             'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto',
             'settembre', 'ottobre', 'novembre', 'dicembre', 'agenda', 'anno', 'e', 'ed', 'di', 'xlsx',
@@ -1605,22 +1798,31 @@ def stanza_dal_titolo(stanze, titolo):
 
 
 # ============================================================== esecuzione
+def completa_campi(esistente, dati):
+    """I campi vuoti della scheda presi dalla riga, senza sovrascrivere niente;
+    un telefono diverso va nell'altro telefono. True se qualcosa e' cambiato.
+    La stessa regola vale nell'anteprima della rubrica, sulla scheda che
+    l'importazione creera' dalla riga di prima della stessa persona."""
+    cambiato = False
+    for campo in ('nome', 'telefono', 'email', 'codice_fiscale', 'data_nascita', 'indirizzo'):
+        if dati.get(campo) and not getattr(esistente, campo):
+            setattr(esistente, campo, dati[campo])
+            cambiato = True
+    if dati.get('telefono2') and not esistente.telefono2 and pazienti.telefono_confronto(dati['telefono2']) != \
+            pazienti.telefono_confronto(esistente.telefono):
+        esistente.telefono2 = dati['telefono2']
+        cambiato = True
+    if dati.get('telefono') and esistente.telefono and not esistente.telefono2 and \
+            pazienti.telefono_confronto(dati['telefono']) != pazienti.telefono_confronto(esistente.telefono):
+        esistente.telefono2 = dati['telefono']
+        cambiato = True
+    return cambiato
+
+
 def crea_o_completa_paziente(s, indice, dati, note='', inviato_da=''):
     esistente, _ = indice.trova(dati['cognome'], dati['nome'], dati['telefono'], dati['codice_fiscale'])
     if esistente is not None:
-        cambiato = False
-        for campo in ('nome', 'telefono', 'email', 'codice_fiscale', 'data_nascita', 'indirizzo'):
-            if dati.get(campo) and not getattr(esistente, campo):
-                setattr(esistente, campo, dati[campo])
-                cambiato = True
-        if dati.get('telefono2') and not esistente.telefono2 and pazienti.telefono_confronto(dati['telefono2']) != \
-                pazienti.telefono_confronto(esistente.telefono):
-            esistente.telefono2 = dati['telefono2']
-            cambiato = True
-        if dati.get('telefono') and esistente.telefono and not esistente.telefono2 and \
-                pazienti.telefono_confronto(dati['telefono']) != pazienti.telefono_confronto(esistente.telefono):
-            esistente.telefono2 = dati['telefono']
-            cambiato = True
+        cambiato = completa_campi(esistente, dati)
         if note and note not in (esistente.note or ''):
             esistente.note = ((esistente.note or '') + '\n' + note).strip()[:2000]
             cambiato = True
@@ -1672,16 +1874,22 @@ def esegui(s, piano, nome_file):
              'prestazioni': 0, 'stanze': 0, 'scartati': [], 'primo_giorno': None}
     indice = IndicePazienti(s)
     if piano['tipo'] == 'pazienti':
+        # una persona si conta una volta sola: la scheda creata dalla prima riga e
+        # completata dalla seconda e' un paziente nuovo, non anche uno aggiornato
+        nuovi, aggiornati = set(), set()
         for r in piano['righe']:
-            if r['esito'] not in ('nuovo', 'esistente'):
+            # la riga doppia completa la scheda della stessa persona, come una
+            # gia' in anagrafica: altrimenti i suoi dati si perdevano
+            if r['esito'] not in ('nuovo', 'esistente', 'doppio'):
                 if r['esito'] in ('scartato',):
                     esito['scartati'].append((r['n'], r['motivo']))
                 continue
             p, come = crea_o_completa_paziente(s, indice, r['paziente'], r['note'], r['inviato_da'])
             if come == 'nuovo':
-                esito['pazienti_nuovi'] += 1
-            elif come == 'aggiornato':
-                esito['pazienti_aggiornati'] += 1
+                nuovi.add(p.id)
+            elif come == 'aggiornato' and p.id not in nuovi:
+                aggiornati.add(p.id)
+        esito['pazienti_nuovi'], esito['pazienti_aggiornati'] = len(nuovi), len(aggiornati)
         servizi.registra(s, 'Importazione', None, 'PAZIENTI', '%s: %d nuovi, %d aggiornati' % (
             nome_file, esito['pazienti_nuovi'], esito['pazienti_aggiornati']))
         s.commit()
@@ -1707,15 +1915,24 @@ def esegui(s, piano, nome_file):
             esito['prestazioni'] += 1
         prestazioni[p['chiave']] = esistente
     stanze = {}
-    ordine = max([r.ordine for r in st.risorse] or [0])
+    # le stanze della struttura per nome semplificato: una stanza che c'e' gia'
+    # con lo stesso nome (anche scritto con altre maiuscole) si usa, non se ne
+    # crea un'altra. Con un nome uguale il database rifiuterebbe tutta
+    # l'importazione; con le maiuscole diverse ci sarebbero due stanze
+    gia = s.scalars(select(Risorsa).where(Risorsa.struttura_id == st.id)).all()
+    per_chiave = {pazienti.semplifica(r.nome): r for r in gia}
+    ordine = max([r.ordine for r in gia] or [0])
     for nome in piano['nuove_stanze']:
-        ordine += 1
-        tipo = 'SALA_OPERATORIA' if 'sala' in nome.lower() and 'endosc' not in nome.lower() else 'AMBULATORIO'
-        r = Risorsa(nome=nome, tipo=tipo, struttura_id=st.id, ordine=ordine, attiva=True)
-        s.add(r)
-        s.flush()
+        r = per_chiave.get(pazienti.semplifica(nome))
+        if r is None:
+            ordine += 1
+            tipo = 'SALA_OPERATORIA' if 'sala' in nome.lower() and 'endosc' not in nome.lower() else 'AMBULATORIO'
+            r = Risorsa(nome=nome, tipo=tipo, struttura_id=st.id, ordine=ordine, attiva=True)
+            s.add(r)
+            s.flush()
+            per_chiave[pazienti.semplifica(nome)] = r
+            esito['stanze'] += 1
         stanze[nome] = r
-        esito['stanze'] += 1
     campi_extra = {}
     esito['appunti'] = 0
 
@@ -1732,10 +1949,22 @@ def esegui(s, piano, nome_file):
         elif come == 'aggiornato':
             esito['pazienti_aggiornati'] += 1
 
+    esito['appunti_chiusi'] = 0
+
+    def chiudi_appunti(r, a):
+        """La riga e' in agenda: i suoi da confermare di un'importazione di prima
+        (quelli che l'anteprima ha contato) si chiudono, come con Prenota."""
+        for x in r.get('chiude_appunti') or []:
+            if segreteria.chiudi_appunto_prenotato(s, x.id, a):
+                esito['appunti_chiusi'] += 1
+
     for r in piano['righe']:
         if r['esito'] != 'nuovo':
             if r['esito'] in ('scartato', 'conflitto'):
                 da_confermare(r)
+            elif r['esito'] == 'presente':
+                chiudi_appunti(r, r.get('appuntamento_presente'))
+            # 'appunto': e' gia' fra i da confermare, non se ne fa un altro
             continue
         stanza = r['stanza'] or stanze.get(r.get('stanza_nuova'))
         medico = r['medico'] or medici.get(r.get('medico_chiave'))
@@ -1768,6 +1997,7 @@ def esegui(s, piano, nome_file):
         s.add(a)
         s.flush()
         esito['appuntamenti'] += 1
+        chiudi_appunti(r, a)
         if esito['primo_giorno'] is None or r['inizio'].date() < esito['primo_giorno']:
             esito['primo_giorno'] = r['inizio'].date()
         if prest is not None and r['extra']:
@@ -1893,6 +2123,21 @@ def foglio_di_dati(fogli):
     return next((i for i, x in enumerate(fogli) if len(x['righe']) > 1), 0)
 
 
+def avviso_righe_oltre(foglio):
+    """Il foglio ha piu' righe di quelle che si leggono: l'anteprima e la pagina
+    finale lo dicono, le righe in piu' non restano fuori senza saperlo."""
+    n = foglio.get('oltre') or 0
+    if not n:
+        return ''
+    massimo = MASSIMO_RIGHE + 30
+
+    def cifre(x):
+        return '{:,}'.format(x).replace(',', '.')
+    return ('Righe non lette: %s, dalla riga %s in poi. Il programma legge al massimo %s righe per foglio: '
+            'per importare anche quelle, dividere il file in più file più piccoli.'
+            % (cifre(n), cifre(massimo + 1), cifre(massimo)))
+
+
 def _analisi_dalla_richiesta(dati, meta, f):
     fogli = leggi_file(dati, meta['nome'])
     indice_foglio = 0
@@ -1963,6 +2208,7 @@ def anteprima(token):
         dopo = foglio_successivo(fogli, indice_foglio)
         return render_template('importa_esito.html', esito=esito, piano=piano, meta=meta, token=token,
                                foglio=fogli[indice_foglio].get('nome'),
+                               righe_oltre=avviso_righe_oltre(fogli[indice_foglio]),
                                prossimo=(dopo, fogli[dopo].get('nome')) if dopo is not None else None,
                                sid=piano['struttura'].id if piano.get('struttura') else None,
                                sezione='importa')
@@ -1982,6 +2228,7 @@ def anteprima(token):
                        .order_by(Operatore.cognome, Operatore.nome)).all()
     return render_template('importa_anteprima.html', token=token, meta=meta, fogli=fogli, medici=medici,
                            indice_foglio=indice_foglio, analisi=analisi, opzioni=opzioni, piano=piano,
+                           righe_oltre=avviso_righe_oltre(fogli[indice_foglio]),
                            colonne=colonne, campi=campi, strutture=strutture, stanze=stanze,
                            righe=righe_mostrate, etichetta_stato=ETICHETTA_STATO,
                            importo_in_testo=importo_in_testo, sezione='importa',
