@@ -1968,7 +1968,7 @@ python prove_16_browser.py http://127.0.0.1:5001   # 19 controlli: finestra dei 
 python prove_17_browser.py http://127.0.0.1:5001   # 16 controlli: codice fiscale mentre si scrive, calcolo,
                              # suggerimenti del luogo, prenotazione, pagina di controllo (salva pazienti di prova)
 python prove_tendine_browser.py http://127.0.0.1:5001   # 150 controlli: le tendine sopra la pagina e le notifiche, a 1366x657
-python prove_18_browser.py http://127.0.0.1:5001   # 46 controlli sui turni: griglia, tastiera, annulla e rifai, scelta del turno
+python prove_18_browser.py http://127.0.0.1:5001   # 55 controlli sui turni: griglia, tastiera, annulla e rifai, scelta del turno
                              # (dove si apre, mai coperta), schema, giorno a ore, schermo stretto, movimento ridotto
 python prove_19_browser.py http://127.0.0.1:5001   # 37 controlli su Dove si fa: ricerca mentre si scrive, frecce, scheda della
                              # struttura, messaggio cambiato, Copia, WhatsApp e Stampa, registro con Annulla, paziente,
@@ -2407,6 +2407,9 @@ falliscono, cioè il difetto c'era davvero.
 | Importazione: durata come orario, o «INF» | 0:45 non si leggeva; «INF» dava un errore del server | Si legge come ore e minuti; quello che non si legge si segnala |
 | Importazione rifatta | Le stesse righe in conflitto diventavano ogni volta un da confermare nuovo | Non si aggiungono di nuovo; quelle entrate in agenda chiudono il loro |
 | Importazione della rubrica: la stessa persona su due righe | I dati della seconda riga si perdevano | La seconda riga completa la scheda |
+| Turni: Annulla dopo aver tolto i turni di chi non è più in servizio | Annulla si rifiutava, e in un blocco misto non tornava niente (anche i turni dei colleghi in servizio) | Annulla rimette i turni com'erano; le sovrapposizioni restano rifiutate |
+| Turni: filtro per area | Una cella che sembrava vuota sostituiva il turno nascosto di un'altra area (con la sua nota); il turno nuovo restava invisibile | Si cambia solo quello che si vede; il turno nuovo prende l'area del filtro |
+| Turni: Ctrl+Z mentre si scrive un codice, o mentre si salva | Annullava la modifica di prima e il codice scritto si salvava lo stesso | Ctrl+Z lascia perdere il codice in scrittura; la modifica da annullare si sceglie in coda |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo

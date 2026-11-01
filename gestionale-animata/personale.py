@@ -208,18 +208,23 @@ def _testo_breve(valore, massimo):
 
 
 def assegna(s, persona, giorno, tipo=None, ora_inizio=None, ora_fine=None, area='', note='', aggiungi=False,
-            adesso=None):
+            adesso=None, area_filtro='', ripristino=False):
     """Mette un turno: di quel tipo (con il suo orario, o con orari scritti a
     mano se il tipo ha un orario e se ne danno altri) oppure, senza tipo, con
     l'orario scritto. Sostituisce i turni della persona in quel giorno, a meno
-    di 'aggiungi' (un secondo turno nello stesso giorno, spezzato).
+    di 'aggiungi' (un secondo turno nello stesso giorno, spezzato); con
+    'area_filtro' sostituisce solo quelli che si vedono con quel filtro (gli
+    altri restano, e un turno nuovo che si sovrappone a loro si rifiuta).
+    'ripristino' solo per «Annulla»: rimette un turno com'era anche a chi non
+    e' piu' in servizio o con un tipo non piu' in uso (le sovrapposizioni si
+    controllano lo stesso).
     Restituisce (turno, avvisi); se non si puo', ErroreTurno con il motivo.
     Non fa commit."""
-    if persona is None or not persona.attiva:
+    if persona is None or (not persona.attiva and not ripristino):
         raise ErroreTurno('Persona non trovata, o non più in servizio.')
     if not isinstance(giorno, date) or not (PRIMA <= giorno <= ULTIMA):
         raise ErroreTurno('Giorno non valido.')
-    if tipo is not None and not tipo.attivo:
+    if tipo is not None and not tipo.attivo and not ripristino:
         raise ErroreTurno('Il tipo di turno %s non è più in uso.' % tipo.codice)
     if tipo is not None and tipo.tutto_il_giorno:
         inizio = fine = None
@@ -233,7 +238,9 @@ def assegna(s, persona, giorno, tipo=None, ora_inizio=None, ora_fine=None, area=
         inizio, fine = intervallo(giorno, ora_inizio, ora_fine)
     stessi = s.scalars(select(TurnoPersonale).where(TurnoPersonale.persona_id == persona.id,
                                                    TurnoPersonale.giorno == giorno)).all()
-    da_togliere = [] if aggiungi else stessi
+    # con il filtro per area la cella mostra solo i turni di quell'area (e riposi e assenze):
+    # si sostituisce quello che si vede, mai un turno nascosto di un'altra area
+    da_togliere = [] if aggiungi else [t for t in stessi if nell_area(t, area_filtro)]
     contro = conflitti(s, persona.id, giorno, inizio, fine, escludi_ids={t.id for t in da_togliere})
     if contro:
         raise ErroreTurno('%s ha già %s: i due turni non possono stare insieme.' % (
@@ -251,13 +258,14 @@ def assegna(s, persona, giorno, tipo=None, ora_inizio=None, ora_fine=None, area=
     return nuovo, (avvisi_riposo(s, nuovo) if nuovo.con_orario else [])
 
 
-def togli(s, persona_id, giorno, turno_id=None):
-    """Toglie i turni della persona in quel giorno (o solo quello indicato).
+def togli(s, persona_id, giorno, turno_id=None, area_filtro=''):
+    """Toglie i turni della persona in quel giorno (o solo quello indicato);
+    con 'area_filtro' solo quelli che si vedono con quel filtro.
     Restituisce quanti. Non fa commit."""
     q = select(TurnoPersonale).where(TurnoPersonale.persona_id == persona_id, TurnoPersonale.giorno == giorno)
     if turno_id:
         q = q.where(TurnoPersonale.id == turno_id)
-    tolti = s.scalars(q).all()
+    tolti = [t for t in s.scalars(q).all() if nell_area(t, area_filtro)]
     for t in tolti:
         s.delete(t)
     s.flush()
@@ -871,9 +879,11 @@ def _leggi_stato(s, stato, chiavi, celle):
 def cambia():
     """Una o piu' celle della griglia: azione 'metti' (un tipo, o un orario),
     'aggiungi' (un secondo turno), 'togli' (tutto, o un turno), 'ripristina'
-    (rimette le celle come erano: «Annulla»). Risponde con le celle, i totali
-    e la copertura da ridisegnare, gli avvisi, gli errori e com'erano prima le
-    celle cambiate (per poter annullare)."""
+    (rimette le celle come erano: «Annulla»). Con il filtro per area della
+    pagina ('area_filtro') metti, aggiungi e togli toccano solo i turni che si
+    vedono. Risponde con le celle, i totali e la copertura da ridisegnare, gli
+    avvisi, gli errori e com'erano prima le celle cambiate, intere (per poter
+    annullare)."""
     s = ses()
     dati = _dati_richiesta()
     azione = dati.get('azione') or 'metti'
@@ -923,8 +933,12 @@ def cambia():
         persone = {p.id: p for p in s.scalars(select(Persona).where(Persona.id.in_({pid for pid, _ in chiavi})))}
         fatti = []
         if azione == 'ripristina':
-            # tutto o niente: prima si svuotano tutte le celle, poi si rimettono
-            # i turni di prima (che stavano insieme), cella per cella
+            # tutto o niente: prima si svuotano tutte le celle (intere, anche con
+            # il filtro per area: lo stato di prima e' della cella intera), poi si
+            # rimettono i turni di prima (che stavano insieme), cella per cella.
+            # 'ripristino': si rimettono anche i turni di chi nel frattempo non e'
+            # piu' in servizio o di un tipo non piu' in uso (Canc non li ferma,
+            # Annulla nemmeno); una sovrapposizione invece fa rifiutare tutto.
             try:
                 for pid, g in chiavi:
                     p = persone.get(pid)
@@ -934,7 +948,7 @@ def cambia():
                     togli(s, pid, g)
                 for pid, g in chiavi:
                     for i, (t, a, b, ar, no) in enumerate(voci[(pid, g)]):
-                        assegna(s, persone[pid], g, t, a, b, ar, no, aggiungi=i > 0)
+                        assegna(s, persone[pid], g, t, a, b, ar, no, aggiungi=i > 0, ripristino=True)
                     fatti.append((pid, g))
                 s.commit()
             except ErroreTurno as e:
@@ -943,24 +957,30 @@ def cambia():
                 fatti, prima = [], {}
         else:
             area_scritta = str(dati.get('area') or '')
+            con_orario = tipo is None or tipo.con_orario
             # dalla tastiera (o su piu' celle) si cambia il turno ma si tiene l'area che c'era
-            tieni_area = bool(dati.get('tieni_area')) and azione == 'metti' and not area_scritta.strip() and \
-                (tipo is None or tipo.con_orario)
+            tieni_area = bool(dati.get('tieni_area')) and azione == 'metti' and not area_scritta.strip() and con_orario
+            # con il filtro per area si vede (e si cambia) solo quell'area: un turno nuovo con orario
+            # senza un'area scritta va li', cosi' compare nella cella (riposi e assenze restano senza area)
+            area_nuovi = area if area and con_orario and not area_scritta.strip() else ''
             for pid, g in chiavi:
                 p = persone.get(pid)
                 try:
                     if p is None:
                         raise ErroreTurno('Persona non trovata.')
+                    # com'era la cella intera, anche i turni nascosti dal filtro: Annulla la rimette tutta
                     com_era = stato_cella(s, pid, g)
                     if azione == 'togli':
-                        if not togli(s, pid, g, intero(dati.get('turno')) or None):
+                        if not togli(s, pid, g, intero(dati.get('turno')) or None, area_filtro=area):
                             continue
                     else:
                         area_cella = area_scritta
-                        if tieni_area:
+                        if area_nuovi:
+                            area_cella = area_nuovi
+                        elif tieni_area:
                             area_cella = next((v['area'] for v in com_era if v['area']), '')
                         _, a = assegna(s, p, g, tipo, ora_inizio, ora_fine, area_cella,
-                                       str(dati.get('note') or ''), aggiungi=(azione == 'aggiungi'))
+                                       str(dati.get('note') or ''), aggiungi=(azione == 'aggiungi'), area_filtro=area)
                         avvisi.extend(a)
                     fatti.append((pid, g))
                     prima['%d_%s' % (pid, g.isoformat())] = com_era

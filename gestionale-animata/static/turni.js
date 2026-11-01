@@ -709,36 +709,44 @@
       });
     }
 
-    // annulla e rifai: le celle tornano come le ha descritte il programma prima della modifica
+    // annulla e rifai: le celle tornano come le ha descritte il programma prima della modifica.
+    // Manda la richiesta subito: si chiama solo da dentro la coda (annullaUltimo, rifaiUltimo).
     function ripristina(voce, annullando) {
       var chiavi = Object.keys(voce.stato);
       var tds = chiavi.map(function (k) { return perChiave[k]; }).filter(Boolean);
       tds.forEach(function (td) { td.classList.add('in-attesa'); });
-      accoda(function () {
-        return manda(indirizzo, struttura, { azione: 'ripristina', stato: voce.stato, dal: tab.getAttribute('data-dal'),
-                                              al: tab.getAttribute('data-al'), ruolo: tab.getAttribute('data-ruolo'),
-                                              area_filtro: tab.getAttribute('data-area') }).then(function (esito) {
-          tds.forEach(function (td) { td.classList.remove('in-attesa'); });
-          var d = esito.d;
-          if (!d || !d.celle) { avvisa((d && d.errore) || NON_RISPONDE, 'errore'); return; }
-          applica(d, chiavi);
-          if (d.errori && d.errori.length) { avvisa(d.errori, 'errore'); return; }
-          (annullando ? pilaRifai : pilaAnnulla).push({ stato: d.prima, testo: voce.testo });
-          avvisa((annullando ? 'Annullato: ' : 'Rifatto: ') + voce.testo + '.', 'ok',
-                 annullando ? { etichetta: 'Rifai', fai: rifaiUltimo } : { etichetta: 'Annulla', fai: annullaUltimo });
-        }, function () {
-          tds.forEach(function (td) { td.classList.remove('in-attesa'); });
-          avvisa(NON_RISPONDE, 'errore');
-        });
+      return manda(indirizzo, struttura, { azione: 'ripristina', stato: voce.stato, dal: tab.getAttribute('data-dal'),
+                                            al: tab.getAttribute('data-al'), ruolo: tab.getAttribute('data-ruolo'),
+                                            area_filtro: tab.getAttribute('data-area') }).then(function (esito) {
+        tds.forEach(function (td) { td.classList.remove('in-attesa'); });
+        var d = esito.d;
+        if (!d || !d.celle) { avvisa((d && d.errore) || NON_RISPONDE, 'errore'); return; }
+        applica(d, chiavi);
+        if (d.errori && d.errori.length) { avvisa(d.errori, 'errore'); return; }
+        (annullando ? pilaRifai : pilaAnnulla).push({ stato: d.prima, testo: voce.testo });
+        avvisa((annullando ? 'Annullato: ' : 'Rifatto: ') + voce.testo + '.', 'ok',
+               annullando ? { etichetta: 'Rifai', fai: rifaiUltimo } : { etichetta: 'Annulla', fai: annullaUltimo });
+      }, function () {
+        tds.forEach(function (td) { td.classList.remove('in-attesa'); });
+        avvisa(NON_RISPONDE, 'errore');
       });
     }
+    // quale modifica annullare (o rifare) si sceglie in coda, quando le richieste mandate prima
+    // hanno gia' avuto risposta e messo la loro modifica nella pila: Ctrl+Z subito dopo una
+    // modifica che si sta ancora salvando annulla proprio quella, non quella di prima
     function annullaUltimo() {
-      var v = pilaAnnulla.pop();
-      if (v) { ripristina(v, true); } else { avvisa('Niente da annullare.', 'ok'); }
+      accoda(function () {
+        var v = pilaAnnulla.pop();
+        if (!v) { avvisa('Niente da annullare.', 'ok'); return; }
+        return ripristina(v, true);
+      });
     }
     function rifaiUltimo() {
-      var v = pilaRifai.pop();
-      if (v) { ripristina(v, false); } else { avvisa('Niente da rifare.', 'ok'); }
+      accoda(function () {
+        var v = pilaRifai.pop();
+        if (!v) { avvisa('Niente da rifare.', 'ok'); return; }
+        return ripristina(v, false);
+      });
     }
 
     /* il mouse: clic, trascinare, Maiusc+clic, Ctrl+clic */
@@ -824,8 +832,12 @@
       var schema = $('finestra-schema');
       if (schema && schema.open) { return; }
       var k = (e.key || '').toLowerCase();
-      if (k === 'z' && !e.shiftKey) { e.preventDefault(); annullaUltimo(); }
-      else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); rifaiUltimo(); }
+      if (k !== 'z' && k !== 'y') { return; }
+      e.preventDefault();
+      // un codice ancora da confermare (M, P, R aspettano un attimo) non e' ancora una modifica:
+      // Ctrl+Z lo lascia perdere, come Esc, e le modifiche gia' fatte restano (Ctrl+Y lo stesso)
+      if (buffer.attivo()) { buffer.annulla(); return; }
+      if (k === 'z' && !e.shiftKey) { annullaUltimo(); } else { rifaiUltimo(); }
     });
 
     griglia = {
@@ -895,6 +907,9 @@
       }).then(function () { if (ricarica) { window.location.reload(); } });
     }
     function usaUltima() {
+      // ogni modifica ricarica la pagina: mentre se ne salva una, «ultima» e' ancora quella di prima;
+      // la modifica nuova si annulla dalla pagina ricaricata (con il suo avviso e Ctrl+Z)
+      if (inCorso > 0) { avvisa('Un momento: si sta ancora salvando l\'ultima modifica.', 'avviso'); return; }
       if (!ultima) { avvisa('Niente da annullare.', 'ok'); return; }
       var v = ultima;
       ultima = null;
@@ -1001,7 +1016,11 @@
     document.addEventListener('keydown', function (e) {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || staScrivendo(e.target)) { return; }
       var k = (e.key || '').toLowerCase();
-      if (k === 'z' || k === 'y') { e.preventDefault(); usaUltima(); }
+      if (k !== 'z' && k !== 'y') { return; }
+      e.preventDefault();
+      // come nella griglia: un codice ancora da confermare si lascia perdere, e basta
+      if (buffer.attivo()) { buffer.annulla(); return; }
+      usaUltima();
     });
   })();
 
