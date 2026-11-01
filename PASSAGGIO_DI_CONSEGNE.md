@@ -10,9 +10,10 @@ difetti).
 Scritto il 5 ottobre 2026 alla versione 1.7, aggiornato il 12 ottobre 2026 alla versione 1.9
 (il 19 ottobre: come una sessione di Claude può pubblicare su GitHub), il 25 ottobre 2026 alla
 versione 1.9.1 (l'email con qualsiasi casella, senza bisogno della verifica in due passaggi
-di Gmail) e il 31 ottobre 2026 alla versione **1.10** (le fasce di ogni ambulatorio), quando
+di Gmail), il 31 ottobre 2026 alla versione **1.10** (le fasce di ogni ambulatorio), quando
 Giovanni ha chiesto di continuare il lavoro con **Claude Code** sul suo PC (vedi *Passare a
-Claude Code*).
+Claude Code*), e il 1° novembre 2026 alla versione **1.11** (l'autoriparazione e un giro di
+correzioni: vedi *La 1.11*).
 
 ## In breve
 
@@ -91,7 +92,13 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
-- **Versione 1.10**, pronta: **le fasce di ogni ambulatorio**. Ogni turno può avere la sua
+- **Versione 1.11**, in lavorazione sul ramo `ccr-07f8e160-7j5lup` del progetto pubblico
+  `number959/gestionale-agende-versioni` (scelta di Giovanni del 1° novembre: il codice sta lì,
+  non in un progetto privato). Porta **l'autoriparazione** e **34 difetti corretti** trovati con una
+  revisione del codice per parti, ciascuno riprodotto da un controllo indipendente prima di
+  correggerlo e con una prova che fallisce sul codice della 1.10. Tutte le prove sono verdi nelle
+  due cartelle (vedi *La 1.11* per i numeri e per cosa resta da fare prima di pubblicarla).
+- **Versione 1.10**, pubblicabile: **le fasce di ogni ambulatorio**. Ogni turno può avere la sua
   durata delle fasce (*Configura → Anagrafiche*, il turno, *Durata delle fasce*); la prestazione
   occupa le fasce intere che tocca, la griglia e l'agenda del medico le mostrano a righe fitte
   con l'ora in ogni fascia libera, prima disponibilità e Sposta le seguono, un orario a metà
@@ -181,6 +188,7 @@ Il dettaglio di ogni versione è in `LEGGIMI.md` (paragrafi *Novità della …* 
 | 1.9 | Dove si fa: ricerca delle prestazioni nelle strutture del gruppo (sigle, plurali, correzioni), scheda della struttura con recapiti e messaggio per il paziente (copia, WhatsApp, email, stampa), registro dei pazienti indirizzati, database delle prestazioni importato dall'Excel del gruppo con l'anteprima |
 | 1.9.1 | L'email con qualsiasi casella: tipo di casella con server, porta e sicurezza proposti (sito della clinica, Aruba, Gmail, altro server), nome utente diverso dall'indirizzo, server senza password, errori che dicono cosa correggere |
 | 1.10 | Le fasce di ogni ambulatorio: ogni turno con la sua durata delle fasce, la prestazione occupa fasce intere (blocco), griglia a righe fitte con l'ora in ogni fascia libera, prima disponibilità e Sposta sulle fasce, avviso per un orario a metà fascia e per gli appuntamenti già presi che non stanno nelle fasce nuove |
+| 1.11 | L'autoriparazione (il database controllato e riparato da solo senza perdere dati, un gestionale solo, il programma bloccato che si chiude e si riapre, i lavori in sottofondo che ripartono, le copie ogni due ore, la pagina Controllo del programma) e 34 difetti corretti nei messaggi, nell'agenda, nelle schede, nell'importazione, nei turni del personale e nelle copie di sicurezza |
 
 Idee messe da parte da Giovanni: un **PIN** per aprire il programma ("ignora il PIN": non
 fatto, non richiesto per ora).
@@ -316,8 +324,8 @@ python strumenti/tutte_le_prove.py --browser http://127.0.0.1:5001   # tutte, an
 python strumenti/tutte_le_prove.py --solo prove_17,campagna     # solo alcune
 ```
 
-In totale: 973 prove e 2550 casi generati (`campagna.py`), più 382 controlli nel browser
-nella normale e 449 nell'animata (che ha anche `prove_animazioni.py` e
+In totale alla 1.11: 1121 prove e 2550 casi generati (`campagna.py`), più i controlli nel browser
+nella normale e nell'animata (alla 1.10: 382 e 449; alla 1.11 nove in più in `prove_18_browser.py`) (che ha anche `prove_animazioni.py` e
 `prove_icone_animate.py`). Le prove nel browser (Playwright con Chromium) salvano dati:
 sempre sul server di prova, mai su quello vero; `prove_16_browser.py` cambia l'indirizzo
 degli aggiornamenti e per questo il giro la lancia per ultima. Ogni prova si può anche
@@ -565,10 +573,68 @@ riga di comando di Claude Code su Windows è quella di Git for Windows (bash): g
 risorse. Per GitHub c'è il vero `gh` (`winget install GitHub.cli`, poi `gh auth login`): la
 release si fa con `gh release create` come in *Pubblicare una versione*.
 
+## La 1.11
+
+Fatta il 1° novembre 2026 in una sessione di Claude Code nel cloud, con il bundle della 1.10. Il
+lavoro è su `ccr-07f8e160-7j5lup` (un commit per blocco: autoriparazione, messaggi, agenda e
+schede, importazione, turni, revisione), tutto allineato nelle due cartelle.
+
+**L'autoriparazione** (`autoripara.py`, con la sezione *Autoriparazione* del `LEGGIMI.md` e la
+regola in `CLAUDE.md`): il database controllato all'avvio e ogni mezz'ora e riparato senza perdere
+niente quando i guasti sono solo negli indici, altrimenti l'ultima copia buona (il file rovinato
+resta sempre in `backup\danneggiati`); un gestionale solo (lucchetto, `gestionale.pid` con il
+battito del custode, `/salute`): il secondo clic sull'icona apre la pagina, un gestionale bloccato
+si chiude e si riparte, uno occupato si aspetta, un programma che non è il gestionale non si
+chiude mai; il programma si riavvia da solo se perde i suoi file o resta bloccato, al massimo tre
+volte in un'ora; i lavori in sottofondo ripartono; le copie ogni due ore se ci sono modifiche e
+accanto al database se la cartella scelta non si raggiunge; la pagina *Impostazioni → Controllo del
+programma* con il diario e la guida *Il programma si ripara da solo* (con immagine e video). Una
+revisione indipendente del codice nuovo ha trovato undici difetti, corretti (il più grave: una
+pagina rimasta fuori dall'albero dopo una corrente saltata si riparava dicendo «senza perdere
+niente»). `prove_autoriparazione.py`: 60 prove, verdi su Linux e con il Python di Windows in Wine;
+25 mutanti su 25 presi.
+
+**I difetti corretti** (34, tutti nello storico del `LEGGIMI.md`, con la prova in `prove_111*.py`):
+sette nei messaggi ai pazienti (il più grave: un messaggio in attesa di riprovare arrivava
+all'indirizzo del paziente di prima con il testo del paziente nuovo), cinque nell'agenda (una stanza
+disattivata proposta e usata, l'anno a due cifre, la sostituzione che bloccava il turno del
+sostituito, due nelle fasce intere), tre nelle schede dei pazienti (unione, omocodia, scheda
+sovrascritta), dieci nell'importazione da Excel, tre nei turni del personale, sei nelle copie e
+nel ripristino. Le prove nuove sono state lanciate anche sul codice della 1.10: falliscono.
+
+**Le prove alla 1.11**: 25 raccolte senza browser nelle due cartelle, tutte verdi (1121 prove e
+2550 casi generati), più le prove nel browser (10 raccolte nella normale, 12 nell'animata, tutte
+verdi; `prove_18_browser.py` è passato da 46 a 55 controlli).
+
+**Da fare prima di pubblicare la 1.11** (il codice è pronto, i Setup vanno rifatti dall'ultimo
+commit e riprovati: il Setup della 1.11 provato in Wine sulla 1.10 consegnata era di un commit
+precedente, vedi *Costruire e provare l'installatore*):
+
+1. costruire eseguibile e Setup delle due cartelle e provarli sulla 1.10 installata
+   (`prove_installato.py`, 46 controlli, e `strumenti/prova_autoriparazione_installato.py`: il
+   programma bloccato sostituito e il database rovinato riparato sull'eseguibile vero);
+2. rigenerare il PDF della guida (c'è una guida in più);
+3. la release `v1.11` nel progetto delle versioni, con i quattro file.
+
 ## Cose aperte
 
-- In Claude Code, per prima cosa: le prove su Windows, mai lanciate finora (vedi *Passare a
-  Claude Code*); quello che dipende dall'ambiente si sistema nelle prove, non nel programma.
+- **Le notti del cambio dell'ora** (trovato dalla revisione della 1.11, non cambiato): un turno di
+  notte nelle due notti in cui cambia l'ora conta 10 ore, mentre le ore vere sono 11 a ottobre e 9
+  a marzo (`TurnoPersonale.minuti`, anche nell'Excel). Se contare le ore vere o quelle
+  dell'orologio lo decide Giovanni con Federica (sono ore che possono finire in busta paga); per le
+  ore vere serve `tzdata` dentro l'eseguibile o la regola europea scritta a mano.
+- **Codici dei turni scritti di seguito** («M» poi «P» entro un attimo diventa «MP», codice
+  sconosciuto): funziona come documentato (le lettere scritte durante l'attesa formano un codice
+  solo, così si scrivono MA, PE e RE), ma se Federica ci inciampa si può cambiare.
+- `backup\danneggiati` cresce senza limite (i file rovinati non si cancellano mai, apposta): se un
+  giorno occupa troppo, si svuota a mano.
+
+- In Claude Code, per prima cosa: le prove su Windows vero, mai lanciate finora (vedi *Passare a
+  Claude Code*); alla 1.11 le raccolte senza browser sono state lanciate con il Python di Windows
+  in Wine e quattro prove che non andavano su Windows sono state sistemate (la password protetta
+  con DPAPI, una cartella non scrivibile, il pid di un venv, la prova delle icone animate di
+  domenica); `prove_15.py`, `prove_16.py` e `prove_191.py` vogliono `openssl` sul PATH (c'è nella
+  riga di comando di Git for Windows, non in PowerShell).
 - Pubblicare la 1.10 su GitHub (contiene la 1.8, la 1.9 e la 1.9.1) e controllare l'indirizzo
   pubblico (vedi *Stato alla consegna*); mettere il codice (`gestionale-agende.bundle`) in un
   progetto privato.
