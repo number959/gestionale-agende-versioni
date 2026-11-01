@@ -22,6 +22,7 @@ import shutil
 import sqlite3
 import threading
 import time as orologio
+from urllib.request import pathname2url
 from datetime import datetime, date, timedelta
 
 NOME = re.compile(r'agende-(\d{4}-\d{2}-\d{2})_(\d{6})(?:-([a-z0-9-]+))?\.db$')
@@ -44,8 +45,16 @@ def cartella_predefinita(percorso_db):
     return os.path.join(os.path.dirname(os.path.abspath(percorso_db)), 'backup')
 
 
+def solo_lettura(percorso):
+    """Una connessione che non crea il file se manca e non lo scrive (1.11:
+    controllare una copia sparita lasciava un file vuoto al suo posto)."""
+    return sqlite3.connect('file:%s?mode=ro' % pathname2url(os.path.abspath(percorso)), uri=True)
+
+
 def _verifica(percorso):
-    c = sqlite3.connect(percorso)
+    if not os.path.isfile(percorso):
+        raise RuntimeError('la copia non c\'è più: %s' % os.path.basename(percorso))
+    c = solo_lettura(percorso)
     try:
         esito = c.execute('PRAGMA integrity_check').fetchone()[0]
         tabelle = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
@@ -188,10 +197,14 @@ def metti_al_posto(sorgente, percorso_db, motore=None):
     (la testa illeggibile), o a programma chiuso, si sostituisce il file; i
     giornali del file vecchio vanno via prima (applicati al file nuovo lo
     rovinerebbero: chi chiama li ha gia' messi da parte, se servono)."""
+    # 1.11: prima di tutto la copia da rimettere deve esserci ed essere buona. Una copia
+    # sparita (tolta dalla rotazione mentre si ripristinava) veniva creata vuota da
+    # sqlite3.connect e scritta al posto del database: si perdeva tutto
+    _verifica(sorgente)
     if motore is not None:
         motore.dispose()
         try:
-            src = sqlite3.connect(sorgente)
+            src = solo_lettura(sorgente)
             dst = sqlite3.connect(percorso_db, timeout=30)
             try:
                 src.backup(dst)
@@ -209,6 +222,7 @@ def metti_al_posto(sorgente, percorso_db, motore=None):
             os.remove(percorso_db + coda)
     provvisorio = percorso_db + '.nuovo'
     shutil.copyfile(sorgente, provvisorio)
+    _verifica(provvisorio)                 # quello che prende il posto del database e' buono
     for i in range(50):
         try:
             os.replace(provvisorio, percorso_db)
@@ -241,7 +255,12 @@ def ripristina(percorso_db, file_backup, motore, cartella):
             logging.warning('ripristino sopra un database rovinato (%s): copiato fra i danneggiati', guasto)
             sicurezza = copia_grezza(percorso_db)
         else:
-            raise
+            # 1.11: la cartella scelta non si raggiunge (chiavetta tolta): la copia di prima
+            # del ripristino va accanto al database, come per «Aggiorna adesso»
+            predefinita = cartella_predefinita(percorso_db)
+            if os.path.normcase(os.path.abspath(cartella)) == os.path.normcase(os.path.abspath(predefinita)):
+                raise
+            sicurezza = esegui(percorso_db, predefinita, 'prima-del-ripristino')
     metti_al_posto(file_backup, percorso_db, motore)
     return sicurezza
 
@@ -276,7 +295,8 @@ def copia_recente(percorso_db, cartella, adesso=None):
     """Una copia «recente» se l'ultima copia della cartella ha piu' di due ore
     e il database e' cambiato dopo. Restituisce il file o None."""
     adesso = adesso or datetime.now()
-    copie = elenco(cartella)
+    # le copie «del futuro» (fatte con l'orologio avanti) non contano come l'ultima
+    copie = [c for c in elenco(cartella) if c['quando'] <= adesso + timedelta(days=1)]
     if not copie:
         return None
     ultima = copie[0]['quando']
@@ -322,16 +342,18 @@ def allarme(adesso=None):
     """Testo da mostrare in cima alla griglia se i backup non vanno, None
     altrimenti. Nessun allarme finche' il thread non ha fatto il primo giro."""
     adesso = adesso or datetime.now()
+    testi = []
+    # l'orologio indietro si dice insieme agli altri problemi, non al loro posto (1.11)
     if stato.get('orologio'):
-        return ('L\'orologio del computer sembra indietro: c\'è già una copia di sicurezza del %s. Controllare '
-                'data e ora di Windows.' % stato['orologio'].strftime('%d/%m/%Y'))
+        testi.append('L\'orologio del computer sembra indietro: c\'è già una copia di sicurezza del %s. '
+                     'Controllare data e ora di Windows.' % stato['orologio'].strftime('%d/%m/%Y'))
     riserva = stato.get('riserva')
     if riserva:
-        return ('La cartella dei backup scelta non si raggiunge (%s): le copie si fanno intanto nella cartella '
-                'accanto al database. Controllare la cartella in Impostazioni.' % riserva['errore'])
-    if stato['ultimo_errore'] and (stato['ultimo_ok'] is None or
-                                   stato['errore_il'] and stato['errore_il'] > stato['ultimo_ok']):
-        return 'Backup non riuscito: %s. Controllare la cartella in Impostazioni.' % stato['ultimo_errore']
-    if stato['ultimo_ok'] is not None and (adesso - stato['ultimo_ok']).days >= 3:
-        return 'Ultimo backup riuscito %d giorni fa.' % (adesso - stato['ultimo_ok']).days
-    return None
+        testi.append('La cartella dei backup scelta non si raggiunge (%s): le copie si fanno intanto nella '
+                     'cartella accanto al database. Controllare la cartella in Impostazioni.' % riserva['errore'])
+    elif stato['ultimo_errore'] and (stato['ultimo_ok'] is None or
+                                     stato['errore_il'] and stato['errore_il'] > stato['ultimo_ok']):
+        testi.append('Backup non riuscito: %s. Controllare la cartella in Impostazioni.' % stato['ultimo_errore'])
+    elif stato['ultimo_ok'] is not None and (adesso - stato['ultimo_ok']).days >= 3:
+        testi.append('Ultimo backup riuscito %d giorni fa.' % (adesso - stato['ultimo_ok']).days)
+    return ' '.join(testi) or None

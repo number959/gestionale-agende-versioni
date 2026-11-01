@@ -1388,10 +1388,15 @@ prima che il server esista); le prove sono `prove_autoriparazione.py`.
 Windows quando il programma si chiude, anche se si chiude male) e scrive in `gestionale.pid` il suo
 processo, la porta e la fase (`avvio`, poi `in servizio`). Il secondo clic chiede a `/salute` del
 primo se risponde (due tentativi da 15 secondi): se sì apre solo la pagina; se il primo sta ancora
-partendo (fase `avvio`, da meno di 10 minuti) aspetta e apre la pagina; se non risponde, o risponde
-ma ha tutti i fili fermi su una pagina da più di due minuti, lo chiude (`taskkill /F /T`) e parte al
-suo posto. Un processo si chiude solo se è lo stesso eseguibile (`tasklist`): un programma che non è
-il gestionale non si chiude mai. Se la porta 5000 è presa da un altro programma, o Windows non la
+partendo (fase `avvio`) o riparando (fase `riparazione`), da meno di 10 minuti, aspetta e apre la
+pagina. Il custode scrive un battito in `gestionale.pid` a ogni giro (30 secondi): un gestionale che
+non risponde alle pagine ma batte è occupato (salvataggi in coda, una riparazione lunga), non
+bloccato, e il secondo clic lo aspetta fino a due minuti e mezzo; uno che non batte da 90 secondi, o
+che risponde ma ha tutti i fili fermi su una pagina da più di due minuti, si chiude (`taskkill /F`,
+senza `/T`: il browser aperto dal gestionale è un suo «figlio» e si chiuderebbe anche lui) e il
+nuovo parte al suo posto. Un processo si chiude solo se è lo stesso eseguibile, con il percorso intero, ed è
+partito prima che il file fosse scritto (un numero di processo riusato da un programma nato dopo
+non è il gestionale): un programma che non è il gestionale non si chiude mai. Se la porta 5000 è presa da un altro programma, o Windows non la
 lascia usare (Hyper-V e WSL si riservano intere fasce di porte), il gestionale si apre su una delle
 porte 5001-5009 e lo scrive nel diario. Il server lega da sé la porta, senza `SO_REUSEADDR` su
 Windows: con quell'opzione (che waitress mette sempre) Windows lascia legare una porta già usata da
@@ -1409,11 +1414,15 @@ comincia con «SQLite format 3»):
   lasciare), e si dice da che ora ricontrollare. Senza copie è il primo avvio: database nuovo;
 - danneggiato: il file (con il suo giornale) si copia così com'è in `backup\danneggiati`, poi si
   prova a rifarlo senza perdere niente: `VACUUM INTO`, poi `REINDEX` su una copia, poi la copia
-  tabella per tabella con gli indici rifatti dai dati. Se il controllo di SQLite trovava guasti solo
-  negli indici e tutte le righe si sono lette, non si è perso niente. Altrimenti si rimette l'ultima
-  copia buona e il recupero parziale resta da parte; senza copie si tiene il recupero parziale
-  (avviso rosso: chiamare l'assistenza). `VACUUM INTO` da solo non basta per un indice rovinato:
-  copia gli indici così come sono (l'ottimizzazione «xfer» di SQLite) e si ferma anche lui.
+  tabella per tabella con gli indici rifatti dai dati. «Senza perdere niente» si dice solo se il
+  controllo di SQLite trovava guasti solo negli indici: una pagina «mai usata» che contiene delle
+  righe (una scrittura persa quando è saltata la corrente: la pagina interna torna com'era e le
+  righe più recenti restano fuori dall'albero) sono righe perse, anche se la ricostruzione riesce.
+  Allora si rimette l'ultima copia buona (il recupero parziale resta da parte) e si dice da che ora
+  ricontrollare; senza copie si tiene il recupero parziale (avviso rosso: chiamare l'assistenza).
+  `VACUUM INTO` da solo non basta per un indice rovinato: copia gli indici così come sono
+  (l'ottimizzazione «xfer» di SQLite) e si ferma anche lui. Le copie si aprono in sola lettura e si
+  controllano prima di rimetterle: una copia sparita nel frattempo non si crea vuota.
 
 Le copie si cercano nella cartella scelta nelle impostazioni e in quella accanto al database; la
 cartella scelta è scritta anche nel diario, per trovarla quando il database non si legge. Dopo una
@@ -1424,8 +1433,9 @@ ripristino. All'avvio si tolgono anche gli avanzi di lavori interrotti (copie `.
 **Il custode**, un thread che si sveglia ogni minuto:
 - i lavori in sottofondo (copie di sicurezza, email e WhatsApp, controllo degli aggiornamenti), se
   si sono fermati, li fa ripartire;
-- ogni mezz'ora, e subito dopo un errore «malformed» in una pagina, controlla il database; se è
-  danneggiato lo ripara con i salvataggi fermi (`LUCCHETTO`): la copia buona si scrive dentro il
+- ogni mezz'ora, e subito dopo un errore «malformed» in una pagina (allora con il controllo
+  completo: quello veloce non vede un indice che non corrisponde più ai dati), controlla il
+  database; se è danneggiato lo ripara con i salvataggi fermi (`LUCCHETTO`): la copia buona si scrive dentro il
   file aperto con l'API di backup di SQLite (su Windows un file aperto non si sostituisce), e solo se
   il file è troppo rovinato per riceverla si sostituisce il file;
 - controlla lo spazio sul disco: sotto i 300 MB lo dice;
@@ -1441,10 +1451,13 @@ massimo due ore. Se la cartella scelta non si raggiunge (la chiavetta tolta, il 
 del giorno si fa nella cartella accanto al database, e si riprova la cartella scelta a ogni giro. La
 pagina delle impostazioni mostra e rimette le copie di tutte e due le cartelle. Una copia che non si
 scrive non lascia il suo `.parziale`. Con l'orologio del PC indietro la copia appena fatta non si
-cancella più (prima la rotazione la toglieva subito, ogni ora) e la pagina lo dice. Il ripristino
-dalle impostazioni funziona anche quando il database attuale è rovinato: la sua copia di sicurezza
-non passerebbe il controllo, quindi si copia così com'è fra i danneggiati e si va avanti.
-«Aggiorna adesso» fa la sua copia accanto al database se la cartella scelta non si raggiunge.
+cancella più (prima la rotazione la toglieva subito, ogni ora) e la pagina lo dice, insieme agli
+altri avvisi; una copia con la data nel futuro non conta come l'ultima e si rimette per ultima. Il
+ripristino dalle impostazioni funziona anche quando il database attuale è rovinato: la sua copia di
+sicurezza non passerebbe il controllo, quindi si copia così com'è fra i danneggiati e si va avanti.
+Il ripristino e «Aggiorna adesso» fanno la loro copia accanto al database se la cartella scelta non
+si raggiunge. All'avvio si guarda solo la cartella accanto al database: una cartella di rete spenta
+farebbe aspettare.
 
 **La versione dello schema.** Se la riga `versione_schema` manca (un recupero che l'ha persa), la
 versione si ricava da tabelle e colonne (la colonna `turni.passo` → 11, le tabelle di Dove si fa →
@@ -2474,6 +2487,17 @@ falliscono, cioè il difetto c'era davvero.
 | Turni: Annulla dopo aver tolto i turni di chi non è più in servizio | Annulla si rifiutava, e in un blocco misto non tornava niente (anche i turni dei colleghi in servizio) | Annulla rimette i turni com'erano; le sovrapposizioni restano rifiutate |
 | Turni: filtro per area | Una cella che sembrava vuota sostituiva il turno nascosto di un'altra area (con la sua nota); il turno nuovo restava invisibile | Si cambia solo quello che si vede; il turno nuovo prende l'area del filtro |
 | Turni: Ctrl+Z mentre si scrive un codice, o mentre si salva | Annullava la modifica di prima e il codice scritto si salvava lo stesso | Ctrl+Z lascia perdere il codice in scrittura; la modifica da annullare si sceglie in coda |
+| Autoriparazione: pagina di una tabella rimasta fuori dall'albero (corrente saltata) | Si riparava dicendo «senza perdere niente», e le righe più recenti sparivano | Una pagina «mai usata» con delle righe sono righe perse: si rimette la copia e si dice da che ora ricontrollare |
+| Autoriparazione: copia da rimettere sparita nel frattempo | Si creava vuota e andava al posto del database | Le copie si aprono in sola lettura e si controllano prima; una copia che non c'è ferma tutto |
+| Autoriparazione: errore «malformed» di un indice che non corrisponde ai dati | Il controllo veloce diceva «integro» e non si riparava | Dopo un errore «malformed» il custode fa il controllo completo |
+| Autoriparazione: programma occupato (salvataggi in coda, riparazione lunga) | Il secondo clic lo chiudeva dopo mezzo minuto come se fosse bloccato | Il custode batte in gestionale.pid: chi batte si aspetta (2 minuti e mezzo), chi non batte da 90 secondi si chiude |
+| Autoriparazione: chiusura con taskkill /T | Avrebbe chiuso anche il browser aperto dal gestionale (suo figlio) | Si chiude solo il processo (anche nel Setup e in FERMA.bat) |
+| FERMA.bat chiudeva chi ascolta sulla porta 5000 | Con il gestionale su una porta di riserva chiudeva un altro programma | Chiude Gestionale.exe per nome |
+| Copia di sicurezza con la data nel futuro (orologio avanti) | Fermava le copie recenti, veniva rimessa al posto di una buona, l'avviso dell'orologio nascondeva «Backup non riuscito» | Per ultima nella scelta, non conta come l'ultima, gli avvisi si sommano |
+| Ripristino con la cartella scelta irraggiungibile | Rifiutato, anche delle copie accanto al database | La copia di prima del ripristino va accanto al database |
+| Avvio con la cartella delle copie su un NAS spento | L'avvio aspettava la risposta della rete | All'avvio si guarda solo la cartella accanto al database |
+| Riavvio da solo non riuscito | Il programma restava aperto senza il lucchetto: un secondo clic apriva un altro gestionale sullo stesso database | Il lucchetto torna al programma |
+| Processo riconosciuto dal solo nome | «Gestionale.exe» può essere un altro programma; un numero di processo riusato | Percorso intero e ora di avvio del processo |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo

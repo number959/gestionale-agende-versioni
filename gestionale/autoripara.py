@@ -74,7 +74,11 @@ CARTELLA_DANNEGGIATI = 'danneggiati'          # dentro backup\
 MASSIMO_EVENTI = 100
 SPAZIO_MINIMO = 300 * 1024 * 1024
 OGNI_CONTROLLO_DB = 30 * 60                     # secondi fra due controlli del database
-OGNI_GIRO = 60                                  # secondi fra due giri del custode
+OGNI_GIRO = 30                                  # secondi fra due giri del custode (e due battiti)
+# il battito: il custode lo scrive in gestionale.pid a ogni giro. Un gestionale che non
+# risponde alle pagine ma batte e' occupato, non bloccato: il secondo clic aspetta
+BATTITO_SCADUTO = 90                            # secondi senza battito: il programma e' fermo
+ATTESA_OCCUPATO = 150                           # secondi che il secondo clic aspetta uno occupato
 # un gestionale che sta partendo (con una riparazione in corso, per esempio) non
 # risponde ancora: prima di questo tempo il secondo clic non lo chiude
 ATTESA_AVVIO = 10 * 60
@@ -264,7 +268,11 @@ def copia_buona(cartelle):
     copie = []
     for c in cartelle:
         copie += backup.elenco(c)
-    copie.sort(key=lambda x: (x['motivo'] == 'prima-del-ripristino', -x['quando'].timestamp()))
+    # per ultime anche le copie «del futuro»: fatte con l'orologio del PC avanti, la data nel
+    # nome non dice quanto sono recenti, e messe prima sarebbero rimesse al posto di una buona
+    domani = datetime.now() + timedelta(days=1)
+    copie.sort(key=lambda x: (x['quando'] > domani, x['motivo'] == 'prima-del-ripristino',
+                              -x['quando'].timestamp()))
     for x in copie:
         if _integro(x['percorso']):
             return x
@@ -283,15 +291,42 @@ def _metti_da_parte(percorso, momento):
     return os.path.dirname(backup.copia_grezza(percorso, momento))
 
 
+def _pagina_con_righe(percorso, numero):
+    """La pagina 'numero' del file e' una pagina di una tabella con delle righe?
+    (Il tipo della pagina e' il suo primo byte: 13 foglia e 5 interna di una
+    tabella; 10 e 2 sono di un indice; le altre non hanno dati.) True anche se
+    non si legge: nel dubbio, dati."""
+    try:
+        with open(percorso, 'rb') as f:
+            testa = f.read(100)
+            misura = int.from_bytes(testa[16:18], 'big')
+            misura = 65536 if misura == 1 else misura
+            f.seek((numero - 1) * misura + (100 if numero == 1 else 0))
+            pagina = f.read(5)
+    except (OSError, ValueError):
+        return True
+    if len(pagina) < 5:
+        return True
+    return pagina[0] in (0x0D, 0x05) and int.from_bytes(pagina[3:5], 'big') > 0
+
+
 def _solo_indici(percorso):
     """Il controllo di SQLite trova guasti solo negli indici (o in pagine che
     non contengono dati)? Allora le tabelle sono intere e, rifatti gli indici
-    dai dati, non si perde niente. False se non si sa."""
+    dai dati, non si perde niente. False se non si sa.
+
+    Attenzione alle pagine «never used»: puo' essere una pagina di una tabella
+    con le sue righe rimasta fuori dall'albero (una scrittura persa quando e'
+    saltata la corrente: la pagina interna torna com'era prima e le righe piu'
+    recenti non si raggiungono piu'). Quelle sono righe perse, non spazio
+    vuoto: la revisione della 1.11 l'ha trovato, prima diceva «niente perso»."""
     try:
         c = sqlite3.connect(percorso)
         try:
             indici = c.execute("SELECT name, rootpage FROM sqlite_master WHERE type = 'index'").fetchall()
-            messaggi = [str(r[0]) for r in c.execute('PRAGMA quick_check(200)').fetchall()]
+            # SQLite mette piu' messaggi in una riga sola, uno per linea
+            messaggi = [x.strip() for r in c.execute('PRAGMA quick_check(200)').fetchall()
+                        for x in str(r[0]).splitlines() if x.strip()]
         finally:
             c.close()
     except sqlite3.Error:
@@ -309,7 +344,12 @@ def _solo_indici(percorso):
         indice = re.search(r'\bindex (\S+)', m)
         if indice and indice.group(1) in nomi:
             continue
-        if re.match(r'(Page \d+:? (is )?never used|Freelist|freelist)', m):
+        pagina = re.match(r'Page (\d+):? (?:is )?never used', m)
+        if pagina:
+            if _pagina_con_righe(percorso, int(pagina.group(1))):
+                return False
+            continue
+        if re.match(r'(Freelist|freelist)', m):
             continue
         return False
     return True
@@ -471,13 +511,20 @@ def ripara(percorso, cartelle=None, motore=None, esito=None):
         copia_lavoro = os.path.join(lavoro, 'danneggiato.db')
         for p in _file_del_database(percorso):
             shutil.copyfile(p, copia_lavoro + p[len(percorso):])
+        # «senza perdere niente» si dice solo se il controllo trova guasti solo negli
+        # indici: una ricostruzione riuscita non basta (le righe di una pagina rimasta
+        # fuori dall'albero non le legge nessuno, e sparirebbero senza dirlo)
+        solo_indici = _solo_indici(copia_lavoro)
         nuovo, modo = _ricostruisci(copia_lavoro, lavoro)
-        if nuovo:
+        if nuovo and solo_indici:
             _metti_al_posto(nuovo, percorso, motore)
             return annota('Il database era danneggiato ed è stato riparato senza perdere niente (%s). '
                           'Il file di prima è in %s.' % (modo, parte), 'ok', dettaglio, cartella_dati)
         recuperato, righe, problemi = _recupera(copia_lavoro, lavoro)
-        if recuperato and not problemi and _solo_indici(copia_lavoro):
+        if nuovo and not solo_indici:
+            # ricostruito, ma qualcosa puo' mancare: vale come un recupero parziale
+            recuperato, problemi = nuovo, problemi + ['righe forse rimaste fuori (pagine senza albero)']
+        if recuperato and not problemi and solo_indici:
             # tutte le righe lette, i guasti erano solo negli indici: niente perso
             _metti_al_posto(recuperato, percorso, motore)
             return annota('Il database era danneggiato ed è stato riparato senza perdere niente (indici rifatti '
@@ -554,7 +601,9 @@ def all_avvio(percorso_db):
     mai l'avvio: un guasto qui si scrive nel registro e si va avanti."""
     try:
         cartelle = cartelle_backup(percorso_db)
-        pulisci_avanzi(percorso_db, cartelle)
+        # gli avanzi solo accanto al database: leggere all'avvio una cartella di rete spenta
+        # farebbe aspettare (i .parziale nella cartella scelta non restano piu': li toglie la copia)
+        pulisci_avanzi(percorso_db, [backup.cartella_predefinita(percorso_db)])
         esito, dettaglio = controlla_database(percorso_db)
         stato.update(controllo_db=datetime.now(), esito_db=esito, dettaglio_db=dettaglio)
         if esito == 'occupato':
@@ -592,15 +641,49 @@ def prendi_lucchetto(cartella):
     return f
 
 
+_avviato = [None]
+
+
 def scrivi_pid(cartella, porta, fase):
-    """Chi tiene il lucchetto, su che porta risponde e in che fase e'
-    ('avvio' finche' non risponde, poi 'in servizio')."""
+    """Chi tiene il lucchetto, su che porta risponde e in che fase e' ('avvio'
+    finche' non risponde, poi 'in servizio'; 'riparazione' mentre ripara il
+    database), da quando, e l'ultimo battito."""
+    adesso = datetime.now().isoformat(timespec='seconds')
+    _avviato[0] = _avviato[0] or adesso
     try:
         _scrivi_json(os.path.join(cartella, FILE_PID), {
             'pid': os.getpid(), 'porta': porta, 'fase': fase, 'eseguibile': sys.executable,
-            'quando': datetime.now().isoformat(timespec='seconds')})
+            'quando': adesso, 'battito': adesso, 'avviato': _avviato[0]})
     except OSError:
         logging.exception('autoriparazione: %s non scritto', FILE_PID)
+
+
+def batti(cartella=None, fase=None):
+    """Il battito del gestionale principale (lo scrive il custode a ogni giro):
+    chi clicca di nuovo l'icona capisce che il programma e' vivo anche se le
+    pagine sono lente. Con 'fase' cambia anche la fase (e da quando)."""
+    cartella = cartella or _cartella[0]
+    if not cartella or _istanza[0] is None:
+        return
+    info = leggi_pid(cartella)
+    if info.get('pid') != os.getpid():
+        return
+    adesso = datetime.now().isoformat(timespec='seconds')
+    info['battito'] = adesso
+    if fase and fase != info.get('fase'):
+        info['fase'], info['quando'] = fase, adesso
+    try:
+        _scrivi_json(os.path.join(cartella, FILE_PID), info)
+    except OSError:
+        logging.exception('autoriparazione: battito non scritto')
+
+
+def _secondi_da(testo):
+    """Da quanti secondi (dalla data scritta nel file), o None se non si legge."""
+    try:
+        return (datetime.now() - datetime.fromisoformat(testo)).total_seconds()
+    except (TypeError, ValueError):
+        return None
 
 
 def leggi_pid(cartella):
@@ -646,16 +729,73 @@ def _stesso_nome(a, b):
     return a.startswith('python') and b.startswith('python')
 
 
-def processo_nostro(pid):
-    """Il processo 'pid' esiste ed e' il gestionale (lo stesso eseguibile)?
-    Mai chiudere un programma che non e' il nostro."""
+def _stesso_percorso(a, b):
+    """Lo stesso eseguibile, con il percorso intero (1.11: il solo nome,
+    «Gestionale.exe», puo' essere anche di un altro programma)."""
+    a, b = os.path.normcase(os.path.abspath(a or '')), os.path.normcase(os.path.abspath(b or ''))
+    return a == b or (os.path.dirname(a) == os.path.dirname(b) and _stesso_nome(a, b))
+
+
+def _processo_windows(pid):
+    """(percorso dell'eseguibile, avvio come datetime) del processo, o None
+    se non si legge (allora vale il controllo con tasklist)."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        k32 = ctypes.windll.kernel32
+        h = k32.OpenProcess(0x1000, False, pid)           # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return None
+        try:
+            buf = ctypes.create_unicode_buffer(1024)
+            n = wintypes.DWORD(1024)
+            if not k32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(n)):
+                return None
+            tempi = [wintypes.FILETIME() for _ in range(4)]
+            if not k32.GetProcessTimes(h, *[ctypes.byref(t) for t in tempi]):
+                return None
+            centinaia = (tempi[0].dwHighDateTime << 32) | tempi[0].dwLowDateTime   # dal 1601, 100 ns
+            avvio = datetime(1601, 1, 1) + timedelta(microseconds=centinaia // 10)
+            # l'ora del sistema e' UTC: in ora locale come i datetime del programma
+            avvio = avvio + (datetime.now() - datetime.utcnow())
+            return buf.value, avvio
+        finally:
+            k32.CloseHandle(h)
+    except Exception:
+        return None
+
+
+def _avvio_linux(pid):
+    """L'ora di avvio del processo (da /proc), o None."""
+    try:
+        with open('/proc/%d/stat' % pid) as f:
+            campi = f.read().rsplit(')', 1)[1].split()
+        with open('/proc/stat') as f:
+            boot = next(int(r.split()[1]) for r in f if r.startswith('btime'))
+        return datetime.fromtimestamp(boot + int(campi[19]) / os.sysconf('SC_CLK_TCK'))
+    except (OSError, ValueError, IndexError, StopIteration):
+        return None
+
+
+def processo_nostro(pid, avviato_entro=None):
+    """Il processo 'pid' esiste ed e' il gestionale (lo stesso eseguibile, con
+    il percorso)? Con 'avviato_entro' (quando il gestionale ha scritto il file)
+    anche: avviato prima di allora; un processo nato dopo ha solo riusato il
+    numero. Mai chiudere un programma che non e' il nostro."""
     try:
         pid = int(pid)
     except (TypeError, ValueError):
         return False
     if pid <= 0 or pid == os.getpid():
         return False
+    margine = timedelta(seconds=5)
     if os.name == 'nt':
+        dati = _processo_windows(pid)
+        if dati is not None:
+            percorso, avvio = dati
+            if not _stesso_percorso(percorso, sys.executable):
+                return False
+            return avviato_entro is None or avvio <= avviato_entro + margine
         try:
             r = subprocess.run(['tasklist', '/FI', 'PID eq %d' % pid, '/FO', 'CSV', '/NH'],
                                capture_output=True, text=True, errors='replace', timeout=20,
@@ -671,14 +811,19 @@ def processo_nostro(pid):
     except OSError:
         return False
     try:
-        return _stesso_nome(os.path.realpath('/proc/%d/exe' % pid), os.path.realpath(sys.executable))
+        if not _stesso_percorso(os.path.realpath('/proc/%d/exe' % pid), os.path.realpath(sys.executable)):
+            return False
     except OSError:
         return False
+    avvio = _avvio_linux(pid)
+    return avviato_entro is None or avvio is None or avvio <= avviato_entro + margine
 
 
 def chiudi_processo(pid):
     if os.name == 'nt':
-        subprocess.run(['taskkill', '/F', '/T', '/PID', str(int(pid))], capture_output=True, timeout=30,
+        # senza /T: il browser aperto dal gestionale e' un suo «figlio», e /T chiuderebbe
+        # anche quello, con le pagine della segreteria
+        subprocess.run(['taskkill', '/F', '/PID', str(int(pid))], capture_output=True, timeout=30,
                        creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     else:
         import signal
@@ -694,7 +839,8 @@ def _sana(risposta):
     return bool(risposta) and not risposta.get('bloccato')
 
 
-def entra(cartella, porta=None, riserva=None, attesa=15.0, tentativi=2, aspetta_chiusura=20.0):
+def entra(cartella, porta=None, riserva=None, attesa=15.0, tentativi=2, aspetta_chiusura=20.0,
+          aspetta_occupato=None):
     """Decide all'avvio: questo e' il gestionale principale o ce n'e' gia'
     uno? Restituisce dict(principale, porta, lucchetto, nota):
     - principale False: ce n'e' gia' uno che risponde (o che sta partendo),
@@ -709,17 +855,29 @@ def entra(cartella, porta=None, riserva=None, attesa=15.0, tentativi=2, aspetta_
     if f is None:
         info = leggi_pid(cartella)
         sua = info.get('porta') if isinstance(info.get('porta'), int) else porta
-        for _ in range(max(1, tentativi)):
-            if _sana(salute(sua, attesa)):
-                return dict(principale=False, porta=sua, lucchetto=None, nota='già aperto')
-        try:
-            partito = datetime.fromisoformat(info.get('quando') or '')
-        except (TypeError, ValueError):
-            partito = None
-        if info.get('fase') == 'avvio' and partito and datetime.now() - partito < timedelta(seconds=ATTESA_AVVIO):
-            return dict(principale=False, porta=sua, lucchetto=None, nota='sta partendo')
+        fine_attesa = orologio.monotonic() + (ATTESA_OCCUPATO if aspetta_occupato is None else aspetta_occupato)
+        while True:
+            for _ in range(max(1, tentativi)):
+                if _sana(salute(sua, attesa)):
+                    return dict(principale=False, porta=sua, lucchetto=None, nota='già aperto')
+            info = leggi_pid(cartella)
+            sua = info.get('porta') if isinstance(info.get('porta'), int) else sua
+            da_quando = _secondi_da(info.get('quando'))
+            if info.get('fase') in ('avvio', 'riparazione') and da_quando is not None and da_quando < ATTESA_AVVIO:
+                return dict(principale=False, porta=sua, lucchetto=None,
+                            nota='sta partendo' if info.get('fase') == 'avvio' else 'sta riparando')
+            # 1.11: le pagine non rispondono ma il custode batte: e' occupato (salvataggi in coda,
+            # una riparazione lunga), non bloccato. Si aspetta; fermo da troppo, si chiude
+            battito = _secondi_da(info.get('battito'))
+            if battito is None or battito > BATTITO_SCADUTO or orologio.monotonic() > fine_attesa:
+                break
+            orologio.sleep(min(5.0, max(0.2, fine_attesa - orologio.monotonic())))
         pid = info.get('pid')
-        if not processo_nostro(pid):
+        try:
+            avviato = datetime.fromisoformat(info.get('avviato') or info.get('quando') or '')
+        except (TypeError, ValueError):
+            avviato = None
+        if not processo_nostro(pid, avviato):
             # il lucchetto lo tiene qualcuno che non si riconosce: non si chiude niente
             logging.warning('autoriparazione: il gestionale aperto non risponde, ma il processo %s non si '
                             'riconosce: non lo chiudo', pid)
@@ -815,6 +973,8 @@ def controlla_e_ripara(percorso_db, motore, lucchetto, dopo=None, completo=False
         return esito, None
     with lucchetto:
         esito, dettaglio = controlla_database(percorso_db, completo=completo)   # con i salvataggi fermi
+        # mentre ripara le pagine possono aspettare: chi clicca di nuovo l'icona non lo chiude
+        batti(fase='riparazione')
         try:
             evento = ripara(percorso_db, motore=motore, esito=(esito, dettaglio))
         except Exception as e:
@@ -830,6 +990,7 @@ def controlla_e_ripara(percorso_db, motore, lucchetto, dopo=None, completo=False
                 logging.exception('autoriparazione: dopo la riparazione')
                 annota('Dopo la riparazione il database non si è aggiornato: chiudere e riaprire il programma.',
                        'errore', str(e))
+    batti(fase='in servizio')
     stato.update(esito_db=controlla_database(percorso_db)[0])
     return esito, evento
 
@@ -912,6 +1073,9 @@ def riavvia_programma(motivo, lancia=None, esci=None, adesso=None):
         (lancia or _lancia)(_riavvio['comando'])
     except Exception:
         logging.exception('autoriparazione: il programma non riparte')
+        # si resta aperti: il lucchetto torna a questo programma (altrimenti un secondo clic
+        # aprirebbe un altro gestionale sullo stesso database)
+        _istanza[0] = prendi_lucchetto(_cartella[0]) if _cartella[0] else None
         return False
     logging.shutdown()
     (esci or os._exit)(0)
@@ -927,7 +1091,9 @@ def un_giro(percorso_db, motore, lucchetto, dopo=None, forza_db=False, adesso=No
         ultimo = stato['controllo_db']
         if forza_db or ultimo is None or (adesso - ultimo).total_seconds() >= OGNI_CONTROLLO_DB:
             try:
-                _, evento = controlla_e_ripara(percorso_db, motore, lucchetto, dopo)
+                # chiamato da un errore «malformed»: il controllo completo. Quello veloce non
+                # vede un indice che non corrisponde piu' ai dati (1.11)
+                _, evento = controlla_e_ripara(percorso_db, motore, lucchetto, dopo, completo=forza_db)
                 if evento:
                     note.append(evento)
             except Exception as e:
@@ -936,6 +1102,7 @@ def un_giro(percorso_db, motore, lucchetto, dopo=None, forza_db=False, adesso=No
     motivo = motivo_per_riavviare()
     if motivo:
         riavvia_programma(motivo)
+    batti()
     stato['ultimo_giro'] = adesso
     return note
 

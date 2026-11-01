@@ -25,7 +25,10 @@ with sync_playwright() as p:
     ok('notifica rossa con icona di avviso', pg.evaluate("!!document.querySelector('.notifica.errore b .icona-animata.pronta svg')"))
     pg.screenshot(path=F+'notifica.png', clip={'x':1000,'y':560,'width':366,'height':260})
     # Oggi: icone nelle parti vuote
-    richieste.clear(); pg.goto(B+'/oggi'); pg.wait_for_timeout(1800)
+    # Oggi puo' non avere parti vuote (di domenica i dati di prova la riempiono tutta): la sala
+    # operatoria di un giorno lontano senza interventi ce l'ha sempre, con la stessa icona
+    lontano=(oggi+dt.timedelta(days=400)).isoformat()
+    richieste.clear(); pg.goto(B+'/sala/%s' % lontano); pg.wait_for_timeout(1800)
     n=pg.evaluate("document.querySelectorAll('p.vuoto .icona-animata.pronta svg').length")
     ok('Oggi: icone animate nelle parti vuote', n>=1, n)
     ok('lettore caricato dal programma, non da internet', any(u.startswith(B) and 'lottie_light' in u for u in richieste) and all(u.startswith(B) or u.startswith('data:') for u in richieste), [u for u in richieste if not u.startswith(B)][:3])

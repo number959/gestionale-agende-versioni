@@ -1631,7 +1631,11 @@ def bk_allarme():
 
 def bk_cartella():
     S_, C_ = mondo()
-    C_.post('/impostazioni', data={'azione': 'cartella', 'cartella': '/proc/non-scrivibile'})
+    # una cartella che non si puo' creare, su Linux e su Windows: sotto un file che esiste
+    # (su Windows /proc diventerebbe C:\proc, che si puo' creare, e resterebbe sul disco)
+    file_non_cartella = os.path.join(PROVVISORIA, 'bk_file')
+    open(file_non_cartella, 'w').close()
+    C_.post('/impostazioni', data={'azione': 'cartella', 'cartella': os.path.join(file_non_cartella, 'sotto')})
     assert 'non si riesce a scrivere' in avvisi(C_), 'cartella non scrivibile accettata'
     nuova = os.path.join(PROVVISORIA, 'bk_scelta')
     C_.post('/impostazioni', data={'azione': 'cartella', 'cartella': nuova})

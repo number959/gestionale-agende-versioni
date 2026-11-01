@@ -686,6 +686,12 @@ f = autoripara.prendi_lucchetto(cartella)
 if f is None:
     sys.exit(3)
 autoripara.scrivi_pid(cartella, porta, 'avvio' if modo == 'partendo' else 'in servizio')
+if modo in ('bloccato', 'fili_fermi', 'altro_pid'):
+    # fermo da un pezzo: l'ultimo battito e' di cinque minuti fa (un programma bloccato non batte)
+    import datetime
+    dati = autoripara.leggi_pid(cartella)
+    dati['battito'] = (datetime.datetime.now() - datetime.timedelta(minutes=5)).isoformat(timespec='seconds')
+    open(os.path.join(cartella, 'gestionale.pid'), 'w').write(json.dumps(dati))
 if modo == 'altro_pid':
     autoripara.scrivi_pid(cartella, porta, 'in servizio')
     dati = autoripara.leggi_pid(cartella); dati['pid'] = %(altro_pid)d
@@ -698,7 +704,10 @@ while True:
     if modo in ('partendo',):
         time.sleep(1); continue
     conn, _ = s.accept()
-    if modo in ('bloccato', 'altro_pid'):
+    if modo in ('bloccato', 'altro_pid', 'occupato'):
+        if modo == 'occupato':
+            autoripara._istanza[0] = f
+            autoripara.batti(cartella)   # occupato: non risponde alle pagine, ma e' vivo e batte
         continue                      # accetta e non risponde mai
     conn.recv(4096)
     corpo = json.dumps({'programma': 'Gestionale Agende', 'versione': 'prova', 'pid': os.getpid(),
@@ -786,6 +795,33 @@ def u_bloccato():
         chiudi_figli()
 
 
+def u_occupato():
+    """Non risponde alle pagine ma il custode batte (salvataggi in coda, una
+    riparazione lunga): e' occupato, non bloccato. Il secondo clic aspetta e non
+    lo chiude; se poi resta muto oltre l'attesa, lo chiude (revisione 1.11)."""
+    c, porta = cartella_nuova('u_occupato'), porta_libera()
+    p = figlio(c, 'occupato', porta)
+    inizio = orologio.monotonic()
+    e = autoripara.entra(c, porta=porta, riserva=(), attesa=1, tentativi=1, aspetta_occupato=6)
+    try:
+        assert e['principale'] and e['nota'] == 'chiuso il gestionale bloccato', e
+        assert orologio.monotonic() - inizio >= 6, 'non ha aspettato il programma occupato'
+        assert p.wait(10) is not None
+    finally:
+        lascia(e)
+        chiudi_figli()
+    # mentre ripara (fase 'riparazione' da poco) non si chiude mai, come quando sta partendo
+    c2 = cartella_nuova('u_ripara')
+    p2 = figlio(c2, 'bloccato', porta_libera())
+    dati = autoripara.leggi_pid(c2)
+    dati['fase'] = 'riparazione'
+    dati['quando'] = datetime.now().isoformat(timespec='seconds')
+    autoripara._scrivi_json(os.path.join(c2, autoripara.FILE_PID), dati)
+    e2 = autoripara.entra(c2, porta=dati['porta'], riserva=(), attesa=0.5, tentativi=1, aspetta_occupato=0)
+    assert not e2['principale'] and e2['nota'] == 'sta riparando' and p2.poll() is None, e2
+    chiudi_figli()
+
+
 def u_fili_fermi():
     """Risponde a /salute ma tutti i suoi fili sono fermi su una pagina: e'
     bloccato lo stesso."""
@@ -804,6 +840,19 @@ def u_partendo():
     p = figlio(c, 'partendo', porta)
     e = autoripara.entra(c, porta=porta, riserva=(), attesa=0.5, tentativi=1)
     assert not e['principale'] and e['nota'] == 'sta partendo' and p.poll() is None, e
+    chiudi_figli()
+
+
+def u_pid_riusato():
+    """Il numero di processo scritto nel file e' di un programma nato DOPO (il
+    numero riusato dal sistema): non e' il gestionale, non si chiude."""
+    assert autoripara.processo_nostro(os.getppid(), datetime.now()) in (True, False)
+    nato_dopo = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])
+    FIGLI.append(nato_dopo)
+    orologio.sleep(0.5)
+    assert autoripara.processo_nostro(nato_dopo.pid) is True, 'un python uguale al nostro non si riconosce'
+    assert autoripara.processo_nostro(nato_dopo.pid, datetime.now() - timedelta(minutes=10)) is False, \
+        'riconosciuto un processo nato dopo il file'
     chiudi_figli()
 
 
@@ -860,8 +909,10 @@ for nome, f in [('nessun gestionale aperto: si parte', u_primo),
                 ('gestionale già aperto che risponde: solo la pagina', u_gia_aperto),
                 ('gestionale bloccato: chiuso e si riparte', u_bloccato),
                 ('fili tutti fermi su una pagina: bloccato', u_fili_fermi),
+                ('occupato ma vivo: si aspetta; in riparazione: mai chiuso', u_occupato),
                 ('gestionale che sta partendo: si aspetta', u_partendo),
                 ('un programma che non è il gestionale non si chiude mai', u_mai_un_altro),
+                ('numero di processo riusato da un programma nato dopo', u_pid_riusato),
                 ('porta occupata da un altro programma: porta di riserva', u_porta_occupata),
                 ('/salute', u_salute)]:
     prova(nome, f)
@@ -1029,6 +1080,17 @@ def programma(localappdata, porta):
     return p
 
 
+def pid_vero(p):
+    """Il pid del gestionale avviato con p: su Windows, da un venv, python.exe e'
+    un lanciatore e il programma e' suo figlio, con un altro pid."""
+    if os.name != 'nt':
+        return p.pid
+    r = subprocess.run(['wmic', 'process', 'where', 'ParentProcessId=%d' % p.pid, 'get', 'ProcessId'],
+                       capture_output=True, text=True, errors='replace')
+    figli = [int(x) for x in r.stdout.split() if x.isdigit()]
+    return figli[0] if len(figli) == 1 else p.pid
+
+
 def risponde(porta, entro=60.0):
     fine = orologio.monotonic() + entro
     while orologio.monotonic() < fine:
@@ -1047,9 +1109,10 @@ def e2e():
     porta = porta_libera()
     a = programma(base, porta)
     d = risponde(porta)
-    assert d and d['pid'] == a.pid, 'il programma non parte: %s' % (a.poll() is not None and a.stderr.read()[-800:])
+    assert d and d['pid'] == pid_vero(a), 'il programma non parte: %s' % (a.poll() is not None and a.stderr.read()[-800:])
     info = autoripara.leggi_pid(dati)
-    assert info['fase'] == 'in servizio' and info['pid'] == a.pid, info
+    assert info['fase'] == 'in servizio' and info['pid'] == pid_vero(a), info
+    assert info.get('battito') and info.get('avviato'), 'manca il battito nel gestionale.pid'
     assert autoripara.leggi_diario(dati).get('ultimo_avvio'), 'avvio non ricordato nel diario'
     # secondo clic: apre solo la pagina e finisce subito
     b = programma(base, porta)
@@ -1062,7 +1125,7 @@ def e2e():
         c = programma(base, porta)
         # aspetta: 2 tentativi da 15 secondi prima di chiudere quello fermo
         d = risponde(porta, entro=120)
-        assert d and d['pid'] == c.pid, 'il programma bloccato non e\' stato sostituito'
+        assert d and d['pid'] == pid_vero(c), 'il programma bloccato non e\' stato sostituito'
         assert a.wait(10) is not None, 'il programma bloccato e\' ancora vivo'
         assert any('non rispondeva' in x['testo'] for x in autoripara.eventi(cartella=dati))
         passi.append('programma bloccato sostituito')
@@ -1078,7 +1141,7 @@ def e2e():
     rovina_pagina(pdb, pagine(pdb, 'ix_appuntamenti_inizio')[0])
     e = programma(base, porta)
     d = risponde(porta)
-    assert d and d['pid'] == e.pid, 'non riparte sul database rovinato: %s' % (e.poll() is not None and e.stderr.read()[-800:])
+    assert d and d['pid'] == pid_vero(e), 'non riparte sul database rovinato: %s' % (e.poll() is not None and e.stderr.read()[-800:])
     assert autoripara.controlla_database(pdb, completo=True)[0] == 'ok'
     eventi_ = [x['testo'] for x in autoripara.eventi(cartella=dati)]
     assert any('danneggiato' in t and 'senza perdere niente' in t for t in eventi_), eventi_
@@ -1161,6 +1224,11 @@ def d_orologio_indietro():
         nuova = backup.esegui(p, cartella)
         assert os.path.exists(nuova), 'la copia appena fatta e\' stata cancellata dalla rotazione'
         assert 'orologio' in (backup.allarme() or ''), backup.allarme()
+        backup.stato.update(ultimo_errore='disco pieno', errore_il=datetime.now(), ultimo_ok=None)
+        testo = backup.allarme() or ''
+        assert 'orologio' in testo and 'disco pieno' in testo, 'un avviso nasconde l\'altro: %s' % testo
+        # una copia del futuro non vale come la piu' recente, ne' per le copie recenti ne' per la riparazione
+        assert autoripara.copia_buona([cartella])['quando'] <= datetime.now() + timedelta(days=1), 'copia del futuro scelta'
     finally:
         backup.stato.clear()
         backup.stato.update(salvato)
@@ -1288,6 +1356,87 @@ def d_pagine_errore():
     assert aperte and aperte[0].startswith('file:///') and '&lt;guasto&gt;' in pagina and 'non è partito' in pagina
 
 
+def d_pagina_orfana():
+    """Corrente saltata: la pagina interna di una tabella torna com'era e la
+    foglia con le righe piu' recenti resta fuori dall'albero. Il controllo dice
+    solo «never used»: la revisione della 1.11 ha visto che si riparava dicendo
+    «senza perdere niente» e le righe nuove sparivano. Ora si rimette la copia
+    e si dice da che ora ricontrollare."""
+    c = cartella_nuova('d_orfana')
+    p = os.path.join(c, 'agende.db')
+    q = sqlite3.connect(p)
+    q.execute('PRAGMA page_size = 4096')
+    q.execute('CREATE TABLE appuntamenti (id INTEGER PRIMARY KEY, note TEXT)')
+    q.execute('CREATE INDEX ix_note ON appuntamenti (note)')
+    q.executemany('INSERT INTO appuntamenti (note) VALUES (?)', [('appuntamento %05d ' % i + 'x' * 150,)
+                                                                 for i in range(400)])
+    q.commit()
+    radice = q.execute("SELECT rootpage FROM sqlite_master WHERE name = 'appuntamenti'").fetchone()[0]
+    q.close()
+    backup.esegui(p, backup.cartella_predefinita(p))
+    with open(p, 'rb') as f:
+        f.seek((radice - 1) * 4096)
+        vecchia = f.read(4096)
+    q = sqlite3.connect(p)
+    q.executemany('INSERT INTO appuntamenti (note) VALUES (?)', [('nuovo %05d ' % i + 'y' * 150,) for i in range(60)])
+    q.commit()
+    q.close()
+    with open(p, 'r+b') as f:
+        f.seek((radice - 1) * 4096)
+        f.write(vecchia)
+    assert autoripara.controlla_database(p)[0] == 'danneggiato'
+    evento = autoripara.ripara(p, [backup.cartella_predefinita(p)])
+    assert evento and evento['livello'] != 'ok' and 'ricontrollati' in evento['testo'], evento
+    assert autoripara.controlla_database(p, completo=True)[0] == 'ok'
+    parte = os.path.join(c, 'backup', 'danneggiati')
+    assert [x for x in os.listdir(parte) if x.startswith('danneggiato-')], 'il file con le righe nuove non e\' da parte'
+
+
+def d_copia_sparita():
+    """La copia da rimettere e' sparita (tolta dalla rotazione nel frattempo):
+    prima sqlite3 la creava vuota e la scriveva al posto del database."""
+    c = cartella_nuova('d_sparita')
+    p = database_con_dati(c, 20, 5)
+    sparita = os.path.join(c, 'backup', 'agende-2026-10-31_120000.db')
+    os.makedirs(os.path.dirname(sparita), exist_ok=True)
+    for motore in (None, crea_sessione('sqlite:///' + p).motore):
+        try:
+            backup.metti_al_posto(sparita, p, motore)
+        except RuntimeError as e:
+            assert 'non c\'è più' in str(e), e
+        else:
+            raise AssertionError('nessun errore con la copia sparita')
+        assert conta(p, 'pazienti') == 20 and not os.path.exists(sparita), 'database toccato, o copia creata vuota'
+
+
+def d_malformed_controllo_completo():
+    """Un indice che non corrisponde piu' ai dati (la sua definizione dice una
+    colonna, il contenuto e' di un'altra): il controllo veloce dice ok, quello
+    completo no, e le pagine che lo usano danno «malformed». Dopo quell'errore
+    il custode fa il controllo completo e ripara (revisione 1.11)."""
+    c = cartella_nuova('d_completo')
+    p = os.path.join(c, 'agende.db')
+    q = sqlite3.connect(p)
+    q.execute('CREATE TABLE appuntamenti (id INTEGER PRIMARY KEY, a TEXT, b TEXT)')
+    q.executemany('INSERT INTO appuntamenti (a, b) VALUES (?, ?)', [('a%d' % i, 'b%d' % i) for i in range(2000)])
+    q.execute('CREATE INDEX ix_a ON appuntamenti (a)')
+    q.commit()
+    q.execute('PRAGMA writable_schema = ON')
+    q.execute("UPDATE sqlite_master SET sql = 'CREATE INDEX ix_a ON appuntamenti (b)' WHERE name = 'ix_a'")
+    q.commit()
+    q.close()
+    veloce, completo = autoripara.controlla_database(p)[0], autoripara.controlla_database(p, completo=True)[0]
+    assert (veloce, completo) == ('ok', 'danneggiato'), (veloce, completo)
+    autoripara.imposta_cartella(c)
+    autoripara.stato['controllo_db'] = None
+    note = autoripara.un_giro(p, None, A.LUCCHETTO, dopo=None, forza_db=True)
+    assert note and 'riparato' in note[0]['testo'], note
+    assert autoripara.controlla_database(p, completo=True)[0] == 'ok'
+    q = sqlite3.connect(p)
+    assert q.execute('SELECT COUNT(*) FROM appuntamenti').fetchone()[0] == 2000, 'righe perse'
+    q.close()
+
+
 def d_schema_piu_nuovo():
     autoripara.stato['schema_nuovo'] = 12
     try:
@@ -1304,7 +1453,10 @@ for nome, f in [('database senza versione dello schema: niente migrazioni rifatt
                 ('copie della cartella accanto al database visibili', d_copie_due_cartelle),
                 ('porta non utilizzabile: la prossima', d_porta_non_utilizzabile),
                 ('pagine d\'errore e avvio non riuscito', d_pagine_errore),
-                ('database di una versione più nuova', d_schema_piu_nuovo)]:
+                ('database di una versione più nuova', d_schema_piu_nuovo),
+                ('pagina rimasta fuori dall\'albero: righe perse, si rimette la copia', d_pagina_orfana),
+                ('copia sparita: non si rimette niente', d_copia_sparita),
+                ('dopo un errore malformed, solo il controllo completo lo vede', d_malformed_controllo_completo)]:
     prova(nome, f)
 
 
@@ -1383,7 +1535,10 @@ def v_riavvio_vero():
     """Il programma vero perde i suoi file mentre e' aperto (la pulizia di
     Windows): si riavvia da solo e torna a rispondere sulla stessa porta."""
     if os.name == 'nt':
-        return 'solo su Linux: su Windows lo prova strumenti/prove_installato.py'
+        # qui si tolgono i modelli di una copia del programma mentre gira: su Windows i file
+        # aperti non si cancellano. Il riavvio da solo sull'eseguibile vero e' stato provato a
+        # mano nel Windows finto (vedi LEGGIMI, Autoriparazione)
+        return 'solo su Linux (su Windows i file aperti non si cancellano)'
     base = cartella_nuova('v_vero')
     dati = os.path.join(base, 'GestionaleAgende')
     porta = porta_libera()

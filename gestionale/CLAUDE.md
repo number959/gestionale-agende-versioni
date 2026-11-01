@@ -139,10 +139,15 @@ temporanea.
   database controllato e, se serve, riparato prima di `crea_sessione`). Regole da non rompere: un
   file del database rovinato non si cancella mai (va in `backup\danneggiati` con il suo giornale,
   `backup.copia_grezza`); con il giornale di un salvataggio interrotto decide SQLite (non si
-  controlla la testa del file prima); un database solo occupato non si ripara; si chiude un processo
-  solo se `processo_nostro` lo riconosce; a programma aperto la riparazione tiene il `LUCCHETTO` e
-  scrive la copia dentro il file con l'API di backup (`backup.metti_al_posto`); il riavvio da solo
-  mai durante un aggiornamento e al massimo tre volte in un'ora. `/salute` non tocca database né
+  controlla la testa del file prima); un database solo occupato non si ripara; «senza perdere
+  niente» solo se `_solo_indici` lo dice (una pagina «never used» con righe sono righe perse:
+  `_pagina_con_righe`); le copie si aprono in sola lettura (`backup.solo_lettura`) e si verificano
+  prima di rimetterle; si chiude un processo solo se `processo_nostro` lo riconosce (percorso intero e
+  ora di avvio), mai con `taskkill /T` (chiuderebbe il browser); un gestionale che batte
+  (`autoripara.batti`, in `gestionale.pid`) si aspetta, non si chiude; a programma aperto la
+  riparazione tiene il `LUCCHETTO` e scrive la copia dentro il file con l'API di backup
+  (`backup.metti_al_posto`); dopo un errore «malformed» il controllo è quello completo; il riavvio
+  da solo mai durante un aggiornamento e al massimo tre volte in un'ora. `/salute` non tocca database né
   lucchetto. Il server lega la porta da sé (`app.presa_in_ascolto`, senza `SO_REUSEADDR` su
   Windows). Le copie «recenti» (`backup.MOTIVO_RECENTE`) se ne tengono `COPIE_RECENTI`; le altre con
   un motivo restano sempre; la rotazione non cancella mai la copia appena fatta. Se la riga

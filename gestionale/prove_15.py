@@ -2107,7 +2107,9 @@ def g_salva_email():
     s = S()
     salvata = leggi_impostazione(s, 'email_password')
     s.close()
-    assert salvata.startswith('chiaro:') and 'abcdefghijklmnop' not in salvata, salvata
+    # su Windows la password si protegge con DPAPI, altrove resta «chiaro:» (offuscata)
+    assert salvata.startswith('dpapi:' if sys.platform == 'win32' else 'chiaro:') and \
+        'abcdefghijklmnop' not in salvata, salvata
     assert invii.svela(salvata) == 'abcdefghijklmnop'
     pagina = html(C.get('/invii'))
     assert 'abcdefghijklmnop' not in pagina and salvata not in pagina and 'salvata: vuoto per lasciarla' in pagina
