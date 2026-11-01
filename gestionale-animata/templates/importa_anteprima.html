@@ -77,16 +77,19 @@
     </div>
 
     <h2 class="sezione">Cosa succederà</h2>
+    {% if righe_oltre %}<div class="avviso errore">{{ righe_oltre }}</div>{% endif %}
     <ul class="numeri grandi">
       {% if analisi.tipo == 'appuntamenti' %}
       <li><b>{{ c.get('nuovo', 0) }}</b> appuntamenti da importare</li>
       {% if c.get('presente') %}<li><b>{{ c.presente }}</b> già in agenda</li>{% endif %}
       {% if c.get('conflitto') %}<li class="allarme"><b>{{ c.conflitto }}</b> in conflitto{% if opzioni.appunti %} (vanno fra i da confermare){% endif %}</li>{% endif %}
+      {% if c.get('appunto') %}<li><b>{{ c.appunto }}</b> già fra i da confermare (non si aggiungono di nuovo)</li>{% endif %}
+      {% if piano.appunti_da_chiudere %}<li><b>{{ piano.appunti_da_chiudere }}</b> da confermare si chiudono: ora sono in agenda</li>{% endif %}
       {% if c.get('saltato') %}<li><b>{{ c.saltato }}</b> passati, saltati</li>{% endif %}
       {% else %}
       <li><b>{{ c.get('nuovo', 0) }}</b> pazienti nuovi</li>
       <li><b>{{ c.get('esistente', 0) }}</b> già in anagrafica (si completano)</li>
-      {% if c.get('doppio') %}<li><b>{{ c.doppio }}</b> righe doppie nel file</li>{% endif %}
+      {% if c.get('doppio') %}<li><b>{{ c.doppio }}</b> righe doppie nel file (completano la scheda della stessa persona)</li>{% endif %}
       {% endif %}
       {% if c.get('scartato') %}<li class="allarme"><b>{{ c.scartato }}</b> scartate{% if analisi.tipo == 'appuntamenti' and opzioni.appunti %} (con giorno e ora vanno fra i da confermare){% endif %}</li>{% endif %}
       {% if c.dubbi %}<li><b>{{ c.dubbi }}</b> da controllare</li>{% endif %}
@@ -113,7 +116,7 @@
         <td>{{ r.prestazione.nome if r.prestazione else (r.prestazione_testo or '') }}</td>
         <td>{% if r.paziente and r.paziente.cognome %}<b>{{ r.paziente.cognome }}</b> {{ r.paziente.nome }}{% if r.esistente %}<div class="nota-riga">già in anagrafica</div>{% endif %}{% else %}<span class="senza">—</span>{% endif %}</td>
         <td>{% if r.convenzione %}{{ r.convenzione }}<br>{% endif %}{% if r.importo %}{{ importo_in_testo(r.importo) }} €<br>{% endif %}{% if r.extra %}<span class="nota-riga">{% for k, v in r.extra.items() %}{{ k }}: {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}</span><br>{% endif %}{% if r.degenza %}<span class="nota-riga">Degenza: {{ {'DH': 'DH', 'NOTTE': 'notte', 'RICOVERO': 'ricovero'}[r.degenza] }}{% if r.notti %}, {{ r.notti }} notti{% endif %}</span><br>{% endif %}{% if r.stato %}<span class="nota-riga">{{ etichetta_stato[r.stato] }}</span>{% endif %}</td>
-        <td><b class="esito-{{ r.esito }}">{{ {'nuovo': 'si importa', 'scartato': 'scartata', 'conflitto': 'conflitto', 'presente': 'già in agenda', 'saltato': 'saltata'}[r.esito] }}</b>{% if r.motivo %}<div class="nota-riga">{{ r.motivo }}</div>{% endif %}{% for x in r.avvisi %}<div class="nota-riga">{{ x }}</div>{% endfor %}</td>
+        <td><b class="esito-{{ 'presente' if r.esito == 'appunto' else r.esito }}">{{ {'nuovo': 'si importa', 'scartato': 'scartata', 'conflitto': 'conflitto', 'presente': 'già in agenda', 'saltato': 'saltata', 'appunto': 'già fra i da confermare'}[r.esito] }}</b>{% if r.motivo %}<div class="nota-riga">{{ r.motivo }}</div>{% endif %}{% for x in r.avvisi %}<div class="nota-riga">{{ x }}</div>{% endfor %}</td>
       </tr>
       {% endfor %}
       {% else %}
@@ -123,7 +126,7 @@
         <td class="lettera">{{ r.n }}</td><td><b>{{ p.cognome }}</b></td><td>{{ p.nome }}</td><td>{{ p.telefono }}{% if p.telefono2 %}<br>{{ p.telefono2 }}{% endif %}</td>
         <td>{{ p.email }}</td><td>{{ p.codice_fiscale }}</td><td>{{ p.data_nascita.strftime('%d/%m/%Y') if p.data_nascita else '' }}</td>
         <td>{{ p.indirizzo }}</td>
-        <td><b class="esito-{{ r.esito }}">{{ {'nuovo': 'nuovo', 'esistente': 'già presente: si completa', 'scartato': 'scartata', 'doppio': 'doppia'}[r.esito] }}</b>{% if r.esistente %}<div class="nota-riga">{{ r.esistente.etichetta }}</div>{% endif %}{% if r.motivo %}<div class="nota-riga">{{ r.motivo }}</div>{% endif %}{% for x in r.avvisi %}<div class="nota-riga">{{ x }}</div>{% endfor %}</td>
+        <td><b class="esito-{{ r.esito }}">{{ {'nuovo': 'nuovo', 'esistente': 'già presente: si completa', 'scartato': 'scartata', 'doppio': 'doppia: completa la scheda'}[r.esito] }}</b>{% if r.esistente %}<div class="nota-riga">{{ r.esistente.etichetta }}</div>{% endif %}{% if r.motivo %}<div class="nota-riga">{{ r.motivo }}</div>{% endif %}{% for x in r.avvisi %}<div class="nota-riga">{{ x }}</div>{% endfor %}</td>
       </tr>
       {% endfor %}
       {% endif %}

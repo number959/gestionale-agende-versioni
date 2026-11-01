@@ -846,6 +846,18 @@ Impostazioni → **Importa pazienti o agende da Excel**. File .xlsx o .csv (il v
 .xls va risalvato come .xlsx da Excel), fino a 10 MB. Vanno bene anche il .txt salvato da
 Excel come "Testo Unicode" e i CSV del Mac.
 
+**Dalla 1.11**: si leggono al massimo 20.030 righe per foglio; se il file ne ha di più
+(contate solo quelle scritte) l'anteprima e la pagina finale lo dicono, e il file va diviso.
+Un orario scritto come numero in una cella normale (9,30 diventa il numero 9,3) si legge
+9:30: le cifre dopo la virgola sono i minuti, quindi 9,5 è 9:50 e non le nove e mezza. La
+data di nascita con l'anno a due cifre («12/03/65») vale la data più recente non nel futuro
+(1965), e dal 2000 in poi la riga si segnala da controllare. Nella colonna del medico «Dott.»,
+«Dott.ssa», «D.ssa», «Dr.», «Prof.» non fanno un medico nuovo. La durata si legge anche
+come orario (0:45, 1:30); quella che non si legge, o fuori misura, si segnala. La stessa
+sala scritta con maiuscole diverse è una sala sola. Una riga disdetta non occupa la stanza.
+Reimportando lo stesso file, i da confermare non si aggiungono di nuovo, e quelli delle
+righe che ora entrano in agenda si chiudono.
+
 Il programma riconosce da solo:
 
 1. **la riga dei nomi delle colonne**, anche se sopra c'è un titolo o una riga "SALA A";
@@ -2385,6 +2397,16 @@ falliscono, cioè il difetto c'era davvero.
 | Unione di due schede | Il cellulare dell'altra scheda si perdeva | I numeri in ordine, senza doppioni; quelli in più nelle note |
 | Codice fiscale calcolato e omocodia | La scheda giusta veniva scartata e nasceva un doppione | Confronto senza le lettere dell'omocodia |
 | Paziente scelto e poi cambiato | Con nome e data di nascita di un altro, la scheda scelta veniva sovrascritta | È un'altra persona: la scheda scelta resta |
+| Importazione: orari scritti come numeri (9,30 = 9,3) | Righe scartate per «manca l'ora»; un'agenda ogni 20 minuti non si importava | Le cifre dopo la virgola sono i minuti |
+| Importazione: anno di nascita a due cifre | Nati dal 1927 al 1969 diventavano del 2065 e la data si toglieva | La data più recente non nel futuro, con un avviso dal 2000 |
+| Importazione: stanza nuova con il nome lungo | Dalla seconda importazione, errore e niente importato | Il nome tagliato a 60 caratteri si ritrova; nessuna stanza doppia |
+| Importazione: la stessa sala con maiuscole diverse | Due stanze, e due appuntamenti alla stessa ora entravano tutti e due | Una stanza sola, con il conflitto |
+| Importazione: una riga disdetta | Occupava la stanza: la prenotazione vera alla stessa ora finiva fra i da confermare | Le righe disdette non occupano e non si duplicano reimportando |
+| Importazione: oltre 20.030 righe | Il file si troncava senza dirlo | L'anteprima e la pagina finale lo dicono |
+| Importazione: «Dott. Galasso» nella colonna del medico | Nasceva un medico nuovo «Galasso Dott.» | Il titolo si toglie (anche «D.SSA») |
+| Importazione: durata come orario, o «INF» | 0:45 non si leggeva; «INF» dava un errore del server | Si legge come ore e minuti; quello che non si legge si segnala |
+| Importazione rifatta | Le stesse righe in conflitto diventavano ogni volta un da confermare nuovo | Non si aggiungono di nuovo; quelle entrate in agenda chiudono il loro |
+| Importazione della rubrica: la stessa persona su due righe | I dati della seconda riga si perdevano | La seconda riga completa la scheda |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo

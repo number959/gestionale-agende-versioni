@@ -4,6 +4,7 @@
 <div class="pagina">
   <h1>Importazione completata</h1>
   <p class="sotto">{{ meta.nome }}{% if foglio %}, foglio {{ foglio }}{% endif %}. Prima di importare è stato fatto un backup: se qualcosa non va, si torna indietro da Impostazioni con la copia "prima dell'importazione".</p>
+  {% if righe_oltre %}<div class="avviso errore">{{ righe_oltre }}</div>{% endif %}
   <ul class="numeri grandi">
     {% if piano.tipo == 'appuntamenti' %}<li><b>{{ esito.appuntamenti }}</b> appuntamenti</li>{% endif %}
     <li><b>{{ esito.pazienti_nuovi }}</b> pazienti nuovi</li>
@@ -13,6 +14,7 @@
     {% if esito.stanze %}<li><b>{{ esito.stanze }}</b> stanze nuove</li>{% endif %}
     {% if esito.get('note') %}<li><b>{{ esito.note }}</b> note del giorno</li>{% endif %}
     {% if esito.get('appunti') %}<li><b>{{ esito.appunti }}</b> <a href="{{ url_for('segreteria.da_confermare') }}">da confermare</a> (in conflitto o incomplete)</li>{% endif %}
+    {% if esito.get('appunti_chiusi') %}<li><b>{{ esito.appunti_chiusi }}</b> da confermare chiusi: ora sono in agenda</li>{% endif %}
     {% if esito.scartati %}<li class="allarme"><b>{{ esito.scartati|length }}</b> righe non importate</li>{% endif %}
   </ul>
   {% if esito.scartati %}<p><a class="bottone" href="{{ url_for('importa.scarti', token=token) }}">Scarica l'elenco delle righe non importate</a></p>{% endif %}
