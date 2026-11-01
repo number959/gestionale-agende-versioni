@@ -529,6 +529,23 @@ ARTICOLI = [
              P('Adesso', 'Fai un backup adesso, prima di un\'operazione importante.', 'button', 'Fai un backup adesso'),
              P('Un\'altra cartella', 'Meglio una chiavetta o una cartella di rete: si sceglie nella stessa sezione.'),
          ]),
+    dict(slug='autoriparazione', gruppo='Configurazione', titolo='Il programma si ripara da solo',
+         in_breve='Il programma controlla da solo database, copie di sicurezza e lavori in sottofondo, ripara quello '
+                  'che può senza perdere dati e dice cosa ha fatto.',
+         endpoint='autoriparazione', apri=('autoriparazione', {}), foto='/autoriparazione',
+         passi=[
+             P('Com\'è adesso', 'La tabella dice com\'è il database, l\'ultima copia di sicurezza, i lavori in '
+               'sottofondo e lo spazio sul disco. Si apre da Impostazioni → Controllo del programma.',
+               '#stato-programma'),
+             P('Controlla adesso', 'Il controllo completo del database, dei lavori e dello spazio: qualche secondo. '
+               'Se trova un guasto lo ripara subito.', 'button', 'Controlla adesso'),
+             P('Cosa ha fatto da solo', 'Ogni riparazione resta scritta qui, con quando e cosa; la campanella la dice '
+               'anche nei giorni dopo. Se c\'è da ricontrollare qualcosa, lo dice.', '#diario'),
+             P('Se si blocca', 'Se il programma non risponde più, basta cliccare di nuovo l\'icona Agende: quello '
+               'bloccato si chiude e se ne apre uno nuovo, in mezzo minuto.'),
+             P('Niente si perde', 'Un database rovinato non si cancella mai: resta in backup\\danneggiati, per '
+               'l\'assistenza. Le copie di sicurezza si fanno ogni giorno e ogni due ore se ci sono modifiche.'),
+         ]),
     dict(slug='aggiornare', gruppo='Configurazione', titolo='Aggiornare a una versione nuova',
          in_breve='Quando esce una versione nuova il programma lo dice: «Aggiorna adesso», e in un minuto si riapre '
                   'aggiornato. I dati restano.',

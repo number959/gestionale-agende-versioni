@@ -31,7 +31,7 @@ from modelli import (crea_sessione, aggiorna_database, VERSIONE_SCHEMA, percorso
                      METODI_PAGAMENTO, PROVENIENZE, leggi_impostazione, importo_in_testo,
                      DEGENZE, ETICHETTA_DEGENZA, MASSIMO_NOTTI, MASSIMO_IMPORTO)
 import servizi
-from comune import MASSIMO_ID, VERSIONE, data_da, destinazione_sicura, intero, scarica_excel
+from comune import MASSIMO_ID, PRIMA, ULTIMA, VERSIONE, data_da, destinazione_sicura, intero, scarica_excel
 data_da_stringa = data_da              # il nome di sempre, nel resto del file
 import anagrafiche
 import pazienti
@@ -459,6 +459,12 @@ def appuntamento(aid=None):
             brutti.append('Prestazione non valida.')
         if inizio is None:
             brutti.append('Giorno oppure ora non validi.')
+        elif not PRIMA <= inizio.date() <= ULTIMA:
+            # 1.11: un anno scritto a due cifre (0026) si salvava e non si vedeva piu' in griglia;
+            # al 9999 la somma della durata dava un errore del server
+            brutti.append('Giorno fuori dal calendario (fra il %d e il %d): controllare l\'anno.' % (
+                PRIMA.year, ULTIMA.year))
+            inizio = None
         nuovi, errori_nuovi = controlla_campi_nuovi(request.form)
         brutti += errori_nuovi
         dati_paziente, errori_paziente = controlla_paziente(request.form)
@@ -606,7 +612,7 @@ def medico_di_turno(s, g, rid, ora):
     except (TypeError, ValueError):
         return None
     stanza = s.get(Risorsa, rid) if rid else None
-    if stanza is None:
+    if stanza is None or not stanza.attiva:
         return None
     regole = servizi.Regole(s, g, g)
     for t in regole.turni_effettivi(g, stanza.struttura, rid):
@@ -793,6 +799,10 @@ def autoriparazione():
         return redirect(url_for('autoriparazione'))
     if pdb and autoripara.stato.get('spazio_libero') is None:
         autoripara.controlla_spazio(os.path.dirname(pdb))
+    if pdb and autoripara.stato.get('controllo_db') is None:
+        # la prima volta che si apre la pagina, il controllo veloce (quick_check)
+        esito, dettaglio = autoripara.controlla_database(pdb)
+        autoripara.stato.update(controllo_db=datetime.now(), esito_db=esito, dettaglio_db=dettaglio)
     st = autoripara.stato
     return render_template('autoriparazione.html', problemi=autoripara.problemi_attuali(),
                            esito_db=st.get('esito_db'), controllo_db=st.get('controllo_db'), percorso_db=pdb,

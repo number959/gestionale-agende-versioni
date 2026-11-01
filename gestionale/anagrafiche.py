@@ -600,6 +600,13 @@ def turno(tid=None):
                             Assenza.operatore_id == altro.operatore_id,
                             Assenza.dal <= da, Assenza.al >= da)).first():
                         continue          # chi ha la stanza quel giorno e' assente: si puo' sostituire
+                    # 1.11: e al contrario: l'altro e' la sostituzione di un giorno in cui questo
+                    # medico e' assente. Prima il turno del medico sostituito non si salvava piu'
+                    # (ne' le fasce ne' «Fino al»), finche' non si cancellava la sostituzione
+                    if servizi.e_di_un_giorno(altro) and s.scalars(select(Assenza).where(
+                            Assenza.operatore_id == int(oid),
+                            Assenza.dal <= altro.valido_da, Assenza.al >= altro.valido_da)).first():
+                        continue
                     if (inizio < altro.ora_fine and altro.ora_inizio < fine
                             and si_sovrappongono(da, a, altro.valido_da, altro.valido_a)):
                         m.errori.append(

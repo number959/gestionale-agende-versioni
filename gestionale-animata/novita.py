@@ -19,12 +19,12 @@ NOVITA = [
                    'lo ripara: senza perdere niente quando si può, altrimenti rimettendo l\'ultima copia di sicurezza '
                    'buona e dicendo da che ora ricontrollare. Il file rovinato non si cancella: resta da parte per '
                    'l\'assistenza.',
-             guida=None),
+             guida='autoriparazione'),
         dict(titolo='Se il programma si blocca, basta riaprirlo',
              testo='Cliccando l\'icona Agende mentre il programma è bloccato, quello bloccato si chiude e se ne apre '
                    'uno nuovo. Se una pagina resta ferma troppo a lungo, o mancano i file del programma, si riavvia '
                    'da solo. Se la porta del programma è occupata da un altro programma, si apre su un\'altra.',
-             guida=None),
+             guida='autoriparazione'),
         dict(titolo='Copie di sicurezza più frequenti',
              testo='Oltre alla copia del giorno, una copia ogni due ore se ci sono state modifiche (si tengono le '
                    'ultime tre). Se la cartella scelta per le copie non si raggiunge (la chiavetta tolta), la copia si '
@@ -34,7 +34,7 @@ NOVITA = [
              testo='In Impostazioni → «Controllo del programma» si vede com\'è il programma (database, copie, lavori '
                    'in sottofondo, spazio sul disco) e cosa ha riparato da solo; «Controlla adesso» fa il controllo '
                    'completo. Quello che ha riparato lo dice anche la campanella.',
-             guida=None),
+             guida='autoriparazione'),
     ]),
     ('1.10', [
         dict(titolo='Fasce di ogni ambulatorio',

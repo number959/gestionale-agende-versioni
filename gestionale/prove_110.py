@@ -806,6 +806,13 @@ def _turno_fasce(turni, rid, m):
                  and _minuti(t.ora_inizio) <= m < _minuti(t.ora_fine)), None)
 
 
+def _turno_fasce_per(turni, rid, m, f):
+    """1.11: quello che copre l'inizio, altrimenti il primo che [m, f) tocca."""
+    return _turno_fasce(turni, rid, m) or next(
+        (t for t in turni if t.risorsa_id == rid and t.passo_proprio
+         and _minuti(t.ora_inizio) < f and _minuti(t.ora_fine) > m), None)
+
+
 def _tipo(motivo):
     if motivo.startswith('La stanza '):
         return 'stanza'
@@ -856,7 +863,7 @@ def b_controlli():
                 m = rng.randrange(7 * 12, 21 * 12) * 5 + rng.choice((0, 0, 0, 0, 2))
                 durata = rng.choice((5, 10, 15, 20, 30, 40, 45, 60))
                 escludi = None
-            t = _turno_fasce(effettivi, rid, m)
+            t = _turno_fasce_per(effettivi, rid, m, m + durata)
             b = blocco_oracolo(t, m, m + durata)
             prima = None
             if t is not None and escludi is not None and escludi[5] and escludi[1] == rid:
@@ -871,7 +878,9 @@ def b_controlli():
                         attesi.append('stanza')
                         continue
                     bx = blocco_oracolo(t, x[3], x[4])
-                    if bx[0] < b[1] and bx[1] > b[0] and not (prima and bx[0] < prima[1] and bx[1] > prima[0]):
+                    # 1.11: si perdonano solo le fasce gia' divise, non l'intero appuntamento
+                    i0, i1 = max(bx[0], b[0]), min(bx[1], b[1])
+                    if i0 < i1 and not (prima and prima[0] <= i0 and i1 <= prima[1]):
                         attesi.append('fascia')
                 elif x[2] == oid and reale:
                     attesi.append('medico')
@@ -882,11 +891,15 @@ def b_controlli():
             fasce_ += 'fascia' in attesi
             # l'avviso dell'orario a meta' fascia
             avviso = servizi.fuori_turno(s, rid, oid, quando(MAR, m), quando(MAR, m + durata)) or ''
-            storto = t is not None and (m - _minuti(t.ora_inizio)) % t.passo_proprio != 0
+            # l'avviso guarda il turno dove l'appuntamento comincia (1.11: i controlli invece
+            # anche quello che tocca soltanto)
+            t_inizio = _turno_fasce(effettivi, rid, m)
+            b_inizio = blocco_oracolo(t_inizio, m, m + durata)
+            storto = t_inizio is not None and (m - _minuti(t_inizio.ora_inizio)) % t_inizio.passo_proprio != 0
             frase = 'alle %s non ne comincia una' % hm(m)
             assert (frase in avviso) == storto, (n, hm(m), avviso)
             if storto:
-                assert 'occupa la fascia intera (%s-%s)' % (hm(b[0]), hm(b[1])) in avviso, (avviso, b)
+                assert 'occupa la fascia intera (%s-%s)' % (hm(b_inizio[0]), hm(b_inizio[1])) in avviso, (avviso, b)
             vecchio = fuori_turno_191(s, rid, oid, quando(MAR, m), quando(MAR, m + durata))
             assert avviso.startswith(vecchio or ''), (avviso, vecchio)
             casi += 1

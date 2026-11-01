@@ -163,7 +163,7 @@
 
     <div class="campo meta">
       <label for="data">Giorno</label>
-      <input type="date" id="data" name="data" value="{{ g.isoformat() }}" required>
+      <input type="date" id="data" name="data" value="{{ g.isoformat() }}" min="2000-01-01" max="2100-12-31" required>
     </div>
     <div class="campo meta">
       <label for="ora">Ora</label>

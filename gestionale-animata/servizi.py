@@ -337,6 +337,28 @@ def turno_con_fasce(regole, st, risorsa_id, quando):
                  if t.passo_proprio and t.ora_inizio <= ora < t.ora_fine), None)
 
 
+def turno_con_fasce_per(regole, st, risorsa_id, inizio, fine):
+    """Il turno a fasce proprie per un appuntamento [inizio, fine): quello che
+    copre l'inizio, altrimenti (1.11) il primo che l'appuntamento tocca. Prima
+    contava solo l'inizio: un appuntamento cominciato appena prima del turno e
+    finito dentro una fascia gia' occupata passava, mentre nell'ordine inverso
+    si rifiutava."""
+    t = turno_con_fasce(regole, st, risorsa_id, inizio)
+    if t is not None:
+        return t
+    g = inizio.date()
+    return next((t for t in regole.turni_effettivi(g, st, risorsa_id)
+                 if t.passo_proprio and datetime.combine(g, t.ora_inizio) < fine
+                 and datetime.combine(g, t.ora_fine) > inizio), None)
+
+
+def stanze_attive(ses):
+    """1.11: le stanze disattivate non si propongono (prima disponibilita', Sposta,
+    agenda del medico): un appuntamento messo li' spariva dalla griglia. I loro
+    turni restano, per le statistiche dei mesi passati (Regole non le filtra)."""
+    return set(ses.scalars(select(Risorsa.id).where(Risorsa.attiva == True)))
+
+
 def etichetta_giorno(g):
     return '%s %d %s %d' % (GIORNI[g.weekday()], g.day, MESI[g.month - 1], g.year)
 
@@ -497,7 +519,8 @@ def conflitti(ses, risorsa_id, operatore_id, inizio, fine, escludi_id=None):
     stanza = ses.get(Risorsa, risorsa_id) if risorsa_id else None
     t_fasce = None
     if stanza is not None:
-        t_fasce = turno_con_fasce(Regole(ses, inizio.date(), inizio.date()), stanza.struttura, risorsa_id, inizio)
+        t_fasce = turno_con_fasce_per(Regole(ses, inizio.date(), inizio.date()), stanza.struttura, risorsa_id,
+                                      inizio, fine)
     b0, b1 = blocco(t_fasce, inizio, fine)
     prima = None                     # le fasce che l'appuntamento modificato occupava gia'
     if t_fasce is not None and escludi_id:
@@ -520,10 +543,14 @@ def conflitti(ses, risorsa_id, operatore_id, inizio, fine, escludi_id=None):
                                  a.fine.strftime('%H:%M'), a.operatore.etichetta))
                 continue
             a0, a1 = blocco(t_fasce, a.inizio, a.fine)
-            if a0 < b1 and a1 > b0 and not (prima and a0 < prima[1] and a1 > prima[0]):
+            i0, i1 = max(a0, b0), min(a1, b1)          # le fasce che dividerebbero
+            # 1.11: si perdonano solo le fasce che divideva gia' (prima), non tutte quelle
+            # dell'altro appuntamento: spostarsi in una fascia nuova gia' occupata non passa
+            if i0 < i1 and not (prima and prima[0] <= i0 and i1 <= prima[1]):
+                nuova = i0 if not prima or i0 < prima[0] else max(i0, prima[1])
                 motivi.append('In %s la fascia delle %s è già occupata dall\'appuntamento delle %s-%s di %s: '
                               'nel turno di %s le fasce sono da %d minuti e ogni prestazione occupa fasce intere.'
-                              % (a.risorsa.nome, max(a0, b0).strftime('%H:%M'), a.inizio.strftime('%H:%M'),
+                              % (a.risorsa.nome, nuova.strftime('%H:%M'), a.inizio.strftime('%H:%M'),
                                  a.fine.strftime('%H:%M'), a.operatore.etichetta, t_fasce.operatore.etichetta,
                                  t_fasce.passo_proprio))
         elif a.operatore_id == operatore_id and reale:
@@ -646,7 +673,9 @@ def settimana_medico(ses, lunedi, operatore_id, struttura_id):
         Appuntamento.inizio < inizio + timedelta(days=7),
         Appuntamento.stato.in_(STATI_ATTIVI))) if a.risorsa_id in stanze]
     apertura, ultima, passo = orario(st)
-    turni = {g: [t for t in regole.turni_effettivi(g, st) if t.operatore_id == operatore_id]
+    attive = stanze_attive(ses)
+    turni = {g: [t for t in regole.turni_effettivi(g, st)
+                 if t.operatore_id == operatore_id and t.risorsa_id in attive]
              for g in giorni}
     base = base_righe(passo, apertura, [t for g in giorni for t in turni[g]])
     elenco = fasce(apps, apertura, ultima_riga(ultima, passo, base), base)
@@ -785,6 +814,7 @@ def disponibilita(ses, operatore_id, durata, dal, struttura_id=None, giorni=60, 
     durata = max(5, int(durata or 30))
     strutture = {s.id: s for s in ses.scalars(select(Struttura))}
     regole = Regole(ses, dal, dal + timedelta(days=giorni))
+    attive = stanze_attive(ses)
     for n in range(giorni + 1):
         g = dal + timedelta(days=n)
         candidati = []
@@ -793,7 +823,7 @@ def disponibilita(ses, operatore_id, durata, dal, struttura_id=None, giorni=60, 
                 continue
             info = regole.giorno(g, st)
             for t in regole.turni_effettivi(g, st, risorsa_id, info=info):
-                if t.operatore_id == operatore_id:
+                if t.operatore_id == operatore_id and t.risorsa_id in attive:
                     candidati.append((st, t))
         if not candidati:
             continue
@@ -1131,8 +1161,12 @@ def sposta(ses, a, inizio, risorsa_id=None, operatore_id=None):
     rid = risorsa_id or a.risorsa_id
     oid = operatore_id or a.operatore_id
     fine = inizio + durata
-    if ses.get(Risorsa, rid) is None or ses.get(Operatore, oid) is None:
+    stanza = ses.get(Risorsa, rid)
+    if stanza is None or ses.get(Operatore, oid) is None:
         return ['Stanza o medico non validi.']
+    if not stanza.attiva and rid != a.risorsa_id:
+        # 1.11: in una stanza disattivata l'appuntamento sparirebbe dalla griglia
+        return ['La stanza %s non è più attiva: sceglierne un\'altra.' % stanza.nome]
     motivi = conflitti(ses, rid, oid, inizio, fine, escludi_id=a.id) if a.stato in STATI_ATTIVI else []
     if motivi:
         return motivi

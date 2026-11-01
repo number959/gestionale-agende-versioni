@@ -499,6 +499,268 @@ for nome, f in [('paziente cambiato mentre il messaggio aspetta', m0_paziente_ca
     prova(nome, f)
 
 
+# ================================================================ agenda
+area('agenda')
+from modelli import Turno, Assenza, STATI_ATTIVI  # noqa: E402
+import segreteria  # noqa: E402
+
+
+def medico(s, cognome):
+    o = Operatore(cognome=cognome, nome='Prova', colore='#154381', attivo=True)
+    s.add(o)
+    s.flush()
+    return o.id
+
+
+def turno(s, oid, rid, g, da, a, passo=None, singolo=False):
+    t = Turno(operatore_id=oid, risorsa_id=rid, giorno_settimana=g.weekday(), ora_inizio=da, ora_fine=a,
+              valido_da=g if singolo else date(2025, 1, 1), valido_a=g if singolo else None, passo=passo)
+    s.add(t)
+    s.flush()
+    return t.id
+
+
+def appuntamento(s, rid, oid, inizio, minuti):
+    x = Appuntamento(risorsa_id=rid, operatore_id=oid, inizio=inizio, fine=inizio + timedelta(minutes=minuti),
+                     stato='PRENOTATO')
+    s.add(x)
+    s.flush()
+    return x.id
+
+
+def g0_stanza_disattivata():
+    """Una stanza disattivata (i suoi turni restano, per le statistiche) non si
+    propone piu': prima disponibilita', Sposta, spostamento in blocco, agenda
+    del medico. Prima l'appuntamento spostato li' spariva dalla griglia."""
+    S, I, c = mondo()
+    mar = giorno(giorno_settimana=1)
+    s = S()
+    oid = medico(s, 'Fintini')
+    rid5 = I['Ambulatorio 5'] if 'Ambulatorio 5' in I else I['Ambulatorio 2']
+    turno(s, oid, rid5, mar, time(9, 0), time(12, 0))
+    aid = appuntamento(s, I['Ambulatorio 1'], oid, datetime.combine(mar, time(15, 0)), 30)
+    s.get(Risorsa, rid5).attiva = False
+    s.commit()
+    proposte = servizi.disponibilita(s, oid, 30, date.today(), 1, giorni=30)
+    assert not [p for p in proposte if p['risorsa'].id == rid5], 'proposta la stanza disattivata'
+    a = s.get(Appuntamento, aid)
+    lunedi = mar - timedelta(days=mar.weekday())
+    settimana = servizi.settimana_medico(s, lunedi, oid, 1)
+    assert rid5 not in {t.risorsa_id for g in settimana['turni'].values() for t in g}, \
+        'l\'agenda del medico mostra libera la stanza disattivata'
+    motivi = servizi.sposta(s, a, datetime.combine(mar, time(9, 0)), rid5)
+    assert motivi and 'non è più attiva' in motivi[0], motivi
+    s.rollback()
+    blocco = segreteria.proposte_blocco(s, [s.get(Appuntamento, aid)], 'dopo', date.today())
+    assert not blocco[0]['proposta'] or blocco[0]['proposta'][1] != rid5, blocco
+    s.close()
+
+
+def g1_anno_fuori_calendario():
+    """Il modulo accettava qualsiasi anno: 0026 (l'anno scritto a due cifre) si
+    salvava e non si vedeva in griglia; 9999-12-31 dava un errore del server."""
+    S, I, c = mondo()
+    for data, ora in (('0026-11-10', '10:00'), ('2101-01-01', '10:00'), ('9999-12-31', '23:30')):
+        r = c.post('/appuntamento', data=modulo(I, datetime(2026, 1, 1, 10, 0), data=data, ora=ora, durata='60'))
+        assert r.status_code == 200, (data, r.status_code)
+        assert 'fuori dal calendario' in r.get_data(as_text=True) + avvisi(c), data
+    assert ultimo(S) is None, 'salvato un appuntamento fuori calendario'
+    t = c.get('/appuntamento?data=%s&ora=10:00&risorsa=%d' % (QUANDO.date().isoformat(), I['Ambulatorio 1']))
+    assert 'min="2000-01-01" max="2100-12-31"' in t.get_data(as_text=True), 'il campo data non ha i limiti'
+
+
+def g2_sostituzione():
+    """Dopo una sostituzione di un giorno il turno settimanale del medico assente
+    non si salvava piu' (fasce, «Fino al», anche senza cambiare niente)."""
+    S, I, c = mondo()
+    s = S()
+    fid, pid = medico(s, 'Fintini'), medico(s, 'Provolo')
+    s.commit()
+    s.close()
+    rid = I['Ambulatorio 1']
+    mar = giorno(giorno_settimana=1, settimane=1)
+    sett = {'ripetizione': 'settimanale', 'operatore': str(fid), 'risorsa': str(rid), 'giorno': '1',
+            'ora_inizio': '09:00', 'ora_fine': '13:00', 'valido_da': '2026-01-01', 'valido_a': '', 'passo': '0'}
+    assert c.post('/anagrafiche/turni/nuovo', data=sett).status_code == 302
+    avvisi(c)
+    tid = ultimo(S, Turno)
+    c.post('/anagrafiche/assenze/nuova', data={'operatore': str(fid), 'dal': mar.isoformat(), 'al': '', 'motivo': 'Ferie'})
+    avvisi(c)
+    r = c.post('/anagrafiche/turni/nuovo', data={'ripetizione': 'giorno', 'operatore': str(pid), 'risorsa': str(rid),
+                                                 'data_singola': mar.isoformat(), 'ora_inizio': '09:00',
+                                                 'ora_fine': '13:00', 'passo': '0'})
+    assert r.status_code == 302, 'sostituzione rifiutata (prova)'
+    avvisi(c)
+    for cambi in ({}, {'passo': '20'}, {'valido_a': (mar + timedelta(days=60)).isoformat()}):
+        r = c.post('/anagrafiche/turni/%d' % tid, data=dict(sett, **cambi))
+        assert r.status_code == 302, ('turno del sostituito non salvato', cambi)
+        avvisi(c)
+    # senza l'assenza, la stessa sovrapposizione resta rifiutata
+    s = S()
+    for x in s.scalars(select(Assenza)).all():
+        s.delete(x)
+    s.commit()
+    s.close()
+    r = c.post('/anagrafiche/turni/%d' % tid, data=dict(sett, passo='30'))
+    assert r.status_code == 200 and 'già assegnata' in r.get_data(as_text=True), 'sovrapposizione vera accettata'
+
+
+def g3_fasce_gia_divise():
+    """Modificando un appuntamento si perdonano solo le fasce che divideva gia'
+    con un altro, non tutte quelle dell'altro."""
+    S, I, c = mondo()
+    mer = giorno(giorno_settimana=2)
+    s = S()
+    oid = medico(s, 'Fintini')
+    rid = I['Ambulatorio 1']
+    turno(s, oid, rid, mer, time(9, 0), time(12, 0), passo=30)
+    x = appuntamento(s, rid, oid, datetime.combine(mer, time(9, 0)), 20)      # prima delle fasce
+    y = appuntamento(s, rid, oid, datetime.combine(mer, time(9, 20)), 20)
+    s.commit()
+    # spostare X nella fascia 9:30-10:00, che era solo di Y: non va
+    motivi = servizi.conflitti(s, rid, oid, datetime.combine(mer, time(9, 40)), datetime.combine(mer, time(9, 55)), x)
+    assert motivi and 'fascia delle 09:30' in motivi[0], motivi
+    # ma una nota o il medico cambiati lasciando X dov'e': va (la fascia 9:00 era gia' divisa)
+    assert servizi.conflitti(s, rid, oid, datetime.combine(mer, time(9, 0)), datetime.combine(mer, time(9, 20)), x) == []
+    assert servizi.conflitti(s, rid, oid, datetime.combine(mer, time(9, 20)), datetime.combine(mer, time(9, 40)), y) == []
+    s.close()
+
+
+def g4_prima_del_turno():
+    """Un appuntamento che comincia prima del turno a fasce e finisce in una
+    fascia occupata: prima passava o no secondo l'ordine di prenotazione."""
+    S, I, c = mondo()
+    mer = giorno(giorno_settimana=2)
+    s = S()
+    oid = medico(s, 'Fintini')
+    rid = I['Ambulatorio 1']
+    turno(s, oid, rid, mer, time(9, 0), time(12, 0), passo=30)
+    appuntamento(s, rid, oid, datetime.combine(mer, time(9, 20)), 10)       # occupa la fascia 9:00-9:30
+    s.commit()
+    motivi = servizi.conflitti(s, rid, oid, datetime.combine(mer, time(8, 45)), datetime.combine(mer, time(9, 15)))
+    assert motivi and 'fascia delle 09:00' in motivi[0], motivi
+    assert servizi.conflitti(s, rid, oid, datetime.combine(mer, time(8, 30)), datetime.combine(mer, time(9, 0))) == []
+    s.close()
+
+
+for nome, f in [('stanza disattivata: non si propone e non si sposta li\'', g0_stanza_disattivata),
+                ('anno fuori calendario nel modulo', g1_anno_fuori_calendario),
+                ('sostituzione di un giorno: il turno del sostituito si salva', g2_sostituzione),
+                ('fasce gia\' divise: perdonate solo quelle', g3_fasce_gia_divise),
+                ('appuntamento che comincia prima del turno a fasce', g4_prima_del_turno)]:
+    prova(nome, f)
+
+
+# ================================================================ schede dei pazienti
+area('schede dei pazienti')
+import pazienti  # noqa: E402
+import codice_fiscale as CF  # noqa: E402
+
+
+def p0_unisci_telefoni():
+    """Unendo due schede il cellulare dell'altra si perdeva quando la tenuta
+    aveva solo il fisso; con quattro numeri diversi se ne perdevano due."""
+    S, I, c = mondo()
+    s = S()
+    a = Paziente(cognome='Fintini', nome='Mara', telefono='081 5551234', telefono2='')
+    b = Paziente(cognome='Fintini', nome='Mara', telefono='333 1234567', telefono2='081 7654321')
+    s.add_all([a, b])
+    s.commit()
+    pazienti.unisci(s, a, b)
+    s.commit()
+    assert (a.telefono, a.telefono2) == ('081 5551234', '333 1234567'), (a.telefono, a.telefono2)
+    assert '081 7654321' in (a.note or ''), 'il terzo numero si e\' perso: %r' % a.note
+    x = Paziente(cognome='Esempietti', telefono='333 0000001', telefono2='081 0000002')
+    y = Paziente(cognome='Esempietti', telefono='+39 3330000001', telefono2='081 0000003')
+    s.add_all([x, y])
+    s.commit()
+    pazienti.unisci(s, x, y)
+    s.commit()
+    assert (x.telefono, x.telefono2) == ('333 0000001', '081 0000002') and '081 0000003' in (x.note or '') \
+        and '3330000001' not in (x.note or ''), (x.telefono, x.telefono2, x.note)
+    s.close()
+
+
+def _prenota_con_scheda(scheda, campi):
+    S, I, c = mondo()
+    s = S()
+    p = Paziente(**scheda)
+    s.add(p)
+    s.commit()
+    pid = p.id
+    s.close()
+    d = modulo(I, QUANDO, medico='Lippiello', prestazione='Prima visita', stanza='Ambulatorio 1',
+               email_paziente='', telefono='')
+    d.update(campi)
+    r = c.post('/appuntamento', data=d)
+    assert r.status_code == 302, ('prenotazione non salvata', avvisi(c))
+    s = S()
+    a = s.get(Appuntamento, ultimo(S))
+    schede = s.scalars(select(Paziente).order_by(Paziente.id)).all()
+    esito = (a.paziente_id, pid, [(x.nome, x.data_nascita, x.codice_fiscale) for x in schede])
+    s.close()
+    return esito
+
+
+def p6_omocodia():
+    """Prenotando senza scegliere dall'elenco, il codice fiscale calcolato dai dati
+    scartava la scheda giusta (il suo codice vero ha le lettere dell'omocodia) e
+    ne nasceva un doppione."""
+    base = CF.calcola('Fintini', 'Mario', date(1960, 3, 12), 'M', 'F839')
+    om = base[:14] + CF.OMOCODIA[int(base[14])]
+    om = om + CF.carattere_controllo(om)
+    assert CF.valido(om) and om != base, 'codice omocodico della prova non valido'
+    mario = dict(cognome='Fintini', nome='Mario', telefono='3331234501', codice_fiscale=om,
+                 data_nascita=date(1960, 3, 12), sesso='M', luogo_nascita='F839')
+    a_pid, pid, schede = _prenota_con_scheda(mario, {
+        'paziente': 'Fintini', 'nome_paziente': 'Mario', 'telefono': '333 1234501', 'data_nascita': '1960-03-12',
+        'codice_fiscale': '', 'sesso': 'M', 'luogo_nascita': 'F839'})
+    assert a_pid == pid and len(schede) == 1, ('doppione', schede)
+    assert schede[0][2] == om, 'il codice vero e\' stato cambiato'
+    # il figlio omonimo con il telefono di casa e un'altra data di nascita resta un'altra persona
+    a_pid, pid, schede = _prenota_con_scheda(dict(mario, codice_fiscale=base), {
+        'paziente': 'Fintini', 'nome_paziente': 'Mario', 'telefono': '333 1234501', 'data_nascita': '1990-05-20',
+        'codice_fiscale': '', 'sesso': 'M', 'luogo_nascita': 'F839'})
+    assert a_pid != pid and len(schede) == 2, ('figlio finito sulla scheda del padre', schede)
+
+
+def p7_scelto_poi_cambiato():
+    """Scelto Fintini Mario dall'elenco, poi scritti nome e data di nascita di
+    Luca: prima la scheda di Mario veniva sovrascritta con i dati di Luca."""
+    mario = dict(cognome='Fintini', nome='Mario', telefono='3331234502', data_nascita=date(1962, 4, 1))
+    S, I, c = mondo()
+    s = S()
+    p = Paziente(**mario)
+    s.add(p)
+    s.commit()
+    pid = p.id
+    s.close()
+    d = modulo(I, QUANDO, medico='Lippiello', prestazione='Prima visita', stanza='Ambulatorio 1', email_paziente='',
+               telefono='333 1234502', paziente='Fintini', nome_paziente='Luca', data_nascita='1995-07-01',
+               paziente_id=str(pid))
+    assert c.post('/appuntamento', data=d).status_code == 302
+    avvisi(c)
+    s = S()
+    m = s.get(Paziente, pid)
+    a = s.get(Appuntamento, ultimo(S))
+    esito = (m.nome, m.data_nascita, a.paziente_id != pid, a.paziente.nome, a.paziente.data_nascita)
+    s.close()
+    assert esito == ('Mario', date(1962, 4, 1), True, 'Luca', date(1995, 7, 1)), esito
+    # il nome corretto da solo (nessun altro dato diverso): resta la scheda scelta
+    d2 = dict(d, nome_paziente='Mari', data_nascita='', ora='11:00')
+    c.post('/appuntamento', data=d2)
+    avvisi(c)
+    s = S()
+    assert s.get(Appuntamento, ultimo(S)).paziente_id == pid, 'una correzione del nome ha creato un doppione'
+    s.close()
+
+
+for nome, f in [('unire due schede: nessun telefono perso', p0_unisci_telefoni),
+                ('codice fiscale calcolato e omocodia: niente doppioni', p6_omocodia),
+                ('scelto dall\'elenco e poi cambiato: la scheda non si sovrascrive', p7_scelto_poi_cambiato)]:
+    prova(nome, f)
+
+
 # =====================================================================
 if __name__ == '__main__':
     POSTA.shutdown()

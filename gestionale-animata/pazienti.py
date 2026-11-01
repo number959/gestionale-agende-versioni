@@ -377,6 +377,20 @@ def avvisi_prenotazione(s, paziente, appuntamento):
     return avvisi
 
 
+def _altra_persona(p, nome, data_nascita, codice_fiscale, cf_calcolato):
+    """Scelto dall'elenco, ma il modulo descrive chiaramente un'altra persona con
+    lo stesso cognome (un familiare): un altro nome e un'altra data di nascita, o
+    un altro codice fiscale scritto. Fino alla 1.10 la scheda scelta veniva
+    sovrascritta con i dati dell'altro (1.11). Solo il nome diverso non basta:
+    puo' essere una correzione, e la scheda scelta resta."""
+    if not nome or not p.nome or semplifica(nome) == semplifica(p.nome):
+        return False
+    if data_nascita and p.data_nascita and data_nascita != p.data_nascita:
+        return True
+    return bool(codice_fiscale and not cf_calcolato and p.codice_fiscale and
+                codice_fiscale != p.codice_fiscale.upper())
+
+
 def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_nascita=None,
                  codice_fiscale='', indirizzo='', sesso='', luogo_nascita='', cf_calcolato=False):
     """Il paziente dell'appuntamento.
@@ -400,7 +414,8 @@ def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_n
     codice_fiscale = (codice_fiscale or '').strip().upper()
     indirizzo = ' '.join((indirizzo or '').split())
     p = s.get(Paziente, paziente_id) if paziente_id else None
-    if p is not None and (not cognome or semplifica(cognome) == semplifica(p.cognome)):
+    if p is not None and (not cognome or semplifica(cognome) == semplifica(p.cognome)) and \
+            not _altra_persona(p, nome, data_nascita, codice_fiscale, cf_calcolato):
         if nome and not p.nome:
             p.nome = nome
         if telefono and telefono_confronto(telefono) not in (telefono_confronto(p.telefono),
@@ -459,9 +474,16 @@ def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_n
                 continue
             if nome and r.nome and semplifica(r.nome) != n_s:
                 continue
-            # stesso numero ma un altro codice fiscale: un familiare, non lui
-            if codice_fiscale and r.codice_fiscale and r.codice_fiscale.upper() != codice_fiscale:
-                continue
+            # stesso numero ma un altro codice fiscale: un familiare, non lui. Un codice
+            # calcolato dai dati si confronta senza le lettere dell'omocodia (1.11): quello
+            # vero di una persona puo' averle, e prima la sua scheda veniva scartata e ne
+            # nasceva un doppione
+            if codice_fiscale and r.codice_fiscale:
+                if cf_calcolato:
+                    if CF.senza_omocodia(r.codice_fiscale.upper())[:15] != codice_fiscale[:15]:
+                        continue
+                elif r.codice_fiscale.upper() != codice_fiscale:
+                    continue
             return completa(s.get(Paziente, r.id))
     p = Paziente(cognome=cognome, nome=nome, telefono=telefono, email=email, data_nascita=data_nascita,
                  codice_fiscale=codice_fiscale, indirizzo=indirizzo, sesso=sesso, luogo_nascita=luogo_nascita)
@@ -478,13 +500,25 @@ def unisci(s, tenuto, eliminato):
     # documenti, cose da fare e lista d'attesa seguono la persona
     for modello in (Documento, Attivita, Attesa, Appunto, Invio, Indirizzato):
         s.execute(update(modello).where(modello.paziente_id == eliminato.id).values(paziente_id=tenuto.id))
-    for campo in ('nome', 'telefono', 'telefono2', 'email', 'codice_fiscale', 'data_nascita', 'indirizzo', 'sesso',
-                  'luogo_nascita'):
+    for campo in ('nome', 'email', 'codice_fiscale', 'data_nascita', 'indirizzo', 'sesso', 'luogo_nascita'):
         if not getattr(tenuto, campo) and getattr(eliminato, campo):
             setattr(tenuto, campo, getattr(eliminato, campo))
-    if eliminato.telefono and telefono_confronto(eliminato.telefono) not in (
-            telefono_confronto(tenuto.telefono), telefono_confronto(tenuto.telefono2)) and not tenuto.telefono2:
-        tenuto.telefono2 = eliminato.telefono
+    # i telefoni (1.11): prima quelli della scheda tenuta, poi quelli dell'altra, senza
+    # doppioni (lo stesso numero scritto in due modi conta una volta). Prima il
+    # cellulare dell'altra si perdeva quando la tenuta aveva solo il fisso: il
+    # secondo telefono vuoto si riempiva con il suo secondo numero, non con il primo.
+    # Quelli che non ci stanno nei due campi vanno nelle note: non si perde niente
+    numeri, visti = [], set()
+    for t in (tenuto.telefono, tenuto.telefono2, eliminato.telefono, eliminato.telefono2):
+        t = (t or '').strip()
+        chiave = telefono_confronto(t)
+        if t and chiave not in visti:
+            visti.add(chiave)
+            numeri.append(t)
+    tenuto.telefono = numeri[0] if numeri else ''
+    tenuto.telefono2 = numeri[1] if len(numeri) > 1 else ''
+    if numeri[2:]:
+        tenuto.note = ((tenuto.note or '').strip() + '\nAltro telefono: ' + ', '.join(numeri[2:])).strip()
     completa_da_codice(tenuto)
     if (eliminato.note or '').strip():
         tenuto.note = ((tenuto.note or '').strip() + '\n' + eliminato.note.strip()).strip()
