@@ -607,15 +607,26 @@ la cornice di un altro sito: un sito ostile avrebbe potuto far cliccare «Disdet
 2550 casi generati), più le prove nel browser (10 raccolte nella normale, 12 nell'animata, tutte
 verdi; `prove_18_browser.py` è passato da 46 a 55 controlli).
 
-**Da fare prima di pubblicare la 1.11** (il codice è pronto, i Setup vanno rifatti dall'ultimo
-commit e riprovati: il Setup della 1.11 provato in Wine sulla 1.10 consegnata era di un commit
-precedente, vedi *Costruire e provare l'installatore*):
+**Eseguibile e Setup alla 1.11**, costruiti in Wine dall'ultimo commit (`d832b27`) e provati: la
+1.10 normale consegnata installata in un Windows finto pulito, i dati inventati di `demo.py` della
+1.10 (46 appuntamenti, 30 pazienti), la 1.11 installata sopra con il Setup: le tabelle identiche
+riga per riga dopo (la 1.11 non cambia lo schema), 46 controlli di `prove_installato.py` a posto,
+e `strumenti/prova_autoriparazione_installato.py` (nuovo, con il Python di Windows) 10 controlli su
+10 sull'eseguibile vero: il secondo avvio non apre un altro programma, il programma fermato con
+`NtSuspendProcess` viene chiuso e riaperto da solo (104 secondi: prima aspetta chi potrebbe essere
+solo occupato), un indice del database rovinato a programma chiuso viene riparato all'avvio senza
+perdere una riga, il file rovinato messo da parte. Una cosa imparata: il Setup deve chiudere il
+programma con `taskkill /F /T` (senza `/T` uno dei due processi dell'eseguibile a file unico
+resta e tiene il file: l'installazione si fermava); e nel Windows finto lo schermo (`Xvfb`) dopo
+molte ore smette di rispondere e il Setup muore con «Invalid window handle» senza avere
+colpa: si riavvia lo schermo (per numero di processo, mai con `pkill -f`) e si riprova.
 
-1. costruire eseguibile e Setup delle due cartelle e provarli sulla 1.10 installata
-   (`prove_installato.py`, 46 controlli, e `strumenti/prova_autoriparazione_installato.py`: il
-   programma bloccato sostituito e il database rovinato riparato sull'eseguibile vero);
-2. rigenerare il PDF della guida (c'è una guida in più);
-3. la release `v1.11` nel progetto delle versioni, con i quattro file.
+**Da fare prima di pubblicare la 1.11**:
+
+1. rigenerare il PDF della guida (c'è una guida in più: *Il programma si ripara da solo*);
+2. la release `v1.11` nel progetto delle versioni, con i quattro file di `Output` delle due
+   cartelle (quelli costruiti in questa sessione, o rifatti sul PC di Giovanni con `CREA_EXE.bat` e
+   `CREA_SETUP.bat`), e il controllo dell'indirizzo pubblico.
 
 ## Cose aperte
 
