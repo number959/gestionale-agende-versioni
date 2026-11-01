@@ -31,7 +31,7 @@ QUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SENZA_BROWSER = ['prove.py', 'prove2.py', 'prove100.py', 'prove200.py', 'prove_14.py', 'prove_143.py',
                  'prove_145.py', 'prove_146.py', 'prove_anagrafiche.py', 'prove_funzioni.py', 'prove_guida.py',
                  'prove_personalizzazione.py', 'prove_15.py', 'prove_16.py', 'prove_17.py', 'prove_18.py',
-                 'prove_19.py', 'prove_191.py', 'prove_110.py', 'prove_autoriparazione.py', 'campagna.py']
+                 'prove_19.py', 'prove_191.py', 'prove_110.py', 'prove_autoriparazione.py', 'prove_111.py', 'campagna.py']
 # in quest'ordine: prima quelle che non cambiano niente, per ultima quella che cambia l'indirizzo degli aggiornamenti
 NEL_BROWSER = ['prove_guida_browser.py', 'prove_sicurezza_browser.py', 'prove_animazioni.py', 'prove_icone_animate.py',
                'prove_tendine_browser.py', 'prove_15_browser.py', 'prove_17_browser.py', 'prove_18_browser.py',

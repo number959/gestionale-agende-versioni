@@ -74,11 +74,23 @@ def sospendi(pid):
         k32.CloseHandle(h)
 
 
+def vivo(pid):
+    r = subprocess.run(['tasklist', '/FI', 'PID eq %d' % pid, '/FO', 'CSV', '/NH'], capture_output=True, text=True,
+                       errors='replace')
+    return (r.stdout or '').strip().startswith('"')
+
+
 def chiudi_tutti():
-    subprocess.run(['taskkill', '/F', '/IM', os.path.basename(ESEGUIBILE)], capture_output=True)
-    fine = time.monotonic() + 30
-    while salute(1) and time.monotonic() < fine:
+    """Chiude il programma per davvero: il processo di /salute (con /T anche il
+    suo figlio) e poi per nome, e aspetta che il processo non ci sia piu'."""
+    d = salute(5)
+    if d:
+        subprocess.run(['taskkill', '/F', '/T', '/PID', str(d['pid'])], capture_output=True)
+    subprocess.run(['taskkill', '/F', '/T', '/IM', os.path.basename(ESEGUIBILE)], capture_output=True)
+    fine = time.monotonic() + 60
+    while time.monotonic() < fine and (salute(2) or (d and vivo(d['pid']))):
         time.sleep(1)
+    return not salute(2)
 
 
 # 1. aperto, e un secondo avvio non fa niente
@@ -103,7 +115,7 @@ controlla('bloccato: chiuso e riaperto da solo in %.0f secondi' % (time.monotoni
 controlla('il diario dice che non rispondeva', any('non rispondeva' in t for t in eventi()[prima:]), eventi()[-3:])
 
 # 3. indice rovinato a programma chiuso: riparato all'avvio, niente perso
-chiudi_tutti()
+controlla('programma chiuso', chiudi_tutti())
 db = os.path.join(DATI, 'agende.db')
 c = sqlite3.connect(db)
 pagina = c.execute("SELECT rootpage FROM sqlite_master WHERE name = 'ix_appuntamenti_inizio'").fetchone()[0]

@@ -566,13 +566,26 @@ def cambia_stato(aid):
         if motivi:
             flash('%s non si può rimettere in agenda: %s' % (chi, ' '.join(motivi)), 'errore')
             return redirect(torna)
+        # 1.11: un disdetto rimesso in agenda con un clic riprende le sue email automatiche
+        # (quella annullata quando era disdetto non tornava mai); come nel modulo, un difetto
+        # nei messaggi non deve far perdere il cambio di stato
+        notizie, avvisi = [], []
+        if vecchio not in STATI_ATTIVI and nuovo in STATI_ATTIVI:
+            try:
+                invii.dopo_salvataggio(s, a, notizie, avvisi)
+            except Exception as e:
+                logging.exception('email automatiche dell\'appuntamento %s', a.id)
+                avvisi.append('Email automatica non preparata (%s): si può mandare dalla pagina '
+                              'dell\'appuntamento.' % e)
         try:
             s.commit()
         except IntegrityError:
             s.rollback()
             flash('Quella fascia risulta già presa da un altro appuntamento.', 'errore')
             return redirect(torna)
-    messaggio = '%s: %s.' % (chi, ETICHETTA_STATO[nuovo].lower())
+    if notizie:
+        invii.sveglia()
+    messaggio = ' '.join(['%s: %s.' % (chi, ETICHETTA_STATO[nuovo].lower())] + notizie + avvisi)
     # una fascia futura che si libera: chi e' in lista d'attesa per quella?
     if nuovo == 'DISDETTO' and a.inizio > datetime.now():
         candidati = segreteria.candidati_attesa(s, a)

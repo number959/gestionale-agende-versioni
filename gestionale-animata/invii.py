@@ -43,7 +43,7 @@ from io import BytesIO
 from types import SimpleNamespace
 
 from flask import (Blueprint, render_template, request, redirect, url_for, flash, abort, send_file)
-from sqlalchemy import select
+from sqlalchemy import select, or_
 
 from modelli import (Struttura, Operatore, Prestazione, Appuntamento, Paziente, RegolaEmail, AllegatoRegola,
                      Invio, Impostazione, STATI_ATTIVI, ETICHETTA_STATO, leggi_impostazione,
@@ -523,8 +523,25 @@ def gemello(s, a, regola):
     inizio = datetime.combine(a.inizio.date(), time(0, 0))
     return s.scalars(select(Invio).where(
         Invio.paziente_id == a.paziente_id, Invio.regola_id == regola.id, Invio.motivo == 'PREPARAZIONE',
-        Invio.stato.in_(VIVI), Invio.appuntamento_id != a.id, Invio.per_inizio >= inizio,
+        # 1.11: anche quella di un appuntamento poi eliminato (appuntamento_id vuoto):
+        # con «!= a.id» da sola SQLite la scartava, e l'email partiva una seconda volta
+        Invio.stato.in_(VIVI), or_(Invio.appuntamento_id.is_(None), Invio.appuntamento_id != a.id),
+        Invio.per_inizio >= inizio,
         Invio.per_inizio < inizio + timedelta(days=1))).first()
+
+
+def gia_per_la_serie(s, a, regola):
+    """La stessa email automatica e' gia' in coda o partita per un altro
+    appuntamento della stessa serie, per lo stesso paziente? Una serie riceve
+    l'email una volta sola (la preparazione e' la stessa): prima, modificando
+    un appuntamento della serie dopo il primo, partiva di nuovo. Per regola e
+    per paziente: un appuntamento della serie passato a un altro medico (con
+    la sua email) o a un altro paziente la riceve lo stesso."""
+    if not a.serie or not a.paziente_id:
+        return False
+    return s.scalars(select(Invio.id).join(Appuntamento, Invio.appuntamento_id == Appuntamento.id).where(
+        Appuntamento.serie == a.serie, Appuntamento.id != a.id, Invio.paziente_id == a.paziente_id,
+        Invio.regola_id == regola.id, Invio.motivo == 'PREPARAZIONE', Invio.stato.in_(VIVI))).first() is not None
 
 
 def accoda(s, canale, motivo, destinatario, a=None, regola=None, a_mano=False, oggetto='', testo='',
@@ -554,6 +571,11 @@ def dopo_salvataggio(s, a, notizie, avvisi, adesso=None):
     if a.stato not in STATI_ATTIVI or a.inizio < adesso or not a.paziente_id:
         return []
     regole = [r for r in regole_per(s, a) if not gia_in_coda(s, a, r)]
+    della_serie = [r for r in regole if gia_per_la_serie(s, a, r)]
+    if della_serie:
+        notizie.append('Email %s già mandata per questa serie di appuntamenti.' % ', '.join(
+            '«%s»' % r.nome for r in della_serie))
+        regole = [r for r in regole if r not in della_serie]
     if not regole:
         return []
     p = s.get(Paziente, a.paziente_id)
@@ -760,6 +782,29 @@ def spiega_accesso_rifiutato(cfg, e=None):
     return testo + (' (risposta del server: %s)' % risposta if risposta else '')
 
 
+ACCESSO_NON_ASCII = ('la password (o il nome utente) contiene lettere accentate o simboli come € £ § che questo '
+                     'server non accetta per l\'accesso: nel pannello della casella sceglierne una con lettere senza '
+                     'accento, numeri e simboli comuni, e scriverla in Configura → Email e WhatsApp')
+
+
+def accedi(server, utente, password):
+    """L'accesso al server della casella. smtplib manda nome utente e password
+    solo in ASCII: con una lettera accentata o un simbolo come € si fermava con
+    un «errore inatteso: ascii codec». In quel caso l'accesso AUTH PLAIN si fa
+    a mano in UTF-8 (RFC 4616), che i server di solito accettano; se il server
+    non lo offre, l'errore dice cosa correggere."""
+    if utente.isascii() and password.isascii():
+        server.login(utente, password)
+        return
+    server.ehlo_or_helo_if_needed()
+    if 'PLAIN' not in (server.esmtp_features.get('auth') or '').upper().split():
+        raise ErroreInvio(ACCESSO_NON_ASCII, permanente=True)
+    credenziali = base64.b64encode(('\0%s\0%s' % (utente, password)).encode('utf-8')).decode('ascii')
+    codice, risposta = server.docmd('AUTH', 'PLAIN ' + credenziali)
+    if codice not in (235, 503):          # 503: gia' entrati
+        raise smtplib.SMTPAuthenticationError(codice, risposta)
+
+
 def manda_email(cfg, messaggio):
     """Con la casella della struttura. Gli errori diventano ErroreInvio, con un
     testo che la segreteria capisce e che dice cosa correggere; permanente
@@ -784,7 +829,7 @@ def manda_email(cfg, messaggio):
             if sicurezza == 'starttls':
                 server.starttls(context=contesto_tls())
             if password:
-                server.login((cfg.get('email_accesso') or '').strip() or cfg['email_utente'], password)
+                accedi(server, (cfg.get('email_accesso') or '').strip() or cfg['email_utente'], password)
             server.send_message(messaggio)
         finally:
             try:
@@ -797,6 +842,14 @@ def manda_email(cfg, messaggio):
         if 'STARTTLS' in str(e).upper():
             raise ErroreInvio('il server non offre STARTTLS su questa porta: provare la porta 465 con SSL, o chiedere '
                               'a chi gestisce la casella porta e sicurezza giuste', permanente=True)
+        if 'SMTPUTF8' in str(e).upper():
+            # 1.11: un indirizzo con lettere accentate; prima la colpa andava alle impostazioni dell'accesso
+            mittente = cfg.get('email_utente') or ''
+            chi = mittente if not mittente.isascii() else str(messaggio['To'] or '')
+            raise ErroreInvio('l\'indirizzo «%s» contiene lettere accentate o caratteri speciali che il server email '
+                              'non accetta: di solito è un errore di battitura, da correggere %s' % (
+                                  chi, 'in Configura → Email e WhatsApp' if chi == mittente
+                                  else 'nella scheda del paziente'), permanente=True)
         raise ErroreInvio('il server non accetta l\'accesso con nome utente e password così (%s): controllare porta e '
                           'sicurezza (molti server lo accettano solo con SSL o STARTTLS); per un server della rete '
                           'interna che non chiede la password, spuntare «Il server non chiede la password»' % e,
@@ -920,6 +973,8 @@ def registra_numero(cfg, pin):
 
 PASSATO = 'appuntamento già passato'
 NON_VALE_PIU = 'non vale più per questo appuntamento (cambiati medico, prestazione o email automatiche)'
+CAMBIATO_PAZIENTE = 'cambiato il paziente dell\'appuntamento'
+CAMBIATO_RECAPITO = 'cambiato il recapito del paziente'
 
 
 def _controlla(x, a, adesso, s=None):
@@ -933,6 +988,22 @@ def _controlla(x, a, adesso, s=None):
         return 'appuntamento eliminato'
     if a.stato not in STATI_ATTIVI:
         return 'appuntamento %s' % ETICHETTA_STATO.get(a.stato, a.stato).lower()
+    # 1.11: il testo si scrive dall'appuntamento com'e' adesso, ma il destinatario e'
+    # quello di quando il messaggio e' entrato in coda. Cambiato il paziente (o
+    # corretto il suo indirizzo) mentre il messaggio aspettava di riprovare, sarebbe
+    # arrivato all'indirizzo vecchio con il nome e la prestazione del paziente nuovo.
+    # Si annulla: al suo posto ne entra uno per il paziente e il recapito di adesso.
+    if x.paziente_id is not None and a.paziente_id != x.paziente_id:
+        return CAMBIATO_PAZIENTE
+    if a.paziente is not None:
+        if x.canale == 'EMAIL':
+            adesso_a = (a.paziente.email or '').strip().lower()
+        elif x.canale == 'WHATSAPP':
+            adesso_a = (pazienti.cellulare_whatsapp(a.paziente) or '').strip().lower()
+        else:
+            adesso_a = None
+        if adesso_a is not None and adesso_a != (x.destinatario or '').strip().lower():
+            return CAMBIATO_RECAPITO
     if a.inizio < adesso and (x.motivo == 'PROMEMORIA' or not x.a_mano):
         return PASSATO
     if x.motivo == 'PROMEMORIA' and not x.a_mano and x.per_inizio is not None \
@@ -1034,6 +1105,18 @@ def _esegui(s, i, adesso):
             try:
                 rimessi = ricontrolla(s, x.paziente_id, x.per_inizio, adesso, x.appuntamento)
                 s.commit()
+            except Exception:
+                s.rollback()
+                logging.exception('invio %d: email da rimettere in coda', i)
+                rimessi = []
+        # 1.11: un promemoria annullato perche' e' cambiato il paziente o il suo recapito:
+        # quello giusto al suo posto (il giro del giorno e' gia' passato e non lo rifarebbe)
+        if stato == 'ANNULLATO' and x.motivo == 'PROMEMORIA' and not x.a_mano and \
+                errore in (CAMBIATO_PAZIENTE, CAMBIATO_RECAPITO) and x.appuntamento is not None:
+            try:
+                nuovo = accoda_promemoria(s, x.appuntamento, impostazioni(s))
+                s.commit()
+                rimessi = [nuovo] if nuovo is not None else []
             except Exception:
                 s.rollback()
                 logging.exception('invio %d: email da rimettere in coda', i)
@@ -1181,8 +1264,14 @@ def stato_promemoria(s, apps):
     if not apps:
         return {}
     uscita = {}
+    per_id = {a.id: a for a in apps}
     for x in s.scalars(select(Invio).where(Invio.motivo == 'PROMEMORIA',
-                                           Invio.appuntamento_id.in_([a.id for a in apps])).order_by(Invio.id)):
+                                           Invio.appuntamento_id.in_(list(per_id))).order_by(Invio.id)):
+        # 1.11: un promemoria del giorno di prima (appuntamento spostato) non vale per quello
+        # di adesso: la pagina diceva «inviato» e toglieva il pulsante per mandarlo
+        a = per_id.get(x.appuntamento_id)
+        if a is not None and x.per_inizio is not None and x.per_inizio.date() != a.inizio.date():
+            continue
         uscita[x.appuntamento_id] = x
     return uscita
 

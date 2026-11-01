@@ -29,7 +29,7 @@ NOVITA = [
              testo='Oltre alla copia del giorno, una copia ogni due ore se ci sono state modifiche (si tengono le '
                    'ultime tre). Se la cartella scelta per le copie non si raggiunge (la chiavetta tolta), la copia si '
                    'fa lo stesso accanto al database, e le copie di tutte e due le cartelle si vedono in Impostazioni.',
-             guida=None),
+             guida='backup'),
         dict(titolo='Controllo del programma',
              testo='In Impostazioni → «Controllo del programma» si vede com\'è il programma (database, copie, lavori '
                    'in sottofondo, spazio sul disco) e cosa ha riparato da solo; «Controlla adesso» fa il controllo '
