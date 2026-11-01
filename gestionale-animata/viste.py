@@ -20,6 +20,7 @@ from comune import PRIMA, ULTIMA, data_da, intero, scarica_excel, struttura_scel
 import calendario
 import pazienti
 import backup
+import autoripara
 import sala
 
 bp = Blueprint('viste', __name__)
@@ -445,6 +446,27 @@ def cartella_effettiva(s, percorso_db):
     return scelta or (backup.cartella_predefinita(percorso_db) if percorso_db else '')
 
 
+def copie_di(s, percorso_db):
+    """Le copie da mostrare e da poter rimettere: quelle della cartella scelta e
+    (1.11) anche quelle della cartella accanto al database, dove vanno le copie
+    «prima della versione», quelle fatte quando la cartella scelta non si
+    raggiungeva e quelle di prima di una cartella nuova. Prima si vedevano
+    solo le altre, e quelle restavano nascoste proprio quando servivano."""
+    if not percorso_db:
+        return []
+    cartelle = [cartella_effettiva(s, percorso_db)]
+    predefinita = backup.cartella_predefinita(percorso_db)
+    if os.path.normcase(os.path.abspath(predefinita)) != os.path.normcase(os.path.abspath(cartelle[0])):
+        cartelle.append(predefinita)
+    visti, uscita = set(), []
+    for i, c in enumerate(cartelle):
+        for x in backup.elenco(c):
+            if x['nome'] not in visti:
+                visti.add(x['nome'])
+                uscita.append(dict(x, altrove=i > 0))
+    return sorted(uscita, key=lambda x: x['quando'], reverse=True)
+
+
 @bp.route('/impostazioni', methods=['GET', 'POST'])
 def impostazioni():
     s = ses()
@@ -469,6 +491,9 @@ def impostazioni():
             with _lucchetto:
                 scrivi_impostazione(s, 'backup_cartella', cartella)
                 s.commit()
+            # anche fuori dal database: se un giorno non si legge, le copie si trovano lo stesso
+            if percorso_db:
+                autoripara.ricorda(os.path.dirname(percorso_db), cartella_backup=cartella)
             flash('Cartella dei backup salvata.' if cartella else
                   'Si torna alla cartella predefinita, accanto al database.', 'ok')
         elif azione == 'backup_ora':
@@ -511,7 +536,7 @@ def impostazioni():
             flash('Testo dei messaggi riportato a quello predefinito.', 'ok')
         return redirect(url_for('viste.impostazioni'))
     cartella = cartella_effettiva(s, percorso_db)
-    copie = backup.elenco(cartella) if cartella else []
+    copie = copie_di(s, percorso_db) if cartella else []
     modello, oggetto = modelli_messaggio(s)
     esempio = s.scalars(select(Appuntamento).where(Appuntamento.paziente_id != None)
                         .order_by(Appuntamento.inizio.desc())).first()
@@ -532,8 +557,7 @@ def scarica_backup(nome):
     percorso_db, _ = percorso_database()
     if not backup.NOME.match(nome or '') or not percorso_db:
         abort(404)
-    cartella = cartella_effettiva(s, percorso_db)
-    copia = next((c for c in backup.elenco(cartella) if c['nome'] == nome), None)
+    copia = next((c for c in copie_di(s, percorso_db) if c['nome'] == nome), None)
     if copia is None:
         abort(404)
     return send_file(copia['percorso'], as_attachment=True, download_name=nome)
@@ -553,7 +577,7 @@ def ripristina():
         flash('Per ripristinare va spuntata la conferma.', 'errore')
         return redirect(url_for('viste.impostazioni'))
     cartella = cartella_effettiva(s, percorso_db)
-    copia = next((c for c in backup.elenco(cartella) if c['nome'] == nome), None)
+    copia = next((c for c in copie_di(s, percorso_db) if c['nome'] == nome), None)
     if copia is None:
         flash('Copia non trovata.', 'errore')
         return redirect(url_for('viste.impostazioni'))

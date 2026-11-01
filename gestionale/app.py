@@ -10,6 +10,8 @@ import sys
 import threading
 import webbrowser
 from datetime import datetime, date, time, timedelta
+from logging.handlers import RotatingFileHandler
+from time import monotonic
 from decimal import Decimal, InvalidOperation
 
 from io import BytesIO
@@ -23,7 +25,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import scoped_session
 from werkzeug.routing import IntegerConverter
 
-from modelli import (crea_sessione, percorso_db, cartella_risorse, Struttura, Risorsa, Operatore,
+from modelli import (crea_sessione, aggiorna_database, VERSIONE_SCHEMA, percorso_db, cartella_risorse, Struttura, Risorsa, Operatore,
                      Prestazione, Paziente, Turno, Appuntamento, Attivita, Appunto, COLORE_PREDEFINITO,
                      STATI_ATTIVI, ETICHETTA_STATO, TIPI_VISITA, ETICHETTA_TIPO_VISITA,
                      METODI_PAGAMENTO, PROVENIENZE, leggi_impostazione, importo_in_testo,
@@ -47,6 +49,7 @@ import invii
 import aggiornamenti
 import personale
 import dovesifa
+import autoripara
 
 # i tipi dei file del programma non si chiedono a Windows: sul PC il registro puo'
 # dire "text/plain" per i .js o non conoscere i video, e il browser li rifiuterebbe
@@ -76,6 +79,10 @@ Sessione = None
 _registro = None
 LUCCHETTO = threading.Lock()   # serializza i salvataggi
 MASSIMA_DURATA = 24 * 60       # oltre, la somma sulla data straborda
+FILI = 4                       # le richieste che waitress serve insieme
+LENTA = 120                    # secondi: una pagina ferma da piu' di cosi' tiene occupato un filo
+_in_corso = {}                 # filo -> (inizio, pagina): le richieste che si stanno servendo
+_lucchetto_istanza = None      # il file bloccato del gestionale principale (autoripara.entra)
 
 
 def ses():
@@ -128,6 +135,62 @@ def solo_dal_gestionale():
         return Response('Richiesta rifiutata: arriva da una pagina che non è del gestionale.',
                         status=403, mimetype='text/plain')
     return None
+
+
+@app.before_request
+def segna_inizio():
+    # per /salute: un gestionale con tutti i fili fermi su una pagina e' bloccato
+    _in_corso[threading.get_ident()] = (monotonic(), request.path)
+
+
+@app.teardown_request
+def segna_fine(_):
+    _in_corso.pop(threading.get_ident(), None)
+
+
+@app.route('/salute')
+def salute():
+    """Il secondo clic sull'icona chiede qui se il gestionale aperto risponde
+    (autoripara.entra). Niente database e niente lucchetto: deve rispondere
+    anche quando il resto e' fermo; 'bloccato' se tutti gli altri fili sono
+    fermi su una pagina da piu' di LENTA secondi."""
+    adesso, io = monotonic(), threading.get_ident()
+    lente = sum(1 for filo, (inizio, _) in list(_in_corso.items()) if filo != io and adesso - inizio > LENTA)
+    r = Response(json.dumps({'programma': autoripara.PROGRAMMA, 'versione': VERSIONE, 'pid': os.getpid(),
+                             'lente': lente, 'bloccato': lente >= FILI - 1}), mimetype='application/json')
+    r.headers['Cache-Control'] = 'no-store'
+    return r
+
+
+PAGINA_ERRORE = '''<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Qualcosa non è andato</title>
+<style>body{font-family:Inter,Segoe UI,Arial,sans-serif;max-width:40em;margin:4em auto;padding:0 1em;line-height:1.5;color:#1d2433;background:#fff}
+h1{font-size:1.4em}a{color:#154381}</style></head><body>
+<h1>Qualcosa non è andato</h1>
+<p>%(motivo)s</p>
+<p>Tornare indietro e riprovare. Se succede di nuovo, il programma prova a ripararsi da solo: guardare
+<a href="/autoriparazione">Configura → Controllo del programma</a>. Per l'assistenza il dettaglio è nel registro
+(<code>gestionale.log</code>).</p>
+<p><a href="/">Torna alla pagina Oggi</a></p></body></html>'''
+
+
+@app.errorhandler(500)
+def errore_interno(e):
+    """Al posto della pagina di errore del server, una spiegazione in parole
+    semplici. Un errore del database rovinato fa partire subito il controllo
+    (il custode lo ripara con i salvataggi fermi)."""
+    originale = getattr(e, 'original_exception', None)
+    testo = str(originale or '').lower()
+    if any(p in testo for p in ('malformed', 'not a database', 'disk image')):
+        autoripara.chiedi_controllo()
+    if 'disk is full' in testo or 'no space left' in testo:
+        motivo = ('Non salvato: il disco del computer è pieno. Liberare spazio (per esempio svuotare il Cestino e '
+                  'la cartella Download) e riprovare.')
+    elif 'database is locked' in testo or 'database is busy' in testo:
+        motivo = ('Non salvato: il database era occupato da un altro programma (per esempio una copia in corso). '
+                  'Riprovare fra qualche secondo.')
+    else:
+        motivo = 'La pagina non si è aperta per un errore del programma. Quello che era già salvato è al sicuro.'
+    return Response(PAGINA_ERRORE % {'motivo': motivo}, status=500, mimetype='text/html')
 
 
 def momento(giorno, ora):
@@ -687,6 +750,44 @@ def esporta(iso):
     return scarica_excel(dati, nome)
 
 
+@app.route('/autoriparazione', methods=['GET', 'POST'])
+def autoriparazione():
+    """Configura → Controllo del programma: com'e' adesso e cosa ha riparato
+    da solo (autoripara). «Controlla adesso» fa il controllo completo."""
+    pdb, motore = viste.percorso_database()
+    if request.method == 'POST':
+        if not pdb:
+            flash('Il database non è un file: il controllo non si può fare.', 'errore')
+            return redirect(url_for('autoriparazione'))
+        ses().close()
+        autoripara.controlla_lavori()
+        autoripara.controlla_spazio(os.path.dirname(pdb))
+        try:
+            esito, evento = autoripara.controlla_e_ripara(pdb, motore, LUCCHETTO, dopo=dopo_riparazione,
+                                                         completo=True)
+        except Exception as e:
+            logging.exception('controllo del programma')
+            flash('Il controllo non è riuscito: %s' % e, 'errore')
+            return redirect(url_for('autoriparazione'))
+        if evento:
+            flash(evento['testo'], 'errore' if evento['livello'] == 'errore' else 'ok')
+        elif esito == 'ok':
+            flash('Controllo fatto: il database è integro.', 'ok')
+        elif esito == 'occupato':
+            flash('Il database in questo momento è occupato da un altro programma: riprovare fra poco.', 'errore')
+        else:
+            flash('Il database ha un problema che non si è riparato: chiamare l\'assistenza.', 'errore')
+        return redirect(url_for('autoriparazione'))
+    if pdb and autoripara.stato.get('spazio_libero') is None:
+        autoripara.controlla_spazio(os.path.dirname(pdb))
+    st = autoripara.stato
+    return render_template('autoriparazione.html', problemi=autoripara.problemi_attuali(),
+                           esito_db=st.get('esito_db'), controllo_db=st.get('controllo_db'), percorso_db=pdb,
+                           backup=backup.stato, allarme=backup.allarme(), lavori=autoripara.lavori(),
+                           spazio=st.get('spazio_libero'), porta=st.get('porta') or autoripara.PORTA,
+                           eventi=autoripara.eventi()[:30], sid=None, sezione='impostazioni')
+
+
 def porta_in_uso(porta):
     with socket.socket() as s:
         s.settimeout(0.4)
@@ -694,38 +795,171 @@ def porta_in_uso(porta):
 
 
 def prepara_registro():
-    """Il programma gira senza finestra: gli errori devono finire su file."""
+    """Il programma gira senza finestra: gli errori devono finire su file.
+    Dalla 1.11 il registro non cresce per sempre: oltre 5 MB diventa
+    gestionale.log.1 (e il .1 il .2, fino al .3) e se ne comincia uno nuovo."""
     cartella = os.path.dirname(percorso_db())
-    logging.basicConfig(
-        filename=os.path.join(cartella, "gestionale.log"),
-        level=logging.INFO, encoding="utf-8",
-        format="%(asctime)s %(levelname)s %(message)s")
-    return os.path.join(cartella, "gestionale.log")
+    percorso = os.path.join(cartella, "gestionale.log")
+    gestore = RotatingFileHandler(percorso, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8")
+    # force: il registro va sempre sul file, anche se prima qualcuno ha gia' scritto a video
+    logging.basicConfig(level=logging.INFO, handlers=[gestore], force=True,
+                        format="%(asctime)s %(levelname)s %(message)s")
+    return percorso
 
 
-def avvia(porta=5000, apri=True):
-    from waitress import serve
+def crea_server(porta, riserva=()):
+    """Il server, gia' in ascolto: (server, porta). Se la porta non si puo'
+    usare (presa da un altro programma, o riservata da Windows: Hyper-V e WSL
+    si tengono intere fasce di porte) si prova la prossima di 'riserva'."""
+    from waitress import create_server
+    candidate = [porta] + [x for x in riserva if x != porta]
+    for i, p in enumerate(candidate):
+        try:
+            return create_server(app, sockets=[presa_in_ascolto(p)], threads=FILI), p
+        except OSError as e:
+            logging.warning("porta %d non utilizzabile: %s", p, e)
+            if i == len(candidate) - 1:
+                raise
+
+
+def presa_in_ascolto(porta):
+    """Il socket del server, legato a 127.0.0.1 (solo loopback: il gestionale
+    non e' raggiungibile dalla rete). Lo crea il programma e non waitress
+    perche' waitress mette sempre SO_REUSEADDR, che su Windows lascia legare
+    una porta gia' in uso da un altro programma (due server sulla stessa
+    porta, risponde l'uno o l'altro): senza, la porta occupata da' errore e
+    si passa alla prossima. Su Linux invece SO_REUSEADDR serve a riprendere la
+    porta subito dopo una chiusura e non permette due server insieme."""
+    presa = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        if os.name != 'nt':
+            presa.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        presa.bind(("127.0.0.1", porta))
+    except OSError:
+        presa.close()
+        raise
+    return presa
+
+
+def avvia(porta=5000, apri=True, riserva=(), pronto=None):
+    """Avvia il server e resta li' finche' il programma gira. Il browser si apre
+    solo dopo che la porta e' presa: prima, se la porta non si poteva usare,
+    si apriva una pagina che non rispondeva. pronto(porta) si chiama appena il
+    server e' in ascolto, prima di servire."""
+    server, porta = crea_server(porta, riserva)
     indirizzo = "http://127.0.0.1:%d/" % porta
-
-    # doppio avvio: non e' un errore, la segreteria ha solo cliccato due volte
-    if porta_in_uso(porta):
-        if apri:
-            logging.info("gia in esecuzione sulla porta %d, apro solo il browser", porta)
-            webbrowser.open(indirizzo)
-        return
-
-    if apri:   # con un ritardo, altrimenti il browser trova la porta chiusa
+    if pronto is not None:
+        pronto(porta)
+    if apri:   # con un ritardo, il tempo che il server cominci a rispondere
         threading.Timer(1.5, webbrowser.open, [indirizzo]).start()
     logging.info("avvio su %s", indirizzo)
-    # solo loopback: il gestionale non e raggiungibile dalla rete
-    serve(app, host="127.0.0.1", port=porta, threads=4)
+    server.run()
+
+
+def dopo_riparazione():
+    """Dopo una riparazione a programma aperto (autoripara): il database torna
+    alla versione del programma, come dopo un ripristino dalle impostazioni
+    (la copia di sicurezza rimessa puo' essere di una versione vecchia)."""
+    _, aggiunte, note = aggiorna_database(Sessione.motore)
+    for nota in note:
+        logging.info("aggiornamento del database dopo la riparazione: %s", nota)
+    s = Sessione()
+    try:
+        servizi.dopo_aggiornamento(s, aggiunte)
+    finally:
+        s.close()
+
+
+def avvia_lavori():
+    """I lavori in sottofondo (una copia sola del programma li fa): backup,
+    messaggi, aggiornamenti; e il custode, che li tiene vivi e controlla il
+    database (autoripara)."""
+    pdb = percorso_db()
+    filo_backup = [backup.avvia_automatico(pdb, viste.cartella_backup)]
+
+    def riavvia_backup():
+        filo_backup[0] = backup.avvia_automatico(pdb, viste.cartella_backup, attesa_iniziale=5)
+        return filo_backup[0]
+    autoripara.sorveglia('backup', lambda: filo_backup[0], riavvia_backup)
+    invii.avvia(lambda: Sessione())
+    autoripara.sorveglia('invii', lambda: invii._thread, lambda: invii.avvia(lambda: Sessione()))
+    aggiornamenti.avvia(lambda: Sessione())
+    autoripara.sorveglia('aggiornamenti', lambda: aggiornamenti._thread,
+                         lambda: aggiornamenti.avvia(lambda: Sessione()))
+    autoripara.avvia_custode(pdb, Sessione.motore, LUCCHETTO, dopo=dopo_riparazione)
+
+
+def comando_riavvio():
+    """Come far ripartire questo programma (autoripara.riavvia_programma)."""
+    if getattr(sys, 'frozen', False):
+        return [sys.executable, '--avvio-automatico']
+    return [sys.executable, os.path.abspath(__file__), '--avvio-automatico']
+
+
+def richieste_ferme():
+    """Da quanti secondi e' in corso ciascuna pagina che si sta servendo."""
+    adesso = monotonic()
+    return [adesso - inizio for inizio, _ in list(_in_corso.values())]
+
+
+def risorse_presenti():
+    """I file del programma ci sono? L'eseguibile li apre in una cartella
+    temporanea di Windows, che la pulizia del disco puo' cancellare."""
+    return os.path.isfile(os.path.join(app.template_folder, 'base.html')) and \
+        os.path.isfile(os.path.join(app.static_folder, 'stile.css'))
+
+
+PAGINA_AVVIO_NON_RIUSCITO = """<!doctype html><html lang="it"><head><meta charset="utf-8">
+<title>Gestionale Agende: il programma non è partito</title>
+<style>body{font-family:Segoe UI,Arial,sans-serif;max-width:42em;margin:4em auto;padding:0 1em;line-height:1.5;color:#1d2433}
+code{background:#f1f3f5;padding:1px 4px}</style></head><body>
+<h1>Il programma non è partito</h1>
+<p>Il Gestionale Agende non si è aperto per un errore. I dati sono al sicuro: il database e le copie di sicurezza
+non sono stati toccati.</p>
+<p>Provare a riavviare il computer e a riaprire il programma dall'icona <b>Agende</b>. Se succede ancora, chiamare
+l'assistenza: il dettaglio dell'errore è nel registro <code>%(registro)s</code>.</p>
+<p style="color:#5b6b75">Errore: %(errore)s</p></body></html>"""
+
+
+def avvio_non_riuscito(registro, errore):
+    """Il programma gira senza finestra: se non parte, la segreteria non vede
+    niente (o una finestra di errore in inglese). Una pagina in parole semplici
+    accanto al registro, aperta nel browser."""
+    from html import escape
+    try:
+        percorso = os.path.join(os.path.dirname(registro), 'avvio-non-riuscito.html')
+        with open(percorso, 'w', encoding='utf-8') as f:
+            f.write(PAGINA_AVVIO_NON_RIUSCITO % {'registro': escape(registro), 'errore': escape(str(errore)[:300])})
+        webbrowser.open('file:///' + percorso.replace('\\', '/').lstrip('/'))
+    except Exception:
+        logging.exception("pagina dell'avvio non riuscito")
 
 
 def principale():
-    global Sessione
+    global Sessione, _lucchetto_istanza
     registro = prepara_registro()
+    # dall'avvio automatico di Windows parte in silenzio, senza aprire il
+    # browser a ogni accesso: la pagina la apre l'icona sul desktop
+    apri = "--avvio-automatico" not in sys.argv
     try:
+        cartella = os.path.dirname(percorso_db())
+        # c'e' gia' un gestionale aperto? Se risponde si apre solo la pagina (la
+        # segreteria ha cliccato due volte); se e' bloccato si chiude e si riparte
+        ingresso = autoripara.entra(cartella)
+        if not ingresso['principale']:
+            logging.info("gestionale gia aperto sulla porta %d (%s): apro solo il browser",
+                         ingresso['porta'], ingresso['nota'])
+            if apri:
+                webbrowser.open("http://127.0.0.1:%d/" % ingresso['porta'])
+            return
+        _lucchetto_istanza = ingresso['lucchetto']   # resta aperto finche' il programma gira
+        porta = ingresso['porta']
+        # il database si controlla (e se serve si ripara) prima di aprirlo
+        autoripara.all_avvio(percorso_db())
         Sessione = crea_sessione()
+        if Sessione.versione_precedente is not None and Sessione.versione_precedente > VERSIONE_SCHEMA:
+            # un database di una versione piu' nuova (il programma rimesso indietro): funziona, ma va detto
+            autoripara.stato['schema_nuovo'] = Sessione.versione_precedente
         if Sessione.colonne_aggiunte:
             logging.info("database aggiornato, colonne aggiunte: %s", ", ".join(Sessione.colonne_aggiunte))
         for nota in Sessione.migrazioni:
@@ -740,28 +974,36 @@ def principale():
         nuova = servizi.prepara_primo_avvio(s)
         if nuova:
             logging.info("primo avvio: creata la struttura %s con le stanze iniziali", nuova.nome)
-        primo = not porta_in_uso(5000)
-        if primo:
-            # versione avviata (per le novita'), esito di un "Aggiorna adesso", Setup vecchi
-            try:
-                for nota in aggiornamenti.dopo_avvio(s):
-                    logging.info("aggiornamenti: %s", nota)
-            except Exception:
-                s.rollback()
-                logging.exception("aggiornamenti: controllo all'avvio")
+        # versione avviata (per le novita'), esito di un "Aggiorna adesso", Setup vecchi
+        try:
+            for nota in aggiornamenti.dopo_avvio(s):
+                logging.info("aggiornamenti: %s", nota)
+        except Exception:
+            s.rollback()
+            logging.exception("aggiornamenti: controllo all'avvio")
+        try:
+            # fuori dal database, per trovare le copie anche quando il database non si legge
+            autoripara.ricorda(cartella_backup=leggi_impostazione(s, 'backup_cartella', ''),
+                               ultimo_avvio=datetime.now().isoformat(timespec='seconds'))
+        except Exception:
+            logging.exception("autoriparazione: diario")
         s.close()
-        if primo:
-            # una sola copia fa i backup, manda i messaggi e guarda gli aggiornamenti:
-            # la seconda istanza apre solo il browser
-            backup.avvia_automatico(percorso_db(), viste.cartella_backup)
-            invii.avvia(lambda: Sessione())
-            aggiornamenti.avvia(lambda: Sessione())
-        # dall'avvio automatico di Windows parte in silenzio, senza aprire il
-        # browser a ogni accesso: la pagina la apre l'icona sul desktop
-        avvia(apri="--avvio-automatico" not in sys.argv)
-    except Exception:
+        autoripara.imposta_riavvio(comando_riavvio(), occupato=lambda: bool(aggiornamenti.stato.get('partito')),
+                                   ferme=richieste_ferme, risorse=risorse_presenti, fili=FILI)
+        avvia_lavori()
+
+        def pronto(p):
+            autoripara.stato['porta'] = p
+            autoripara.scrivi_pid(cartella, p, 'in servizio')
+            if p != porta:
+                autoripara.annota('La porta %d non si poteva usare: il gestionale si apre su http://127.0.0.1:%d/.'
+                                  % (porta, p), 'attenzione')
+        avvia(porta=porta, apri=apri, riserva=[p for p in autoripara.PORTE_DI_RISERVA if p != porta], pronto=pronto)
+    except Exception as e:
         logging.exception("avvio non riuscito")
         print("Avvio non riuscito. Dettagli in %s" % registro)
+        if apri:
+            avvio_non_riuscito(registro, e)
         raise
 
 

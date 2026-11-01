@@ -16,8 +16,9 @@ loro licenze), la registrazione del numero WhatsApp, Dove si fa (pagine, dove.js
 menu, la ricerca rapida con le prestazioni) e la pagina dell'email della 1.9.1 (tipo di
 casella, gestionale.js, la guida vecchia che porta a quella nuova), le fasce dei turni della 1.10
 (giorno, settimana e mese con il database aggiornato, la durata delle fasce nel modulo del turno,
-lo stile, la guida). L'invio delle email sul programma installato si prova con
-strumenti/prova_email_installato.py."""
+lo stile, la guida), l'autoriparazione della 1.11 (/salute, la pagina Controllo del programma con i
+tre lavori in sottofondo attivi; con CARTELLA_DATI anche gestionale.pid e il diario). L'invio delle
+email sul programma installato si prova con strumenti/prova_email_installato.py."""
 import json
 import os
 import re
@@ -179,6 +180,35 @@ s, b, h = get('/static/stile.css')
 controlla('fasce dei turni: lo stile della griglia a fasce miste', s == 200 and b'fasce-miste' in b and b'con-ora' in b, s)
 s, b, _ = get('/aiuto/fasce-turno')
 controlla('fasce dei turni: la guida «Le fasce di ogni ambulatorio»', s == 200 and 'Le fasce di ogni ambulatorio' in testo(b), s)
+# 1.11: l'autoriparazione (solo lettura: il controllo completo non si lancia, scrive nel diario)
+s, b, _ = get('/salute')
+try:
+    salute = json.loads(b.decode('utf-8'))
+except ValueError:
+    salute = {}
+controlla('autoriparazione: /salute risponde, senza database', s == 200 and salute.get('programma') == 'Gestionale Agende'
+          and salute.get('versione') == ATTESA and salute.get('bloccato') is False, (s, salute))
+s, b, _ = get('/autoriparazione')
+t = testo(b)
+controlla('autoriparazione: la pagina Controllo del programma', s == 200 and 'Controllo del programma' in t and
+          'Cosa ha fatto da solo' in t and 'Database' in t, (s, t[:200]))
+controlla('autoriparazione: i tre lavori in sottofondo sorvegliati e attivi',
+          t.count('Lavoro in sottofondo') == 3 and ' fermo' not in t, t[t.find('Lavoro in sottofondo'):][:400])
+s, b, _ = get('/impostazioni')
+controlla('autoriparazione: il collegamento in Impostazioni', s == 200 and b'/autoriparazione' in b, s)
+cartella_dati = os.environ.get('CARTELLA_DATI')
+if cartella_dati:
+    try:
+        pid = json.load(open(os.path.join(cartella_dati, 'gestionale.pid'), encoding='utf-8'))
+    except (OSError, ValueError) as e:
+        pid = {'errore': str(e)}
+    controlla('autoriparazione: gestionale.pid in servizio, con il processo di /salute',
+              pid.get('fase') == 'in servizio' and pid.get('pid') == salute.get('pid'), pid)
+    try:
+        diario = json.load(open(os.path.join(cartella_dati, 'autoriparazione.json'), encoding='utf-8'))
+    except (OSError, ValueError) as e:
+        diario = {'errore': str(e)}
+    controlla('autoriparazione: il diario con l\'ultimo avvio', bool(diario.get('ultimo_avvio')), diario)
 
 for ok, nome, dettaglio in esiti:
     print(('OK ' if ok else 'KO ') + nome + ('' if ok else '  ' + str(dettaglio)[:300]))

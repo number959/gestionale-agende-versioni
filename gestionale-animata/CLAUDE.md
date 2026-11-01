@@ -96,7 +96,9 @@ qualsiasi casella: tipi e server proposti, modulo con errori e avvisi, invio con
 diverso e senza password, ogni errore con il suo consiglio, con lo stesso finto server di posta
 di `prove_15.py`), `prove_110.py` (le fasce dei turni: senza fasce proprie tutto identico alle
 funzioni della 1.9.1 copiate dentro la prova, con le fasce proprie contro calcoli fatti a
-parte; `PROVE_GIRI=500` per più giorni inventati) e `campagna.py` (casi generati con oracoli e
+parte; `PROVE_GIRI=500` per più giorni inventati), `prove_autoriparazione.py` (dalla 1.11: ogni
+guasto creato apposta e riparato, anche sul programma vero avviato in processi a parte) e
+`campagna.py` (casi generati con oracoli e
 invarianti). Alcune delle più vecchie escono con codice 0 anche se qualcosa non va: conta la
 riga finale («0 da sistemare»), ed è quella che legge `tutte_le_prove.py`.
 `PROVE_SOLO=nome1,nome2 python prove_15.py` rifà solo alcune prove di una raccolta. Le due
@@ -110,7 +112,7 @@ temporanea.
   modifiche in sospeso fuori dal lucchetto.
 - Un difetto nei messaggi non deve mai far perdere una prenotazione (try/except intorno a
   `invii.dopo_salvataggio`).
-- Schema del database: `modelli.VERSIONE_SCHEMA` (11 dalla 1.10) e `COLONNE_AGGIUNTE`;
+- Schema del database: `modelli.VERSIONE_SCHEMA` (11 dalla 1.10, uguale nella 1.11) e `COLONNE_AGGIUNTE`;
   l'aggiornamento fa prima una copia di sicurezza («prima-della-versione-N») e aggiunge
   colonne e tabelle senza toccare i dati. `_migra_a_8` ricava sesso, data e luogo di
   nascita dai codici fiscali validi già in archivio, senza cambiare quelli scritti. Alla 9
@@ -131,6 +133,22 @@ temporanea.
   `griglia.html` (tutte e due le versioni) e `settimana.html` la tabella a righe fitte è
   `tbody.fasce-miste` con l'altezza in `--riga`; il nome della prestazione compare solo in
   una cella alta almeno 52 pixel, una cella sotto i 37 è `bassa` (una riga sola).
+- Autoriparazione (dalla 1.11): tutto in `autoripara.py`, senza Flask (lo usa l'avvio prima del
+  server). L'avvio (`app.principale`) passa prima da `autoripara.entra` (un gestionale solo:
+  lucchetto su `gestionale.lock`, `gestionale.pid`, `/salute`) e da `autoripara.all_avvio` (il
+  database controllato e, se serve, riparato prima di `crea_sessione`). Regole da non rompere: un
+  file del database rovinato non si cancella mai (va in `backup\danneggiati` con il suo giornale,
+  `backup.copia_grezza`); con il giornale di un salvataggio interrotto decide SQLite (non si
+  controlla la testa del file prima); un database solo occupato non si ripara; si chiude un processo
+  solo se `processo_nostro` lo riconosce; a programma aperto la riparazione tiene il `LUCCHETTO` e
+  scrive la copia dentro il file con l'API di backup (`backup.metti_al_posto`); il riavvio da solo
+  mai durante un aggiornamento e al massimo tre volte in un'ora. `/salute` non tocca database né
+  lucchetto. Il server lega la porta da sé (`app.presa_in_ascolto`, senza `SO_REUSEADDR` su
+  Windows). Le copie «recenti» (`backup.MOTIVO_RECENTE`) se ne tengono `COPIE_RECENTI`; le altre con
+  un motivo restano sempre; la rotazione non cancella mai la copia appena fatta. Se la riga
+  `versione_schema` manca, `modelli._versione_dallo_schema` la ricava da tabelle e colonne: una
+  versione nuova dello schema va aggiunta anche lì. `prove_autoriparazione.py` crea ogni guasto
+  apposta; `GESTIONALE_PORTA` serve solo alle prove (mai la 5000).
 - Turni del personale: le regole stanno solo in `personale.py` (sovrapposizioni anche con
   la notte del giorno prima, riposi e assenze tutto il giorno, riposo sotto le 11 ore solo
   avvisato); `static/turni.js` manda la richiesta a `POST /personale/turni/cambia` e

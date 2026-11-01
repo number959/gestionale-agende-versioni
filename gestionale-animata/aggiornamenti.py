@@ -742,7 +742,16 @@ def aggiorna():
     s = ses()
     percorso_db_, _ = viste.percorso_database()
     try:
-        copia = backup.esegui(percorso_db_, viste.cartella_effettiva(s, percorso_db_), MOTIVO_COPIA)
+        try:
+            copia = backup.esegui(percorso_db_, viste.cartella_effettiva(s, percorso_db_), MOTIVO_COPIA)
+        except Exception as e:
+            # 1.11: la cartella scelta non si raggiunge (chiavetta tolta): la copia va accanto al database
+            predefinita = backup.cartella_predefinita(percorso_db_)
+            if os.path.normcase(os.path.abspath(viste.cartella_effettiva(s, percorso_db_))) == \
+                    os.path.normcase(os.path.abspath(predefinita)):
+                raise
+            logging.warning('copia prima dell\'aggiornamento: cartella scelta non raggiungibile (%s)', e)
+            copia = backup.esegui(percorso_db_, predefinita, MOTIVO_COPIA)
     except Exception as e:
         flash('La copia di sicurezza non è riuscita (%s): l\'aggiornamento non parte.' % e, 'errore')
         return torna

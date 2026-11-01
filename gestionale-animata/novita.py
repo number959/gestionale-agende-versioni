@@ -13,6 +13,29 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.11', [
+        dict(titolo='Il programma si ripara da solo',
+             testo='Se il database si rovina (per esempio dopo che è saltata la corrente) il programma se ne accorge e '
+                   'lo ripara: senza perdere niente quando si può, altrimenti rimettendo l\'ultima copia di sicurezza '
+                   'buona e dicendo da che ora ricontrollare. Il file rovinato non si cancella: resta da parte per '
+                   'l\'assistenza.',
+             guida=None),
+        dict(titolo='Se il programma si blocca, basta riaprirlo',
+             testo='Cliccando l\'icona Agende mentre il programma è bloccato, quello bloccato si chiude e se ne apre '
+                   'uno nuovo. Se una pagina resta ferma troppo a lungo, o mancano i file del programma, si riavvia '
+                   'da solo. Se la porta del programma è occupata da un altro programma, si apre su un\'altra.',
+             guida=None),
+        dict(titolo='Copie di sicurezza più frequenti',
+             testo='Oltre alla copia del giorno, una copia ogni due ore se ci sono state modifiche (si tengono le '
+                   'ultime tre). Se la cartella scelta per le copie non si raggiunge (la chiavetta tolta), la copia si '
+                   'fa lo stesso accanto al database, e le copie di tutte e due le cartelle si vedono in Impostazioni.',
+             guida=None),
+        dict(titolo='Controllo del programma',
+             testo='In Impostazioni → «Controllo del programma» si vede com\'è il programma (database, copie, lavori '
+                   'in sottofondo, spazio sul disco) e cosa ha riparato da solo; «Controlla adesso» fa il controllo '
+                   'completo. Quello che ha riparato lo dice anche la campanella.',
+             guida=None),
+    ]),
     ('1.10', [
         dict(titolo='Fasce di ogni ambulatorio',
              testo='Ogni turno può avere fasce sue: Configura → Anagrafiche → il turno → «Durata delle fasce» '

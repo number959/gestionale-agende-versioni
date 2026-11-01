@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block titolo %}Controllo del programma{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-autoriparazione">
+  <h1>Controllo del programma</h1>
+  <p class="sotto">Il programma controlla da solo il database, le copie di sicurezza e i lavori in sottofondo, e ripara
+    quello che può senza perdere dati: un file danneggiato non si cancella mai, va da parte per l'assistenza. Qui si vede
+    com'è adesso e cosa ha fatto.</p>
+
+  {% if problemi %}
+    {% for livello, testo in problemi %}<p class="avviso errore">{{ testo }}</p>{% endfor %}
+  {% else %}
+    <p class="avviso" id="tutto-a-posto">Tutto a posto: niente da riparare adesso.</p>
+  {% endif %}
+
+  <table class="elenco" id="stato-programma">
+    <tr><th>Cosa</th><th>Com'è</th></tr>
+    <tr><td>Database</td>
+        <td>{% if esito_db == 'ok' %}integro{% elif esito_db == 'danneggiato' %}<b>danneggiato</b>{% elif esito_db == 'occupato' %}occupato da un altro programma{% elif esito_db %}{{ esito_db }}{% else %}non ancora controllato{% endif %}{% if controllo_db %} <span class="nota-riga">(ultimo controllo {{ controllo_db.strftime('%d/%m/%Y %H:%M') }})</span>{% endif %}
+          {% if percorso_db %}<br><code>{{ percorso_db }}</code>{% endif %}</td></tr>
+    <tr><td>Copie di sicurezza</td>
+        <td>{% if allarme %}<b>{{ allarme }}</b>{% elif backup.ultimo_ok %}l'ultima copia automatica è del {{ backup.ultimo_ok.strftime('%d/%m/%Y %H:%M') }}{% else %}la prima copia si fa pochi minuti dopo l'avvio{% endif %}</td></tr>
+    {% for nome, descrizione, vivo in lavori %}
+    <tr><td>Lavoro in sottofondo: {{ descrizione }}</td><td>{% if vivo %}attivo{% else %}<b>fermo</b>{% endif %}</td></tr>
+    {% endfor %}
+    <tr><td>Spazio libero sul disco</td>
+        <td>{% if spazio is none %}non si legge{% else %}{{ '{:,.0f}'.format(spazio / 1048576).replace(',', '.') }} MB{% endif %}</td></tr>
+    <tr><td>Indirizzo del programma</td><td><code>http://127.0.0.1:{{ porta }}/</code></td></tr>
+    <tr><td>Versione</td><td>{{ versione_programma }}</td></tr>
+  </table>
+
+  <form method="post" class="in-linea">
+    <button class="bottone primario" type="submit">Controlla adesso</button>
+    <span class="nota-riga">Controllo completo del database (qualche secondo), dei lavori in sottofondo e dello spazio sul disco.</span>
+  </form>
+
+  <h2 class="sezione" id="diario">Cosa ha fatto da solo</h2>
+  {% if eventi %}
+  <table class="elenco" id="diario-riparazioni">
+    <tr><th>Quando</th><th>Cosa</th></tr>
+    {% for e in eventi %}
+    <tr><td style="white-space:nowrap">{{ e.quando.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td>{% if e.livello == 'errore' %}<b>{{ e.testo }}</b>{% else %}{{ e.testo }}{% endif %}{% if e.dettaglio %}<br><span class="nota-riga">Per l'assistenza: {{ e.dettaglio }}</span>{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>Niente: finora non c'è stato niente da riparare.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -916,6 +916,12 @@ def notifiche_di(s, struttura_id, adesso=None):
     if allarme:
         uscita.append({'chiave': 'backup-%s' % oggi.isoformat(), 'titolo': 'Backup', 'testo': allarme,
                        'link': url_for('viste.impostazioni'), 'azioni': [], 'livello': 'errore'})
+    # 1.11: quello che il programma ha riparato da solo, e i problemi di adesso
+    try:
+        import autoripara
+        uscita += autoripara.notifiche(adesso, url_for('autoriparazione'))
+    except Exception:
+        logging.exception('notifiche dell\'autoriparazione')
     return uscita
 
 

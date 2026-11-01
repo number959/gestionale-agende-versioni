@@ -9,6 +9,7 @@
     <a class="bottone" href="{{ url_for('documenti.moduli') }}">Moduli da stampare</a>
     <a class="bottone" href="{{ url_for('invii.pagina') }}">Email e WhatsApp</a>
     <a class="bottone" href="{{ url_for('segreteria.sposta_blocco') }}">Sposta gli appuntamenti di un medico</a>
+    <a class="bottone" href="{{ url_for('autoriparazione') }}">Controllo del programma</a>
     <a class="bottone" href="#" onclick="document.getElementById('aiuto-tasti').hidden=false;return false">Tasti rapidi</a>
   </div>
 
@@ -76,7 +77,7 @@
     <tr><th>Copia</th><th>Dimensione</th><th></th><th>Ripristino</th></tr>
     {% for c in copie %}
     <tr>
-      <td>{{ c.quando.strftime('%d/%m/%Y %H:%M') }}{% if c.motivo %} <span class="senza">({{ c.motivo|replace('-', ' ') }})</span>{% endif %}</td>
+      <td>{{ c.quando.strftime('%d/%m/%Y %H:%M') }}{% if c.motivo %} <span class="senza">({{ c.motivo|replace('-', ' ') }})</span>{% endif %}{% if c.altrove %} <span class="senza">(nella cartella accanto al database)</span>{% endif %}</td>
       <td>{{ (c.dimensione / 1024)|round|int }} KB</td>
       <td class="azione"><a href="{{ url_for('viste.scarica_backup', nome=c.nome) }}">Scarica</a></td>
       <td class="azione">

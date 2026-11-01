@@ -17,7 +17,7 @@
 ; sistema e le lettere accentate dei messaggi escono storpiate.
 
 #define NomeApp "Gestionale Agende"
-#define Versione "1.10"
+#define Versione "1.11"
 #define Editore "Gruppo NefroCenter"
 #define Eseguibile "Gestionale.exe"
 

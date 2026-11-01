@@ -1177,8 +1177,27 @@ def versione_trovata(motore):
                 "SELECT valore FROM impostazioni WHERE chiave = 'versione_schema'").fetchone()
             if r and str(r[0]).strip().isdigit():
                 return int(r[0])
-        colonne = {r[1] for r in c.exec_driver_sql('PRAGMA table_info(strutture)')}
-        return 2 if 'logo' in colonne else 1
+        return _versione_dallo_schema(c, tabelle)
+
+
+def _versione_dallo_schema(c, tabelle):
+    """La versione dello schema quando l'impostazione 'versione_schema' manca
+    (o non si legge), ricavata da tabelle e colonne. Fino alla 1.10 diceva 1 o
+    2 guardando solo il logo: un database recente che avesse perso quella riga
+    (un recupero dopo un guasto, per esempio) avrebbe rifatto le migrazioni
+    vecchie, e _migra_a_3 cambia ogni CONFERMATO in PRENOTATO."""
+    def colonne(tabella):
+        if tabella not in tabelle:
+            return set()
+        return {r[1] for r in c.exec_driver_sql('PRAGMA table_info(%s)' % tabella)}
+    pazienti, strutture = colonne('pazienti'), colonne('strutture')
+    for versione, presente in ((11, 'passo' in colonne('turni')), (10, 'strutture_gruppo' in tabelle),
+                               (9, 'tipi_turno' in tabelle), (8, 'luogo_nascita' in pazienti),
+                               (7, 'indirizzo' in pazienti), (6, 'posti_letto' in strutture),
+                               (4, 'provenienza' in pazienti), (3, 'ora_apertura' in strutture)):
+        if presente:
+            return versione
+    return 2 if 'logo' in strutture else 1
 
 
 def in_transazione(motore, lavoro):
@@ -1443,6 +1462,11 @@ def aggiorna_database(motore):
         elif trovata > VERSIONE_SCHEMA:
             logging.warning('database della versione %d, piu nuova del programma (%d)',
                             trovata, VERSIONE_SCHEMA)
+        else:
+            # gia' alla versione giusta: se la riga mancava (ricavata dallo schema) si riscrive
+            with motore.begin() as c:
+                c.exec_driver_sql("INSERT OR IGNORE INTO impostazioni (chiave, valore) "
+                                  "VALUES ('versione_schema', '%d')" % VERSIONE_SCHEMA)
     return trovata, aggiunte, migrazioni
 
 

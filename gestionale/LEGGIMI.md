@@ -5,6 +5,20 @@ ogni struttura: nome, logo, società e colori si impostano dal programma. Gira s
 della segreteria, con un solo utente; internet serve solo, in uscita, per le email e i
 WhatsApp ai pazienti e per scaricare gli aggiornamenti. Il database è un file unico.
 
+**Novità della 1.11.** **Il programma si ripara da solo.** Se il database si rovina (la
+corrente saltata, un disco che sbaglia) il programma se ne accorge all'avvio e ogni mezz'ora: lo
+ripara senza perdere niente quando si può (un indice rovinato si rifà dai dati), altrimenti rimette
+l'ultima copia di sicurezza buona e dice da che ora ricontrollare; il file rovinato non si cancella
+mai, resta in `backup\danneggiati` per l'assistenza. Se il programma si **blocca**, basta cliccare
+di nuovo l'icona: quello bloccato si chiude e se ne apre uno nuovo; se una pagina resta ferma troppo
+a lungo, o mancano i file del programma, si **riavvia da solo**. I lavori in sottofondo (copie,
+email, aggiornamenti) se si fermano ripartono. Le copie di sicurezza sono **più frequenti** (una
+ogni due ore se ci sono modifiche, oltre a quella del giorno) e si fanno anche quando la cartella
+scelta non si raggiunge. Tutto si vede in *Impostazioni → Controllo del programma*, e la campanella
+avvisa (vedi *Autoriparazione*). Corretti anche alcuni difetti trovati studiando i guasti: il
+ripristino che si fermava proprio con il database rovinato, l'orologio del PC indietro che faceva
+sparire le copie appena fatte, le copie della cartella accanto al database che non si vedevano.
+
 **Novità della 1.10.** **Le fasce di ogni ambulatorio.** Ogni turno può avere la sua **durata
 delle fasce** (*Configura → Anagrafiche*, il turno, *Durata delle fasce*): visite ogni 20 minuti
 in un ambulatorio, esami ogni 15 nella sala endoscopia, mentre il resto della clinica resta con
@@ -1289,6 +1303,93 @@ struttura.
   oggi, `N` nuovo appuntamento, `G` `E` `C` griglia, elenco e conferme, `D` Dove si fa, `?`
   l'elenco dei tasti. In un modulo, **Ctrl+Invio** salva.
 
+## Autoriparazione
+
+Dalla 1.11 il programma si accorge da solo dei guasti più comuni e li ripara, senza perdere dati e
+dicendo cosa ha fatto. Chi lo usa non è un tecnico: quando qualcosa si blocca può solo cliccare di
+nuovo l'icona, e quel clic deve bastare. Tutto sta in `autoripara.py` (senza Flask: lo usa l'avvio,
+prima che il server esista); le prove sono `prove_autoriparazione.py`.
+
+**Un gestionale solo.** Il primo che parte tiene un lucchetto sul file `gestionale.lock` (lo toglie
+Windows quando il programma si chiude, anche se si chiude male) e scrive in `gestionale.pid` il suo
+processo, la porta e la fase (`avvio`, poi `in servizio`). Il secondo clic chiede a `/salute` del
+primo se risponde (due tentativi da 15 secondi): se sì apre solo la pagina; se il primo sta ancora
+partendo (fase `avvio`, da meno di 10 minuti) aspetta e apre la pagina; se non risponde, o risponde
+ma ha tutti i fili fermi su una pagina da più di due minuti, lo chiude (`taskkill /F /T`) e parte al
+suo posto. Un processo si chiude solo se è lo stesso eseguibile (`tasklist`): un programma che non è
+il gestionale non si chiude mai. Se la porta 5000 è presa da un altro programma, o Windows non la
+lascia usare (Hyper-V e WSL si riservano intere fasce di porte), il gestionale si apre su una delle
+porte 5001-5009 e lo scrive nel diario. Il server lega da sé la porta, senza `SO_REUSEADDR` su
+Windows: con quell'opzione (che waitress mette sempre) Windows lascia legare una porta già usata da
+un altro programma, e la porta occupata non darebbe errore. Prima di aprire il browser il server è
+già in ascolto. Se il programma non parte proprio, apre nel browser la pagina
+`avvio-non-riuscito.html` (accanto al database) che lo dice in parole semplici.
+
+**Il database, all'avvio.** Prima di aprirlo si controlla (`PRAGMA quick_check`, il file che
+comincia con «SQLite format 3»):
+- integro, o con il giornale di un salvataggio interrotto: niente da fare (il giornale lo rimette
+  SQLite aprendolo, anche con la testa del file scritta a metà);
+- occupato da un altro programma (`BACKUP.bat`, un antivirus): non è un guasto, non si tocca;
+- mancante o vuoto (zero byte) ma con copie di sicurezza: si rimette la più recente che passa il
+  controllo completo (le «prima del ripristino» per ultime: sono lo stato che qualcuno ha scelto di
+  lasciare), e si dice da che ora ricontrollare. Senza copie è il primo avvio: database nuovo;
+- danneggiato: il file (con il suo giornale) si copia così com'è in `backup\danneggiati`, poi si
+  prova a rifarlo senza perdere niente: `VACUUM INTO`, poi `REINDEX` su una copia, poi la copia
+  tabella per tabella con gli indici rifatti dai dati. Se il controllo di SQLite trovava guasti solo
+  negli indici e tutte le righe si sono lette, non si è perso niente. Altrimenti si rimette l'ultima
+  copia buona e il recupero parziale resta da parte; senza copie si tiene il recupero parziale
+  (avviso rosso: chiamare l'assistenza). `VACUUM INTO` da solo non basta per un indice rovinato:
+  copia gli indici così come sono (l'ottimizzazione «xfer» di SQLite) e si ferma anche lui.
+
+Le copie si cercano nella cartella scelta nelle impostazioni e in quella accanto al database; la
+cartella scelta è scritta anche nel diario, per trovarla quando il database non si legge. Dopo una
+riparazione `aggiorna_database` porta la copia alla versione del programma, come dopo un
+ripristino. All'avvio si tolgono anche gli avanzi di lavori interrotti (copie `.parziale`, cartelle
+`riparazione-…`).
+
+**Il custode**, un thread che si sveglia ogni minuto:
+- i lavori in sottofondo (copie di sicurezza, email e WhatsApp, controllo degli aggiornamenti), se
+  si sono fermati, li fa ripartire;
+- ogni mezz'ora, e subito dopo un errore «malformed» in una pagina, controlla il database; se è
+  danneggiato lo ripara con i salvataggi fermi (`LUCCHETTO`): la copia buona si scrive dentro il
+  file aperto con l'API di backup di SQLite (su Windows un file aperto non si sostituisce), e solo se
+  il file è troppo rovinato per riceverla si sostituisce il file;
+- controlla lo spazio sul disco: sotto i 300 MB lo dice;
+- **riavvia il programma** se mancano i suoi file (l'eseguibile si apre in una cartella temporanea
+  di Windows, che la pulizia del disco può cancellare) o se è bloccato (tre pagine ferme da più di
+  cinque minuti, o una da mezz'ora): lascia il lucchetto, fa ripartire l'eseguibile fra due secondi
+  con l'ambiente pulito (come per il Setup di «Aggiorna adesso») e si chiude. Mai durante un
+  aggiornamento e mai più di tre volte in un'ora: alla quarta lo dice e lascia fare a chi c'è.
+
+**Le copie di sicurezza** (in `backup.py`): oltre a quella del giorno, una copia «recente» ogni
+due ore se il database è cambiato (se ne tengono le ultime tre): rimettendo una copia si perdono al
+massimo due ore. Se la cartella scelta non si raggiunge (la chiavetta tolta, il NAS spento) la copia
+del giorno si fa nella cartella accanto al database, e si riprova la cartella scelta a ogni giro. La
+pagina delle impostazioni mostra e rimette le copie di tutte e due le cartelle. Una copia che non si
+scrive non lascia il suo `.parziale`. Con l'orologio del PC indietro la copia appena fatta non si
+cancella più (prima la rotazione la toglieva subito, ogni ora) e la pagina lo dice. Il ripristino
+dalle impostazioni funziona anche quando il database attuale è rovinato: la sua copia di sicurezza
+non passerebbe il controllo, quindi si copia così com'è fra i danneggiati e si va avanti.
+«Aggiorna adesso» fa la sua copia accanto al database se la cartella scelta non si raggiunge.
+
+**La versione dello schema.** Se la riga `versione_schema` manca (un recupero che l'ha persa), la
+versione si ricava da tabelle e colonne (la colonna `turni.passo` → 11, le tabelle di Dove si fa →
+10, i tipi di turno → 9…) e la riga si riscrive. Prima diceva 1 o 2 guardando solo il logo, e
+`_migra_a_3` avrebbe cambiato ogni «Confermato» in «Prenotato».
+
+**Il registro** `gestionale.log` oltre i 5 MB diventa `gestionale.log.1` (fino al `.3`).
+
+**Il diario** `autoriparazione.json`, accanto al database e non dentro (il database è proprio la
+cosa che si ripara): le ultime 100 riparazioni, con quando, cosa e il dettaglio per l'assistenza.
+Lo mostra *Impostazioni → Controllo del programma* (`/autoriparazione`: com'è adesso il database, le
+copie, i lavori in sottofondo, lo spazio, la porta; *Controlla adesso* fa il controllo completo,
+`integrity_check`), e la campanella avvisa per tre giorni (*Riparato da solo*, o in rosso se serve
+l'assistenza). Una pagina che si rompe mostra una spiegazione in parole semplici al posto
+dell'errore del server (il disco pieno e il database occupato con il loro messaggio).
+
+Per le prove: `GESTIONALE_PORTA` cambia la porta del programma (al PC della clinica non c'è: le
+prove non toccano mai la 5000).
+
 ## Dove stanno i dati
 
 `%LOCALAPPDATA%\GestionaleAgende\agende.db`, insieme a `gestionale.log`. Il programma
@@ -1311,6 +1412,14 @@ pianificazione, ma non serve più.
 
 In più il pulsante *Scarica in Excel* rigenera il planning del giorno nel formato che
 l'accettazione usa già.
+
+**Accanto al database (dalla 1.11)**: `autoriparazione.json` (il diario delle riparazioni),
+`gestionale.lock` e `gestionale.pid` (il gestionale aperto), `gestionale.log.1`… (i registri
+vecchi), `backup\danneggiati` (i file rovinati messi da parte, mai cancellati) e, solo se il
+programma non è partito, `avvio-non-riuscito.html`. Vedi *Autoriparazione*.
+
+**Aggiornamento alla 1.11.** Il database non cambia (resta allo schema 11): niente copia di
+sicurezza in più e nessuna tabella nuova.
 
 **Aggiornamento alla 1.10.** Al primo avvio della 1.10 il programma copia il database in
 `backup\agende-…-prima-della-versione-11.db`, poi aggiunge ai turni la colonna della durata
@@ -1826,6 +1935,14 @@ python prove_110.py          # 22 prove sulla 1.10: le fasce dei turni. Senza fa
                              # calcolo minuto per minuto e riga per riga, controlli contro le fasce toccate calcolate a
                              # parte, prima disponibilità contro il controllo vero ora per ora; casi scritti a mano,
                              # appuntamenti presi prima delle fasce, pagine, modulo, Excel, aggiornamento dalla 10
+python prove_autoriparazione.py  # 54 prove sulla 1.11: l'autoriparazione. Ogni guasto creato apposta: database
+                             # mancante, vuoto, con la testa rovinata, un indice o una pagina dei dati rovinati, il
+                             # giornale di un salvataggio interrotto, occupato; riparazione all'avvio e a programma
+                             # aperto; un gestionale bloccato (finti gestionali in processi a parte), uno che sta
+                             # partendo, un programma che non è il nostro (mai chiuso), la porta occupata; lavori
+                             # fermi, poco spazio, copie con la cartella irraggiungibile, l'orologio indietro, il
+                             # ripristino sopra un database rovinato; e il programma vero (app.principale) avviato,
+                             # bloccato, sostituito, riparato e riavviato da solo
 python prove_16.py           # 45 prove sulla 1.6: Aggiorna adesso da una cartella e da un finto GitHub su https
                              # (rimandi, errori del sito, certificati, file delle versioni storpiati, Setup rovinati),
                              # installazione, esito al riavvio, novità, videoguide, installer e file delle versioni,
