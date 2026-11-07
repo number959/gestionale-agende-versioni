@@ -65,6 +65,7 @@ from sqlalchemy import select, func
 
 from modelli import (cartella_risorse, percorso_db, leggi_impostazione, scrivi_impostazione, Appuntamento,
                      Paziente, Invio, Impostazione)
+import comune
 from comune import VERSIONE, json_sicuro
 import backup
 import novita
@@ -209,7 +210,20 @@ def indirizzo_configurato(fabbrica=None):
 
 # ================================================================== lettura
 def contesto_tls():
-    return ssl.create_default_context()
+    """I certificati del sistema piu' l'elenco Mozilla dentro il programma
+    (comune.contesto_tls): l'elenco di Windows da solo puo' non avere ancora
+    la radice nuova di un sito."""
+    return comune.contesto_tls()
+
+
+def pagina_versioni(base):
+    """La pagina da aprire nel browser per scaricare il Setup a mano, dato
+    l'indirizzo da cui il programma prende gli aggiornamenti."""
+    m = re.fullmatch(r'https://github\.com/([^/]+)/([^/]+)/releases/(?:latest/download|download/([^/]+))/', base or '')
+    if m:
+        return 'https://github.com/%s/%s/releases/%s' % (m.group(1), m.group(2),
+                                                         'tag/' + m.group(3) if m.group(3) else 'latest')
+    return base or ''
 
 
 class _SoloHttps(urllib.request.HTTPRedirectHandler):
@@ -240,7 +254,9 @@ def apri(base, nome):
             raise ErroreAggiornamento('il sito degli aggiornamenti ha risposto con l\'errore %d' % e.code)
         except urllib.error.URLError as e:
             if isinstance(e.reason, ssl.SSLCertVerificationError):
-                raise ErroreAggiornamento('il certificato del sito degli aggiornamenti non è valido')
+                raise ErroreAggiornamento('il certificato del sito degli aggiornamenti non è valido: %s. Si può '
+                                          'aggiornare a mano, con il Setup scaricato dal browser (qui sotto)'
+                                          % comune.spiega_certificato(e.reason))
             if isinstance(e.reason, (socket.timeout, TimeoutError)):
                 raise ErroreAggiornamento('internet non risponde: si riprova più tardi')
             raise ErroreAggiornamento('internet non raggiungibile (%s): si riprova più tardi' % e.reason)
@@ -721,7 +737,9 @@ def pagina():
                            usa_predefinito=bool(quello_predefinito and base == quello_predefinito), stato=vista, m=m,
                            novita_nuove=novita_del_manifesto(m) if m else [],
                            pronto=bool(vista['pronto'] and os.path.exists(vista['pronto'])),
-                           fallito=fallito, manifesto=MANIFESTO, nome_setup=NOME_SETUP, sezione='aggiornamenti')
+                           fallito=fallito, manifesto=MANIFESTO, nome_setup=NOME_SETUP, sezione='aggiornamenti',
+                           pagina_versioni=pagina_versioni(base) if base.startswith('https://') else '',
+                           certificati=comune.certificati_in_uso())
 
 
 @bp.route('/aggiornamenti/aggiorna', methods=['POST'])

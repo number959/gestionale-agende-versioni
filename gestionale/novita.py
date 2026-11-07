@@ -13,6 +13,29 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.12', [
+        dict(titolo='Pianificazione degli ambulatori',
+             testo='La pagina Ambulatori → Pianificazione della settimana dice chi occupa ogni stanza, mattina e '
+                   'pomeriggio, calcolato dai turni: una stanza senza nessuno è «DISPONIBILE», le ore avanzate sono '
+                   'segnate come libere. Dal «+» di una cella si mette un medico (ogni settimana o quel giorno solo), '
+                   'dalla «×» si toglie da quella settimana in poi.',
+             guida='ambulatori'),
+        dict(titolo='La matrice degli ambulatori in Excel',
+             testo='Il foglio «Matrice turni ambulatori e disponibilità integrative» per la direzione sanitaria, con '
+                   'intestazione, legenda e firme, si scarica già compilato: questa settimana (con assenze e chiusure) '
+                   'oppure la settimana tipo.',
+             guida='ambulatori'),
+        dict(titolo='La programmazione ambulatori del mese',
+             testo='Ambulatori → Programmazione del mese: per ogni specialità e medico il giorno della settimana, le '
+                   'date del mese in cui viene davvero (tolte assenze, chiusure e festivi), l\'orario e la stanza, con le '
+                   'note che spiegano i giorni saltati. In Excel, con il calendario giorno per giorno.',
+             guida='programmazione'),
+        dict(titolo='Aggiornamenti anche se Windows non conosce il sito',
+             testo='Il controllo degli aggiornamenti (e le email) riconosce i certificati dei siti con un elenco '
+                   'portato dentro il programma: non dipende più da quelli che Windows ha già incontrato. Se un '
+                   'controllo non riesce, la pagina dice perché e come aggiornare a mano dal browser.',
+             guida='aggiornare'),
+    ]),
     ('1.11', [
         dict(titolo='Il programma si ripara da solo',
              testo='Se il database si rovina (per esempio dopo che è saltata la corrente) il programma se ne accorge e '

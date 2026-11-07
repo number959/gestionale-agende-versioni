@@ -791,7 +791,63 @@ def h_certificato_non_valido():
     base = SITO.come_github(nuova_versione(), setup_finto())
     imposta(S, aggiornamenti_indirizzo=base)
     AG.controlla(fabbrica)                         # con i certificati veri: quello finto non vale
+    errore = AG.stato['errore'] or ''
+    assert 'certificato' in errore, errore
+    # 1.12: il motivo spiegato e la via a mano, con il collegamento alla pagina delle versioni
+    assert 'PC non conosce' in errore or 'autofirmato' in errore, errore
+    assert 'a mano' in errore, errore
+    imposta(S, aggiornamenti_indirizzo='https://github.com/u/r')
+    t = html(C.get('/aggiornamenti'))
+    assert 'href="https://github.com/u/r/releases/latest"' in t and 'la pagina delle versioni' in t, t[-1500:]
+    assert 'certificati dei siti di cui il programma si fida sono quelli del sistema' in t, t[-1500:]
+
+
+def h_certificati_pem():
+    """1.12: il file certificati.pem accanto al database (un proxy o un
+    antivirus che riscrive i certificati): con dentro il certificato del sito
+    finto, il controllo con i certificati veri riesce."""
+    S, C, dove = mondo()
+    assert os.path.dirname(os.path.abspath(comune.file_certificati())) == os.path.abspath(dove), comune.file_certificati()
+    shutil.copy(CERT, comune.file_certificati())
+    dati = setup_finto(seme=5)
+    base = SITO.come_github(nuova_versione(), dati)
+    imposta(S, aggiornamenti_indirizzo=base)
+    AG.controlla(fabbrica)
+    assert AG.stato['errore'] is None and AG.stato['pronto'], AG.stato
+    assert open(AG.stato['pronto'], 'rb').read() == dati
+    assert 'il file certificati.pem' in comune.certificati_in_uso(), comune.certificati_in_uso()
+    # un file rotto non ferma il programma: si va avanti con gli altri certificati
+    with open(comune.file_certificati(), 'w') as f:
+        f.write('non e un certificato')
+    assert comune.contesto_tls().cert_store_stats()['x509_ca'] > 0
+    AG.controlla(fabbrica)
     assert 'certificato' in (AG.stato['errore'] or ''), AG.stato['errore']
+
+
+def h_elenco_mozilla():
+    """1.12: come sul PC della clinica, dove l'elenco di Windows non aveva la
+    radice nuova di GitHub: senza nessun certificato di sistema il programma
+    si fida lo stesso delle autorita' dell'elenco Mozilla (certifi)."""
+    codice = ('import ssl, sys; sys.path.insert(0, %r); import comune; '
+              'print(ssl.create_default_context().cert_store_stats()["x509_ca"], '
+              'comune.contesto_tls().cert_store_stats()["x509_ca"])' % CARTELLA)
+    r = subprocess.run([sys.executable, '-c', codice], capture_output=True, text=True, timeout=120,
+                       env=dict(os.environ, SSL_CERT_FILE=os.devnull, SSL_CERT_DIR=os.path.join(PROVVISORIA, 'nessuna')))
+    assert r.returncode == 0, r.stderr[-800:]
+    sistema, gestionale = (int(x) for x in r.stdout.split())
+    assert sistema == 0 and gestionale > 100, (sistema, gestionale)
+    assert 'elenco Mozilla' in comune.certificati_in_uso(), comune.certificati_in_uso()
+    for base, pagina in (('https://github.com/u/r/releases/latest/download/', 'https://github.com/u/r/releases/latest'),
+                         ('https://github.com/u/r/releases/download/v1.9/', 'https://github.com/u/r/releases/tag/v1.9'),
+                         ('https://x.example.com/agg/', 'https://x.example.com/agg/'), ('', '')):
+        assert AG.pagina_versioni(base) == pagina, (base, AG.pagina_versioni(base))
+    for motivo, atteso in (('unable to get local issuer certificate', 'PC non conosce'),
+                           ('certificate has expired', 'data del PC'), ('self-signed certificate', 'autofirmato'),
+                           ("Hostname mismatch, certificate is not valid for 'x'", 'altro sito'), ('boh', 'boh')):
+        e = ssl.SSLCertVerificationError(1, motivo)
+        e.verify_message = motivo
+        assert atteso in comune.spiega_certificato(e), (motivo, comune.spiega_certificato(e))
+    return '%d autorità senza i certificati di sistema' % gestionale
 
 
 def h_senza_risposta():
@@ -819,6 +875,8 @@ prova('come su GitHub: il file rimanda a un altro indirizzo, si segue; User-Agen
 prova('rimando a un indirizzo http: rifiutato (file delle versioni e Setup)', h_rimando_http)
 prova('file mancante (404) o errore del sito (500): detto in chiaro', h_errori_del_sito)
 prova('certificato non valido: non si scarica niente', h_certificato_non_valido)
+prova('certificati.pem accanto al database: il sito con quel certificato vale; un file rotto non ferma niente', h_certificati_pem)
+prova('senza certificati di sistema vale l\'elenco Mozilla dentro il programma; motivi spiegati, pagina delle versioni', h_elenco_mozilla)
 prova('sito che non risponde o porta chiusa: errore entro il tempo, niente blocchi', h_senza_risposta)
 
 

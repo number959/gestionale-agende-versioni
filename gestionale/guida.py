@@ -579,6 +579,49 @@ ARTICOLI = [
 ]
 
 ARTICOLI += [
+    # ------------------------------------------------------------ ambulatori
+    dict(slug='ambulatori', gruppo='Ambulatori', titolo='Chi sta in quale stanza: la pianificazione della settimana',
+         in_breve='Menu Ambulatori: ogni stanza, mattina e pomeriggio, con il medico che la occupa, calcolato dai '
+                  'turni. Le stanze libere sono «DISPONIBILE»; dal «+» si mette un medico. La matrice si scarica in '
+                  'Excel per la direzione sanitaria.',
+         endpoint='ambulatori.settimana', apri=('ambulatori.settimana', {'iso': 'OGGI'}),
+         foto='/ambulatori/settimana/{oggi}?struttura=1',
+         passi=[
+             P('Apri la pianificazione', 'Menu Ambulatori → Pianificazione della settimana: una riga per stanza, una '
+               'colonna per ogni mattina e pomeriggio dei giorni di apertura.', 'nav.menu [data-guida="menu-ambulatori"]'),
+             P('Chi c\'è', 'In ogni cella il medico con l\'orario, calcolato dai turni scritti in Anagrafiche. Una cella '
+               'senza nessuno è DISPONIBILE, in verde; se avanza almeno un\'ora, la cella dice «libero» e da che ora. Un '
+               'medico assente lascia la stanza libera solo in quella settimana.', '[data-guida="matrice-spiegazione"]'),
+             P('Mettere un medico', 'Il «+» in alto a destra della cella: si sceglie il medico, le ore (proposte quelle '
+               'libere) e se vale ogni settimana da questa in poi o quel giorno solo. Le regole sono quelle dei turni: '
+               'una stanza ospita un medico alla volta.', 'details.metti summary'),
+             P('Cambiare o togliere', 'Clic sul nome apre il turno, con tutte le sue impostazioni (fasce, fino al…). '
+               'La «×» accanto al nome toglie il medico da quella settimana in poi: le settimane già fatte restano '
+               'com\'erano, anche nelle statistiche.', 'table.matrice .turno-sett a'),
+             P('La matrice in Excel', 'Stampa e scarica → La matrice in Excel: il foglio «Matrice turni ambulatori e '
+               'disponibilità integrative» già compilato, con intestazione, legenda e firme, per la direzione '
+               'sanitaria. «Settimana tipo» è la stessa senza assenze e chiusure.', '[data-guida="matrice-scarica"]'),
+         ]),
+    dict(slug='programmazione', gruppo='Ambulatori', titolo='La programmazione ambulatori del mese',
+         in_breve='Menu Ambulatori → Programmazione del mese: per ogni specialità e medico, il giorno, le date del '
+                  'mese in cui viene davvero, l\'orario e la stanza. Si scarica in Excel, con il calendario.',
+         endpoint='ambulatori.mese', apri=('ambulatori.mese', {'aaaamm': 'MESE'}),
+         foto='/ambulatori/mese/{mese}?struttura=1',
+         passi=[
+             P('Apri la programmazione', 'Menu Ambulatori → Programmazione del mese; le frecce cambiano mese.',
+               'nav.menu [data-guida="menu-ambulatori"]'),
+             P('Una riga per turno', 'Raggruppate per specialità del medico (si scrive nella sua scheda): il giorno '
+               'della settimana, le date del mese in cui viene davvero, l\'orario e la stanza. Le note dicono i giorni '
+               'saltati e perché (assente, chiusura, festivo), da quando vale un turno nuovo e fino a quando uno che '
+               'finisce.', '[data-guida="programmazione-spiegazione"]'),
+             P('Niente da ricopiare', 'Le date nascono dai turni, dalle assenze e dalle chiusure già nel programma: il '
+               'foglio non può dire una cosa diversa dall\'agenda. Clic sul medico apre il suo turno.',
+               '#programmazione-ambulatori'),
+             P('Giorno per giorno', 'In fondo, il calendario del mese: per ogni giorno chi c\'è in quale stanza.',
+               '[data-guida="programmazione-calendario"]'),
+             P('In Excel', 'Scarica in Excel: il foglio della programmazione pronto da stampare o mandare, più il '
+               'calendario del mese in un secondo foglio.', '[data-guida="programmazione-excel"]'),
+         ]),
     # ------------------------------------------------------- email e WhatsApp
     dict(slug='email-casella', gruppo='Email e WhatsApp', titolo='Collegare l\'email della clinica',
          in_breve='Le email ai pazienti partono da una casella della clinica: quella del sito (bastano indirizzo e '
@@ -670,8 +713,8 @@ PER_SLUG = {a['slug']: a for a in ARTICOLI}
 # guide che hanno cambiato nome: il vecchio indirizzo porta a quella nuova
 # (1.9.1: «email-gmail» e' diventata «email-casella», l'email va con ogni casella)
 NOMI_VECCHI = {'email-gmail': 'email-casella'}
-GRUPPI = ['Primi passi', 'Tutti i giorni', 'Dove si fa', 'Turni del personale', 'Sala operatoria', 'Cassa e fogli',
-          'Email e WhatsApp', 'Configurazione']
+GRUPPI = ['Primi passi', 'Tutti i giorni', 'Ambulatori', 'Dove si fa', 'Turni del personale', 'Sala operatoria',
+          'Cassa e fogli', 'Email e WhatsApp', 'Configurazione']
 
 
 def collega(app):

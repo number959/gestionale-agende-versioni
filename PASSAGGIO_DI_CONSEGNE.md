@@ -653,6 +653,46 @@ installati in Wine sopra la 1.10 consegnata con i dati inventati: tabelle identi
 i 10 dell'autoriparazione a posto. Resta da rigenerare il **PDF della guida** (c'è una guida in più,
 *Il programma si ripara da solo*): non blocca niente, le guide sono dentro il programma.
 
+## La 1.12
+
+Fatta il 2 novembre 2026 nella stessa sessione di Claude Code nel cloud, sullo stesso ramo
+`ccr-07f8e160-7j5lup`, dopo la richiesta di Giovanni con l'errore degli aggiornamenti e i due
+fogli da digitalizzare (il PDF della programmazione ambulatori di un'altra struttura del gruppo e
+la matrice chiesta dalla segreteria amministrativa per la direzione sanitaria: file veri, rimasti fuori dal progetto).
+
+**L'errore «il certificato del sito degli aggiornamenti non è valido»** (la 1.9 animata installata
+alla clinica, 2 novembre). La causa non è il sito né la rete: Windows parte con pochi certificati
+radice e aggiunge gli altri solo la prima volta che li incontra con Edge o con un suo programma
+(CryptoAPI); il Python dentro il gestionale usa l'elenco di Windows così com'è e non glieli fa
+scaricare. Nel 2025 GitHub è passato a radici nuove di Sectigo, che quel PC non aveva ancora
+incontrato: il browser apriva il sito, il programma no. Dalla 1.12 `comune.contesto_tls` si fida
+anche dell'elenco Mozilla portato dentro l'eseguibile (`certifi`, in `requirements.txt` e nella
+ricetta `gestionale.spec`) e di un eventuale `certificati.pem` accanto al database; lo usano gli
+aggiornamenti e le email. Il messaggio dice il motivo in parole semplici e la pagina ha il
+collegamento alla pagina delle versioni per il Setup a mano; una riga «per l'assistenza» dice di
+quali certificati il programma si fida (così `prove_installato.py` controlla che certifi sia dentro
+l'eseguibile). Prove in `prove_16.py` (il file `certificati.pem`, l'elenco Mozilla senza nessun
+certificato di sistema, i motivi spiegati). **Per la clinica**: la 1.9 installata non può
+aggiornarsi da sola finché Windows non conosce quella radice. Due strade: aprire una volta
+`https://github.com` con **Edge** su quel PC (Windows scarica la radice) e poi *Configura →
+Aggiornamenti → Controlla adesso*; oppure scaricare dal browser
+`GestionaleAgende-animata-setup.exe` dalla pagina delle versioni
+(`https://github.com/number959/gestionale-agende-versioni/releases/latest`) e avviarlo sopra la
+1.9: i dati restano. Dalla 1.12 in poi non succede più.
+
+**Ambulatori** (`ambulatori.py`, menu *Ambulatori*, sezione *Ambulatori* del `LEGGIMI.md`, guide
+*Chi sta in quale stanza* e *La programmazione ambulatori del mese* con immagini e video): la
+pianificazione della settimana (stanze × mattina/pomeriggio, DISPONIBILE e ore libere, il «+» per
+mettere un medico, la «×» per toglierlo da quella settimana in poi, il nome apre il turno e torna
+indietro), la matrice in Excel per la direzione sanitaria (anche come settimana tipo), la
+programmazione del mese per specialità con le date calcolate e le note automatiche, in pagina e in
+Excel con il calendario. Le scelte: calcolato dai turni e mai ricopiato (il foglio a mano si
+allontanava dall'agenda); mattina e pomeriggio divisi alle 14 (`ambulatori.META`), un'ora libera
+(`MINIMO_LIBERO`) si segnala; sale operatorie fuori; destinatario e chi compila sono testi fissi
+(`DESTINATARIO`, `COMPILATO_DA`), modificabili nell'Excel; la regola della stanza occupata è una
+sola, `anagrafiche.stanza_gia_assegnata`, condivisa con la scheda del turno. Prove `prove_112.py` e
+`prove_112_browser.py`.
+
 ## Cose aperte
 
 - **Le notti del cambio dell'ora** (trovato dalla revisione della 1.11, non cambiato): un turno di
@@ -672,8 +712,9 @@ i 10 dell'autoriparazione a posto. Resta da rigenerare il **PDF della guida** (c
   con DPAPI, una cartella non scrivibile, il pid di un venv, la prova delle icone animate di
   domenica); `prove_15.py`, `prove_16.py` e `prove_191.py` vogliono `openssl` sul PATH (c'è nella
   riga di comando di Git for Windows, non in PowerShell).
-- Installare la 1.11 alla clinica la prima volta a mano, se c'è ancora la 1.5 (dalla 1.6 arriva da
-  sola). Il PDF della guida da rigenerare.
+- Alla clinica c'è la 1.9 animata e il suo controllo degli aggiornamenti non riesce (il certificato,
+  vedi *La 1.12*): la 1.12 va messa una volta a mano, dal Setup scaricato nel browser, oppure
+  dopo aver aperto github.com con Edge. Il PDF della guida da rigenerare.
 - **Fasce dei turni**: con Federica, scegliere la durata delle fasce dei turni che ne hanno
   bisogno (per esempio le sedute di endoscopia e gli ambulatori con le visite ogni 20 minuti),
   da *Configura → Anagrafiche*, il turno, *Durata delle fasce*. Salvando ogni turno il programma

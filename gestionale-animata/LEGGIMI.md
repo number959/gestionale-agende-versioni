@@ -234,6 +234,21 @@ impostazioni. Se qualcosa va storto il programma resta alla versione di prima, c
 dati, e al riavvio lo dice (notifica *Aggiornamento non riuscito*, con il registro del
 Setup per l'assistenza). Il Setup si può sempre avviare anche a mano.
 
+**I certificati dei siti (1.12).** Il controllo degli aggiornamenti e l'invio delle email si fidano
+dei certificati che conosce Windows, più l'elenco delle autorità riconosciute da Mozilla portato
+dentro il programma (il pacchetto `certifi`, `comune.contesto_tls`) e, se c'è, del file
+`certificati.pem` accanto al database (per una rete con un proxy o un antivirus che riscrive i
+certificati: ci si mette il suo). Perché: Windows parte con pochi certificati e aggiunge una
+radice nuova al suo elenco solo la prima volta che la incontra con Edge o con un suo programma; il
+gestionale usa l'elenco così com'è, e quando GitHub è passato a radici nuove (2025) la 1.9 sul PC
+della clinica diceva *il certificato del sito degli aggiornamenti non è valido* mentre il browser
+apriva il sito senza problemi. Dalla 1.12 non dipende più da cosa ha già visto Windows; se un
+controllo non riesce lo stesso, la pagina dice il motivo in parole semplici (autorità sconosciuta,
+scaduto o data del PC sbagliata, un altro sito in mezzo) e il collegamento alla pagina delle
+versioni per scaricare il Setup dal browser. Per la versione installata che ha ancora il difetto:
+aprire una volta `https://github.com` con Edge (Windows scarica la radice) e poi *Controlla
+adesso*, oppure il Setup nuovo a mano.
+
 **Da dove arrivano.** Dalle versioni pubblicate su GitHub, nel progetto
 `https://github.com/number959/gestionale-agende-versioni`: è l'indirizzo predefinito, già
 scritto nel programma, e alla clinica non c'è niente da impostare. Il programma prende
@@ -560,6 +575,49 @@ promemoria al paziente.
   turno), appuntamenti per medico con il tasso di mancate presenze, per prestazione,
   tipo e giorno della settimana, pazienti nuovi. Si scaricano in Excel. L'export del
   giorno ora ha anche un secondo foglio *Elenco* con tutti i campi.
+
+## Ambulatori
+
+Dalla 1.12. Menu *Ambulatori*: chi sta in quale stanza, calcolato dai turni dei medici (quelli
+di *Configura → Anagrafiche*), in due pagine nate da fogli che in due strutture del gruppo si
+compilavano a mano. Tutto in `ambulatori.py`; le sale operatorie restano fuori (si programmano in
+*Sala*).
+
+- **Pianificazione della settimana** (`/ambulatori/settimana/<data>`): una riga per stanza attiva,
+  una colonna per la mattina (dall'apertura alle 14) e una per il pomeriggio (dalle 14 alla
+  chiusura) di ogni giorno di apertura. In ogni cella chi occupa la stanza con l'orario; una cella
+  senza nessuno è **DISPONIBILE**, in verde; se dentro una mezza giornata occupata avanza almeno
+  un'ora, la cella dice *libero* e da che ora a che ora. Un medico assente lascia la stanza libera
+  solo in quella settimana (e lo si legge: *assente: ferie*); un giorno di chiusura, o un festivo
+  in cui la struttura chiude, è grigio. È anche la pianificazione: il **+** in alto a destra di
+  una cella (solo da oggi in poi) apre un modulo con il medico, le ore (proposte quelle libere) e
+  la ripetizione, *ogni settimana da questa in poi* (un turno valido da quel giorno) oppure *quel
+  giorno solo* (un turno di un giorno); le regole sono quelle della scheda del turno
+  (`anagrafiche.stanza_gia_assegnata`: una stanza ospita un medico alla volta, con le eccezioni
+  delle sostituzioni). Il nome apre la scheda del turno, che poi torna qui (`torna`); la **×** lo
+  toglie da quella settimana in poi: un turno di un giorno, o che comincia in quella settimana o
+  dopo, si elimina; uno che veniva da prima si chiude la domenica precedente (*Fino al*), così le
+  settimane già fatte e le statistiche restano com'erano.
+- **La matrice in Excel** (*Stampa e scarica → La matrice in Excel*,
+  `/ambulatori/settimana/<lunedì>.xlsx`): il foglio *Matrice turni ambulatori e disponibilità
+  integrative* chiesto dalla direzione sanitaria, già compilato: nome della struttura, titolo,
+  settimana, destinatario e chi lo compila, la tabella stanze × mezze giornate con *DISPONIBILE*
+  in verde pieno e le ore libere in verde chiaro, la legenda, la data del calcolo e le righe per
+  le firme; una pagina A4 orizzontale. Con `?tipo=1` (*La settimana tipo in Excel*) solo i turni
+  che si ripetono, senza assenze, chiusure e turni di un giorno.
+- **Programmazione del mese** (`/ambulatori/mese/<aaaa-mm>` e `.xlsx`): il foglio *programmazione
+  ambulatori* di un'altra struttura del gruppo, ma calcolato: una riga per turno, raggruppate per
+  specialità del medico (dalla sua scheda; senza specialità in fondo), con il giorno della
+  settimana, le **date del mese in cui il medico viene davvero** (tolte assenze, chiusure e festivi
+  in cui si chiude), l'orario, la stanza e le note che si scrivono da sole: *un giorno solo*,
+  *dal 15*, *fino al 20*, *non il 2 e il 9 (assente: ferie)*, *nessuna seduta nel mese*, *fasce
+  da 20 minuti*. In fondo alla pagina il calendario del mese; nell'Excel è un secondo foglio.
+  Perché così e non ricopiato: il foglio a mano andava riscritto ogni mese e si allontanava
+  dall'agenda (le date saltate le scriveva una persona); qui non può dire una cosa diversa.
+
+Le prove sono `prove_112.py` (le celle della matrice contro un calcolo minuto per minuto fatto a
+parte, la programmazione, i due Excel riaperti, mettere e togliere, le protezioni) e
+`prove_112_browser.py`.
 
 ## Conferme
 
@@ -2504,6 +2562,7 @@ falliscono, cioè il difetto c'era davvero.
 | Documento oltre il massimo | Rispondeva «405 Method Not Allowed» invece del messaggio | Si torna alla scheda del paziente con il messaggio |
 | Dove si fa: «ecografia dell'addome», «rx dell'anca» | Zero risultati: «dell'» non era fra le parole vuote | Aggiunte le parole con l'apostrofo |
 | Richieste JSON di forma inattesa | Errore del server (solo a mano) | Un JSON che non è un dizionario non ha campi |
+| Controllo degli aggiornamenti: «il certificato del sito degli aggiornamenti non è valido» (1.9 alla clinica) | Windows non aveva ancora la radice nuova di GitHub (la aggiunge solo quando la incontra con Edge); Python usa l'elenco di Windows così com'è | L'elenco Mozilla (certifi) dentro il programma, più il file `certificati.pem` accanto al database; il motivo spiegato e il collegamento per il Setup a mano |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo

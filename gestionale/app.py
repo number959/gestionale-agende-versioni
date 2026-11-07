@@ -49,6 +49,7 @@ import guida
 import invii
 import aggiornamenti
 import personale
+import ambulatori
 import dovesifa
 import autoripara
 
@@ -774,6 +775,7 @@ importa.collega(app, ses, LUCCHETTO)
 sala.collega(app, ses, LUCCHETTO)
 cruscotto.collega(app, ses, LUCCHETTO)
 personale.collega(app, ses, LUCCHETTO)
+ambulatori.collega(app, ses, LUCCHETTO)
 dovesifa.collega(app, ses, LUCCHETTO)
 guida.collega(app)
 # la coda dei messaggi lavora in un thread suo: le serve una sessione nuova ogni volta

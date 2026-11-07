@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block titolo %}Ambulatori · {{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">Ambulatori · {{ titolo }}</h1>
+  <span class="conteggio">{{ vista.libere }} mezz{{ 'a giornata libera' if vista.libere == 1 else 'e giornate libere' }}{% if vista.parziali %}, {{ vista.parziali }} con ore libere{% endif %}</span>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('ambulatori.settimana', iso=prima, struttura=sid) }}" title="Settimana precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('ambulatori.settimana', iso=dopo, struttura=sid) }}" title="Settimana successiva">&rsaquo;</a>
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('ambulatori.settimana', iso=oggi.isoformat(), struttura=sid) }}">Questa settimana</a>
+    {% if strutture|length > 1 %}
+    <span class="separa"></span>
+    <form method="get" style="display:inline">
+      <select name="struttura" onchange="this.form.submit()">
+        {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+      </select>
+    </form>
+    {% endif %}
+    <span class="separa"></span>
+    <div class="gruppo-comandi" data-guida="matrice-scarica">
+      <button type="button" class="bottone apri-gruppo" aria-haspopup="true" aria-expanded="false">Stampa e scarica<span class="freccia" aria-hidden="true"></span></button>
+      <div class="tendina" role="menu">
+        <a href="{{ url_for('ambulatori.settimana_excel', iso=lunedi.isoformat(), struttura=sid) }}"><b>La matrice in Excel</b><small>questa settimana, con assenze e chiusure: per la direzione sanitaria</small></a>
+        <a href="{{ url_for('ambulatori.settimana_excel', iso=lunedi.isoformat(), struttura=sid, tipo=1) }}"><b>La settimana tipo in Excel</b><small>solo i turni che si ripetono, senza assenze</small></a>
+        <a href="{{ url_for('ambulatori.mese', aaaamm=aaaamm, struttura=sid) }}"><b>Programmazione del mese</b><small>per specialità e medico, con le date in cui viene</small></a>
+        <a href="#" onclick="window.print(); return false"><b>Stampa</b><small>questa pagina</small></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="telaio">
+<p class="nota" data-guida="matrice-spiegazione">Chi occupa ogni stanza, mattina e pomeriggio, calcolato dai turni dei medici: una cella senza nessuno è <b class="verde">DISPONIBILE</b>, le ore avanzate sono segnate come <b class="verde">libere</b>. Dal <b>+</b> si mette un medico in una stanza, dal nome si apre il turno, dalla <b>×</b> si toglie da quella settimana in poi.</p>
+{% if vista.righe %}
+<table class="settimana matrice" id="matrice-ambulatori" data-lunedi="{{ lunedi.isoformat() }}">
+  <thead>
+    <tr><th class="stanza-sett" rowspan="2">Ambulatorio</th>
+      {% for g in vista.giorni %}{% set i = vista.info[g] %}
+      <th colspan="{{ vista.meta|length }}" class="{% if g == oggi %}oggi{% endif %}{% if i.chiusura or (i.festivo and i.chiude_festivo) %} festivo{% endif %}">
+        <a href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">{{ giorni_nomi[g.weekday()] }} {{ g.day }}/{{ g.month }}</a>
+        {% if i.chiusura %}<span class="sotto">chiusa: {{ i.chiusura }}</span>{% elif i.festivo %}<span class="sotto">{{ i.festivo }}</span>{% endif %}
+      </th>{% endfor %}
+    </tr>
+    <tr>
+      {% for g in vista.giorni %}{% for m in vista.meta %}<th class="meta">{{ fascia(m.da, m.a) }}</th>{% endfor %}{% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for riga in vista.righe %}
+    <tr>
+      <th class="stanza-sett">{{ riga.risorsa.nome }}</th>
+      {% for c in riga.celle %}
+      <td class="{% if c.chiuso %}chiusa{% elif c.tutta_libera %}libera{% else %}occupata{% if c.libere %} parziale{% endif %}{% endif %}"
+          data-cella="{{ riga.risorsa.id }}_{{ c.data.isoformat() }}_{{ c.meta.nome }}">
+        {% if c.chiuso %}
+          <span class="chiuso">chiusa: {{ c.chiuso }}</span>
+        {% else %}
+          {% for p in c.presenze %}
+          <span class="turno-sett" style="border-left-color: {{ p.operatore.colore_sicuro }}">
+            <a href="{{ url_for('anagrafiche.turno', tid=p.turno.id, torna=request.full_path.rstrip('?')) }}" title="Apri il turno di {{ p.operatore.etichetta }}">{{ p.operatore.cognome }}</a> <small>{{ fascia(p.da, p.a) }}</small>
+            <form method="post" action="{{ url_for('ambulatori.togli') }}" class="togli-turno">
+              <input type="hidden" name="turno" value="{{ p.turno.id }}"><input type="hidden" name="data" value="{{ c.data.isoformat() }}">
+              <input type="hidden" name="struttura" value="{{ sid }}"><input type="hidden" name="torna" value="{{ request.full_path.rstrip('?') }}">
+              <button type="submit" title="Togli {{ p.operatore.etichetta }} da questa stanza, da questa settimana in poi" aria-label="Togli {{ p.operatore.etichetta }}"
+                      onclick='return confirm({{ ("Togliere %s da %s il %s, da questa settimana in poi? Le settimane già fatte restano come erano." % (p.operatore.etichetta, riga.risorsa.nome, giorni_nomi[c.data.weekday()]))|tojson }})'>&times;</button>
+            </form>
+          </span>
+          {% endfor %}
+          {% for o, motivo, t in c.assenti %}<span class="turno-sett assente">{{ o.cognome }} <small>assente: {{ motivo|lower }}</small></span>{% endfor %}
+          {% if c.tutta_libera %}<span class="disponibile">DISPONIBILE</span>{% endif %}
+          {% for da, a in c.libere %}<span class="libero">libero {{ fascia(da, a) }}</span>{% endfor %}
+          {% if medici and c.data >= oggi %}
+          <details class="metti">
+            <summary title="Metti un medico in {{ riga.risorsa.nome }}, {{ giorni_nomi[c.data.weekday()] }} {{ c.meta.nome }}">+</summary>
+            <form method="post" action="{{ url_for('ambulatori.metti') }}">
+              <input type="hidden" name="risorsa" value="{{ riga.risorsa.id }}"><input type="hidden" name="data" value="{{ c.data.isoformat() }}">
+              <input type="hidden" name="struttura" value="{{ sid }}"><input type="hidden" name="torna" value="{{ request.full_path.rstrip('?') }}">
+              <b>{{ riga.risorsa.nome }}, {{ giorni_nomi[c.data.weekday()] }} {{ c.data.day }}/{{ c.data.month }}</b>
+              <label>Medico
+                <select name="operatore">{% for o in medici %}<option value="{{ o.id }}">{{ o.etichetta }}</option>{% endfor %}</select>
+              </label>
+              <label>Dalle <input type="time" name="ora_inizio" value="{{ c.proposta[0].strftime('%H:%M') }}" required></label>
+              <label>Alle <input type="time" name="ora_fine" value="{{ c.proposta[1].strftime('%H:%M') }}" required></label>
+              <label>Ripetizione
+                <select name="ripetizione">
+                  <option value="settimanale">ogni {{ giorni_nomi[c.data.weekday()] }}, da questa settimana</option>
+                  <option value="giorno">solo {{ giorni_nomi[c.data.weekday()] }} {{ c.data.day }}/{{ c.data.month }}</option>
+                </select>
+              </label>
+              <div class="azioni"><button class="bottone primario piccolo" type="submit">Metti</button></div>
+            </form>
+          </details>
+          {% endif %}
+        {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="nota legenda-matrice">Mattina dall'apertura ({{ st.apertura.strftime('%H:%M') }}) alle {{ vista.meta[0].a.strftime('%H:%M') if vista.meta|length > 1 else st.chiusura.strftime('%H:%M') }}, pomeriggio fino alla chiusura ({{ st.chiusura.strftime('%H:%M') }}): si cambiano in Configura → Anagrafiche → Strutture. Un medico assente lascia la stanza libera solo in quella settimana; per i turni, le assenze e le chiusure c'è Anagrafiche.</p>
+{% else %}
+<p class="vuoto">Nessuna stanza attiva in questa struttura: si aggiungono in Configura → Anagrafiche → Stanze.</p>
+{% endif %}
+</div>
+{% endblock %}

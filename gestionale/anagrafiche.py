@@ -21,7 +21,7 @@ from modelli import (Struttura, Risorsa, Operatore, Prestazione, Turno,
                      Appuntamento, Assenza, Chiusura, Appunto, RegolaEmail, COLORE_PREDEFINITO, PASSI_AMMESSI,
                      PASSI_TURNO, STATI_ATTIVI)
 import servizi
-from comune import PALETTE, PRIMA, ULTIMA, colore_libero      # PALETTE: la leggono anche le prove
+from comune import PALETTE, PRIMA, ULTIMA, colore_libero, destinazione_sicura      # PALETTE: la leggono anche le prove
 import marchio
 import calendario
 
@@ -145,7 +145,9 @@ def carica(modello, ident):
     return oggetto
 
 
-def salva_e_torna(s, oggetto, entita, messaggio, avviso=None):
+def salva_e_torna(s, oggetto, entita, messaggio, avviso=None, torna=None):
+    """'torna': la pagina interna da cui si era partiti (1.12: la pianificazione
+    degli ambulatori); senza, l'elenco delle anagrafiche."""
     try:
         s.flush()
         servizi.registra(s, entita, oggetto.id, 'SALVATO', messaggio)
@@ -157,7 +159,7 @@ def salva_e_torna(s, oggetto, entita, messaggio, avviso=None):
     flash(messaggio, 'ok')
     if avviso:
         flash(avviso, 'avviso')
-    return redirect(url_for('anagrafiche.elenco'))
+    return redirect(destinazione_sicura(torna, url_for('anagrafiche.elenco')))
 
 
 def usi(s, riferimenti, ident):
@@ -478,6 +480,35 @@ def si_sovrappongono(a_da, a_a, b_da, b_a):
     return a_da <= (b_a or ULTIMA) and b_da <= (a_a or ULTIMA)
 
 
+def stanza_gia_assegnata(s, rid, giorno, inizio, fine, da, a, oid, escludi_id=None):
+    """Una stanza ospita un medico alla volta: il motivo per cui il turno
+    (stanza rid, giorno della settimana, orario, validita' da-a, medico oid)
+    non si puo' salvare, oppure None. Lo stesso medico su due stanze nella
+    stessa fascia invece va bene (visite su due ambulatori). Dalla 1.12 la
+    usano anche la pianificazione degli ambulatori."""
+    singolo = da == a
+    for altro in s.scalars(select(Turno).where(
+            Turno.risorsa_id == rid, Turno.giorno_settimana == giorno,
+            Turno.id != (escludi_id if escludi_id else -1))):
+        if singolo and s.scalars(select(Assenza).where(
+                Assenza.operatore_id == altro.operatore_id,
+                Assenza.dal <= da, Assenza.al >= da)).first():
+            continue          # chi ha la stanza quel giorno e' assente: si puo' sostituire
+        # 1.11: e al contrario: l'altro e' la sostituzione di un giorno in cui questo
+        # medico e' assente. Prima il turno del medico sostituito non si salvava piu'
+        # (ne' le fasce ne' «Fino al»), finche' non si cancellava la sostituzione
+        if servizi.e_di_un_giorno(altro) and s.scalars(select(Assenza).where(
+                Assenza.operatore_id == oid,
+                Assenza.dal <= altro.valido_da, Assenza.al >= altro.valido_da)).first():
+            continue
+        if (inizio < altro.ora_fine and altro.ora_inizio < fine
+                and si_sovrappongono(da, a, altro.valido_da, altro.valido_a)):
+            return ('La stanza è già assegnata a %s il %s dalle %s alle %s.'
+                    % (altro.operatore.etichetta, servizi.GIORNI[altro.giorno_settimana],
+                       altro.ora_inizio.strftime('%H:%M'), altro.ora_fine.strftime('%H:%M')))
+    return None
+
+
 @bp.route('/turni/nuovo', methods=['GET', 'POST'])
 @bp.route('/turni/<int:tid>', methods=['GET', 'POST'])
 def turno(tid=None):
@@ -560,7 +591,7 @@ def turno(tid=None):
                               'o' if len(rimasti) == 1 else 'i'), 'avviso')
                 else:
                     flash('Turno eliminato: %s.' % descrizione, 'ok')
-                return redirect(url_for('anagrafiche.elenco'))
+                return redirect(destinazione_sicura(request.values.get('torna'), url_for('anagrafiche.elenco')))
             m = Modulo(request.form)
             oid = m.scelta('operatore', 'Medico', [str(x.id) for x in medici])
             rid = m.scelta('risorsa', 'Stanza', [str(x.id) for x in stanze])
@@ -590,30 +621,10 @@ def turno(tid=None):
             if da and a and a < da:
                 m.errori.append('La data di fine validità viene prima di quella di inizio.')
             if not m.errori:
-                # una stanza ospita un medico alla volta; lo stesso medico su due
-                # stanze nella stessa fascia invece va bene (visite su due ambulatori)
-                for altro in s.scalars(select(Turno).where(
-                        Turno.risorsa_id == int(rid),
-                        Turno.giorno_settimana == int(giorno),
-                        Turno.id != (t.id if t else -1))):
-                    if singolo and s.scalars(select(Assenza).where(
-                            Assenza.operatore_id == altro.operatore_id,
-                            Assenza.dal <= da, Assenza.al >= da)).first():
-                        continue          # chi ha la stanza quel giorno e' assente: si puo' sostituire
-                    # 1.11: e al contrario: l'altro e' la sostituzione di un giorno in cui questo
-                    # medico e' assente. Prima il turno del medico sostituito non si salvava piu'
-                    # (ne' le fasce ne' «Fino al»), finche' non si cancellava la sostituzione
-                    if servizi.e_di_un_giorno(altro) and s.scalars(select(Assenza).where(
-                            Assenza.operatore_id == int(oid),
-                            Assenza.dal <= altro.valido_da, Assenza.al >= altro.valido_da)).first():
-                        continue
-                    if (inizio < altro.ora_fine and altro.ora_inizio < fine
-                            and si_sovrappongono(da, a, altro.valido_da, altro.valido_a)):
-                        m.errori.append(
-                            'La stanza è già assegnata a %s il %s dalle %s alle %s.'
-                            % (altro.operatore.etichetta, servizi.GIORNI[altro.giorno_settimana],
-                               altro.ora_inizio.strftime('%H:%M'), altro.ora_fine.strftime('%H:%M')))
-                        break
+                occupata = stanza_gia_assegnata(s, int(rid), int(giorno), inizio, fine, da, a, int(oid),
+                                                escludi_id=t.id if t else None)
+                if occupata:
+                    m.errori.append(occupata)
             if m.errori:
                 return scheda(titolo, campi(errore=True), m.errori, eliminabile=bool(t),
                               conferma='Eliminare questo turno?')
@@ -629,7 +640,8 @@ def turno(tid=None):
             quando = ('il %s' % da.strftime('%d/%m/%Y')) if singolo else servizi.GIORNI[int(giorno)]
             return salva_e_torna(s, t, 'Turno', 'Turno salvato: %s, %s dalle %s alle %s%s.' % (
                 scelto.etichetta, quando, inizio.strftime('%H:%M'), fine.strftime('%H:%M'),
-                ', fasce da %d minuti' % passo if passo else ''), avviso=avviso_fasce(s, t))
+                ', fasce da %d minuti' % passo if passo else ''), avviso=avviso_fasce(s, t),
+                torna=request.values.get('torna'))
 
     return scheda(titolo, campi(), eliminabile=bool(t), conferma='Eliminare questo turno?',
                   nota='I turni decidono quali fasce compaiono libere nella griglia. Quelli '

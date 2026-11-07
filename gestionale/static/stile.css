@@ -543,6 +543,51 @@ a.cella-sett:hover { background: var(--primario-tenue); }
 .turno-sett.assente { border-left-color: #D9822B; color: #9C4A1A; font-weight: 400; }
 .conti { display: block; font-size: 12px; color: #46596A; margin-top: 3px; }
 .liberi { color: #2E7D32; font-weight: 600; }
+/* ------------------------------------------- ambulatori (1.12): la matrice */
+table.matrice th.stanza-sett { width: 112px; }
+table.matrice thead th.meta { font-weight: 400; font-size: 12px; padding: 4px 4px; }
+table.matrice td { position: relative; padding: 5px 5px 24px 5px; height: 64px; font-size: 12px; }
+table.matrice td.libera { background: #E3F4E1; }
+table.matrice td.parziale { background: #F1F8EC; }
+table.matrice td.chiusa { background: #F0F1EE; color: #5B6B75; font-style: italic; }
+table.matrice .disponibile { display: block; color: #1E6B2E; font-weight: 700; font-size: 12px; }
+table.matrice .libero { display: block; color: #2E7D32; font-size: 12px; font-weight: 600; }
+table.matrice .turno-sett { font-size: 12.5px; padding-left: 4px; margin-bottom: 4px; }
+table.matrice .turno-sett small { display: block; white-space: nowrap; }
+table.matrice .turno-sett a { color: #16263F; text-decoration: none; }
+table.matrice .turno-sett a:hover { text-decoration: underline; color: var(--primario); }
+b.verde { color: #1E6B2E; }
+form.togli-turno { display: inline; }
+form.togli-turno button { border: 0; background: none; color: #9AA5AD; cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; vertical-align: middle; }
+form.togli-turno button:hover { color: #B3261E; }
+details.metti { position: absolute; right: 3px; bottom: 3px; }
+details.metti summary { list-style: none; cursor: pointer; width: 19px; height: 19px; border-radius: 50%; border: 1px solid #9AA5AD; color: #46596A; background: #FFFFFF; text-align: center; line-height: 17px; font-weight: 700; font-size: 14px; }
+details.metti summary::-webkit-details-marker { display: none; }
+details.metti summary:hover, details.metti[open] summary { background: var(--primario); color: #FFFFFF; border-color: var(--primario); }
+details.metti form { position: absolute; right: 0; bottom: 23px; z-index: 30; width: 240px; background: #FFFFFF; border: 1px solid #CFD5D8; box-shadow: 0 6px 20px rgba(0, 0, 0, .18); padding: 10px 12px; text-align: left; font-size: 13px; font-weight: 400; }
+details.metti form b { display: block; margin-bottom: 6px; color: var(--primario); }
+details.metti form label { display: block; margin-bottom: 6px; color: #46596A; }
+details.metti form select, details.metti form input { width: 100%; box-sizing: border-box; margin-top: 2px; }
+details.metti form .azioni { margin-top: 6px; }
+p.legenda-matrice { font-size: 12px; color: #5B6B75; }
+/* la programmazione del mese */
+table.programmazione tr.primo-del-gruppo td, details.calendario-mese tr.primo-del-gruppo td { border-top: 2px solid var(--primario); }
+table.programmazione td.specialita { font-weight: 600; color: var(--primario); font-family: var(--titoli); white-space: nowrap; }
+table.programmazione td.senza-date { color: #B35F16; }
+table.programmazione td.note-prog { color: #46596A; font-size: 13px; }
+a.medico-prog { border-left: 4px solid var(--primario); padding-left: 6px; color: #16263F; text-decoration: none; font-weight: 600; }
+a.medico-prog:hover { text-decoration: underline; }
+details.calendario-mese { margin-top: 18px; }
+details.calendario-mese summary { cursor: pointer; color: var(--primario); padding: 6px 0; font-weight: 600; }
+details.calendario-mese tr.spento td { color: #5B6B75; font-style: italic; }
+@media print {
+  details.metti, form.togli-turno, p.legenda-matrice { display: none !important; }
+  table.matrice td { padding-bottom: 5px; }
+  details.calendario-mese { display: block; }
+  details.calendario-mese summary { list-style: none; }
+  table.matrice td.libera, table.matrice td.parziale, table.matrice td.chiusa { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
 table.mese td { height: 108px; }
 table.mese td.fuori { background: #F0F1EE; }
 table.mese td.fuori a { opacity: .55; }

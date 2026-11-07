@@ -7,7 +7,10 @@ Prima erano copiate in ogni modulo, e due copie si erano gia' allontanate
 (i suggerimenti dei pazienti senza "no-store", il mese "202609" letto in un
 posto e non nell'altro). I moduli le importano con lo stesso nome di prima."""
 import json
+import logging
+import os
 import re
+import ssl
 from datetime import date, datetime, timedelta
 from io import BytesIO
 from urllib.parse import quote
@@ -15,7 +18,7 @@ from urllib.parse import quote
 from flask import Response, request, send_file
 from sqlalchemy import select
 
-from modelli import Struttura, Operatore
+from modelli import Struttura, Operatore, percorso_db
 import servizi
 
 # SQLite conserva interi fino a 2^63-1: un numero piu' grande scritto nella
@@ -29,12 +32,16 @@ ULTIMA = date(2100, 12, 31)
 # colori proposti ai medici nuovi, uno diverso per ciascuno finche' bastano:
 # la versione del programma: la stessa di installer.iss (una prova controlla
 # che coincidano), mostrata in Aiuto per sapere cosa e' installato
-VERSIONE = '1.11'
+VERSIONE = '1.12'
 
 # nella griglia il colore e' il modo piu' rapido per distinguerli
 PALETTE = ['#154381', '#5B7F3E', '#A8582B', '#6B4E9B', '#B3261E',
            '#0F7C8C', '#8A6D1F', '#4A5560', '#C2185B', '#2E7D32']
 MIME_XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+# il file, accanto al database, con i certificati in piu' di cui fidarsi (un
+# antivirus o un proxy della rete che riscrive i certificati dei siti: ci si
+# mette il suo). Si legge se c'e'; di solito non c'e'
+FILE_CERTIFICATI = 'certificati.pem'
 # Outlook non apre un collegamento mailto molto piu' lungo di 2000 caratteri,
 # contati sull'indirizzo codificato (uno spazio diventa %20, una "è" %C3%A8)
 MASSIMO_MAILTO = 1900
@@ -56,8 +63,13 @@ def testo_pulito(testo):
 
 def testo_excel(valore):
     """Un valore per una cella di openpyxl: i testi senza caratteri di
-    controllo (anche quelli gia' salvati prima della 1.11), il resto com'e'."""
-    return testo_pulito(valore) if isinstance(valore, str) else valore
+    controllo (anche quelli gia' salvati prima della 1.11), il resto com'e'.
+    Un testo che comincia con «=» (un nome scritto cosi' per sbaglio) openpyxl
+    lo scriverebbe come formula: davanti ci va uno spazio (1.12)."""
+    if not isinstance(valore, str):
+        return valore
+    testo = testo_pulito(valore)
+    return ' ' + testo if testo.startswith('=') else testo
 
 
 def intero(valore, difetto=0):
@@ -146,6 +158,95 @@ def scarica_excel(libro, nome):
         dati = libro
     dati.seek(0)
     return send_file(dati, mimetype=MIME_XLSX, as_attachment=True, download_name=nome)
+
+
+# ================================================== connessioni protette
+def cartella_dati():
+    """La cartella del database: li' stanno anche backup, aggiornamenti e
+    il file dei certificati in piu'."""
+    import viste                                   # qui, non in testa: viste importa comune
+    percorso, _ = viste.percorso_database()
+    return os.path.dirname(percorso or percorso_db())
+
+
+def elenco_mozilla():
+    """Il file con i certificati delle autorita' riconosciute da Mozilla
+    (il pacchetto certifi, dentro l'eseguibile), o None se manca."""
+    try:
+        import certifi
+        percorso = certifi.where()
+    except (ImportError, OSError):
+        return None
+    return percorso if os.path.isfile(percorso) else None
+
+
+def file_certificati():
+    return os.path.join(cartella_dati(), FILE_CERTIFICATI)
+
+
+def contesto_tls():
+    """La connessione protetta (gli aggiornamenti, le email) che riconosce il
+    certificato del sito. Si fida dei certificati che conosce il sistema (su
+    Windows il suo elenco), di quelli delle autorita' riconosciute da Mozilla
+    portati dentro il programma (certifi) e, se c'e', di quelli nel file
+    certificati.pem accanto al database.
+
+    Perche' l'elenco di Windows da solo non basta: Windows ha pochi
+    certificati di partenza e aggiunge una radice nuova solo la prima volta
+    che la incontra con Edge o con un suo programma. Il gestionale usa
+    l'elenco cosi' com'e', senza farglielo fare: quando GitHub e' passato a
+    radici nuove (2025) il controllo degli aggiornamenti della 1.9 sul PC
+    della clinica diceva «il certificato del sito degli aggiornamenti non e'
+    valido», mentre il browser apriva il sito senza problemi. Dalla 1.12
+    l'elenco di Mozilla viaggia con il programma, e non dipende piu' da cosa
+    ha gia' visto Windows."""
+    contesto = ssl.create_default_context()
+    for percorso in (elenco_mozilla(), file_certificati()):
+        if percorso and os.path.isfile(percorso):
+            try:
+                contesto.load_verify_locations(cafile=percorso)
+            except (OSError, ssl.SSLError) as e:
+                logging.getLogger('gestionale').warning('certificati in %s non letti: %s', percorso, e)
+    return contesto
+
+
+def certificati_in_uso():
+    """Una riga per l'assistenza: da dove arrivano i certificati di cui il
+    programma si fida."""
+    parti = ['quelli del sistema']
+    mozilla = elenco_mozilla()
+    if mozilla:
+        try:
+            import certifi
+            parti.append('l\'elenco Mozilla del %s' % certifi.__version__.replace('.', '-'))
+        except (ImportError, AttributeError):
+            parti.append('l\'elenco Mozilla')
+    if os.path.isfile(file_certificati()):
+        parti.append('il file %s' % FILE_CERTIFICATI)
+    return ', '.join(parti[:-1]) + ' e ' + parti[-1] if len(parti) > 1 else parti[0]
+
+
+# i motivi per cui un certificato non passa, nelle parole di OpenSSL, spiegati
+MOTIVI_CERTIFICATO = (
+    ('unable to get local issuer', 'è firmato da un\'autorità che questo PC non conosce'),
+    ('unable to get issuer', 'è firmato da un\'autorità che questo PC non conosce'),
+    ('self-signed', 'è autofirmato: in mezzo c\'è un proxy o un antivirus che riscrive i certificati'),
+    ('self signed', 'è autofirmato: in mezzo c\'è un proxy o un antivirus che riscrive i certificati'),
+    ('has expired', 'risulta scaduto: se il sito funziona nel browser, la data del PC è sbagliata'),
+    ('not yet valid', 'non è ancora valido: la data del PC è indietro'),
+    ('hostname mismatch', 'è di un altro sito: qualcosa nella rete si mette in mezzo'),
+    ('doesn\'t match', 'è di un altro sito: qualcosa nella rete si mette in mezzo'),
+)
+
+
+def spiega_certificato(errore):
+    """Perche' un certificato non passa, in parole semplici (con il motivo di
+    OpenSSL fra parentesi, per l'assistenza)."""
+    motivo = getattr(errore, 'verify_message', '') or str(errore)
+    for pezzo, testo in MOTIVI_CERTIFICATO:
+        if pezzo in motivo.lower():
+            return '%s (%s)' % (testo, motivo)
+    return motivo
 
 
 def indirizzo_mail(email, oggetto, testo, coda):

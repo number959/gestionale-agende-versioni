@@ -8,6 +8,7 @@
 {%- set _n_conf = n_da_confermare() if n_da_confermare is defined else 0 %}
 {%- set _segreteria = _sez in ('conferme', 'chiusura', 'confermare', 'cose', 'attesa', 'disponibilita', 'elenco') %}
 {%- set _configura = _sez in ('anagrafiche', 'gruppo', 'impostazioni', 'importa', 'invii', 'aggiornamenti') %}
+{%- set _ambulatori = _sez in ('ambulatori', 'programmazione') %}
 <nav class="menu" aria-label="Pagine">
   <a href="{{ url_for('cruscotto.oggi', struttura=_sid) }}"{% if _sez == 'oggi' %} class="attivo"{% endif %} data-guida="menu-oggi">Oggi</a>
   <a data-tasto="g" href="{{ url_for('giorno', iso=_data, struttura=_sid) }}"{% if _sez == 'giorno' %} class="attivo"{% endif %} data-guida="menu-giorno">Giorno</a>
@@ -18,6 +19,13 @@
   <span class="separatore"></span>
   <a href="{{ url_for('pazienti.elenco') }}"{% if _sez == 'pazienti' %} class="attivo"{% endif %} data-guida="menu-pazienti">Pazienti</a>
   <a href="{{ url_for('personale.turni', struttura=_sid) }}"{% if _sez == 'personale' %} class="attivo"{% endif %} data-guida="menu-turni">Turni</a>
+  <div class="gruppo{% if _ambulatori %} attivo{% endif %}" data-guida="menu-ambulatori">
+    <button type="button" class="apri-gruppo" aria-haspopup="true" aria-expanded="false">Ambulatori<span class="freccia" aria-hidden="true"></span></button>
+    <div class="tendina" role="menu">
+      <a href="{{ url_for('ambulatori.settimana', iso=_data, struttura=_sid) }}"{% if _sez == 'ambulatori' %} class="attivo"{% endif %}><b>Pianificazione della settimana</b><small>chi sta in quale stanza, mattina e pomeriggio; le stanze libere</small></a>
+      <a href="{{ url_for('ambulatori.mese', aaaamm=_data[:7], struttura=_sid) }}"{% if _sez == 'programmazione' %} class="attivo"{% endif %}><b>Programmazione del mese</b><small>per specialità e medico, con le date in cui viene</small></a>
+    </div>
+  </div>
   <a data-tasto="d" href="{{ url_for('dovesifa.pagina', struttura=_sid) }}"{% if _sez == 'dove' %} class="attivo"{% endif %} data-guida="menu-dove">Dove si fa</a>
   <div class="gruppo{% if _segreteria %} attivo{% endif %}" data-guida="menu-segreteria">
     <button type="button" class="apri-gruppo" aria-haspopup="true" aria-expanded="false">Segreteria{% if _n_conf %}<span class="contatore" title="{{ _n_conf }} da confermare">{{ _n_conf }}</span>{% endif %}<span class="freccia" aria-hidden="true"></span></button>

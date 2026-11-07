@@ -114,6 +114,24 @@
   html.scuro .turno-sett.assente { border-left-color: #E8B27D; color: #E6B89D; }
   html.scuro .conti { color: #A9B7C4; }
   html.scuro .liberi { color: #A9DFAC; }
+  html.scuro table.matrice td.libera { background: #2A3A28; }
+  html.scuro table.matrice td.parziale { background: #293223; }
+  html.scuro table.matrice td.chiusa { background: #222B35; color: #9AA8B4; }
+  html.scuro table.matrice .disponibile { color: #AFE9BB; }
+  html.scuro table.matrice .libero { color: #A9DFAC; }
+  html.scuro table.matrice .turno-sett a { color: #E1E7ED; }
+  html.scuro b.verde { color: #AFE9BB; }
+  html.scuro form.togli-turno button { color: #B0B9BF; }
+  html.scuro form.togli-turno button:hover { color: #E49793; }
+  html.scuro details.metti summary { border: 1px solid #4F5A61; color: #A9B7C4; background: #1C242D; }
+  html.scuro details.metti summary:hover, html.scuro details.metti[open] summary { color: #FFFFFF; }
+  html.scuro details.metti form { background: #1C242D; border: 1px solid #2E3843; }
+  html.scuro details.metti form label { color: #A9B7C4; }
+  html.scuro p.legenda-matrice { color: #9AA8B4; }
+  html.scuro table.programmazione td.senza-date { color: #E5BB96; }
+  html.scuro table.programmazione td.note-prog { color: #A9B7C4; }
+  html.scuro a.medico-prog { color: #E1E7ED; }
+  html.scuro details.calendario-mese tr.spento td { color: #9AA8B4; }
   html.scuro table.mese td.fuori { background: #222B35; }
   html.scuro table.mese td.festivo { background: #312A22; }
   html.scuro table.mese td.chiuso-di-solito:not(.festivo) { background: #141A21; }

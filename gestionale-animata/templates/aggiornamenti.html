@@ -36,7 +36,7 @@
       <p>Non è ancora stata scaricata{% if stato.errore %}: <span class="errore-testo">{{ stato.errore }}</span>{% endif %}. Il programma riprova da solo; oppure <i>Controlla adesso</i>.</p>
     {% elif stato.errore %}
       <p class="errore-testo">Ultimo controllo non riuscito ({{ stato.errore_il.strftime('%d/%m alle %H:%M') if stato.errore_il else '' }}): {{ stato.errore }}.</p>
-      <p class="nota-riga">Il programma riprova da solo ogni sei ore.</p>
+      <p class="nota-riga">Il programma riprova da solo ogni sei ore.{% if pagina_versioni %} Se continua a non riuscire, si aggiorna a mano: <a href="{{ pagina_versioni }}" target="_blank" rel="noopener">la pagina delle versioni</a> nel browser, da cui scaricare <code>{{ nome_setup }}</code> e avviarlo sopra il programma (i dati restano).{% endif %}</p>
     {% elif stato.controllato_il %}
       <p>Il programma è aggiornato: non c'è una versione più nuova (controllato il {{ stato.controllato_il.strftime('%d/%m alle %H:%M') }}).</p>
     {% else %}
@@ -63,7 +63,8 @@
   {% endif %}
 
   <h2 class="sezione">Aggiornare a mano</h2>
-  <p>Senza internet, o su un altro PC: doppio clic sul Setup nuovo (<code>{{ nome_setup }}</code>), poi <b>Avanti</b> e <b>Fine</b>. Non serve disinstallare: il Setup dice quale versione c'è e quale arriva, e i dati restano.</p>
+  <p>Senza internet, o su un altro PC: doppio clic sul Setup nuovo (<code>{{ nome_setup }}</code>), poi <b>Avanti</b> e <b>Fine</b>. Non serve disinstallare: il Setup dice quale versione c'è e quale arriva, e i dati restano.{% if pagina_versioni %} Il Setup si scarica dal browser, da <a href="{{ pagina_versioni }}" target="_blank" rel="noopener">la pagina delle versioni</a>.{% endif %}</p>
+  <p class="nota-riga certificati-in-uso">Per l'assistenza: i certificati dei siti di cui il programma si fida sono {{ certificati }}. Se la rete della clinica ha un proxy o un antivirus che riscrive i certificati, il suo si mette nel file <code>certificati.pem</code> nella cartella dei dati, accanto al database.</p>
   <p class="collegamenti-aggiornamenti"><a href="{{ url_for('aggiornamenti.novita_pagina') }}">Le novità di questa versione</a> · <a href="{{ url_for('guida.articolo', slug='aggiornare') }}">La guida, con il video</a></p>
 </div>
 <script>

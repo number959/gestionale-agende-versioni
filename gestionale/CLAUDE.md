@@ -79,7 +79,8 @@ Senza `--solo` e con `--browser` le lancia tutte, anche quelle nel browser (Play
 Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_tendine_browser.py`,
 `prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, `prove_19_browser.py`,
 `prove_191_browser.py` (salva le impostazioni email della prova e poi rimette quelle di
-partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova), nell'animata
+partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova),
+`prove_112_browser.py` (la pianificazione degli ambulatori: mette e toglie un turno, scarica i due Excel), nell'animata
 `prove_animazioni.py` e `prove_icone_animate.py`, e per ultima `prove_16_browser.py`, che
 cambia l'indirizzo degli aggiornamenti. Le prove nel browser salvano dati: sempre su un
 gestionale di prova, mai su quello vero.
@@ -97,7 +98,9 @@ diverso e senza password, ogni errore con il suo consiglio, con lo stesso finto 
 di `prove_15.py`), `prove_110.py` (le fasce dei turni: senza fasce proprie tutto identico alle
 funzioni della 1.9.1 copiate dentro la prova, con le fasce proprie contro calcoli fatti a
 parte; `PROVE_GIRI=500` per più giorni inventati), `prove_autoriparazione.py` (dalla 1.11: ogni
-guasto creato apposta e riparato, anche sul programma vero avviato in processi a parte) e
+guasto creato apposta e riparato, anche sul programma vero avviato in processi a parte), `prove_112.py` (dalla 1.12: gli
+ambulatori: matrice della settimana contro un oracolo minuto per minuto, programmazione del mese, i due Excel,
+Metti e Togli, la regola della stanza e il ritorno alla pagina di partenza) e
 `campagna.py` (casi generati con oracoli e
 invarianti). Alcune delle più vecchie escono con codice 0 anche se qualcosa non va: conta la
 riga finale («0 da sistemare»), ed è quella che legge `tutte_le_prove.py`.
@@ -154,6 +157,23 @@ temporanea.
   `versione_schema` manca, `modelli._versione_dallo_schema` la ricava da tabelle e colonne: una
   versione nuova dello schema va aggiunta anche lì. `prove_autoriparazione.py` crea ogni guasto
   apposta; `GESTIONALE_PORTA` serve solo alle prove (mai la 5000).
+- Ambulatori (dalla 1.12): tutto in `ambulatori.py`, calcolato dai turni dei medici (`servizi.Regole`),
+  mai ricopiato. La matrice divide la giornata alle `META` (14:00) fra apertura e chiusura della
+  struttura; un'ora libera (`MINIMO_LIBERO`) dentro una mezza giornata occupata si segnala, una
+  mezza giornata senza nessuno dice solo DISPONIBILE (`libere == []`); in un festivo in cui la
+  struttura chiude resta aperta solo la mezza giornata di un turno di un giorno; le sale operatorie
+  restano fuori (`stanze_della`). La regola «una stanza ospita un medico alla volta» è una sola,
+  `anagrafiche.stanza_gia_assegnata`, usata dalla scheda del turno e da `/ambulatori/metti`.
+  «Togli» non cancella mai la storia: un turno che veniva da prima si chiude la domenica precedente.
+  La scheda del turno torna alla pagina di partenza con `torna` (solo indirizzi interni,
+  `destinazione_sicura`). Destinatario e chi compila la matrice sono testi fissi
+  (`DESTINATARIO`, `COMPILATO_DA`). Negli Excel ogni testo passa da `testo_excel` (anche i nomi
+  che cominciano con «=», che altrimenti diventano formule).
+- Certificati dei siti (dalla 1.12): `comune.contesto_tls` (sistema + elenco Mozilla di `certifi`,
+  dentro l'eseguibile con `collect_data_files` in `gestionale.spec`, + `certificati.pem` accanto
+  al database) lo usano aggiornamenti ed email; `certifi` sta in `requirements.txt` e
+  `prove_installato.py` controlla che sia dentro l'eseguibile. Mai `ssl.create_default_context()`
+  da solo: su Windows l'elenco delle radici si riempie solo quando le incontra Edge.
 - Turni del personale: le regole stanno solo in `personale.py` (sovrapposizioni anche con
   la notte del giorno prima, riposi e assenze tutto il giorno, riposo sotto le 11 ore solo
   avvisato); `static/turni.js` manda la richiesta a `POST /personale/turni/cambia` e

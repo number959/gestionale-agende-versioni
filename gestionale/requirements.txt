@@ -13,3 +13,7 @@ SQLAlchemy>=2.0.53,<2.1
 waitress>=3.0.2,<4
 openpyxl>=3.1.5,<3.2
 pillow>=11.3,<14
+# l'elenco dei certificati delle autorita' riconosciute da Mozilla: per fidarsi
+# dei siti (aggiornamenti, email) anche quando l'elenco di Windows non ha
+# ancora una radice nuova (comune.contesto_tls). Le versioni sono date
+certifi>=2025.1.31

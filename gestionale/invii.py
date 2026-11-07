@@ -52,6 +52,7 @@ import servizi
 import pazienti
 import documenti
 import viste
+import comune
 from comune import intero, destinazione_sicura
 
 bp = Blueprint('invii', __name__, url_prefix='/invii')
@@ -698,7 +699,9 @@ def anteprima_promemoria(s, cfg, oggi=None):
 
 # ================================================================== spedire
 def contesto_tls():
-    return ssl.create_default_context()
+    """I certificati del sistema piu' l'elenco Mozilla dentro il programma
+    (comune.contesto_tls)."""
+    return comune.contesto_tls()
 
 
 def testi_email(s, x, a):

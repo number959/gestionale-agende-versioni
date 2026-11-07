@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">{{ titolo }}</h1>
+  <span class="conteggio">{{ vista.righe|length }} turn{{ 'o' if vista.righe|length == 1 else 'i' }}, {{ vista.medici }} medic{{ 'o' if vista.medici == 1 else 'i' }}</span>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('ambulatori.mese', aaaamm=prima, struttura=sid) }}" title="Mese precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('ambulatori.mese', aaaamm=dopo, struttura=sid) }}" title="Mese successivo">&rsaquo;</a>
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('ambulatori.mese', aaaamm=oggi.strftime('%Y-%m'), struttura=sid) }}">Questo mese</a>
+    {% if strutture|length > 1 %}
+    <span class="separa"></span>
+    <form method="get" style="display:inline">
+      <select name="struttura" onchange="this.form.submit()">
+        {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+      </select>
+    </form>
+    {% endif %}
+    <span class="separa"></span>
+    <a class="bottone" href="{{ url_for('ambulatori.settimana', iso=data_menu, struttura=sid) }}">Pianificazione della settimana</a>
+    <a class="bottone primario" href="{{ url_for('ambulatori.mese_excel', aaaamm=aaaamm, struttura=sid) }}" data-guida="programmazione-excel">Scarica in Excel</a>
+    <button class="bottone" type="button" onclick="window.print()">Stampa</button>
+  </div>
+</div>
+
+<div class="contenuto">
+  <p class="nota" data-guida="programmazione-spiegazione">Il foglio «programmazione ambulatori» calcolato dai turni: per ogni specialità e medico, il giorno della settimana, le date del mese in cui viene davvero (tolte assenze, chiusure e festivi in cui la struttura chiude), l'orario e la stanza. Le note dicono i giorni saltati e perché. L'Excel ha anche il calendario giorno per giorno.</p>
+  <table class="elenco programmazione" id="programmazione-ambulatori">
+    <tr><th>Specialità</th><th>Medico</th><th>Giorno</th><th>Date di {{ mese_nome }}</th><th>Orario</th><th>Stanza</th><th>Note</th></tr>
+    {% for gruppo in vista.gruppi %}{% for r in gruppo.righe %}
+    <tr{% if loop.first %} class="primo-del-gruppo"{% endif %}>
+      <td class="specialita">{% if loop.first %}{{ gruppo.specialita }}{% endif %}</td>
+      <td><a href="{{ url_for('anagrafiche.turno', tid=r.turno.id, torna=request.full_path.rstrip('?')) }}" class="medico-prog" style="border-left-color: {{ r.operatore.colore_sicuro }}" title="Apri il turno">{{ r.operatore.etichetta }}</a></td>
+      <td>{{ giorni_nomi[r.giorno] }}</td>
+      <td{% if not r.date %} class="senza-date"{% endif %}>{% if r.date %}{% for g in r.date %}{{ g.day }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}—{% endif %}</td>
+      <td>{{ fascia(r.ora_inizio, r.ora_fine) }}</td>
+      <td>{{ r.risorsa.nome }}</td>
+      <td class="note-prog">{{ r.note|join('; ') }}</td>
+    </tr>
+    {% endfor %}{% else %}
+    <tr><td colspan="7" class="senza">Nessun turno nelle stanze attive di questa struttura in questo mese: i turni dei medici si scrivono in Configura → Anagrafiche, oppure dalla Pianificazione della settimana.</td></tr>
+    {% endfor %}
+  </table>
+
+  <details class="calendario-mese" data-guida="programmazione-calendario">
+    <summary>Calendario del mese, giorno per giorno</summary>
+    <table class="elenco">
+      <tr><th>Data</th><th>Stanza</th><th>Medico</th><th>Orario</th></tr>
+      {% for giorno in vista.calendario if giorno.data.weekday() in st.giorni_aperti or giorno.presenze %}
+        {% set i = giorno.info %}
+        {% if giorno.presenze %}
+          {% for t in giorno.presenze %}
+          <tr{% if loop.first %} class="primo-del-gruppo"{% endif %}>
+            <td>{% if loop.first %}{{ giorni_nomi[giorno.data.weekday()] }} {{ giorno.data.day }}{% endif %}</td>
+            <td>{{ t.risorsa.nome }}</td><td>{{ t.operatore.etichetta }}</td><td>{{ fascia(t.ora_inizio, t.ora_fine) }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr class="primo-del-gruppo spento"><td>{{ giorni_nomi[giorno.data.weekday()] }} {{ giorno.data.day }}</td>
+            <td colspan="3">{% if i.chiusura %}chiusa: {{ i.chiusura }}{% elif i.festivo and i.chiude_festivo %}chiusa: {{ i.festivo }}{% else %}nessun medico in turno{% endif %}</td></tr>
+        {% endif %}
+      {% endfor %}
+    </table>
+  </details>
+</div>
+{% endblock %}
