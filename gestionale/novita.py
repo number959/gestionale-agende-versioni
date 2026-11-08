@@ -13,6 +13,20 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.12.1', [
+        dict(titolo='Le ore vere nelle notti del cambio dell\'ora',
+             testo='Un turno di notte a cavallo del cambio dell\'ora legale conta le ore davvero lavorate (una in più a '
+                   'ottobre, una in meno a marzo), nelle ore del mese, nei riposi e nei controlli dei turni.',
+             guida='turni-personale'),
+        dict(titolo='Codici dei turni scritti di seguito',
+             testo='Nei turni del personale si possono scrivere più codici attaccati («MP» per mattina e pomeriggio): '
+                   'il programma li separa come li separerebbe una persona, provando prima i codici più lunghi.',
+             guida='turni-personale'),
+        dict(titolo='I file rovinati messi da parte si possono svuotare',
+             testo='In Impostazioni → Controllo del programma si vede quanto spazio occupano i database rovinati messi '
+                   'da parte dall\'autoriparazione e, con una conferma, si cancellano quelli più vecchi di tre mesi.',
+             guida='autoriparazione'),
+    ]),
     ('1.12', [
         dict(titolo='Pianificazione degli ambulatori',
              testo='La pagina Ambulatori → Pianificazione della settimana dice chi occupa ogni stanza, mattina e '

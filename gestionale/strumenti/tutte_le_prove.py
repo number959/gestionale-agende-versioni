@@ -6,6 +6,7 @@ riepilogo alla fine. Va su Windows e su Linux, con il Python da cui si lancia
     python strumenti/tutte_le_prove.py                     prove senza browser
     python strumenti/tutte_le_prove.py --browser URL       anche quelle nel browser
     python strumenti/tutte_le_prove.py --solo prove_17,campagna
+    python strumenti/tutte_le_prove.py --browser URL --solo-browser   solo quelle nel browser
 
 Le prove nel browser girano su un gestionale di prova gia' avviato con i dati
 finti (per esempio: python strumenti/demo.py --porta 5001), MAI su quello
@@ -72,10 +73,15 @@ def main():
     p = argparse.ArgumentParser(description='Tutte le prove automatiche, con il riepilogo.')
     p.add_argument('--browser', metavar='URL', help='anche le prove nel browser, su questo gestionale DI PROVA')
     p.add_argument('--solo', metavar='NOMI', help='solo queste prove, separate da virgole (anche senza .py)')
+    p.add_argument('--solo-browser', action='store_true',
+                   help='solo le prove nel browser (con --browser), per chi ha gia\' fatto le altre')
     p.add_argument('--limite', type=int, default=1800, help='secondi al massimo per una prova (predefinito 1800)')
     a = p.parse_args()
 
-    elenco = [(n, []) for n in SENZA_BROWSER]
+    if a.solo_browser and not a.browser:
+        print('--solo-browser vuole anche --browser URL')
+        return 2
+    elenco = [] if a.solo_browser else [(n, []) for n in SENZA_BROWSER]
     if a.browser:
         elenco += [(n, [a.browser.rstrip('/')]) for n in NEL_BROWSER]
     elenco = [(n, x) for n, x in elenco if os.path.exists(os.path.join(QUI, n))]

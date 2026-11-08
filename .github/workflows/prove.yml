@@ -1,0 +1,80 @@
+# Le prove su un Windows vero (quello di GitHub), nelle due cartelle: tutte le raccolte senza
+# browser e poi quelle nel browser contro il gestionale di prova (strumenti/demo.py). Si avvia a
+# mano dalla pagina Actions («Run workflow») o a ogni push sul ramo di lavoro. Finora le prove
+# giravano su Linux e nel Windows finto di Wine: qui si vede se su Windows qualcosa non va.
+name: Prove su Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['ccr-*']
+    paths-ignore: ['**.md', 'strumenti/cruscotto_prototipo/**']
+
+jobs:
+  prove:
+    name: Prove ${{ matrix.cartella }}
+    runs-on: windows-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        cartella: [gestionale, gestionale-animata]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Librerie e Chromium per le prove nel browser
+        shell: cmd
+        working-directory: ${{ matrix.cartella }}
+        run: |
+          python -m pip install --upgrade pip --quiet --disable-pip-version-check
+          python -m pip install --only-binary=:all: -r requirements.txt playwright --quiet --disable-pip-version-check
+          python -m playwright install chromium
+
+      - name: Prove senza browser (tutte le raccolte)
+        shell: cmd
+        working-directory: ${{ matrix.cartella }}
+        # openssl per le prove delle email e degli aggiornamenti: quello di Git for Windows;
+        # i registri in RUNNER_TEMP, cosi' alla fine si raccolgono
+        run: |
+          set "PATH=%PATH%;C:\Program Files\Git\usr\bin"
+          set "TEMP=%RUNNER_TEMP%" & set "TMP=%RUNNER_TEMP%"
+          python strumenti\tutte_le_prove.py
+
+      - name: Gestionale di prova in sottofondo
+        shell: pwsh
+        working-directory: ${{ matrix.cartella }}
+        run: |
+          $p = Start-Process python -ArgumentList 'strumenti\demo.py','--porta','5001','--dati',"$env:RUNNER_TEMP\demo" -PassThru -WindowStyle Hidden
+          "$($p.Id)" | Out-File "$env:RUNNER_TEMP\demo.pid"
+          $pronto = $false
+          for ($i = 0; $i -lt 90 -and -not $pronto; $i++) {
+            Start-Sleep -Seconds 2
+            try { $r = Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5001/salute -TimeoutSec 3; if ($r.StatusCode -eq 200) { $pronto = $true } } catch {}
+          }
+          if (-not $pronto) { Write-Error "il gestionale di prova non risponde"; exit 1 }
+
+      - name: Prove nel browser
+        shell: cmd
+        working-directory: ${{ matrix.cartella }}
+        run: |
+          set "PATH=%PATH%;C:\Program Files\Git\usr\bin"
+          set "TEMP=%RUNNER_TEMP%" & set "TMP=%RUNNER_TEMP%"
+          python strumenti\tutte_le_prove.py --browser http://127.0.0.1:5001 --solo-browser
+
+      - name: Chiudi il gestionale di prova
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path "$env:RUNNER_TEMP\demo.pid") { Stop-Process -Id (Get-Content "$env:RUNNER_TEMP\demo.pid") -Force -ErrorAction SilentlyContinue }
+
+      - name: Registri delle prove
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: registri-${{ matrix.cartella }}
+          path: ${{ runner.temp }}/gestionale-prove-*/
+          if-no-files-found: ignore
