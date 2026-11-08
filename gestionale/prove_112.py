@@ -1198,6 +1198,116 @@ prova('foglio del giorno: testata e piede ripetuti, conteggi e turni per stanza,
 prova('preferenze di stampa: anche disdetti, data di nascita, casella da spuntare, ordine di ora; elenco del giorno con thead e nota stampata', s_preferenze_di_stampa)
 
 
+
+# ========================================================== riepilogo live
+area('riepilogo live (1.12)')
+
+
+def _mondo_live():
+    """Il mondo pieno, piu' due pazienti con nomi che non sono di nessun medico
+    e qualche appuntamento di lunedi 7/12: in Ambulatorio 1 (Lippiello di
+    turno 15-20) uno fatto alle 15, uno alle 16 e uno disdetto alle 17; in
+    Ambulatorio 2 (nessun turno il lunedi) uno alle 10 non arrivato."""
+    import live
+    from modelli import Paziente, Appuntamento
+    S, I, C = mondo_pieno()
+    s = S()
+    p1 = Paziente(cognome='Testabianca', nome='Rita', telefono='3339990001', email='rita@example.com')
+    p2 = Paziente(cognome='Provolo', nome='Gino', telefono='3339990002')
+    s.add_all([p1, p2])
+    s.flush()
+
+    def app(rid, oid, ora, pid, stato='PRENOTATO', **altro):
+        inizio = datetime.combine(LUN, time(ora))
+        a = Appuntamento(risorsa_id=rid, operatore_id=oid, paziente_id=pid, inizio=inizio,
+                         fine=inizio + timedelta(minutes=30), stato=stato, **altro)
+        s.add(a)
+
+    app(I['Ambulatorio 1'], I['Lippiello'], 15, p1.id, 'ARRIVATO', arrivato_alle=datetime.combine(LUN, time(14, 55)))
+    app(I['Ambulatorio 1'], I['Lippiello'], 16, p2.id)
+    app(I['Ambulatorio 1'], I['Lippiello'], 17, p1.id, 'DISDETTO')
+    app(I['Ambulatorio 2'], I['Fintini'], 10, p2.id)
+    s.commit()
+    s.close()
+    return S, I, C, live
+
+
+def l_riepilogo():
+    S, I, C, live = _mondo_live()
+    s = S()
+    st = s.get(Struttura, 1)
+    r = live.riepilogo(s, st, adesso=datetime.combine(LUN, time(15, 40)))
+    assert r['aggiornato'] == '15:40' and r['data'] == LUN.isoformat() and not r['chiusa']
+    o = r['oggi']
+    assert (o['totale'], o['arrivati'], o['fatte'], o['in_corso'], o['restanti']) == (3, 1, 1, 0, 1), o
+    assert o['disdetti'] == 1 and o['non_presentati'] == 0, o
+    # alle 10 Provolo non e' arrivato: alle 15:40 e' in ritardo da piu' di 3 ore, quindi non conta piu' «in ritardo»
+    assert o['in_ritardo'] == 0 and o['tra_poco'] == 1, o
+    stanze = {x['stanza']: x for x in r['stanze']}
+    assert set(stanze) == {'Ambulatorio 1', 'Ambulatorio 2', 'Ambulatorio 3', 'Ambulatorio 4', 'Ambulatorio 5', 'Sala endoscopia'}, set(stanze)
+    a1 = stanze['Ambulatorio 1']
+    assert a1['stato'] == 'libera' and a1['fino'] == '16:00' and a1['medico'] == 'Lippiello Anna', a1
+    assert (a1['totale'], a1['fatte'], a1['in_corso'], a1['restanti'], a1['prossima']) == (2, 1, 0, 1, '16:00'), a1
+    assert a1['turni'] == ['Lippiello Anna 15:00–20:00']
+    a2 = stanze['Ambulatorio 2']
+    assert a2['stato'] == 'senza turno' and a2['fino'] is None and a2['totale'] == 1 and a2['restanti'] == 0, a2
+    assert r['stanze_occupate'] == 0 and r['stanze_libere'] == 1
+    # alle 16:10 la visita delle 16 e' in corso
+    r = live.riepilogo(s, st, adesso=datetime.combine(LUN, time(16, 10)))
+    a1 = {x['stanza']: x for x in r['stanze']}['Ambulatorio 1']
+    assert a1['stato'] == 'occupata' and a1['fino'] == '16:30' and r['oggi']['in_corso'] == 1 and r['stanze_occupate'] == 1, a1
+    # la mattina presto: Lippiello non e' ancora di turno
+    r = live.riepilogo(s, st, adesso=datetime.combine(LUN, time(8, 5)))
+    a1 = {x['stanza']: x for x in r['stanze']}['Ambulatorio 1']
+    assert a1['stato'] == 'senza turno' and a1['fino'] == '15:00', a1
+    assert r['oggi']['restanti'] == 3 and r['oggi']['fatte'] == 0
+    # visite ora per ora: alle 10 una, alle 15 una (arrivata), alle 16 una
+    ore = {x['ora']: x for x in r['per_ora']}
+    assert ore['10:00']['totale'] == 1 and ore['15:00'] == {'ora': '15:00', 'totale': 1, 'arrivati': 1} and ore['16:00']['totale'] == 1
+    assert ore['08:00']['totale'] == 0 and '20:00' not in ore and len(ore) == 12
+    # le mezze giornate libere: nei prossimi 7 giorni, mai nel passato, mai il festivo chiuso, mai la sala operatoria
+    r = live.riepilogo(s, st, adesso=datetime.combine(LUN, time(15, 40)))
+    assert r['n_libere'] > 0 and all(l['data'] >= LUN.isoformat() for l in r['libere'])
+    assert not any(l['data'] == LUN.isoformat() and l['meta'] == 'mattina' for l in r['libere']), 'la mattina di oggi e passata'
+    assert not any(l['data'] == (LUN + timedelta(days=1)).isoformat() for l in r['libere']), 'martedi 8 e festivo chiuso'
+    assert not any(l['stanza'] == 'Sala operatoria' for l in r['libere'])
+    assert any(l['data'] == LUN.isoformat() and l['stanza'] == 'Ambulatorio 2' and l['meta'] == 'pomeriggio' for l in r['libere'])
+    assert all(l['data'] <= (LUN + timedelta(days=7)).isoformat() for l in r['libere']) and len(r['libere']) <= live.MASSIMO_LIBERE
+    s.close()
+
+
+def l_pagina_e_json():
+    S, I, C, live = _mondo_live()
+    r = C.get('/riepilogo-live?struttura=1')
+    t = testo(r)
+    assert r.status_code == 200 and 'Riepilogo live' in t and 'id="riepilogo-live"' in t and 'nav class="menu"' in t
+    assert 'Ambulatorio 1' in t and 'Le stanze adesso' in t and 'Mezze giornate libere' in t and 'Visite ora per ora' in t
+    assert 'class="gruppo attivo" data-guida="menu-ambulatori"' in t and 'Riepilogo live</b>' in t
+    t = testo(C.get('/riepilogo-live?struttura=1&schermo=1'))
+    assert 'class="pagina-live schermo"' in t and 'nav class="menu"' not in t and 'Torna alla pagina normale' in t
+    r = C.get('/riepilogo-live.json?struttura=1')
+    assert r.status_code == 200 and r.headers['Cache-Control'] == 'no-store'
+    d = json.loads(r.data.decode('utf-8'))
+    assert set(d) >= {'aggiornato', 'oggi', 'stanze', 'per_ora', 'libere', 'n_libere', 'stanze_occupate', 'struttura'}
+    # riservatezza: nel JSON non c'e' nessun dato dei pazienti
+    grezzo = r.data.decode('utf-8')
+    for vietato in ('Testabianca', 'Rita', 'Provolo', 'Gino', '3339990001', '3339990002', 'example.com'):
+        assert vietato not in grezzo, vietato
+    assert 'Ambulatorio 1' in grezzo and 'stanze' in grezzo
+    # senza struttura: la pagina «da configurare», il JSON un errore e non un 500
+    S2, I2, C2 = mondo()
+    s = S2()
+    for st in s.scalars(select(Struttura)):
+        st.attiva = False
+    s.commit()
+    s.close()
+    assert C2.get('/riepilogo-live').status_code == 200 and json.loads(C2.get('/riepilogo-live.json').data)['errore']
+
+
+prova('riepilogo live: numeri di oggi, stanze adesso (libera fino alle, in corso, senza medico), ore, mezze giornate libere', l_riepilogo)
+prova('riepilogo live: pagina, modo schermo, JSON senza dati dei pazienti, struttura mancante', l_pagina_e_json)
+
+
 # =====================================================================
 if __name__ == '__main__':
     aree = []

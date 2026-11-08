@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block classe_body %}{% if schermo %} class="pagina-live schermo"{% else %} class="pagina-live"{% endif %}{% endblock %}
+{% block menu %}{% if not schermo %}{% include "_menu.html" %}{% endif %}{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">Riepilogo live <small class="sotto-titolo">{{ r.giorno }}</small></h1>
+  <span class="conteggio vivo-live"><span class="punto-live" aria-hidden="true"></span>aggiornato alle <span id="live-ora">{{ r.aggiornato }}</span>, si rinnova ogni minuto</span>
+  <div class="comandi">
+    {% if strutture|length > 1 %}
+    <form method="get" style="display:inline"><select name="struttura" onchange="this.form.submit()">
+      {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+    </select>{% if schermo %}<input type="hidden" name="schermo" value="1">{% endif %}</form>
+    <span class="separa"></span>
+    {% endif %}
+    {% if schermo %}
+    <a class="bottone" href="{{ url_for('live.pagina', struttura=sid) }}">Torna alla pagina normale</a>
+    {% else %}
+    <a class="bottone" href="{{ url_for('live.pagina', struttura=sid, schermo=1) }}" data-guida="live-schermo">Modo schermo</a>
+    <a class="bottone" href="{{ url_for('ambulatori.settimana', iso=r.data, struttura=sid) }}">Pianificazione</a>
+    <a class="bottone" href="{{ url_for('cruscotto.oggi', struttura=sid) }}">Oggi</a>
+    {% endif %}
+  </div>
+</div>
+<div class="contenuto pagina-live-contenuto" id="riepilogo-live" data-indirizzo="{{ url_for('live.pagina', struttura=sid, schermo=1 if schermo else none) }}">
+  {% if r.chiusa %}<p class="avviso avviso-giallo">Oggi la struttura è chiusa: {{ r.chiusa }}.</p>{% endif %}
+  <section class="numeri-live" data-guida="live-numeri">
+    <div class="numero-live"><b>{{ r.oggi.totale }}</b><span>appuntamenti oggi</span></div>
+    <div class="numero-live"><b>{{ r.oggi.fatte }}</b><span>fatti</span></div>
+    <div class="numero-live{% if r.oggi.in_corso %} acceso{% endif %}"><b>{{ r.oggi.in_corso }}</b><span>in corso</span></div>
+    <div class="numero-live"><b>{{ r.oggi.restanti }}</b><span>ancora da fare</span></div>
+    <div class="numero-live{% if r.oggi.in_ritardo %} attenzione{% endif %}"><b>{{ r.oggi.in_ritardo }}</b><span>in ritardo</span></div>
+    <div class="numero-live"><b>{{ r.oggi.in_struttura }}</b><span>in struttura</span></div>
+    <div class="numero-live"><b>{{ r.stanze_occupate }}<small>/{{ r.stanze|length }}</small></b><span>stanze occupate ora</span></div>
+    <div class="numero-live{% if r.oggi.da_confermare %} attenzione{% endif %}"><b>{{ r.oggi.da_confermare }}</b><span>da confermare{% if r.oggi.prossimo_giorno %} per il prossimo giorno{% endif %}</span></div>
+  </section>
+  <div class="avanzamento-live" title="{{ r.oggi.fatte }} fatti, {{ r.oggi.in_corso }} in corso, {{ r.oggi.restanti }} ancora da fare">
+    {% set tot = r.oggi.totale or 1 %}
+    <span class="fatti" style="width: {{ (100 * r.oggi.fatte / tot)|round(1) }}%"></span><span class="in-corso" style="width: {{ (100 * r.oggi.in_corso / tot)|round(1) }}%"></span>
+  </div>
+
+  <h2 class="sezione">Le stanze adesso</h2>
+  <div class="stanze-live" data-guida="live-stanze">
+    {% for x in r.stanze %}
+    <div class="stanza-live stato-{{ x.stato|replace(' ', '-') }}">
+      <div class="testa"><b>{{ x.stanza }}</b><span class="stato-live">{% if x.stato == 'occupata' %}visita in corso{% if x.fino %} fino alle {{ x.fino }}{% endif %}{% elif x.stato == 'libera' %}libera{% if x.fino %} fino alle {{ x.fino }}{% endif %}{% elif x.stato == 'senza turno' %}{% if x.fino %}nessun medico fino alle {{ x.fino }}{% else %}nessun medico oggi{% endif %}{% elif x.stato == 'finita' %}giornata finita{% else %}chiusa{% endif %}</span></div>
+      {% if x.medico %}<div class="medico-live">{{ x.medico }}</div>{% elif x.turni %}<div class="medico-live muto">{{ x.turni|join(', ') }}</div>{% endif %}
+      <div class="conti-live">{{ x.fatte }} fatt{{ 'o' if x.fatte == 1 else 'i' }} · {{ x.in_corso }} in corso · {{ x.restanti }} da fare{% if x.prossima %} · prossimo alle {{ x.prossima }}{% endif %}</div>
+    </div>
+    {% else %}
+    <p class="vuoto">Nessuna stanza attiva.</p>
+    {% endfor %}
+  </div>
+
+  <div class="due-colonne-live">
+    <section>
+      <h2 class="sezione">Visite ora per ora</h2>
+      <div class="ore-live" data-guida="live-ore">
+        {% set massimo = (r.per_ora|map(attribute='totale')|max) or 1 %}
+        {% for o in r.per_ora %}
+        <div class="ora-live" title="{{ o.ora }}: {{ o.totale }} appuntamenti, {{ o.arrivati }} arrivati">
+          <div class="colonna"><span class="barra-ora" style="height: {{ (100 * o.totale / massimo)|round(0)|int }}%"><span class="barra-arrivati" style="height: {{ (100 * o.arrivati / (o.totale or 1))|round(0)|int }}%"></span></span></div>
+          <small>{{ o.ora[:2] }}</small>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="nota">Colonna piena: appuntamenti dell'ora; parte scura: già arrivati.</p>
+    </section>
+    <section>
+      <h2 class="sezione">Mezze giornate libere <small class="sotto-titolo">nei prossimi {{ 7 }} giorni{% if r.n_libere > r.libere|length %}: le prime {{ r.libere|length }} di {{ r.n_libere }}{% endif %}</small></h2>
+      {% if r.libere %}
+      <ul class="libere-live" data-guida="live-libere">
+        {% for l in r.libere %}<li><b>{{ l.giorno }} {{ l.data[8:] }}/{{ l.data[5:7] }}</b> {{ l.meta }} ({{ l.orario }}) · {{ l.stanza }}</li>{% endfor %}
+      </ul>
+      {% else %}<p class="vuoto">Nessuna mezza giornata libera nei prossimi giorni.</p>{% endif %}
+      <p class="nota">Dalla <a href="{{ url_for('ambulatori.settimana', iso=r.data, struttura=sid) }}">pianificazione degli ambulatori</a>: da lì si mette un medico in una stanza libera.</p>
+    </section>
+  </div>
+</div>
+<script>
+/* la pagina si rinnova da sola ogni minuto, senza sfarfallio: si ricarica il contenuto dalla stessa pagina */
+(function () {
+  var box = document.getElementById('riepilogo-live');
+  if (!box) return;
+  function rinnova() {
+    fetch(box.getAttribute('data-indirizzo'), { cache: 'no-store', credentials: 'same-origin' })
+      .then(function (r) { return r.text(); })
+      .then(function (t) {
+        var doc = new DOMParser().parseFromString(t, 'text/html');
+        var nuovo = doc.getElementById('riepilogo-live'), ora = doc.getElementById('live-ora');
+        if (nuovo) { box.innerHTML = nuovo.innerHTML; }
+        if (ora && document.getElementById('live-ora')) { document.getElementById('live-ora').textContent = ora.textContent; }
+      })
+      .catch(function () { /* senza rete si riprova al giro dopo */ });
+  }
+  setInterval(rinnova, 60000);
+})();
+</script>
+{% endblock %}

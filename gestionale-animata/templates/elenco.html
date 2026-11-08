@@ -19,7 +19,7 @@
     {% endif %}
     <span class="separa"></span>
     <a class="bottone" href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">Griglia</a>
-    <a class="bottone" href="{{ url_for('viste.stampa', iso=g.isoformat(), struttura=sid, per='ora') }}" target="_blank">Stampa</a>
+    <a class="bottone" href="{{ url_for('viste.stampa', iso=g.isoformat(), struttura=sid) }}" target="_blank">Stampa</a>
     <a class="bottone" href="{{ url_for('segreteria.chiusura', iso=g.isoformat(), struttura=sid) }}">Chiudi la giornata</a>
   </div>
 </div>
@@ -27,7 +27,7 @@
 <div class="contenuto">
 {% if apps %}
 <table class="elenco lista-giorno">
-  <tr><th>Ora</th><th>Paziente</th><th>Telefono</th><th>Prestazione</th><th>Medico · stanza</th><th>Stato</th><th></th></tr>
+  <thead><tr><th>Ora</th><th>Paziente</th><th>Telefono</th><th>Prestazione</th><th>Medico · stanza</th><th>Stato</th><th class="azione"></th></tr></thead>
   {% for a in apps %}
   <tr class="stato-{{ a.stato|lower }}">
     <td class="ora-lista"><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}">{{ a.inizio.strftime('%H:%M') }}</a></td>

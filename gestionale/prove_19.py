@@ -961,8 +961,9 @@ def p_menu_e_altre():
     assert 'Indirizzati alle altre strutture Centro Sud 2 Centro Nord 1' in t, t[t.find('Indirizzati'):][:200]
     import openpyxl
     wb = openpyxl.load_workbook(BytesIO(C.get('/statistiche/excel?struttura=1').data))
-    assert list(wb['Indirizzati'].iter_rows(values_only=True)) == \
-        [('Struttura del gruppo', 'Pazienti indirizzati'), ('Centro Sud', 2), ('Centro Nord', 1)]
+    righe = [r for r in wb['Indirizzati'].iter_rows(values_only=True) if r and r[0] is not None]
+    testa = righe.index(('Struttura del gruppo', 'Pazienti indirizzati'))
+    assert righe[testa + 1:testa + 4] == [('Centro Sud', 2), ('Centro Nord', 1), ('Totale', 3)], righe[testa:]
 
 
 def p_pazienti():

@@ -169,6 +169,16 @@ temporanea.
   `destinazione_sicura`). Destinatario e chi compila la matrice sono testi fissi
   (`DESTINATARIO`, `COMPILATO_DA`). Negli Excel ogni testo passa da `testo_excel` (anche i nomi
   che cominciano con «=», che altrimenti diventano formule).
+- Riepilogo live (dalla 1.12): tutto in `live.py`; il JSON di `/riepilogo-live.json` contiene solo
+  conteggi, orari, stanze e medici, mai un dato di pazienti (`prove_112.py` lo controlla con i nomi
+  inventati): chi aggiunge un campo lo tiene così, perché è il formato del futuro cruscotto su
+  internet. La pagina si rinnova con `fetch` di se stessa ogni minuto; `?schermo=1` toglie il menu.
+- Stampe (dalla 1.12): il foglio del giorno è una `table.impaginazione` con testata in `thead` e
+  piede in `tfoot` (il browser li ripete su ogni pagina); il numero di pagina viene dai margin box di
+  `@page` in `stile.css`. Le colonne di partenza del foglio sono `viste.COLONNE_DI_PARTENZA`: una
+  colonna nuova si aggiunge a `COLONNE_STAMPA` ma non a quelle di partenza (una prova conta le
+  intestazioni di serie). Gli Excel passano tutti dagli aiuti di `comune.py` (titolo, intestazione,
+  stampa A4, piede): un export nuovo li usa, non si inventa uno stile suo.
 - Certificati dei siti (dalla 1.12): `comune.contesto_tls` (sistema + elenco Mozilla di `certifi`,
   dentro l'eseguibile con `collect_data_files` in `gestionale.spec`, + `certificati.pem` accanto
   al database) lo usano aggiornamenti ed email; `certifi` sta in `requirements.txt` e

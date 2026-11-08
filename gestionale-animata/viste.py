@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from modelli import (Risorsa, Operatore, Prestazione, Appuntamento, Paziente,
                      STATI, STATI_ATTIVI, ETICHETTA_STATO, leggi_impostazione,
-                     scrivi_impostazione, aggiorna_database)
+                     scrivi_impostazione, aggiorna_database, importo_in_testo)
 import servizi
 from comune import PRIMA, ULTIMA, data_da, intero, scarica_excel, struttura_scelta
 import calendario
@@ -220,7 +220,10 @@ def conferme():
 @bp.route('/stampa/<iso>')
 def stampa(iso):
     """Il foglio del giorno in A4 orizzontale: una tabella per stanza, oppure
-    tutto in ordine di ora."""
+    tutto in ordine di ora. Dalla 1.12 ogni stanza dice quanti appuntamenti
+    ha, chi e' di turno e chi e' assente, le colonne in piu' sono solo quelle
+    che quella stanza usa, c'e' il totale degli importi, e le stanze con un
+    medico di turno ma senza appuntamenti compaiono lo stesso."""
     s = ses()
     st, strutture = struttura_scelta(s)
     if st is None:
@@ -230,38 +233,71 @@ def stampa(iso):
     per = request.args.get('per') if request.args.get('per') in ('ora', 'stanza') else preferenze['ordine']
     orientamento = request.args.get('orientamento') if request.args.get('orientamento') in (
         'orizzontale', 'verticale') else preferenze['orientamento']
-    tutti = request.args.get('tutti') == '1'
+    tutti = request.args.get('tutti') == '1' if request.args.get('tutti') in ('0', '1') else preferenze['tutti']
     apps = servizi.elenco_giorno(s, g, st.id, None if tutti else STATI_ATTIVI)
-    gruppi = []
-    if per == 'stanza':
-        for r in s.scalars(select(Risorsa).where(Risorsa.struttura_id == st.id).order_by(Risorsa.ordine)):
-            qui = [a for a in apps if a.risorsa_id == r.id]
-            if qui:
-                gruppi.append((r.nome, qui))
-    elif apps:
-        gruppi.append(('', apps))
-    extra = []
-    for a in apps:
-        for k in a.valori_extra:
-            if k not in extra:
-                extra.append(k)
     colonne = set(preferenze['colonne'])
-    if 'extra' not in colonne:
+    regole = servizi.Regole(s, g, g)
+    info = regole.giorno(g, st)
+    nomi = {o.id: o for o in s.scalars(select(Operatore))}
+
+    def presenze(risorsa_id):
+        """(turni effettivi, assenti) della stanza quel giorno, in parole."""
+        turni = sorted(regole.turni_effettivi(g, st, risorsa_id, info), key=lambda x: x.ora_inizio)
+        assenti = sorted({(x.operatore_id, info['assenze'][x.operatore_id])
+                          for x in regole.turni_validi(g, st, risorsa_id) if x.operatore_id in info['assenze']})
+        return (['%s %s–%s' % (x.operatore.etichetta, x.ora_inizio.strftime('%H:%M'), x.ora_fine.strftime('%H:%M'))
+                 for x in turni],
+                ['%s assente%s' % (nomi[oid].etichetta if oid in nomi else '?', (': %s' % motivo.lower()) if motivo
+                                   and motivo.lower() != 'assente' else '') for oid, motivo in assenti])
+
+    def gruppo(nome, qui, risorsa_id=None):
         extra = []
-    info = servizi.Regole(s, g, g).giorno(g, st)
+        for a in qui:
+            for k in a.valori_extra:
+                if k not in extra:
+                    extra.append(k)
+        attivi = [a for a in qui if a.attivo]
+        turni, assenti = presenze(risorsa_id) if risorsa_id else ([], [])
+        return {'nome': nome, 'apps': qui, 'extra': extra if 'extra' in colonne else [], 'n_attivi': len(attivi),
+                'n_altri': len(qui) - len(attivi), 'turni': turni, 'assenti': assenti,
+                'totale': importo_in_testo(sum(a.importo_cent or 0 for a in attivi)) if attivi and any(
+                    a.importo_cent for a in attivi) else ''}
+
+    gruppi, turni_giorno = [], []
+    stanze = s.scalars(select(Risorsa).where(Risorsa.struttura_id == st.id).order_by(Risorsa.ordine)).all()
+    for r in stanze:
+        qui = [a for a in apps if a.risorsa_id == r.id]
+        turni, assenti = presenze(r.id)
+        if turni and r.tipo != 'SALA_OPERATORIA':
+            turni_giorno.append('%s: %s' % (r.nome, ', '.join(turni)))
+        # una stanza senza appuntamenti compare se c'e' un medico di turno (non le sale operatorie:
+        # i loro interventi stanno nella lista operatoria)
+        if per == 'stanza' and (qui or (turni and r.attiva and r.tipo != 'SALA_OPERATORIA')):
+            gruppi.append(gruppo(r.nome, qui, r.id))
+    if per == 'ora' and apps:
+        gruppi.append(gruppo('', apps))
+    attivi = [a for a in apps if a.attivo]
+    conteggi = {'attivi': len(attivi), 'disdetti': sum(1 for a in apps if a.stato == 'DISDETTO'),
+                'non_presentati': sum(1 for a in apps if a.stato == 'NON_PRESENTATO')}
+    totale_giorno = importo_in_testo(sum(a.importo_cent or 0 for a in attivi)) if 'importo' in colonne and any(
+        a.importo_cent for a in attivi) else ''
     import segreteria
     return render_template('stampa.html', gruppi=gruppi, g=g, st=st, sid=st.id, per=per,
-                           nota=segreteria.nota_del_giorno(s, st.id, g),
-                           tutti=tutti, extra=extra, info=info, totale=len(apps), colonne=colonne,
-                           orientamento=orientamento,
+                           nota=segreteria.nota_del_giorno(s, st.id, g), turni_giorno=turni_giorno,
+                           tutti=tutti, info=info, totale=len(attivi), conteggi=conteggi, colonne=colonne,
+                           totale_giorno=totale_giorno, orientamento=orientamento,
                            titolo=servizi.etichetta_giorno(g), adesso=datetime.now())
 
 
 # ======================================================= foglio del giorno
-COLONNE_STAMPA = [('telefono', 'Telefono'), ('prestazione', 'Prestazione'), ('medico', 'Medico'),
-                  ('tipo', 'Tipo di visita e convenzione'), ('importo', 'Importo'),
-                  ('extra', 'Campi in più della prestazione (sedazione, anestesista…)'), ('note', 'Note')]
-STAMPA_PREDEFINITA = {'colonne': [c for c, _ in COLONNE_STAMPA], 'orientamento': 'orizzontale', 'ordine': 'stanza'}
+COLONNE_STAMPA = [('nascita', 'Data di nascita'), ('telefono', 'Telefono'), ('prestazione', 'Prestazione'),
+                  ('medico', 'Medico'), ('tipo', 'Tipo di visita e convenzione'), ('importo', 'Importo'),
+                  ('extra', 'Campi in più della prestazione (sedazione, anestesista…)'), ('note', 'Note'),
+                  ('spunta', 'Casella da spuntare a penna (arrivato, pagato)')]
+# le colonne di partenza: quelle che c'erano fino alla 1.11 (data di nascita e casella si scelgono)
+COLONNE_DI_PARTENZA = ['telefono', 'prestazione', 'medico', 'tipo', 'importo', 'extra', 'note']
+STAMPA_PREDEFINITA = {'colonne': list(COLONNE_DI_PARTENZA), 'orientamento': 'orizzontale', 'ordine': 'stanza',
+                      'tutti': False}
 
 
 def impostazioni_stampa(s):
@@ -279,6 +315,7 @@ def impostazioni_stampa(s):
         'colonne': [c for c in colonne if c in note] if isinstance(colonne, list) else list(STAMPA_PREDEFINITA['colonne']),
         'orientamento': dati.get('orientamento') if dati.get('orientamento') in ('orizzontale', 'verticale') else 'orizzontale',
         'ordine': dati.get('ordine') if dati.get('ordine') in ('stanza', 'ora') else 'stanza',
+        'tutti': dati.get('tutti') is True,
     }
 
 
@@ -364,27 +401,38 @@ def statistiche():
 @bp.route('/statistiche/excel')
 def statistiche_excel():
     from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
-    from openpyxl.utils import get_column_letter
     s = ses()
     st, _ = struttura_scelta(s)
     if st is None:
         abort(404)
     dal, al = periodo_statistiche()
     d = servizi.statistiche(s, st.id, dal, al)
+    from comune import apri_foglio_excel, imposta_stampa_excel, tabella_excel, FORMATO_DATA, FORMATO_EURO
     wb = Workbook()
-    grassetto, fondo = Font(bold=True), PatternFill('solid', fgColor='FF00B0F0')
+    periodo = 'dal %s al %s' % (dal.strftime('%d/%m/%Y'), al.strftime('%d/%m/%Y'))
+    CON_TOTALI = ('Stanze', 'Medici', 'Prestazioni', 'Giorni', 'Indirizzati')
 
     def foglio(titolo, intestazioni, righe, primo=False):
+        """Un foglio con l'aspetto comune a tutti gli Excel (1.12): titolo con la
+        struttura e il periodo, intestazione blu, A4, piede con il numero di pagina;
+        gli importi in euro dove la colonna lo dice, i totali dove hanno senso."""
         ws = wb.active if primo else wb.create_sheet()
         ws.title = titolo
-        ws.append(intestazioni)
-        for c in ws[1]:
-            c.font, c.fill = grassetto, fondo
-        for r in righe:
-            ws.append(r)
-        for i, _ in enumerate(intestazioni, start=1):
-            ws.column_dimensions[get_column_letter(i)].width = 22
+        formati = {i: FORMATO_EURO for i, testo in enumerate(intestazioni, start=1) if 'EUR' in testo or 'Importi' in testo}
+        testa = apri_foglio_excel(ws, 'Statistiche · %s' % titolo, periodo.capitalize(), st, colonne=len(intestazioni))
+        pulite = [[(v.date() if isinstance(v, datetime) else v) for v in r] for r in righe]
+        totali = None
+        if titolo in CON_TOTALI:
+            totali = {1: 'Totale'}
+            for i, testo in enumerate(intestazioni, start=1):
+                if i > 1 and testo not in ('Saturazione %',):
+                    totali[i] = 'somma'
+        tabella_excel(ws, testa, intestazioni, [26] + [18] * (len(intestazioni) - 1), pulite, formati=formati,
+                      totali=totali)
+        for i in range(testa + 1, ws.max_row + 1):          # le date del Riepilogo scritte all'italiana
+            if isinstance(ws.cell(i, 2).value, date):
+                ws.cell(i, 2).number_format = FORMATO_DATA
+        imposta_stampa_excel(ws, False, '%d:%d' % (testa, testa), None, st, 'statistiche %s' % periodo)
         return ws
 
     ore = lambda m: round(m / 60.0, 2)
@@ -409,8 +457,10 @@ def statistiche_excel():
             for p in d['per_prestazione']])
     foglio('Giorni', ['Giorno', 'Appuntamenti'],
            [[servizi.GIORNI[i], n] for i, n in enumerate(d['per_giorno_settimana'])])
-    foglio('Provenienza', ['Come ci hanno conosciuto', 'Pazienti nuovi'],
-           [list(x) for x in d['per_provenienza']] + [[]] + [['Inviati da', '']] + [list(x) for x in d['inviati']])
+    ws = foglio('Provenienza', ['Come ci hanno conosciuto', 'Pazienti nuovi'], [list(x) for x in d['per_provenienza']])
+    if d['inviati']:
+        tabella_excel(ws, ws.max_row + 2, ['Inviati da', 'Pazienti nuovi'], [26, 18], [list(x) for x in d['inviati']],
+                      filtro=False, blocca=False)
     import dovesifa
     indirizzati = dovesifa.conteggi_periodo(s, dal, al, st.id)
     if indirizzati:
@@ -522,7 +572,8 @@ def impostazioni():
             dati = {'colonne': [c for c, _ in COLONNE_STAMPA if c in scelte],
                     'orientamento': request.form.get('orientamento') if request.form.get('orientamento') in (
                         'orizzontale', 'verticale') else 'orizzontale',
-                    'ordine': request.form.get('ordine') if request.form.get('ordine') in ('stanza', 'ora') else 'stanza'}
+                    'ordine': request.form.get('ordine') if request.form.get('ordine') in ('stanza', 'ora') else 'stanza',
+                    'tutti': request.form.get('tutti') == '1'}
             with _lucchetto:
                 scrivi_impostazione(s, 'stampa_giorno', json.dumps(dati))
                 s.commit()

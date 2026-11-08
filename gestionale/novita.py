@@ -30,6 +30,24 @@ NOVITA = [
                    'date del mese in cui viene davvero (tolte assenze, chiusure e festivi), l\'orario e la stanza, con le '
                    'note che spiegano i giorni saltati. In Excel, con il calendario giorno per giorno.',
              guida='programmazione'),
+        dict(titolo='Riepilogo live di agende e ambulatori',
+             testo='Ambulatori → Riepilogo live: come va la giornata adesso (fatti, in corso, da fare, in ritardo, '
+                   'da confermare) e ogni stanza con il medico di turno, la visita in corso o fino a quando è libera; '
+                   'le visite ora per ora e le mezze giornate libere dei prossimi giorni. Si rinnova da solo ogni '
+                   'minuto; «Modo schermo» per il secondo monitor.',
+             guida='riepilogo-live'),
+        dict(titolo='Foglio del giorno più completo',
+             testo='Su ogni foglio stampato si ripetono testata e piede, con il numero di pagina; ogni stanza dice '
+                   'quanti appuntamenti ha, chi è di turno e chi è assente; le stanze con un medico ma senza '
+                   'appuntamenti compaiono lo stesso; le colonne in più solo dove servono; i totali degli importi; '
+                   'a scelta la data di nascita e una casella da spuntare a penna; si può stampare sempre anche con '
+                   'disdetti e non presentati (barrati, con lo Stato e l\'ora di arrivo).',
+             guida='aspetto'),
+        dict(titolo='Tutti gli Excel con lo stesso aspetto',
+             testo='Planning del giorno, elenco, statistiche, incassi, riepilogo medici, turni del personale, Dove si '
+                   'fa e ambulatori: stesso stile di intestazione, foglio A4 adattato alla larghezza, intestazioni '
+                   'ripetute su ogni pagina, numero di pagina, data di esportazione e righe dei totali dove servono.',
+             guida='aspetto'),
         dict(titolo='Aggiornamenti anche se Windows non conosce il sito',
              testo='Il controllo degli aggiornamenti (e le email) riconosce i certificati dei siti con un elenco '
                    'portato dentro il programma: non dipende più da quelli che Windows ha già incontrato. Se un '

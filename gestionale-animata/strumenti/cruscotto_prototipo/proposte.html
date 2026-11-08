@@ -1,0 +1,179 @@
+<title>Cruscotto online: le proposte</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: un documento da leggere, una colonna di testo larga al massimo 76 caratteri, con
+   riquadri per le tre strade e una tabella di confronto che scorre sui telefoni. */
+:root {
+  --bg: #F3F5F8; --carta: #FFFFFF; --bordo: #D6DDE6; --testo: #16263F; --muto: #5B6B7A;
+  --primario: #154381; --primario-tenue: #E6EEF9; --accento: #0F7C8C; --ok: #2E7D32; --ok-tenue: #E3F4E1;
+  --attenzione: #B35F16; --attenzione-tenue: #FBEBDD; --scelta: #FFF6E0; --scelta-bordo: #E3B04B;
+  --titoli: 'Manrope', 'Inter', 'Segoe UI', Arial, sans-serif; --corpo: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0D1526; --carta: #151F35; --bordo: #2A3853; --testo: #E9EEF6; --muto: #9FB0C4;
+  --primario: #8DB3E6; --primario-tenue: #1D2E4D; --accento: #5CC3D0; --ok: #7BD389; --ok-tenue: #173224;
+  --attenzione: #F0A868; --attenzione-tenue: #3A2817; --scelta: #2C2A1A; --scelta-bordo: #B98E2F; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0D1526; --carta: #151F35; --bordo: #2A3853; --testo: #E9EEF6; --muto: #9FB0C4;
+  --primario: #8DB3E6; --primario-tenue: #1D2E4D; --accento: #5CC3D0; --ok: #7BD389; --ok-tenue: #173224;
+  --attenzione: #F0A868; --attenzione-tenue: #3A2817; --scelta: #2C2A1A; --scelta-bordo: #B98E2F; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--testo); font: 15px/1.6 var(--corpo); padding-block: 0 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.doc { max-width: 860px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--titoli); text-wrap: balance; color: var(--testo); }
+h1 { font-size: 30px; font-weight: 800; letter-spacing: -.02em; margin: 28px 0 6px; }
+h2 { font-size: 21px; font-weight: 700; margin: 36px 0 10px; padding-top: 14px; border-top: 1px solid var(--bordo); }
+h3 { font-size: 16px; font-weight: 700; margin: 18px 0 6px; }
+p, li { max-width: 76ch; }
+.sopra { font: 600 12px var(--corpo); color: var(--muto); letter-spacing: .06em; text-transform: uppercase; margin-top: 24px; }
+.data { color: var(--muto); font-size: 13px; margin: 0 0 18px; }
+.riquadro { background: var(--carta); border: 1px solid var(--bordo); border-radius: 12px; padding: 16px 20px; margin: 14px 0; }
+.riquadro.scelta { background: var(--scelta); border-color: var(--scelta-bordo); }
+.riquadro h3 { margin-top: 0; }
+.etichetta { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 1px 9px; margin-left: 6px; vertical-align: middle; }
+.etichetta.ok { background: var(--ok-tenue); color: var(--ok); } .etichetta.att { background: var(--attenzione-tenue); color: var(--attenzione); } .etichetta.blu { background: var(--primario-tenue); color: var(--primario); }
+ul.pulita { padding-left: 20px; } ul.pulita li { margin: 4px 0; }
+.strade { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 14px 0; }
+.strade .riquadro { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.strade .riquadro p { margin: 0; font-size: 14px; }
+.strade .costo { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--bordo); font-size: 13px; color: var(--muto); }
+.scorri { overflow-x: auto; margin: 10px -4px; padding: 0 4px; }
+table.confronto { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; background: var(--carta); border: 1px solid var(--bordo); border-radius: 10px; overflow: hidden; }
+table.confronto th, table.confronto td { padding: 8px 10px; border-bottom: 1px solid var(--bordo); vertical-align: top; text-align: left; }
+table.confronto thead th { background: var(--primario); color: #fff; font-family: var(--titoli); font-weight: 700; font-size: 13px; }
+table.confronto th:first-child { width: 150px; color: var(--muto); font-weight: 600; }
+table.confronto td.si { color: var(--ok); font-weight: 600; } table.confronto td.no { color: var(--attenzione); font-weight: 600; }
+.kpi-griglia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; margin: 10px 0; }
+.kpi-griglia div { background: var(--carta); border: 1px solid var(--bordo); border-radius: 10px; padding: 10px 14px; font-size: 14px; }
+.kpi-griglia b { display: block; font-family: var(--titoli); font-size: 14px; color: var(--primario); }
+.kpi-griglia small { color: var(--muto); }
+.domande li { margin: 8px 0; }
+.domande b { color: var(--primario); }
+.passi { counter-reset: passo; list-style: none; padding: 0; }
+.passi li { position: relative; padding-left: 40px; margin: 10px 0; }
+.passi li::before { counter-increment: passo; content: counter(passo); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--primario); color: #fff; font: 700 14px/28px var(--titoli); text-align: center; }
+a { color: var(--primario); }
+.nota { font-size: 13px; color: var(--muto); }
+@media (max-width: 720px) { .strade { grid-template-columns: 1fr; } .kpi-griglia { grid-template-columns: 1fr; } h1 { font-size: 25px; } }
+</style>
+
+<main class="doc">
+  <p class="sopra">Gestionale Agende · Clinica Posillipo</p>
+  <h1>Cruscotto online della clinica: le proposte</h1>
+  <p class="data">8 novembre 2026 · per Giovanni · un prototipo animato da provare è qui: <a href="https://claude.ai/artifact/QBveCZQsB1AHyNigxoPNE9">Cruscotto Clinica Posillipo</a> (quattro stili sulla stessa plancia, dati di esempio)</p>
+
+  <div class="riquadro scelta">
+    <h3>In breve</h3>
+    <p>Una pagina su internet, per telefono e per lo schermo della direzione, che racconta la clinica con i numeri che il programma ha già: visite, prestazioni, incassi quando sono segnati, ambulatori occupati e liberi, mancate presenze, medici, lavoro in sospeso. <b>Nessun nome di paziente lascia il PC:</b> il programma pubblica solo totali e conteggi, cifrati, e la chiave per leggerli sta nel collegamento che si dà alla direzione.</p>
+    <p><b>La strada che consiglio</b> è la più semplice: il programma scrive un file di numeri cifrato e lo carica sullo spazio web del gruppo (quello del sito, già pagato) oppure su GitHub Pages; la pagina è un file solo, senza server da gestire; costo zero; mezz'ora di Giovanni per accenderla. La stessa pagina si apre anche in locale sul PC della segreteria, per lo schermo della direzione, e funziona pure senza internet. Quando serviranno più strutture del gruppo insieme o un accesso con nome e password per persona, si passa alla terza strada senza cambiare il programma.</p>
+  </div>
+
+  <h2>Cosa si vede</h2>
+  <p>Ogni numero esiste già nel programma (agende, cassa, turni, sala, invii). La pagina li racconta in quattro tempi, con il periodo che si sceglie (oggi, settimana, mese) e gli avvisi sempre in alto.</p>
+  <div class="kpi-griglia">
+    <div><b>Adesso in clinica</b>chi occupa ogni stanza ora per ora, chi è arrivato, chi è in ritardo, le fasce libere; la lancetta dell'ora che si muove da sola. <small>Dai turni dei medici e dagli stati degli appuntamenti.</small></div>
+    <div><b>Visite e prestazioni</b>quante oggi, questa settimana, questo mese; confronto con il periodo prima; prime visite, controlli, prestazioni; le prestazioni più richieste. <small>Dalle agende delle stanze.</small></div>
+    <div><b>Incassi registrati</b>per giorno e per metodo (contanti, carta, bonifico), quando la cassa è stata segnata; cassa del giorno quadrata o no. <small>Dalla Cassa.</small></div>
+    <div><b>Ambulatori</b>ore prenotate su ore di turno per stanza, mezze giornate libere nei prossimi giorni (le «disponibilità integrative» della matrice). <small>Dalla pianificazione degli ambulatori (1.12).</small></div>
+    <div><b>Mancate presenze e conferme</b>quanti non si presentano, per medico e per tipo; quanti appuntamenti sono ancora da confermare per domani. <small>Dagli stati e dalle conferme.</small></div>
+    <div><b>Medici e sala</b>visite per medico con l'andamento; interventi in sala, letti occupati stanotte; personale in servizio per ruolo (solo conteggi). <small>Da Sala, Turni del personale, Riepilogo medici.</small></div>
+    <div><b>Da guardare</b>gli avvisi che il programma calcola da solo: stanze libere domani, mancate presenze in aumento, appuntamenti da confermare, giornate non chiuse, messaggi non partiti. <small>Dalle stesse regole della pagina Oggi.</small></div>
+    <div><b>In diretta</b>i movimenti dell'agenda che scorrono (arrivato, confermato, spostato, disdetto, pagato) con prestazione, stanza e medico: mai il paziente. <small>Dal registro delle modifiche, solo i conteggi e i tipi.</small></div>
+  </div>
+
+  <h2>Il motion design</h2>
+  <p>Il movimento serve a capire i numeri, non a decorare. Le regole che ho messo nel prototipo e che terrei:</p>
+  <ul class="pulita">
+    <li><b>Entrata a cascata</b> dei riquadri (pochi decimi di secondo, con una leggera salita), poi la pagina sta ferma.</li>
+    <li><b>Numeri che contano</b> fino al valore, con decelerazione; cambiando periodo contano dal valore di prima a quello nuovo, così si vede la differenza.</li>
+    <li><b>Grafici che si disegnano</b>: barre che salgono una dopo l'altra, linea degli incassi che si traccia fino al punto di oggi, ciambella che ruota ai nuovi valori; il periodo precedente tratteggiato per il confronto.</li>
+    <li><b>Lancetta «adesso»</b> sulle stanze, che si sposta ogni minuto; blocchi delle stanze che crescono all'apertura; il punto verde «in diretta» che pulsa.</li>
+    <li><b>Feed che scivola</b>: ogni movimento nuovo entra dall'alto e spinge gli altri.</li>
+    <li><b>Solo quello che cambia</b>: quando arrivano numeri nuovi si anima la differenza, non tutta la pagina; chi ha chiesto al sistema «meno animazioni» le vede ferme.</li>
+    <li><b>Schermo della direzione</b>: tema scuro, caratteri grandi, rotazione automatica delle schede ogni 20 secondi, niente da toccare.</li>
+  </ul>
+  <p>Quattro stili sulla stessa struttura, da scegliere senza allontanarsi dal programma (Manrope e Inter, il blu della clinica): <b>Clinica</b> (bianco, blu e verde acqua, quello di partenza), <b>Notturno</b> (scuro, per lo schermo in direzione), <b>Carta</b> (fondo caldo, senza ombre), <b>Contrasto</b> (numeri grandi e bordi netti, per leggere da lontano). Si provano con il selettore in alto nel prototipo.</p>
+
+  <h2>Riservatezza, prima di tutto</h2>
+  <div class="riquadro">
+    <ul class="pulita">
+      <li><b>Mai fuori dal PC</b>: nomi, cognomi, telefoni, email, codici fiscali, date di nascita, indirizzi, note degli appuntamenti, campi in più, motivi delle assenze, testi dei messaggi, nomi del personale. Non una riga per appuntamento o per paziente: l'unità più piccola è un conteggio per giorno.</li>
+      <li><b>Cosa parte</b>: conteggi, minuti, euro in centesimi, percentuali, date e orari delle fasce, i nomi delle stanze e delle prestazioni, i nomi dei medici (si possono sostituire con la specialità con un'impostazione).</li>
+      <li><b>Una lista di cose permesse, non un filtro</b>: il pezzo di programma che prepara i numeri legge solo le funzioni di statistica che esistono già e non tocca mai la tabella dei pazienti. Una prova automatica genera i numeri dai dati finti della demo e controlla che nessun nome, telefono, email o codice fiscale compaia nel file; se qualcuno un giorno aggiungesse per sbaglio una nota, la prova fallisce.</li>
+      <li><b>Cifrato prima di uscire</b>: il file viaggia e resta sul sito cifrato (AES-256-GCM); la chiave sta solo nel collegamento (dopo il cancelletto, che il browser non manda mai al server) e nel PC della clinica. Chi trova la pagina senza il collegamento vede una cornice vuota. Due collegamenti: «Direzione» con gli incassi, «Reparto» senza; ciascuno si può rigenerare con un clic se un telefono si perde.</li>
+      <li><b>«Vedi cosa viene mandato»</b>: nella pagina delle impostazioni si vede il file esatto che parte, in chiaro, così Federica e Giovanni possono controllare da soli.</li>
+      <li><b>Niente entra nel PC</b>: il programma continua a rispondere solo in locale; il cruscotto è una connessione in uscita in più, come le email e gli aggiornamenti, con gli stessi certificati della 1.12.</li>
+    </ul>
+  </div>
+
+  <h2>Tre strade</h2>
+  <div class="strade">
+    <div class="riquadro">
+      <h3>A · File sul sito del gruppo <span class="etichetta ok">consigliata</span></h3>
+      <p>Il programma, ogni 10 minuti e quando cambia qualcosa, scrive il file cifrato dei numeri e lo carica via FTPS in una cartella dello spazio web del gruppo (cPanel, già pagato), con un account FTP chiuso in quella cartella. La pagina è un file solo nella stessa cartella. In alternativa GitHub Pages, gratis, con lo stesso meccanismo.</p>
+      <p>La stessa pagina si apre anche in locale (127.0.0.1:5000) per lo schermo della direzione: funziona senza internet e il PC della segreteria la manda sul secondo monitor.</p>
+      <p class="costo">Costo 0 €. Giovanni: 30 minuti una volta. Sviluppo: 5–6 giornate, versione 1.13.</p>
+    </div>
+    <div class="riquadro">
+      <h3>B · GitHub Pages <span class="etichetta blu">variante di A</span></h3>
+      <p>Stesso file cifrato, ma caricato su un progetto GitHub pubblico (un ramo «dati» riscritto a ogni invio, così non cresce mai); la pagina la serve GitHub Pages, eventualmente sotto un nome del gruppo. Usa l'account GitHub che c'è già per le versioni del programma.</p>
+      <p>Va bene se lo spazio web del gruppo non si vuole toccare. Il progetto è pubblico, ma contiene solo una cornice e un file illeggibile senza chiave.</p>
+      <p class="costo">Costo 0 €. Giovanni: 30 minuti (progetto, Pages, un gettone di accesso). Sviluppo: come A.</p>
+    </div>
+    <div class="riquadro">
+      <h3>C · Servizio piccolo in cloud <span class="etichetta att">quando servirà</span></h3>
+      <p>Un piccolo servizio (Cloudflare Worker con un database D1, in Europa) riceve i numeri firmati da ogni PC del gruppo, tiene la storia e li serve alla pagina dietro un accesso con nome e password per persona (codice via email o l'account aziendale), revocabile uno per uno. Più strutture insieme, anche in Power BI.</p>
+      <p>Lo stesso file dei numeri di A e B: il programma non cambia, cambia dove li manda.</p>
+      <p class="costo">Costo 0–10 €/anno (il dominio). Giovanni: 2 ore. Sviluppo: 12–14 giornate.</p>
+    </div>
+  </div>
+
+  <div class="scorri">
+  <table class="confronto">
+    <thead><tr><th></th><th>A · sito del gruppo</th><th>B · GitHub Pages</th><th>C · servizio in cloud</th></tr></thead>
+    <tbody>
+      <tr><th>Server da gestire</th><td class="si">nessuno</td><td class="si">nessuno</td><td>uno piccolo, senza macchina da aggiornare</td></tr>
+      <tr><th>Chi può leggere</th><td>chi ha il collegamento con la chiave (due collegamenti, rigenerabili)</td><td>come A</td><td class="si">persone con nome e password, una per una</td></tr>
+      <tr><th>Dati sul server</th><td class="si">solo il file cifrato</td><td class="si">solo il file cifrato</td><td>numeri aggregati in chiaro, cifrati a riposo, in Europa</td></tr>
+      <tr><th>Più strutture del gruppo</th><td>una pagina per struttura</td><td>una pagina per struttura</td><td class="si">una pagina di gruppo che le somma</td></tr>
+      <tr><th>Storia nel tempo</th><td>sul PC che scrive (13 mesi nel file)</td><td>come A</td><td class="si">sul servizio, anche se il PC cambia</td></tr>
+      <tr><th>PC spento o senza internet</th><td>la pagina dice «dati di N ore fa»; in locale funziona sempre</td><td>come A</td><td>come A, più «ultimo contatto» certo</td></tr>
+      <tr><th>Rischio se rubano la password del PC</th><td>si può solo riscrivere il file (la pagina lo rifiuta)</td><td>come A</td><td>si possono mandare numeri finti per quella struttura: visibili e revocabili</td></tr>
+      <tr><th>Costo</th><td class="si">0 €</td><td class="si">0 €</td><td>0–10 €/anno</td></tr>
+      <tr><th>Tempo di sviluppo</th><td class="si">5–6 giorni</td><td class="si">5–6 giorni</td><td>12–14 giorni</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="nota">Scartate: esporre il programma su internet (porta aperta, VPN, tunnel): rovescerebbe la scelta «solo in locale» e metterebbe il database vero dietro un servizio che nessuno amministra. Anche aprire il programma alla rete della clinica per la TV non serve: basta il secondo monitor del PC.</p>
+
+  <h2>Cosa cambierebbe nel programma (versione 1.13)</h2>
+  <ul class="pulita">
+    <li>Una pagina nuova <b>Configura → Cruscotto online</b>: acceso/spento (di serie spento), dove mandare i numeri (cartella FTPS del sito, GitHub, o solo in locale), «Vedi cosa viene mandato», i due collegamenti con la chiave e il codice QR, «Rigenera», «Manda adesso», ultimo invio e ultimo errore in parole semplici.</li>
+    <li>Un lavoro in sottofondo come quello degli aggiornamenti: si accorge dei cambiamenti, manda al massimo ogni due minuti, non blocca mai una prenotazione, riprova da solo se internet manca, viene sorvegliato dall'autoriparazione.</li>
+    <li>La pagina <b>Cruscotto</b> anche in locale (menu Statistiche), con la modalità schermo (caratteri grandi, rotazione, tema scuro) per il secondo monitor.</li>
+    <li>Guida con immagine e video, novità, LEGGIMI con l'elenco esatto di quello che parte; nessun cambiamento al database.</li>
+  </ul>
+
+  <h2>Le decisioni che servono a Giovanni</h2>
+  <ol class="domande">
+    <li><b>Dove pubblicare</b>: cartella sul sito del gruppo (A) oppure GitHub Pages (B)? A tiene tutto in casa; B non tocca il sito.</li>
+    <li><b>I nomi dei medici</b> possono comparire (sono professionisti già sul sito) o preferite la sola specialità?</li>
+    <li><b>Gli incassi</b> vanno nel collegamento «Direzione» e non in «Reparto»: chi riceve quale collegamento?</li>
+    <li><b>Lo schermo della direzione</b>: secondo monitor del PC della segreteria (consigliato, zero rischi) oppure una TV con browser collegata a internet?</li>
+    <li><b>Quando passare alla strada C</b>: solo se altre strutture del gruppo useranno il programma o se serve l'accesso per persona.</li>
+  </ol>
+
+  <h2>Piano</h2>
+  <ol class="passi">
+    <li><b>Il file dei numeri</b> e le prove di riservatezza (1 giorno): la lista delle cose permesse, i conteggi dai dati finti, la prova che nessun nome passa.</li>
+    <li><b>La pagina</b> con il motion design del prototipo, i quattro stili, telefono e schermo, prove nel browser (2–3 giorni).</li>
+    <li><b>L'invio</b>: cifratura, caricamento FTPS o GitHub, impostazioni, collegamenti e QR, avvisi (2 giorni).</li>
+    <li><b>Guide, documenti, le due cartelle, eseguibile e Setup, prove sul programma installato, versione 1.13</b> (1 giorno).</li>
+    <li><b>Prova alla clinica</b>: Giovanni accende il cruscotto, apre il collegamento sul telefono e sullo schermo; una settimana di osservazione, poi eventuali ritocchi.</li>
+  </ol>
+  <p class="nota">Tutto il lavoro resta nel progetto come il resto del programma: italiano, parole semplici, prove automatiche prima di consegnare, dati finti nelle immagini.</p>
+</main>

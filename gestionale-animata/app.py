@@ -31,7 +31,7 @@ from modelli import (crea_sessione, aggiorna_database, VERSIONE_SCHEMA, percorso
                      METODI_PAGAMENTO, PROVENIENZE, leggi_impostazione, importo_in_testo,
                      DEGENZE, ETICHETTA_DEGENZA, MASSIMO_NOTTI, MASSIMO_IMPORTO)
 import servizi
-from comune import (MASSIMO_ID, PRIMA, ULTIMA, VERSIONE, data_da, destinazione_sicura, intero, scarica_excel,
+from comune import (MASSIMO_ID, PRIMA, ULTIMA, VERSIONE, data_da, destinazione_sicura, intero, scarica_excel, struttura_scelta,
                     testo_pulito)
 data_da_stringa = data_da              # il nome di sempre, nel resto del file
 import anagrafiche
@@ -50,6 +50,7 @@ import invii
 import aggiornamenti
 import personale
 import ambulatori
+import live
 import dovesifa
 import autoripara
 
@@ -776,6 +777,7 @@ sala.collega(app, ses, LUCCHETTO)
 cruscotto.collega(app, ses, LUCCHETTO)
 personale.collega(app, ses, LUCCHETTO)
 ambulatori.collega(app, ses, LUCCHETTO)
+live.collega(app, ses, LUCCHETTO)
 dovesifa.collega(app, ses, LUCCHETTO)
 guida.collega(app)
 # la coda dei messaggi lavora in un thread suo: le serve una sessione nuova ogni volta
@@ -787,12 +789,17 @@ aggiornamenti.collega(app, ses, LUCCHETTO, lambda: Sessione())
 @app.route('/esporta/<iso>')
 def esporta(iso):
     g = data_da_stringa(iso)
-    sid = intero(request.args.get('struttura'), 1) or 1
+    s = ses()
+    # 1.12: una struttura che non esiste (indirizzo scritto a mano) non da' un file vuoto: si prende quella scelta
+    st, _ = struttura_scelta(s)
+    if st is None:
+        return render_template('da_configurare.html'), 200
+    sid = st.id
     # il nome nasce dalla data gia' convalidata, mai dal testo dell'indirizzo:
     # altrimenti bastano un byte nullo o 500 lettere per far cadere il server
     nome = 'planning-%s.xlsx' % g.isoformat()
     dati = BytesIO()
-    servizi.esporta_giorno(ses(), g, sid, dati)
+    servizi.esporta_giorno(s, g, sid, dati)
     return scarica_excel(dati, nome)
 
 

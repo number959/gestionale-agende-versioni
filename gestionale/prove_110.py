@@ -1478,7 +1478,8 @@ def e_excel():
     s.close()
     dati.seek(0)
     ws = load_workbook(dati).worksheets[0]
-    assert ws.max_row == 2 + len(v['fasce']), (ws.max_row, len(v['fasce']))
+    # 1.12: sotto la griglia ci sono la riga vuota e la legenda (al massimo quattro righe in piu')
+    assert 2 + len(v['fasce']) <= ws.max_row <= 6 + len(v['fasce']), (ws.max_row, len(v['fasce']))
     orari = [ws.cell(r, 1).value for r in range(3, 3 + len(v['fasce']))]
     assert orari == v['fasce'], orari[:4]
     k = [c['risorsa'].nome for c in v['colonne']].index('Sala endoscopia')

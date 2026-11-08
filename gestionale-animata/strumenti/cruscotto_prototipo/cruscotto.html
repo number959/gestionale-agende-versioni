@@ -1,0 +1,678 @@
+<title>Cruscotto Clinica Posillipo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: una plancia a 12 colonne; sopra i numeri che contano, al centro la clinica "adesso"
+   (le stanze ora per ora con la lancetta), sotto i grafici del periodo e le liste.
+   Quattro stili sulla stessa struttura (data-stile): clinica (quello di partenza), notturno
+   (sala di controllo, per lo schermo in direzione), carta (caldo, senza ombre), contrasto
+   (numeri grandi, bordi netti, per leggere da lontano). */
+:root {
+  --bg: #EEF2F7; --superficie: #FFFFFF; --superficie-2: #F5F7FA; --bordo: #D6DDE6;
+  --testo: #16263F; --muto: #5B6B7A; --primario: #154381; --primario-2: #2E6DB4; --primario-tenue: #E6EEF9;
+  --accento: #0F7C8C; --ok: #2E7D32; --ok-tenue: #E3F4E1; --attenzione: #B35F16; --attenzione-tenue: #FBEBDD;
+  --critico: #B3261E; --critico-tenue: #F9E3E1; --griglia: #E3E8EF; --su-primario: #FFFFFF;
+  --ombra: 0 1px 2px rgba(22,38,63,.06), 0 8px 24px rgba(22,38,63,.06);
+  --titoli: 'Manrope', 'Inter', 'Segoe UI', Arial, sans-serif; --corpo: 'Inter', 'Segoe UI', Arial, sans-serif;
+  --raggio: 14px; --spessore: 1px; --kpi: 34px; --peso-titoli: 800;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0D1526; --superficie: #151F35; --superficie-2: #1B2742; --bordo: #2A3853;
+  --testo: #E9EEF6; --muto: #9FB0C4; --primario: #8DB3E6; --primario-2: #5E8FD1; --primario-tenue: #1D2E4D;
+  --accento: #5CC3D0; --ok: #7BD389; --ok-tenue: #173224; --attenzione: #F0A868; --attenzione-tenue: #3A2817;
+  --critico: #F08A80; --critico-tenue: #3B1F1F; --griglia: #243350; --su-primario: #0D1526;
+  --ombra: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0D1526; --superficie: #151F35; --superficie-2: #1B2742; --bordo: #2A3853;
+  --testo: #E9EEF6; --muto: #9FB0C4; --primario: #8DB3E6; --primario-2: #5E8FD1; --primario-tenue: #1D2E4D;
+  --accento: #5CC3D0; --ok: #7BD389; --ok-tenue: #173224; --attenzione: #F0A868; --attenzione-tenue: #3A2817;
+  --critico: #F08A80; --critico-tenue: #3B1F1F; --griglia: #243350; --su-primario: #0D1526;
+  --ombra: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+/* stile «notturno»: sempre scuro, la sala di controllo */
+:root[data-stile="notturno"], :root[data-stile="notturno"]:not([data-theme="light"]), :root[data-stile="notturno"][data-theme="light"] {
+  --bg: #0A1120; --superficie: #111A2E; --superficie-2: #172339; --bordo: #22304A;
+  --testo: #E7EEF8; --muto: #8FA2BA; --primario: #93B8EA; --primario-2: #4F86D6; --primario-tenue: #1A2A47;
+  --accento: #45D0C4; --ok: #63D47F; --ok-tenue: #10301E; --attenzione: #F2B266; --attenzione-tenue: #3A2712;
+  --critico: #F5867C; --critico-tenue: #3D1B1B; --griglia: #1F2D47; --su-primario: #0A1120;
+  --ombra: 0 0 0 1px rgba(147,184,234,.06), 0 12px 36px rgba(0,0,0,.45); --raggio: 16px;
+  color-scheme: dark;
+}
+/* stile «carta»: fondo caldo, niente ombre, bordi sottili */
+:root[data-stile="carta"] {
+  --bg: #F4F1EA; --superficie: #FFFDF8; --superficie-2: #F0ECE3; --bordo: #DCD5C7;
+  --testo: #1F2A3A; --muto: #6A6E66; --primario: #154381; --primario-2: #35649E; --primario-tenue: #E9EEF5;
+  --accento: #0F7C8C; --ok: #2F7A3A; --ok-tenue: #E4F0E0; --attenzione: #A65A1C; --attenzione-tenue: #F6E7D8;
+  --critico: #A8322A; --critico-tenue: #F6E0DD; --griglia: #E7E1D5; --su-primario: #FFFDF8;
+  --ombra: none; --raggio: 10px;
+}
+@media (prefers-color-scheme: dark) { :root[data-stile="carta"]:not([data-theme="light"]) {
+  --bg: #16171B; --superficie: #1F2127; --superficie-2: #272A31; --bordo: #363A44;
+  --testo: #ECE8DF; --muto: #A9A89F; --primario: #9DB8E0; --primario-2: #6F94C8; --primario-tenue: #262F3F;
+  --accento: #5FC1C9; --ok: #86CF8E; --ok-tenue: #1F3324; --attenzione: #E9B27A; --attenzione-tenue: #3B2C1C;
+  --critico: #E89088; --critico-tenue: #3C2423; --griglia: #2E323B; --su-primario: #16171B;
+  --ombra: none; color-scheme: dark;
+} }
+:root[data-stile="carta"][data-theme="dark"] {
+  --bg: #16171B; --superficie: #1F2127; --superficie-2: #272A31; --bordo: #363A44;
+  --testo: #ECE8DF; --muto: #A9A89F; --primario: #9DB8E0; --primario-2: #6F94C8; --primario-tenue: #262F3F;
+  --accento: #5FC1C9; --ok: #86CF8E; --ok-tenue: #1F3324; --attenzione: #E9B27A; --attenzione-tenue: #3B2C1C;
+  --critico: #E89088; --critico-tenue: #3C2423; --griglia: #2E323B; --su-primario: #16171B;
+  --ombra: none; color-scheme: dark;
+}
+/* stile «contrasto»: numeri grandi, bordi netti, per leggere da lontano */
+:root[data-stile="contrasto"] {
+  --bg: #FFFFFF; --superficie: #FFFFFF; --superficie-2: #F1F4F8; --bordo: #16263F;
+  --testo: #0B1526; --muto: #3E4B5E; --primario: #0B3D91; --primario-2: #0B3D91; --primario-tenue: #E3EAF7;
+  --accento: #006D77; --ok: #1B6E20; --ok-tenue: #DDF2DC; --attenzione: #8F4500; --attenzione-tenue: #FBE6D2;
+  --critico: #A00F0F; --critico-tenue: #FADCDC; --griglia: #CFD6DF; --su-primario: #FFFFFF;
+  --ombra: none; --raggio: 6px; --spessore: 2px; --kpi: 42px;
+}
+@media (prefers-color-scheme: dark) { :root[data-stile="contrasto"]:not([data-theme="light"]) {
+  --bg: #000000; --superficie: #070B13; --superficie-2: #121A28; --bordo: #DCE4F0;
+  --testo: #FFFFFF; --muto: #C3CEDC; --primario: #A9C8F5; --primario-2: #7FB0F0; --primario-tenue: #15274A;
+  --accento: #5FE0E8; --ok: #8CE39A; --ok-tenue: #10351B; --attenzione: #FFC27A; --attenzione-tenue: #452B0E;
+  --critico: #FF9C94; --critico-tenue: #4A1A1A; --griglia: #2B3650; --su-primario: #000000;
+  --ombra: none; color-scheme: dark;
+} }
+:root[data-stile="contrasto"][data-theme="dark"] {
+  --bg: #000000; --superficie: #070B13; --superficie-2: #121A28; --bordo: #DCE4F0;
+  --testo: #FFFFFF; --muto: #C3CEDC; --primario: #A9C8F5; --primario-2: #7FB0F0; --primario-tenue: #15274A;
+  --accento: #5FE0E8; --ok: #8CE39A; --ok-tenue: #10351B; --attenzione: #FFC27A; --attenzione-tenue: #452B0E;
+  --critico: #FF9C94; --critico-tenue: #4A1A1A; --griglia: #2B3650; --su-primario: #000000;
+  --ombra: none; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--testo); font: 14px/1.5 var(--corpo); font-variant-numeric: tabular-nums;
+  padding-block: 0 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+h1, h2, h3 { font-family: var(--titoli); margin: 0; text-wrap: balance; }
+.plancia { max-width: 1340px; margin: 0 auto; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.plancia > * { min-width: 0; }
+
+/* testata */
+.testata { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 18px 0 0; }
+.marchio { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.marchio .logo { flex: none; width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, var(--primario), var(--accento)); display: grid; place-items: center; color: #fff; font: 800 18px var(--titoli); box-shadow: var(--ombra); }
+.marchio h1 { font-size: 22px; font-weight: var(--peso-titoli); letter-spacing: -.01em; }
+.marchio small { display: block; font: 500 12px var(--corpo); color: var(--muto); letter-spacing: .04em; text-transform: uppercase; }
+.vivo { display: inline-flex; align-items: center; gap: 8px; color: var(--muto); font-size: 13px; }
+.vivo .punto { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); animation: battito 2s ease-out infinite; }
+@keyframes battito { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); } 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+.comandi { margin-left: auto; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.segmenti { display: inline-flex; background: var(--superficie); border: var(--spessore) solid var(--bordo); border-radius: 999px; padding: 3px; position: relative; box-shadow: var(--ombra); }
+.segmenti button { position: relative; z-index: 1; border: 0; background: none; color: var(--muto); font: 600 13px var(--corpo); padding: 7px 14px; border-radius: 999px; cursor: pointer; transition: color .3s; white-space: nowrap; }
+.segmenti button[aria-pressed="true"] { color: var(--su-primario); }
+.segmenti .cursore { position: absolute; top: 3px; bottom: 3px; left: 0; width: 70px; border-radius: 999px; background: var(--primario); transition: transform .45s cubic-bezier(.2,.8,.2,1), width .45s cubic-bezier(.2,.8,.2,1); }
+.segmenti button:focus-visible { outline: 2px solid var(--accento); outline-offset: 2px; }
+.segmenti.stili button { padding: 7px 12px; font-weight: 500; }
+.segmenti.stili button[aria-pressed="true"] { font-weight: 600; }
+.sotto-testata { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; font-size: 12.5px; color: var(--muto); }
+.sotto-testata b { background: var(--attenzione-tenue); color: var(--attenzione); border-radius: 6px; padding: 1px 8px; font-weight: 600; margin-right: 6px; }
+.sotto-testata .stile-nota { font-style: italic; }
+
+/* riquadri */
+.riquadro { background: var(--superficie); border: var(--spessore) solid var(--bordo); border-radius: var(--raggio); box-shadow: var(--ombra); padding: 16px 18px; animation: entra .7s cubic-bezier(.2,.8,.2,1) both; transition: background .4s, border-color .4s, box-shadow .4s; }
+.riquadro h2 { font-size: 15px; font-weight: 700; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.riquadro h2 small { font: 500 12px var(--corpo); color: var(--muto); }
+@keyframes entra { from { opacity: .35; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.plancia > .riquadro:nth-child(4) { animation-delay: .05s } .plancia > .riquadro:nth-child(5) { animation-delay: .1s }
+.plancia > .riquadro:nth-child(6) { animation-delay: .15s } .plancia > .riquadro:nth-child(7) { animation-delay: .2s }
+.plancia > .riquadro:nth-child(8) { animation-delay: .25s } .plancia > .riquadro:nth-child(9) { animation-delay: .3s }
+.plancia > .riquadro:nth-child(n+10) { animation-delay: .35s }
+
+/* numeri */
+.kpi { grid-column: span 2; display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden; }
+.kpi .etichetta { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muto); padding-right: 100px; }
+.kpi .valore { font: var(--peso-titoli) var(--kpi)/1.1 var(--titoli); letter-spacing: -.02em; color: var(--testo); }
+.kpi .valore small { font: 600 .45em var(--titoli); color: var(--muto); margin-left: 2px; }
+.kpi .delta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muto); }
+.pillola { display: inline-block; border-radius: 999px; padding: 1px 8px; font-weight: 600; font-size: 12px; white-space: nowrap; }
+.pillola.ok { background: var(--ok-tenue); color: var(--ok); } .pillola.attenzione { background: var(--attenzione-tenue); color: var(--attenzione); } .pillola.critico { background: var(--critico-tenue); color: var(--critico); }
+.kpi .scintilla { position: absolute; right: 12px; top: 12px; width: 92px; height: 34px; opacity: .9; }
+.kpi .scintilla path.area { fill: var(--primario-tenue); } .kpi .scintilla path.linea { fill: none; stroke: var(--primario-2); stroke-width: 2; stroke-linecap: round; }
+.kpi .scintilla circle { fill: var(--primario-2); }
+
+/* adesso: le stanze ora per ora */
+.adesso { grid-column: 1 / -1; }
+.scorri { overflow-x: auto; overflow-y: hidden; margin: 0 -6px; padding: 0 6px; }
+.stanze { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; align-items: center; margin-top: 30px; position: relative; min-width: 680px; }
+.stanze .nome { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: sticky; left: 0; background: var(--superficie); z-index: 2; padding-right: 6px; }
+.stanze .nome small { display: block; color: var(--muto); font-weight: 500; font-size: 12px; }
+.binario { position: relative; height: 30px; background: var(--superficie-2); border-radius: 8px; overflow: hidden; border: 1px solid var(--bordo); }
+.binario .blocco { position: absolute; top: 4px; bottom: 4px; border-radius: 6px; background: var(--primario-2); color: var(--su-primario); font-size: 11.5px; font-weight: 600; line-height: 22px; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transform-origin: left center; animation: cresce .9s cubic-bezier(.2,.8,.2,1) both; }
+.binario .blocco.arrivato { background: var(--ok); } .binario .blocco.ritardo { background: var(--attenzione); } .binario .blocco.libero { background: transparent; color: var(--ok); border: 1px dashed var(--ok); line-height: 20px; }
+@keyframes cresce { from { transform: scaleX(0); opacity: .4; } to { transform: scaleX(1); opacity: 1; } }
+.ore { grid-column: 2; display: flex; justify-content: space-between; font-size: 11px; color: var(--muto); padding: 0 2px; }
+.lancetta { position: absolute; top: 0; bottom: 26px; width: 2px; background: var(--critico); border-radius: 2px; pointer-events: none; box-shadow: 0 0 0 1px var(--superficie); transition: left 1s linear; z-index: 3; }
+.lancetta::before { content: attr(data-ora); position: absolute; top: -22px; left: 50%; transform: translateX(-50%); background: var(--critico); color: #fff; font: 600 11px var(--corpo); padding: 1px 6px; border-radius: 6px; white-space: nowrap; }
+.legenda { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 12px; color: var(--muto); }
+.legenda i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 5px; }
+
+/* riepilogo live: la giornata e le stanze adesso */
+.live { grid-column: 1 / -1; display: grid; grid-template-columns: 300px 1fr; gap: 16px 22px; }
+.live h2 { grid-column: 1 / -1; }
+.live .giornata { display: flex; flex-direction: column; gap: 10px; }
+.live .avanzamento { height: 12px; border-radius: 999px; background: var(--superficie-2); overflow: hidden; display: flex; border: 1px solid var(--bordo); }
+.live .avanzamento span { display: block; height: 100%; transition: width .9s cubic-bezier(.2,.8,.2,1); }
+.live .avanzamento .fatti { background: var(--ok); } .live .avanzamento .in-corso { background: var(--primario-2); }
+.live .mini { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.live .mini div { background: var(--superficie-2); border-radius: 10px; padding: 8px 10px; }
+.live .mini b { display: block; font: 800 22px/1.1 var(--titoli); } .live .mini span { font-size: 11.5px; color: var(--muto); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+.live .stanze-live { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; align-content: start; }
+.live .stanza-live { border: 1px solid var(--bordo); border-left-width: 5px; border-radius: 10px; padding: 8px 10px; background: var(--superficie-2); animation: entra .6s cubic-bezier(.2,.8,.2,1) both; }
+.live .stanza-live b { display: block; font-family: var(--titoli); font-size: 14px; }
+.live .stanza-live .stato { display: block; font-size: 12.5px; font-weight: 600; margin-top: 2px; }
+.live .stanza-live small { display: block; color: var(--muto); font-size: 12px; margin-top: 3px; }
+.live .stanza-live.occupata { border-left-color: var(--primario-2); } .live .stanza-live.occupata .stato { color: var(--primario); }
+.live .stanza-live.libera { border-left-color: var(--ok); background: var(--ok-tenue); } .live .stanza-live.libera .stato { color: var(--ok); }
+.live .stanza-live.senza { border-left-color: var(--bordo); } .live .stanza-live.senza .stato { color: var(--muto); }
+.live .libere { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.live .libere span { background: var(--ok-tenue); color: var(--ok); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; font-weight: 600; }
+.live .libere .titolo { background: none; color: var(--muto); font-weight: 500; padding-left: 0; }
+@media (max-width: 900px) { .live { grid-template-columns: 1fr; } }
+
+/* grafici */
+.grafico { grid-column: span 6; position: relative; }
+.grafico svg { width: 100%; height: auto; display: block; margin-top: 8px; }
+.grafico .asse text, .grafico text.valore-asse { font: 11px var(--corpo); fill: var(--muto); }
+.grafico line.griglia { stroke: var(--griglia); stroke-width: 1; }
+.barre rect { fill: var(--primario-2); transform-origin: center bottom; transform-box: fill-box; animation: cresce-y .8s cubic-bezier(.2,.8,.2,1) both; }
+.barre rect.oggi { fill: var(--accento); }
+.barre rect:hover { fill: var(--primario); }
+@keyframes cresce-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.linea-prec { fill: none; stroke: var(--muto); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .7; }
+.area-incassi { fill: url(#sfuma); } .linea-incassi { fill: none; stroke: var(--accento); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.disegna { stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: traccia 1.6s cubic-bezier(.4,0,.2,1) .2s forwards; }
+@keyframes traccia { to { stroke-dashoffset: 0; } }
+.punto-fine { fill: var(--accento); stroke: var(--superficie); stroke-width: 2; animation: appare .4s 1.6s both; }
+@keyframes appare { from { opacity: 0; transform: scale(.4); transform-box: fill-box; transform-origin: center; } to { opacity: 1; transform: none; } }
+.suggerimento { position: absolute; pointer-events: none; background: var(--testo); color: var(--bg); font-size: 12px; padding: 4px 8px; border-radius: 6px; transform: translate(-50%, -120%); opacity: 0; transition: opacity .15s; white-space: nowrap; z-index: 5; }
+
+/* ciambella e classifiche */
+.ciambella { grid-column: span 4; display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: center; }
+.ciambella h2 { grid-column: 1 / -1; align-self: start; }
+.ciambella svg { width: 150px; height: 150px; }
+.ciambella circle.arco { fill: none; stroke-width: 18; stroke-linecap: butt; transition: stroke-dasharray .9s cubic-bezier(.2,.8,.2,1), stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1); }
+.ciambella .centro { font: 800 24px var(--titoli); fill: var(--testo); text-anchor: middle; }
+.ciambella .centro-sotto { font: 500 11px var(--corpo); fill: var(--muto); text-anchor: middle; }
+.voci { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.voci li { display: grid; grid-template-columns: 12px 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
+.voci i { width: 12px; height: 12px; border-radius: 3px; display: block; }
+.voci b { font-weight: 600; }
+.classifica { grid-column: span 4; }
+.barrette { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 9px; }
+.barrette li { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 13px; }
+.barrette .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barrette .n { font-weight: 600; }
+.barrette .traccia { grid-column: 1 / -1; height: 8px; background: var(--superficie-2); border-radius: 999px; overflow: hidden; }
+.barrette .riemp { height: 100%; background: linear-gradient(90deg, var(--primario-2), var(--accento)); border-radius: 999px; transform-origin: left; animation: cresce .9s cubic-bezier(.2,.8,.2,1) both; }
+.medici { grid-column: span 4; }
+.tab { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+.tab th { text-align: left; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muto); font-weight: 600; padding: 4px 0; border-bottom: 1px solid var(--bordo); }
+.tab td { padding: 7px 0; border-bottom: 1px solid var(--griglia); vertical-align: middle; }
+.tab td.n, .tab th.n { text-align: right; font-weight: 600; }
+.tab .colore { display: inline-block; width: 4px; height: 18px; border-radius: 2px; vertical-align: middle; margin-right: 8px; }
+.tab svg { width: 70px; height: 22px; vertical-align: middle; } .tab svg path { fill: none; stroke: var(--primario-2); stroke-width: 1.6; }
+
+/* avvisi e diretta */
+.avvisi { grid-column: span 6; }
+.avvisi ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.avvisi li { display: grid; grid-template-columns: 6px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--superficie-2); animation: entra .6s cubic-bezier(.2,.8,.2,1) both; }
+.avvisi li i { width: 6px; height: 100%; min-height: 28px; border-radius: 3px; display: block; }
+.avvisi li.critico i { background: var(--critico); } .avvisi li.attenzione i { background: var(--attenzione); } .avvisi li.ok i { background: var(--ok); }
+.avvisi li b { display: block; font-weight: 600; } .avvisi li span { color: var(--muto); font-size: 12.5px; }
+.avvisi li .quando { color: var(--muto); font-size: 12px; white-space: nowrap; }
+.diretta { grid-column: span 6; }
+.feed { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; max-height: 262px; overflow: hidden; position: relative; }
+.feed::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 48px; background: linear-gradient(to bottom, transparent, var(--superficie)); pointer-events: none; }
+.feed li { display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--griglia); animation: scivola .55s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes scivola { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+.feed .ora { font-weight: 600; color: var(--muto); font-size: 12.5px; }
+.feed .cosa { min-width: 0; } .feed .cosa b { font-weight: 600; } .feed .cosa span { color: var(--muto); font-size: 12.5px; }
+.feed .stato { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 2px 9px; }
+.feed .stato.neutro { background: var(--primario-tenue); color: var(--primario); }
+.piede { grid-column: 1 / -1; color: var(--muto); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 6px 18px; padding-top: 6px; }
+.piede b { color: var(--testo); font-weight: 600; }
+
+/* schermi medi e telefono */
+@media (max-width: 1100px) { .kpi { grid-column: span 4; } .grafico, .avvisi, .diretta, .medici { grid-column: span 12; } .ciambella, .classifica { grid-column: span 6; } }
+@media (max-width: 720px) {
+  .testata { padding-top: 12px; } .marchio h1 { font-size: 19px; } .marchio .logo { width: 36px; height: 36px; font-size: 15px; }
+  .comandi { margin-left: 0; width: 100%; justify-content: space-between; }
+  .kpi { grid-column: span 6; padding: 12px 14px; } .kpi .valore { font-size: calc(var(--kpi) * .8); } .kpi .scintilla { display: none; } .kpi .etichetta { padding-right: 0; }
+  .ciambella, .classifica { grid-column: span 12; }
+  .riquadro { padding: 14px; }
+  .tab th:nth-child(2), .tab td:nth-child(2) { display: none; }
+  .feed li { grid-template-columns: 46px 1fr; } .feed .stato { grid-column: 2; justify-self: start; }
+  .avvisi li { grid-template-columns: 6px 1fr; } .avvisi li .quando { grid-column: 2; }
+  .plancia { gap: 12px; }
+}
+@media (max-width: 420px) { .kpi .valore { font-size: calc(var(--kpi) * .72); } .segmenti button { padding: 7px 10px; font-size: 12.5px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; } .disegna { stroke-dashoffset: 0; } }
+</style>
+
+<main class="plancia" id="plancia">
+  <header class="testata">
+    <div class="marchio">
+      <div class="logo" aria-hidden="true">CP</div>
+      <div><h1>Cruscotto della clinica</h1><small>Clinica Posillipo · agende, prestazioni, incassi, ambulatori</small></div>
+    </div>
+    <span class="vivo"><span class="punto" aria-hidden="true"></span><span id="aggiornato">in diretta · aggiornato alle --:--</span></span>
+    <div class="comandi">
+      <div class="segmenti stili" role="group" aria-label="Stile della pagina" id="stili">
+        <span class="cursore" aria-hidden="true"></span>
+        <button type="button" aria-pressed="true" data-stile="clinica" title="Lo stile di partenza: bianco, blu e verde acqua">Clinica</button>
+        <button type="button" aria-pressed="false" data-stile="notturno" title="Scuro sempre: per lo schermo in direzione">Notturno</button>
+        <button type="button" aria-pressed="false" data-stile="carta" title="Fondo caldo, senza ombre, bordi sottili">Carta</button>
+        <button type="button" aria-pressed="false" data-stile="contrasto" title="Numeri grandi e bordi netti, per leggere da lontano">Contrasto</button>
+      </div>
+      <div class="segmenti periodi" role="group" aria-label="Periodo" id="periodi">
+        <span class="cursore" aria-hidden="true"></span>
+        <button type="button" id="p-oggi" aria-pressed="true" data-periodo="oggi">Oggi</button>
+        <button type="button" id="p-settimana" aria-pressed="false" data-periodo="settimana">Settimana</button>
+        <button type="button" id="p-mese" aria-pressed="false" data-periodo="mese">Mese</button>
+      </div>
+    </div>
+  </header>
+  <p class="sotto-testata"><span><b>Prototipo</b>Dati di esempio generati sul momento: nessun paziente vero, nessun nome. La pagina vera leggerà i totali che il Gestionale Agende pubblica dal PC della clinica.</span><span class="stile-nota" id="stile-nota">Stile «Clinica»: quello di partenza.</span></p>
+
+  <section class="riquadro kpi" id="kpi-visite"><span class="etichetta">Visite</span><div class="valore"><span data-conta>0</span></div><div class="delta"></div><svg class="scintilla" viewBox="0 0 92 34" aria-hidden="true"></svg></section>
+  <section class="riquadro kpi" id="kpi-prestazioni"><span class="etichetta">Prestazioni</span><div class="valore"><span data-conta>0</span></div><div class="delta"></div><svg class="scintilla" viewBox="0 0 92 34" aria-hidden="true"></svg></section>
+  <section class="riquadro kpi" id="kpi-incassi"><span class="etichetta">Incassi registrati</span><div class="valore"><span data-conta>0</span><small>€</small></div><div class="delta"></div><svg class="scintilla" viewBox="0 0 92 34" aria-hidden="true"></svg></section>
+  <section class="riquadro kpi" id="kpi-occupazione"><span class="etichetta">Ambulatori occupati</span><div class="valore"><span data-conta>0</span><small>%</small></div><div class="delta"></div><svg class="scintilla" viewBox="0 0 92 34" aria-hidden="true"></svg></section>
+  <section class="riquadro kpi" id="kpi-mancate"><span class="etichetta">Mancate presenze</span><div class="valore"><span data-conta>0</span><small>%</small></div><div class="delta"></div><svg class="scintilla" viewBox="0 0 92 34" aria-hidden="true"></svg></section>
+  <section class="riquadro kpi" id="kpi-confermare"><span class="etichetta">Da confermare</span><div class="valore"><span data-conta>0</span></div><div class="delta"></div><svg class="scintilla" viewBox="0 0 92 34" aria-hidden="true"></svg></section>
+
+  <section class="riquadro adesso" aria-labelledby="t-adesso">
+    <h2 id="t-adesso">Adesso in clinica <small id="adesso-sotto">le stanze ora per ora, con chi è arrivato</small></h2>
+    <div class="scorri"><div class="stanze" id="stanze"></div></div>
+    <div class="legenda"><span><i style="background: var(--primario-2)"></i>prenotato</span><span><i style="background: var(--ok)"></i>arrivato</span><span><i style="background: var(--attenzione)"></i>in ritardo</span><span><i style="border: 1px dashed var(--ok); background: transparent"></i>fascia libera</span></div>
+  </section>
+
+  <section class="riquadro live" aria-labelledby="t-live">
+    <h2 id="t-live">Riepilogo live · agende e ambulatori <small>come va la giornata, stanza per stanza; si rinnova da solo</small></h2>
+    <div class="giornata">
+      <div class="avanzamento" id="live-avanzamento" title="fatti, in corso, ancora da fare"><span class="fatti" style="width:0%"></span><span class="in-corso" style="width:0%"></span></div>
+      <div class="mini" id="live-mini"></div>
+    </div>
+    <div class="stanze-live" id="live-stanze"></div>
+    <div class="libere" id="live-libere"></div>
+  </section>
+  <section class="riquadro grafico" aria-labelledby="t-visite">
+    <h2 id="t-visite">Visite per giorno <small id="visite-sotto">questo mese, con il mese scorso tratteggiato</small></h2>
+    <svg id="g-visite" viewBox="0 0 640 230" role="img" aria-label="Visite per giorno"></svg>
+    <div class="suggerimento" id="sugg-visite"></div>
+  </section>
+  <section class="riquadro grafico" aria-labelledby="t-incassi">
+    <h2 id="t-incassi">Incassi registrati <small>per giorno, dove la cassa è stata segnata</small></h2>
+    <svg id="g-incassi" viewBox="0 0 640 230" role="img" aria-label="Incassi per giorno"></svg>
+    <div class="suggerimento" id="sugg-incassi"></div>
+  </section>
+
+  <section class="riquadro ciambella" aria-labelledby="t-tipi">
+    <h2 id="t-tipi">Tipo di visita</h2>
+    <svg viewBox="0 0 150 150" id="g-tipi" aria-hidden="true"></svg>
+    <ul class="voci" id="voci-tipi"></ul>
+  </section>
+  <section class="riquadro classifica" aria-labelledby="t-prestazioni">
+    <h2 id="t-prestazioni">Prestazioni più richieste</h2>
+    <ul class="barrette" id="barrette-prestazioni"></ul>
+  </section>
+  <section class="riquadro medici" aria-labelledby="t-medici">
+    <h2 id="t-medici">Medici <small>visite nel periodo e mancate presenze</small></h2>
+    <table class="tab" id="tab-medici"><thead><tr><th>Medico</th><th>Andamento</th><th class="n">Visite</th><th class="n">Non pres.</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section class="riquadro avvisi" aria-labelledby="t-avvisi">
+    <h2 id="t-avvisi">Da guardare <small>quello che il programma segnala da solo</small></h2>
+    <ul id="lista-avvisi"></ul>
+  </section>
+  <section class="riquadro diretta" aria-labelledby="t-diretta">
+    <h2 id="t-diretta">In diretta <small>movimenti dell'agenda, senza nomi</small></h2>
+    <ul class="feed" id="feed"></ul>
+  </section>
+
+  <footer class="piede">
+    <span><b>Riservatezza:</b> la pagina riceve solo totali e conteggi; nomi, telefoni e codici fiscali non lasciano mai il PC della clinica.</span>
+    <span><b>Fonte:</b> Gestionale Agende, agende delle stanze, cassa, turni dei medici.</span>
+  </footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var ridotto = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // ------------------------------------------------ dati di esempio (deterministici)
+  var seme = 20261107;
+  function caso() { seme = (seme * 1103515245 + 12345) % 2147483648; return seme / 2147483648; }
+  function tra(a, b) { return a + Math.floor(caso() * (b - a + 1)); }
+  var STANZE = ['Ambulatorio 1', 'Ambulatorio 2', 'Ambulatorio 3', 'Ambulatorio 4', 'Ambulatorio 5', 'Sala endoscopia'];
+  var MEDICI = [{ n: 'Dott.ssa Lippiello', c: '#154381', s: 'Ginecologia' }, { n: 'Dott. Galasso', c: '#5B7F3E', s: 'Gastroenterologia' }, { n: 'Dott. Fintini', c: '#A8582B', s: 'Cardiologia' }, { n: 'Dott.ssa Esempietti', c: '#6B4E9B', s: 'Dermatologia' }, { n: 'Dott. Provolo', c: '#0F7C8C', s: 'Ortopedia' }];
+  var PRESTAZIONI = ['Visita ginecologica', 'Ecografia', 'Colonscopia', 'Visita cardiologica', 'EGDS', 'Visita dermatologica', 'Visita ortopedica', 'Elettrocardiogramma'];
+  var TIPI = [{ n: 'Prima visita', c: 'var(--primario-2)' }, { n: 'Controllo', c: 'var(--accento)' }, { n: 'Prestazione', c: 'var(--primario)' }];
+  var oggi = new Date();
+  var giornoMese = oggi.getDate();
+  var giorniNelMese = new Date(oggi.getFullYear(), oggi.getMonth() + 1, 0).getDate();
+  var MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+
+  var visiteMese = [], visitePrec = [];
+  for (var d = 1; d <= giorniNelMese; d++) {
+    var data = new Date(oggi.getFullYear(), oggi.getMonth(), d);
+    var dom = data.getDay() === 0;
+    var base = dom ? 0 : (data.getDay() === 6 ? tra(10, 18) : tra(26, 44));
+    visitePrec.push(dom ? 0 : Math.max(0, base + tra(-8, 6)));
+    visiteMese.push(d <= giornoMese ? base : null);
+  }
+  var incassiMese = visiteMese.map(function (v) { return v === null ? null : Math.round(v * tra(55, 90)); });
+  function somma(a) { return a.reduce(function (s, x) { return s + (x || 0); }, 0); }
+  var settimanaDa = Math.max(1, giornoMese - oggi.getDay() + (oggi.getDay() === 0 ? -6 : 1));
+  var visiteOggi = visiteMese[giornoMese - 1] || 31;
+
+  var PERIODI = {
+    oggi: { visite: visiteOggi, prestazioni: 0, incassi: incassiMese[giornoMese - 1] || 2240, occupazione: 68, mancate: 6.5, confermare: 12,
+      deltaV: '+4 rispetto a una settimana fa', deltaP: 'di cui 9 esami', deltaI: '71% carta, 29% contanti', deltaO: '4 stanze su 6 occupate ora', deltaM: '2 su ' + visiteOggi + ' non presentati', deltaC: 'per domani, telefonate da fare' },
+    settimana: { visite: somma(visiteMese.slice(settimanaDa - 1, giornoMese)), prestazioni: 0, incassi: somma(incassiMese.slice(settimanaDa - 1, giornoMese)), occupazione: 74, mancate: 5.1, confermare: 38,
+      deltaV: '+6% sulla settimana scorsa', deltaP: '38% esami, 62% visite', deltaI: 'saldo della settimana', deltaO: 'ore prenotate su ore di turno', deltaM: 'in calo', deltaC: 'nei prossimi 3 giorni' },
+    mese: { visite: somma(visiteMese), prestazioni: 0, incassi: somma(incassiMese), occupazione: 71, mancate: 5.8, confermare: 96,
+      deltaV: (somma(visiteMese) - somma(visitePrec.slice(0, giornoMese)) >= 0 ? '+' : '') + (somma(visiteMese) - somma(visitePrec.slice(0, giornoMese))) + ' sullo stesso periodo del mese scorso', deltaP: '41% esami, 59% visite', deltaI: 'saldo di cassa del mese', deltaO: 'ore prenotate su ore di turno', deltaM: 'media del gruppo 7%', deltaC: 'fino a fine mese' }
+  };
+  Object.keys(PERIODI).forEach(function (k) { PERIODI[k].prestazioni = Math.round(PERIODI[k].visite * 1.32); });
+
+  // ------------------------------------------------ utilità
+  function el(tag, attrs, testo) { var e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (testo !== undefined) e.textContent = testo; return e; }
+  function formatta(n, decimali) { return n.toLocaleString('it-IT', { minimumFractionDigits: decimali || 0, maximumFractionDigits: decimali || 0 }); }
+  function facile(t) { return 1 - Math.pow(1 - t, 3); }
+  function conta(nodo, a, b, decimali, durata) {
+    if (ridotto) { nodo.textContent = formatta(b, decimali); return; }
+    var inizio = null; durata = durata || 1100;
+    function passo(ts) { if (!inizio) inizio = ts; var t = Math.min(1, (ts - inizio) / durata); nodo.textContent = formatta(a + (b - a) * facile(t), decimali); if (t < 1) requestAnimationFrame(passo); }
+    requestAnimationFrame(passo);
+  }
+  function ora(h, m) { return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; }
+  function cursoreDi(gruppo) {
+    var attivo = gruppo.querySelector('button[aria-pressed="true"]'), cur = gruppo.querySelector('.cursore');
+    if (!attivo || !cur) return;
+    cur.style.width = attivo.offsetWidth + 'px'; cur.style.transform = 'translateX(' + attivo.offsetLeft + 'px)';
+  }
+
+  // ------------------------------------------------ numeri che contano
+  var attuali = { visite: 0, prestazioni: 0, incassi: 0, occupazione: 0, mancate: 0, confermare: 0 };
+  function pillola(testo, classe) { return '<span class="pillola ' + classe + '">' + testo + '</span>'; }
+  function scintilla(svg, valori) {
+    svg.innerHTML = '';
+    var w = 92, h = 34, max = Math.max.apply(null, valori) || 1, n = valori.length;
+    var pts = valori.map(function (v, i) { return [i * (w - 4) / (n - 1) + 2, h - 3 - (v / max) * (h - 8)]; });
+    var linea = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+    svg.appendChild(el('path', { 'class': 'area', d: linea + ' L' + pts[n - 1][0].toFixed(1) + ' ' + h + ' L2 ' + h + ' Z' }));
+    svg.appendChild(el('path', { 'class': 'linea disegna', d: linea }));
+    svg.appendChild(el('circle', { 'class': 'punto-fine', cx: pts[n - 1][0], cy: pts[n - 1][1], r: 2.6 }));
+  }
+  function mostraKpi(periodo) {
+    var p = PERIODI[periodo];
+    var def = [
+      ['kpi-visite', 'visite', p.visite, 0, p.deltaV, p.deltaV.indexOf('+') === 0 ? 'ok' : ''],
+      ['kpi-prestazioni', 'prestazioni', p.prestazioni, 0, p.deltaP, ''],
+      ['kpi-incassi', 'incassi', p.incassi, 0, p.deltaI, ''],
+      ['kpi-occupazione', 'occupazione', p.occupazione, 0, p.deltaO, p.occupazione >= 70 ? 'ok' : 'attenzione'],
+      ['kpi-mancate', 'mancate', p.mancate, 1, p.deltaM, p.mancate > 6 ? 'attenzione' : 'ok'],
+      ['kpi-confermare', 'confermare', p.confermare, 0, p.deltaC, p.confermare > 30 ? 'attenzione' : '']
+    ];
+    def.forEach(function (d) {
+      var box = document.getElementById(d[0]);
+      conta(box.querySelector('[data-conta]'), attuali[d[1]], d[2], d[3]);
+      attuali[d[1]] = d[2];
+      box.querySelector('.delta').innerHTML = (d[5] ? pillola(d[5] === 'ok' ? 'bene' : 'attenzione', d[5]) : '') + '<span>' + d[4] + '</span>';
+      var serie = []; for (var k = 0; k < 12; k++) serie.push(Math.max(1, Math.round(d[2] * (0.75 + caso() * 0.5))));
+      serie[11] = d[2] || 1;
+      scintilla(box.querySelector('.scintilla'), serie);
+    });
+  }
+
+  // ------------------------------------------------ adesso: le stanze
+  var APERTURA = 8, CHIUSURA = 20;
+  function perc(h) { return (h - APERTURA) / (CHIUSURA - APERTURA) * 100; }
+  var agendaStanze = STANZE.map(function (nome, i) {
+    var blocchi = [], h = APERTURA + (i % 2 ? 1 : 0);
+    while (h < CHIUSURA - 0.5) {
+      var durata = [1, 1.5, 2, 2.5, 3][tra(0, 4)];
+      if (caso() < 0.22) { blocchi.push({ da: h, a: Math.min(CHIUSURA, h + durata), libero: true }); }
+      else { blocchi.push({ da: h, a: Math.min(CHIUSURA, h + durata), medico: MEDICI[(i + blocchi.length) % MEDICI.length], n: tra(2, 6) }); }
+      h += durata + (caso() < 0.3 ? 0.5 : 0);
+    }
+    return { nome: nome, blocchi: blocchi };
+  });
+  function disegnaStanze() {
+    var adesso = new Date(), oraDec = adesso.getHours() + adesso.getMinutes() / 60;
+    var cont = document.getElementById('stanze'); cont.innerHTML = '';
+    agendaStanze.forEach(function (s, i) {
+      var nome = document.createElement('div'); nome.className = 'nome'; nome.innerHTML = s.nome + '<small>' + (s.blocchi.filter(function (b) { return !b.libero; }).length) + ' turni</small>';
+      var bin = document.createElement('div'); bin.className = 'binario';
+      s.blocchi.forEach(function (b, j) {
+        var d = document.createElement('div');
+        var stato = b.libero ? 'libero' : (b.a < oraDec ? 'arrivato' : (b.da < oraDec && caso() < 0.25 ? 'ritardo' : ''));
+        d.className = 'blocco ' + stato;
+        d.style.left = perc(b.da) + '%'; d.style.width = (perc(b.a) - perc(b.da)) + '%';
+        d.style.animationDelay = (0.06 * j + 0.08 * i) + 's';
+        d.textContent = b.libero ? 'libera' : b.medico.n.replace(/^Dott\.(ssa)? /, '') + ' · ' + b.n;
+        d.title = (b.libero ? 'Fascia libera' : b.medico.n + ', ' + b.n + ' appuntamenti') + ' ' + ora(Math.floor(b.da), Math.round(b.da % 1 * 60)) + '–' + ora(Math.floor(b.a), Math.round(b.a % 1 * 60));
+        bin.appendChild(d);
+      });
+      cont.appendChild(nome); cont.appendChild(bin);
+    });
+    var ore = document.createElement('div'); ore.className = 'ore';
+    for (var h = APERTURA; h <= CHIUSURA; h += 2) { var s2 = document.createElement('span'); s2.textContent = h + ':00'; ore.appendChild(s2); }
+    cont.appendChild(ore);
+    var lancetta = document.createElement('div'); lancetta.className = 'lancetta'; lancetta.id = 'lancetta'; cont.appendChild(lancetta);
+    muoviLancetta();
+  }
+  function muoviLancetta() {
+    var l = document.getElementById('lancetta'); if (!l) return;
+    var adesso = new Date(), oraDec = adesso.getHours() + adesso.getMinutes() / 60 + adesso.getSeconds() / 3600;
+    var dentro = oraDec >= APERTURA && oraDec <= CHIUSURA;
+    var p = Math.min(100, Math.max(0, perc(oraDec)));
+    var colonna = document.querySelector('#stanze .binario');
+    if (colonna) { var r = colonna.getBoundingClientRect(), base = document.getElementById('stanze').getBoundingClientRect(); l.style.left = (r.left - base.left + r.width * p / 100) + 'px'; }
+    l.setAttribute('data-ora', dentro ? ora(adesso.getHours(), adesso.getMinutes()) : 'chiusa · ' + ora(adesso.getHours(), adesso.getMinutes()));
+    l.style.opacity = dentro ? 1 : .55;
+    document.getElementById('aggiornato').textContent = 'in diretta · aggiornato alle ' + ora(adesso.getHours(), adesso.getMinutes());
+  }
+
+  // ------------------------------------------------ riepilogo live
+  function riepilogoLive() {
+    var adesso = new Date(), oraDec = adesso.getHours() + adesso.getMinutes() / 60;
+    var fatti = 0, inCorso = 0, daFare = 0, occupate = 0, libere = 0, carte = [];
+    agendaStanze.forEach(function (s) {
+      var corrente = null, prossimo = null, f = 0, c = 0, d = 0;
+      s.blocchi.forEach(function (b) {
+        if (b.libero) return;
+        if (b.a <= oraDec) f += b.n; else if (b.da <= oraDec) { c += 1; d += b.n - 1; corrente = b; } else { d += b.n; if (!prossimo) prossimo = b; }
+      });
+      fatti += f; inCorso += c; daFare += d;
+      var stato, classe, testo;
+      if (oraDec < APERTURA || oraDec >= CHIUSURA) { classe = 'senza'; stato = 'chiusa'; }
+      else if (corrente) { classe = 'occupata'; occupate++; stato = 'visita in corso fino alle ' + ora(Math.floor(corrente.a), Math.round(corrente.a % 1 * 60)); }
+      else if (prossimo) { classe = 'libera'; libere++; stato = 'libera fino alle ' + ora(Math.floor(prossimo.da), Math.round(prossimo.da % 1 * 60)); }
+      else { classe = 'senza'; stato = 'giornata finita'; }
+      var medico = corrente ? corrente.medico.n : (prossimo ? prossimo.medico.n + ' dalle ' + ora(Math.floor(prossimo.da), Math.round(prossimo.da % 1 * 60)) : '');
+      carte.push({ nome: s.nome, classe: classe, stato: stato, medico: medico, f: f, c: c, d: d });
+    });
+    var tot = Math.max(1, fatti + inCorso + daFare);
+    var av = document.getElementById('live-avanzamento');
+    av.children[0].style.width = (100 * fatti / tot) + '%'; av.children[1].style.width = (100 * inCorso / tot) + '%';
+    document.getElementById('live-mini').innerHTML = [[fatti, 'fatti'], [inCorso, 'in corso'], [daFare, 'ancora da fare'], [occupate + '/' + agendaStanze.length, 'stanze occupate ora']]
+      .map(function (x) { return '<div><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('');
+    document.getElementById('live-stanze').innerHTML = carte.map(function (k, i) {
+      return '<div class="stanza-live ' + k.classe + '" style="animation-delay:' + (i * 0.05) + 's"><b>' + k.nome + '</b><span class="stato">' + k.stato + '</span>' +
+        (k.medico ? '<small>' + k.medico + '</small>' : '') + '<small>' + k.f + ' fatti · ' + k.c + ' in corso · ' + k.d + ' da fare</small></div>';
+    }).join('');
+    var GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'], chip = ['<span class="titolo">Mezze giornate libere nei prossimi giorni:</span>'];
+    for (var g = 1; g <= 6 && chip.length < 8; g++) {
+      var d = new Date(adesso.getFullYear(), adesso.getMonth(), adesso.getDate() + g);
+      if (d.getDay() === 0) continue;
+      var stanza = STANZE[(g * 2 + 1) % STANZE.length];
+      chip.push('<span>' + GIORNI[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1) + ' · ' + (g % 2 ? 'pomeriggio' : 'mattina') + ' · ' + stanza + '</span>');
+    }
+    document.getElementById('live-libere').innerHTML = chip.join('');
+  }
+
+  // ------------------------------------------------ grafici
+  function assi(svg, w, h, pad, maxY, passi) {
+    for (var i = 0; i <= passi; i++) {
+      var y = pad.t + (h - pad.t - pad.b) * (1 - i / passi);
+      svg.appendChild(el('line', { 'class': 'griglia', x1: pad.l, x2: w - pad.r, y1: y, y2: y }));
+      svg.appendChild(el('text', { 'class': 'valore-asse', x: pad.l - 6, y: y + 4, 'text-anchor': 'end' }, formatta(Math.round(maxY * i / passi))));
+    }
+  }
+  var sugg = function (id) { var s = document.getElementById(id); return { mostra: function (x, y, t) { s.textContent = t; s.style.left = x + 'px'; s.style.top = y + 'px'; s.style.opacity = 1; }, nascondi: function () { s.style.opacity = 0; } }; };
+  function larghezzaGrafico() { return window.innerWidth < 720 ? 400 : 640; }
+  function graficoVisite(periodo) {
+    var svg = document.getElementById('g-visite'); svg.innerHTML = '';
+    var w = larghezzaGrafico(), h = 230, pad = { l: 34, r: 10, t: 14, b: 26 };
+    svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+    var serie, prec, etichette;
+    if (periodo === 'oggi') { serie = []; prec = []; etichette = []; for (var o = APERTURA; o < CHIUSURA; o++) { serie.push(o < new Date().getHours() ? tra(1, 6) : null); prec.push(tra(1, 6)); etichette.push(o + ':00'); } document.getElementById('visite-sotto').textContent = 'oggi ora per ora, con una settimana fa tratteggiata'; }
+    else if (periodo === 'settimana') { serie = visiteMese.slice(settimanaDa - 1, settimanaDa + 6); prec = visitePrec.slice(settimanaDa - 1, settimanaDa + 6); while (serie.length < 7) serie.push(null); while (prec.length < 7) prec.push(0); etichette = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom']; document.getElementById('visite-sotto').textContent = 'questa settimana, con la settimana scorsa tratteggiata'; }
+    else { serie = visiteMese; prec = visitePrec; etichette = serie.map(function (_, i) { return String(i + 1); }); document.getElementById('visite-sotto').textContent = 'questo mese, con il mese scorso tratteggiato'; }
+    var maxY = Math.max(5, Math.ceil(Math.max.apply(null, serie.concat(prec).map(function (v) { return v || 0; })) / 5) * 5);
+    assi(svg, w, h, pad, maxY, 4);
+    var n = serie.length, larg = (w - pad.l - pad.r) / n, altezza = h - pad.t - pad.b;
+    var g = el('g', { 'class': 'barre' }); svg.appendChild(g);
+    var s = sugg('sugg-visite');
+    serie.forEach(function (v, i) {
+      if (v === null) return;
+      var bh = altezza * v / maxY;
+      var r = el('rect', { x: pad.l + i * larg + larg * 0.18, y: pad.t + altezza - bh, width: larg * 0.64, height: Math.max(1, bh), rx: Math.min(4, larg * 0.2), 'class': (periodo === 'mese' && i === giornoMese - 1) || (periodo === 'settimana' && i === (new Date().getDay() + 6) % 7) ? 'oggi' : '' });
+      r.style.animationDelay = (i * 0.025) + 's';
+      r.addEventListener('mousemove', function (e) { var b = svg.getBoundingClientRect(); s.mostra(e.clientX - b.left, e.clientY - b.top, etichette[i] + ': ' + v + ' visite' + (prec[i] !== undefined ? ' (prima: ' + prec[i] + ')' : '')); });
+      r.addEventListener('mouseleave', s.nascondi);
+      g.appendChild(r);
+    });
+    var pts = prec.map(function (v, i) { return [pad.l + i * larg + larg / 2, pad.t + altezza - altezza * v / maxY]; });
+    svg.appendChild(el('path', { 'class': 'linea-prec disegna', d: pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ') }));
+    var ga = el('g', { 'class': 'asse' }); svg.appendChild(ga);
+    var salto = n > 16 ? (w < 500 ? 3 : 2) : (w < 500 && n > 8 ? 2 : 1);
+    etichette.forEach(function (t, i) { if (i % salto) return; ga.appendChild(el('text', { x: pad.l + i * larg + larg / 2, y: h - 8, 'text-anchor': 'middle' }, t)); });
+  }
+  function graficoIncassi(periodo) {
+    var svg = document.getElementById('g-incassi'); svg.innerHTML = '';
+    var w = larghezzaGrafico(), h = 230, pad = { l: 44, r: 12, t: 14, b: 26 };
+    svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+    var serie, etichette;
+    if (periodo === 'oggi') { serie = []; etichette = []; var acc = 0; for (var o = APERTURA; o < CHIUSURA; o++) { if (o < new Date().getHours()) acc += tra(80, 420); serie.push(acc); etichette.push(o + ':00'); } }
+    else if (periodo === 'settimana') { serie = incassiMese.slice(settimanaDa - 1, settimanaDa + 6).map(function (v) { return v || 0; }); while (serie.length < 7) serie.push(0); etichette = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom']; }
+    else { serie = incassiMese.map(function (v) { return v || 0; }); etichette = serie.map(function (_, i) { return String(i + 1); }); }
+    var maxY = Math.max(100, Math.ceil(Math.max.apply(null, serie) / 500) * 500);
+    var defs = el('defs'); var grad = el('linearGradient', { id: 'sfuma', x1: 0, y1: 0, x2: 0, y2: 1 });
+    grad.appendChild(el('stop', { offset: '0%', 'stop-color': 'var(--accento)', 'stop-opacity': '.35' })); grad.appendChild(el('stop', { offset: '100%', 'stop-color': 'var(--accento)', 'stop-opacity': '0' }));
+    defs.appendChild(grad); svg.appendChild(defs);
+    assi(svg, w, h, pad, maxY, 4);
+    var n = serie.length, altezza = h - pad.t - pad.b, passo = (w - pad.l - pad.r) / Math.max(1, n - 1);
+    var ultimo = periodo === 'mese' ? giornoMese - 1 : (periodo === 'settimana' ? Math.min(6, giornoMese - settimanaDa) : Math.max(0, Math.min(n - 1, new Date().getHours() - APERTURA)));
+    var pts = serie.slice(0, ultimo + 1).map(function (v, i) { return [pad.l + i * passo, pad.t + altezza - altezza * v / maxY]; });
+    if (pts.length === 1) pts.push([pts[0][0] + 1, pts[0][1]]);
+    var linea = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+    svg.appendChild(el('path', { 'class': 'area-incassi', d: linea + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + (pad.t + altezza) + ' L' + pts[0][0] + ' ' + (pad.t + altezza) + ' Z' }));
+    svg.appendChild(el('path', { 'class': 'linea-incassi disegna', d: linea }));
+    svg.appendChild(el('circle', { 'class': 'punto-fine', cx: pts[pts.length - 1][0], cy: pts[pts.length - 1][1], r: 5 }));
+    var s = sugg('sugg-incassi');
+    pts.forEach(function (p, i) { var z = el('rect', { x: p[0] - passo / 2, y: pad.t, width: passo, height: altezza, fill: 'transparent' }); z.addEventListener('mousemove', function (e) { var b = svg.getBoundingClientRect(); s.mostra(e.clientX - b.left, e.clientY - b.top, etichette[i] + ': ' + formatta(serie[i]) + ' €'); }); z.addEventListener('mouseleave', s.nascondi); svg.appendChild(z); });
+    var ga = el('g', { 'class': 'asse' }); svg.appendChild(ga);
+    var salto = n > 16 ? (w < 500 ? 3 : 2) : (w < 500 && n > 8 ? 2 : 1);
+    etichette.forEach(function (t, i) { if (i % salto) return; ga.appendChild(el('text', { x: pad.l + i * passo, y: h - 8, 'text-anchor': 'middle' }, t)); });
+  }
+  function ciambella(periodo) {
+    var svg = document.getElementById('g-tipi'); var tot = PERIODI[periodo].visite;
+    var quote = [Math.round(tot * 0.34), Math.round(tot * 0.41)]; quote.push(tot - quote[0] - quote[1]);
+    var r = 56, C = 2 * Math.PI * r, acc = 0;
+    if (!svg.childNodes.length) {
+      TIPI.forEach(function (t) { svg.appendChild(el('circle', { 'class': 'arco', cx: 75, cy: 75, r: r, stroke: t.c, 'stroke-dasharray': '0 ' + C, 'stroke-dashoffset': 0, transform: 'rotate(-90 75 75)' })); });
+      svg.appendChild(el('text', { 'class': 'centro', x: 75, y: 72 }, '0')); svg.appendChild(el('text', { 'class': 'centro-sotto', x: 75, y: 90 }, 'visite'));
+    }
+    var archi = svg.querySelectorAll('circle.arco');
+    requestAnimationFrame(function () {
+      TIPI.forEach(function (t, i) { var l = C * quote[i] / Math.max(1, tot); archi[i].setAttribute('stroke-dasharray', l + ' ' + (C - l)); archi[i].setAttribute('stroke-dashoffset', -acc); acc += l; });
+    });
+    conta(svg.querySelector('.centro'), parseInt(svg.querySelector('.centro').textContent.replace(/\./g, ''), 10) || 0, tot, 0);
+    var ul = document.getElementById('voci-tipi'); ul.innerHTML = '';
+    TIPI.forEach(function (t, i) { var li = document.createElement('li'); li.innerHTML = '<i style="background:' + t.c + '"></i><span>' + t.n + '</span><b>' + formatta(quote[i]) + ' · ' + Math.round(quote[i] / Math.max(1, tot) * 100) + '%</b>'; ul.appendChild(li); });
+  }
+  function classifica(periodo) {
+    var ul = document.getElementById('barrette-prestazioni'); ul.innerHTML = '';
+    var tot = PERIODI[periodo].prestazioni, pesi = [0.21, 0.17, 0.14, 0.12, 0.1, 0.08], max = tot * pesi[0];
+    PRESTAZIONI.slice(0, 6).forEach(function (p, i) { var n = Math.round(tot * pesi[i]); var li = document.createElement('li'); li.innerHTML = '<span class="nome">' + p + '</span><span class="n">' + formatta(n) + '</span><div class="traccia"><div class="riemp" style="width:' + (n / max * 100) + '%; animation-delay:' + (i * 0.07) + 's"></div></div>'; ul.appendChild(li); });
+  }
+  function tabellaMedici(periodo) {
+    var tb = document.querySelector('#tab-medici tbody'); tb.innerHTML = '';
+    var tot = PERIODI[periodo].visite, pesi = [0.3, 0.22, 0.18, 0.17, 0.13];
+    MEDICI.forEach(function (m, i) {
+      var n = Math.round(tot * pesi[i]), np = (3 + caso() * 7).toFixed(1);
+      var serie = []; for (var k = 0; k < 14; k++) serie.push(tra(1, 9));
+      var w = 70, h = 22, max = 9, pts = serie.map(function (v, j) { return [j * (w - 2) / 13 + 1, h - 2 - v / max * (h - 4)]; });
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td><span class="colore" style="background:' + m.c + '"></span>' + m.n + '<br><small style="color:var(--muto); margin-left:12px">' + m.s + '</small></td>' +
+        '<td><svg viewBox="0 0 70 22" aria-hidden="true"><path class="disegna" d="' + pts.map(function (p, j) { return (j ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ') + '"/></svg></td>' +
+        '<td class="n">' + formatta(n) + '</td><td class="n"><span class="pillola ' + (np > 7 ? 'attenzione' : 'ok') + '">' + np.replace('.', ',') + '%</span></td>';
+      tb.appendChild(tr);
+    });
+  }
+  function avvisi(periodo) {
+    var ul = document.getElementById('lista-avvisi'); ul.innerHTML = '';
+    var voci = [
+      ['attenzione', PERIODI[periodo].confermare + ' appuntamenti da confermare', 'telefonate o promemoria ancora da fare', 'entro stasera'],
+      ['ok', '3 mezze giornate libere domani', 'Ambulatorio 2 e 5 la mattina, Sala endoscopia il pomeriggio', 'domani'],
+      ['critico', 'Mancate presenze in aumento', 'questa settimana 6,5% contro il 4,8% del mese scorso', 'settimana'],
+      ['ok', 'Incassi del giorno quadrati', 'cassa chiusa alle 19:40, differenza 0 €', 'ieri']
+    ];
+    voci.forEach(function (v, i) { var li = document.createElement('li'); li.className = v[0]; li.style.animationDelay = (0.1 * i) + 's'; li.innerHTML = '<i></i><div><b>' + v[1] + '</b><span>' + v[2] + '</span></div><span class="quando">' + v[3] + '</span>'; ul.appendChild(li); });
+  }
+  // ------------------------------------------------ la diretta
+  var STATI = [['Arrivato', 'ok'], ['Prenotato', 'neutro'], ['Confermato', 'ok'], ['Spostato', 'attenzione'], ['Disdetto', 'critico'], ['Pagato', 'ok']];
+  function evento(h, m) {
+    var st = STATI[tra(0, STATI.length - 1)], li = document.createElement('li');
+    li.innerHTML = '<span class="ora">' + ora(h, m) + '</span><span class="cosa"><b>' + PRESTAZIONI[tra(0, PRESTAZIONI.length - 1)] + '</b> <span>· ' + STANZE[tra(0, STANZE.length - 1)] + ' · ' + MEDICI[tra(0, MEDICI.length - 1)].n + '</span></span><span class="stato pillola ' + st[1] + '">' + st[0] + '</span>';
+    return li;
+  }
+  function diretta() {
+    var ul = document.getElementById('feed'); var adesso = new Date(), h = adesso.getHours(), m = adesso.getMinutes();
+    for (var i = 0; i < 6; i++) { m -= tra(2, 9); if (m < 0) { m += 60; h = (h + 23) % 24; } var li = evento(h, m); li.style.animationDelay = (0.08 * i) + 's'; ul.appendChild(li); }
+    if (!ridotto) setInterval(function () { var a = new Date(); var li = evento(a.getHours(), a.getMinutes()); ul.insertBefore(li, ul.firstChild); while (ul.children.length > 8) ul.removeChild(ul.lastChild); }, 6500);
+  }
+
+  // ------------------------------------------------ stile, periodo e avvio
+  var NOTE_STILE = { clinica: 'Stile «Clinica»: quello di partenza, bianco con blu e verde acqua.', notturno: 'Stile «Notturno»: sempre scuro, pensato per lo schermo in direzione.', carta: 'Stile «Carta»: fondo caldo, niente ombre, bordi sottili.', contrasto: 'Stile «Contrasto»: numeri grandi e bordi netti, per leggere da lontano.' };
+  var gruppoStili = document.getElementById('stili'), gruppoPeriodi = document.getElementById('periodi');
+  function mostraStile(nome, salva) {
+    if (!NOTE_STILE[nome]) nome = 'clinica';
+    if (nome === 'clinica') delete document.documentElement.dataset.stile; else document.documentElement.dataset.stile = nome;
+    gruppoStili.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.stile === nome)); });
+    document.getElementById('stile-nota').textContent = NOTE_STILE[nome];
+    cursoreDi(gruppoStili);
+    if (salva) { try { localStorage.setItem('cruscotto-stile', nome); } catch (e) { /* senza memoria va bene lo stesso */ } }
+  }
+  var periodo = 'oggi';
+  function mostra(p) {
+    periodo = p;
+    mostraKpi(p); graficoVisite(p); graficoIncassi(p); ciambella(p); classifica(p); tabellaMedici(p); avvisi(p);
+    gruppoPeriodi.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.periodo === p)); });
+    cursoreDi(gruppoPeriodi);
+  }
+  gruppoPeriodi.querySelectorAll('button').forEach(function (b) { b.addEventListener('click', function () { if (b.dataset.periodo !== periodo) mostra(b.dataset.periodo); }); });
+  gruppoStili.querySelectorAll('button').forEach(function (b) { b.addEventListener('click', function () { mostraStile(b.dataset.stile, true); }); });
+  var ricordato = null; try { ricordato = localStorage.getItem('cruscotto-stile'); } catch (e) { ricordato = null; }
+  mostraStile(ricordato || 'clinica', false);
+  disegnaStanze(); diretta(); mostra('oggi'); riepilogoLive();
+  setInterval(muoviLancetta, 20000); setInterval(riepilogoLive, 60000);
+  var larghezzaPrima = larghezzaGrafico(), attesaRidisegno = null;
+  window.addEventListener('resize', function () {
+    muoviLancetta(); cursoreDi(gruppoStili); cursoreDi(gruppoPeriodi);
+    clearTimeout(attesaRidisegno);
+    attesaRidisegno = setTimeout(function () { if (larghezzaGrafico() !== larghezzaPrima) { larghezzaPrima = larghezzaGrafico(); graficoVisite(periodo); graficoIncassi(periodo); } }, 200);
+  });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { cursoreDi(gruppoStili); cursoreDi(gruppoPeriodi); });
+})();
+</script>

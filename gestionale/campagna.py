@@ -476,7 +476,8 @@ def caso_export(semenza):
         servizi.esporta_giorno(s, g, sid, percorso)
         import openpyxl
         ws = openpyxl.load_workbook(percorso).active
-        atteso = 2 + len(servizi.griglia(s, g, sid)['fasce'])
+        # 1.12: sotto la griglia una riga vuota, la legenda e la nota sulle stanze disattivate
+        atteso = 2 + len(servizi.griglia(s, g, sid)['fasce']) + 3
         s.close()
         assert ws.max_row <= atteso, 'export N righe contro N attese'
         fuori = [str(x) for x in ws.merged_cells.ranges if x.max_row > atteso]

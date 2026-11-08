@@ -66,7 +66,8 @@ def segnaposto():
     martedi = oggi - timedelta(days=(oggi.weekday() - 1) % 7)
     return {'oggi': oggi.isoformat(), 'domani': (oggi + timedelta(days=1)).isoformat(),
             'ieri': (oggi - timedelta(days=1)).isoformat(), 'martedi': martedi.isoformat(),
-            'mese': oggi.strftime('%Y-%m')}
+            'mese': oggi.strftime('%Y-%m'),
+            'lunedi_prossimo': (oggi + timedelta(days=7 - oggi.weekday())).isoformat()}
 
 
 def foto(pg):

@@ -132,6 +132,26 @@
   html.scuro table.programmazione td.note-prog { color: #A9B7C4; }
   html.scuro a.medico-prog { color: #E1E7ED; }
   html.scuro details.calendario-mese tr.spento td { color: #9AA8B4; }
+  html.scuro .punto-live { background: #29702D; }
+  html.scuro .numero-live { background: #1C242D; border: 1px solid #2E3843; }
+  html.scuro .numero-live b { color: #E1E7ED; }
+  html.scuro .numero-live b small { color: #9AA8B4; }
+  html.scuro .numero-live span { color: #9AA8B4; }
+  html.scuro .numero-live.attenzione { border-color: #E8B27D; background: #382F27; }
+  html.scuro .avanzamento-live { background: #10151B; }
+  html.scuro .avanzamento-live .fatti { background: #29702D; }
+  html.scuro .avanzamento-live .in-corso { background: var(--primario-2, #2962A2); }
+  html.scuro .stanza-live { background: #1C242D; border: 1px solid #2E3843; }
+  html.scuro .stanza-live.stato-libera { border-left-color: #64C669; background: #293223; }
+  html.scuro .stanza-live.stato-libera .stato-live { color: #AFE9BB; }
+  html.scuro .stanza-live.stato-senza-turno, html.scuro .stanza-live.stato-finita, html.scuro .stanza-live.stato-chiusa { border-left-color: #56636F; background: #141A21; }
+  html.scuro .stanza-live.stato-senza-turno .stato-live, html.scuro .stanza-live.stato-finita .stato-live, html.scuro .stanza-live.stato-chiusa .stato-live { color: #9AA8B4; }
+  html.scuro .medico-live.muto { color: #9AA8B4; }
+  html.scuro .conti-live { color: #A9B7C4; }
+  html.scuro .ora-live .colonna { background: #222B35; }
+  html.scuro .barra-ora { background: var(--primario-chiaro, #1E324F); }
+  html.scuro .ora-live small { color: #9AA8B4; }
+  html.scuro .libere-live li { background: #293223; border-left: 4px solid #64C669; }
   html.scuro table.mese td.fuori { background: #222B35; }
   html.scuro table.mese td.festivo { background: #312A22; }
   html.scuro table.mese td.chiuso-di-solito:not(.festivo) { background: #141A21; }

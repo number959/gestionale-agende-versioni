@@ -447,8 +447,7 @@ def imposta_stampa_excel(ws, orizzontale=True, righe_titolo=None, colonne_titolo
     if testa:
         ws.oddHeader.center.text = _senza_e_commerciale(testa)
     societa = (getattr(struttura, 'societa', '') or '') if struttura is not None else ''
-    if societa or nome:
-        ws.oddFooter.left.text = _senza_e_commerciale(testo_excel(societa or nome))
+    ws.oddFooter.left.text = _senza_e_commerciale(testo_excel(societa or nome or 'Gestionale Agende'))
     ws.oddFooter.right.text = 'Pagina &P di &N'
     ws.page_margins.left = ws.page_margins.right = margine
     ws.page_margins.top = ws.page_margins.bottom = 0.6

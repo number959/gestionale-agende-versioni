@@ -571,6 +571,34 @@ promemoria al paziente.
   tipo e giorno della settimana, pazienti nuovi. Si scaricano in Excel. L'export del
   giorno ora ha anche un secondo foglio *Elenco* con tutti i campi.
 
+
+**Il foglio del giorno dalla 1.12.** La pagina di stampa è una tabella con testata (`thead`) e piede
+(`tfoot`): il browser li ripete su ogni foglio stampato, e nel margine in basso a destra c'è
+«Pagina X di Y» (`@page` con `counter(pages)`, Chrome ed Edge recenti). Ogni stanza dice quanti
+appuntamenti ha, chi è di turno e chi è assente; le stanze con un medico di turno ma senza
+appuntamenti compaiono lo stesso (non le sale operatorie); le colonne in più (sedazione, anestesista…)
+compaiono solo nella tabella della stanza che le usa; sotto ogni tabella il totale degli importi
+degli appuntamenti attivi, nel piede quello del giorno; con *anche disdetti e non presentati* la
+colonna Stato (con l'ora di arrivo), i disdetti barrati in grigio, i non presentati in marrone e
+una legenda. Due colonne in più a scelta: la data di nascita e una casella da spuntare a penna
+(arrivato, pagato). In *Impostazioni → Foglio del giorno* si salva anche «anche disdetti e non
+presentati» (`tutti`); nell'indirizzo `tutti=0` o `tutti=1` vince per quella stampa. Il pulsante
+*Stampa* dell'elenco del giorno segue le preferenze salvate; l'elenco stampato con Ctrl+P perde
+pulsanti e collegamenti rapidi, ripete le intestazioni e stampa la nota del giorno.
+
+
+**Gli Excel dalla 1.12: un aspetto solo.** Tutti i file Excel (planning e elenco del giorno,
+statistiche, incassi, riepilogo medici, turni del personale, registro di Dove si fa, matrice e
+programmazione degli ambulatori) passano dagli aiuti di `comune.py`: `apri_foglio_excel` (titolo con
+la struttura, sottotitolo con il periodo, «Esportato il … dal Gestionale Agende»), `tabella_excel`
+(intestazione bianca su blu, bordi, formati di ore, euro e date, righe dei totali, filtri, riquadri
+bloccati), `imposta_stampa_excel` (A4 adattato in larghezza, intestazioni ripetute su ogni pagina,
+intestazione e piè di pagina con struttura, periodo e «Pagina X di Y»). Il planning del giorno mostra
+anche i turni dei medici nell'intestazione di ogni stanza, le fasce libere nel turno in azzurro e
+quelle fuori turno in grigio, con la legenda; l'elenco ha i disdetti barrati e la riga dei totali
+dei soli attivi. La prova `prove_112_excel.py` riapre ogni file e controlla formato, intestazioni,
+piè di pagina e totali.
+
 ## Ambulatori
 
 Dalla 1.12. Menu *Ambulatori*: chi sta in quale stanza, calcolato dai turni dei medici (quelli
@@ -610,9 +638,24 @@ compilavano a mano. Tutto in `ambulatori.py`; le sale operatorie restano fuori (
   Perché così e non ricopiato: il foglio a mano andava riscritto ogni mese e si allontanava
   dall'agenda (le date saltate le scriveva una persona); qui non può dire una cosa diversa.
 
+
+**Riepilogo live** (`live.py`, menu *Ambulatori → Riepilogo live*, `/riepilogo-live` e
+`/riepilogo-live.json`): la giornata adesso. In alto i numeri di oggi (appuntamenti, fatti, in corso,
+ancora da fare, in ritardo, in struttura, stanze occupate ora, da confermare per il prossimo
+giorno) e la barra di avanzamento; poi ogni stanza attiva (senza le sale operatorie) con lo stato
+adesso: *visita in corso fino alle*, *libera fino alle* (il prossimo appuntamento o la fine del
+turno), *nessun medico fino alle*, *giornata finita*, *chiusa*; il medico di turno e i conti del
+giorno; le visite ora per ora (in scuro gli arrivati); le mezze giornate libere dei prossimi
+sette giorni, prese dalla matrice degli ambulatori. La pagina si rinnova da sola ogni minuto
+(ricarica il proprio contenuto con `fetch`, senza sfarfallio); con `?schermo=1` («Modo schermo»)
+niente menu e caratteri grandi, per il secondo monitor. Il JSON ha gli stessi numeri: solo
+conteggi, orari, nomi di stanze e medici, mai un paziente (una prova lo controlla con i nomi
+inventati) ed è il formato pensato per alimentare un giorno il cruscotto su internet (vedi le
+proposte nel `PASSAGGIO_DI_CONSEGNE.md`).
+
 Le prove sono `prove_112.py` (le celle della matrice contro un calcolo minuto per minuto fatto a
-parte, la programmazione, i due Excel riaperti, mettere e togliere, le protezioni) e
-`prove_112_browser.py`.
+parte, la programmazione, i due Excel riaperti, mettere e togliere, le protezioni, il foglio del
+giorno, il riepilogo live) e `prove_112_browser.py`.
 
 ## Conferme
 

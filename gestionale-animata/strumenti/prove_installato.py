@@ -20,6 +20,7 @@ lo stile, la guida), l'autoriparazione della 1.11 (/salute, la pagina Controllo 
 tre lavori in sottofondo attivi; con CARTELLA_DATI anche gestionale.pid e il diario). L'invio delle
 email sul programma installato si prova con strumenti/prova_email_installato.py."""
 import json
+from datetime import date
 import os
 import re
 import sys
@@ -78,6 +79,15 @@ controlla('Aggiornamenti: il collegamento alla pagina delle versioni per il Setu
 s, b, _ = get('/aggiornamenti/stato.json')
 d = json.loads(b)
 controlla('stato.json', s == 200 and d['versione'] == ATTESA, d)
+s, b, _ = get('/riepilogo-live?struttura=1')
+controlla('Riepilogo live (1.12): la pagina', s == 200 and 'id="riepilogo-live"' in b.decode('utf-8', 'replace'), s)
+s, b, _ = get('/riepilogo-live.json?struttura=1')
+d = json.loads(b) if s == 200 else {}
+controlla('Riepilogo live (1.12): il JSON con stanze e numeri di oggi', s == 200 and 'stanze' in d and 'oggi' in d, (s, list(d)[:6]))
+s, b, _ = get('/ambulatori/settimana/%s?struttura=1' % date.today().isoformat())
+controlla('Ambulatori (1.12): la pianificazione della settimana', s == 200 and 'id="matrice-ambulatori"' in b.decode('utf-8', 'replace'), s)
+s, b, h = get('/ambulatori/settimana/%s.xlsx?struttura=1' % date.today().isoformat())
+controlla('Ambulatori (1.12): la matrice in Excel', s == 200 and b[:2] == b'PK' and 'spreadsheet' in h.get('Content-Type', ''), (s, h.get('Content-Type')))
 totale, rotti = 0, []
 for a in guida.ARTICOLI:
     s, b, _ = get('/aiuto/' + a['slug'])

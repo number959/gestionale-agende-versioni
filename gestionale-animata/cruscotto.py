@@ -218,42 +218,41 @@ def riepilogo(aaaamm):
 
 @bp.route('/riepilogo-medici/<aaaamm>/excel')
 def riepilogo_excel(aaaamm):
+    """Il riepilogo del mese per medico in Excel: il foglio «Riepilogo» (una
+    riga per medico con i conteggi e gli importi, la riga dei totali) e un
+    foglio per medico con i suoi appuntamenti e i totali. Stile comune degli
+    Excel (comune.tabella_excel), A4 che sta in larghezza."""
     from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment
+    from comune import (apri_foglio_excel, imposta_stampa_excel, tabella_excel, FORMATO_DATA, FORMATO_ORA,
+                        FORMATO_EURO)
     s = ses()
     primo, ultimo = mese_da(aaaamm)
     scelto, st = filtri_riepilogo(s)
     fogli = riepilogo_medici(s, primo, ultimo, scelto.id if scelto else None, st.id if st else None)
+    struttura = st if st else next((x for x in s.scalars(select(Struttura).order_by(Struttura.id))), None)
+    periodo = 'riepilogo per medico · %s' % nome_mese(primo)
     wb = Workbook()
     ws = wb.active
     ws.title = 'Riepilogo'
-    ws.append(['Riepilogo per medico — %s%s' % (nome_mese(primo), (' — %s' % st.nome) if st else '')])
-    ws['A1'].font = Font(bold=True, size=13)
     intestazione = ['Medico', 'Specialità', 'Appuntamenti', 'Arrivati', 'Prenotati o confermati',
                     'Non presentati', 'Disdetti', 'Giorni', 'Importi previsti', 'Incassato']
-    ws.append(intestazione)
-    for c in ws[2]:
-        c.font = Font(bold=True)
-        c.alignment = Alignment(wrap_text=True, vertical='top')
+    righe = []
     for f in fogli:
         c = f['conteggio']
-        ws.append([f['operatore'].etichetta, f['operatore'].specialita or '', len(f['apps']),
-                   c.get('ARRIVATO', 0), c.get('PRENOTATO', 0) + c.get('CONFERMATO', 0),
-                   c.get('NON_PRESENTATO', 0), c.get('DISDETTO', 0), f['giorni'],
-                   f['previsto'] / 100.0, f['incassato'] / 100.0])
-    if fogli:
-        ws.append(['Totale', '', sum(len(f['apps']) for f in fogli)]
-                  + [sum(f['conteggio'].get(k, 0) for f in fogli) for k in ('ARRIVATO',)]
-                  + [sum(f['conteggio'].get('PRENOTATO', 0) + f['conteggio'].get('CONFERMATO', 0) for f in fogli)]
-                  + [sum(f['conteggio'].get(k, 0) for f in fogli) for k in ('NON_PRESENTATO', 'DISDETTO')]
-                  + ['', sum(f['previsto'] for f in fogli) / 100.0, sum(f['incassato'] for f in fogli) / 100.0])
-        for c in ws[ws.max_row]:
-            c.font = Font(bold=True)
-    for riga in ws.iter_rows(min_row=3):
-        riga[8].number_format = riga[9].number_format = '#,##0.00'
-    for colonna, larghezza in zip('ABCDEFGHIJ', (28, 18, 13, 10, 13, 11, 10, 8, 13, 12)):
-        ws.column_dimensions[colonna].width = larghezza
+        righe.append([f['operatore'].etichetta, f['operatore'].specialita or '', len(f['apps']),
+                      c.get('ARRIVATO', 0), c.get('PRENOTATO', 0) + c.get('CONFERMATO', 0),
+                      c.get('NON_PRESENTATO', 0), c.get('DISDETTO', 0), f['giorni'],
+                      f['previsto'] / 100.0, f['incassato'] / 100.0])
+    riga = apri_foglio_excel(ws, 'Riepilogo per medico', '%s%s' % (nome_mese(primo).capitalize(),
+                                                                   (' · tutte le strutture' if not st else '')),
+                             struttura if st else None, colonne=len(intestazione))
+    totali = {1: 'Totale', 3: 'somma', 4: 'somma', 5: 'somma', 6: 'somma', 7: 'somma', 9: 'somma', 10: 'somma'}
+    tabella_excel(ws, riga, intestazione, (28, 18, 14, 11, 16, 14, 11, 9, 15, 13), righe,
+                  formati={9: FORMATO_EURO, 10: FORMATO_EURO}, totali=totali if fogli else None)
+    imposta_stampa_excel(ws, True, '%d:%d' % (riga, riga), None, struttura if st else None, periodo)
     usati = {'riepilogo'}
+    teste = ['Giorno', 'Ora', 'Fine', 'Stanza', 'Paziente', 'Telefono', 'Prestazione', 'Stato',
+             'Convenzione', 'Importo', 'Pagato', 'Metodo', 'Note']
     for f in fogli:
         # un foglio per medico: il nome del foglio non puo' superare 31 caratteri ne' ripetersi
         base = re.sub(r'[\[\]:*?/\\]', ' ', f['operatore'].etichetta).strip()[:28] or 'Medico'
@@ -262,30 +261,24 @@ def riepilogo_excel(aaaamm):
             nome, n = '%s %d' % (base[:26], n), n + 1
         usati.add(nome.lower())
         w = wb.create_sheet(nome)
-        w.append(['%s — %s' % (f['operatore'].etichetta, nome_mese(primo))])
-        w['A1'].font = Font(bold=True, size=12)
-        w.append(['Giorno', 'Ora', 'Fine', 'Stanza', 'Paziente', 'Telefono', 'Prestazione', 'Stato',
-                  'Convenzione', 'Importo', 'Pagato', 'Metodo', 'Note'])
-        for c in w[2]:
-            c.font = Font(bold=True)
-        for a in f['apps']:
-            w.append([a.inizio.date(), a.inizio.strftime('%H:%M'), a.fine.strftime('%H:%M'),
-                      a.risorsa.nome if a.risorsa else '', a.paziente.etichetta if a.paziente else '',
-                      a.paziente.telefono if a.paziente else '', a.prestazione.nome if a.prestazione else '',
-                      ETICHETTA_STATO.get(a.stato, a.stato), a.convenzione or '',
-                      (a.importo_cent / 100.0) if a.importo_cent is not None else None,
-                      (a.pagato_cent / 100.0) if a.pagato else None,
-                      ETICHETTA_PAGAMENTO.get(a.pagamento or '', '') if a.pagato else '',
-                      testo_excel(a.note or '')])
-        for riga in w.iter_rows(min_row=3):
-            riga[0].number_format = 'dd/mm/yyyy'
-            riga[9].number_format = riga[10].number_format = '#,##0.00'
-        for colonna, larghezza in zip('ABCDEFGHIJKLM', (11, 6, 6, 14, 26, 15, 24, 14, 16, 10, 10, 11, 40)):
-            w.column_dimensions[colonna].width = larghezza
-        w.freeze_panes = 'A3'
-    societa = st.societa if st else next((x.societa for x in s.scalars(select(Struttura)) if x.societa), '')
-    if societa:
-        for w in wb.worksheets:
-            w.oddFooter.left.text = societa
+        righe_m = [[a.inizio.date(), a.inizio.time(), a.fine.time(),
+                    a.risorsa.nome if a.risorsa else '', a.paziente.etichetta if a.paziente else '',
+                    a.paziente.telefono if a.paziente else '', a.prestazione.nome if a.prestazione else '',
+                    ETICHETTA_STATO.get(a.stato, a.stato), a.convenzione or '',
+                    (a.importo_cent / 100.0) if a.importo_cent is not None else None,
+                    (a.pagato_cent / 100.0) if a.pagato else None,
+                    ETICHETTA_PAGAMENTO.get(a.pagamento or '', '') if a.pagato else '',
+                    a.note or ''] for a in f['apps']]
+        n_app = len(f['apps'])
+        riga_m = apri_foglio_excel(w, '%s — %s' % (f['operatore'].etichetta, nome_mese(primo)),
+                                   '%d appuntament%s in %d giorn%s' % (n_app, 'o' if n_app == 1 else 'i', f['giorni'],
+                                                                      'o' if f['giorni'] == 1 else 'i'),
+                                   struttura if st else None, colonne=len(teste))
+        tabella_excel(w, riga_m, teste, (11, 7, 7, 14, 26, 15, 24, 14, 16, 11, 11, 11, 36), righe_m,
+                      formati={1: FORMATO_DATA, 2: FORMATO_ORA, 3: FORMATO_ORA, 10: FORMATO_EURO, 11: FORMATO_EURO},
+                      totali={1: 'Totale', 5: '%d appuntament%s' % (n_app, 'o' if n_app == 1 else 'i'), 10: 'somma',
+                              11: 'somma'}, a_capo=(13,))
+        imposta_stampa_excel(w, True, '%d:%d' % (riga_m, riga_m), None, struttura if st else None,
+                             '%s · %s' % (f['operatore'].etichetta, nome_mese(primo)))
     nome = 'riepilogo-medici-%s%s.xlsx' % (primo.strftime('%Y-%m'), '-%d' % scelto.id if scelto else '')
     return scarica_excel(wb, nome)

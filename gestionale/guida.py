@@ -40,6 +40,7 @@ def P(titolo, testo, sel=None, contiene=None):
 
 # endpoint: la pagina dove si fa (per la guida sullo schermo)
 # apri: come aprirla dal programma (endpoint, argomenti; 'OGGI' = la data di oggi, 'MESE' = il mese,
+#   'LUNEDI_PROSSIMO' = il lunedi della settimana prossima,
 #   'FASCE' = il primo giorno da oggi con un turno a fasce proprie, nella sua struttura)
 # condizione: la guida vale solo se nella pagina c'e' questo elemento
 # foto: la pagina da fotografare sui dati di prova ({martedi}, {domani}, {oggi})
@@ -584,8 +585,8 @@ ARTICOLI += [
          in_breve='Menu Ambulatori: ogni stanza, mattina e pomeriggio, con il medico che la occupa, calcolato dai '
                   'turni. Le stanze libere sono «DISPONIBILE»; dal «+» si mette un medico. La matrice si scarica in '
                   'Excel per la direzione sanitaria.',
-         endpoint='ambulatori.settimana', apri=('ambulatori.settimana', {'iso': 'OGGI'}),
-         foto='/ambulatori/settimana/{oggi}?struttura=1',
+         endpoint='ambulatori.settimana', apri=('ambulatori.settimana', {'iso': 'LUNEDI_PROSSIMO'}),
+         foto='/ambulatori/settimana/{lunedi_prossimo}?struttura=1',
          passi=[
              P('Apri la pianificazione', 'Menu Ambulatori → Pianificazione della settimana: una riga per stanza, una '
                'colonna per ogni mattina e pomeriggio dei giorni di apertura.', 'nav.menu [data-guida="menu-ambulatori"]'),
@@ -621,6 +622,25 @@ ARTICOLI += [
                '[data-guida="programmazione-calendario"]'),
              P('In Excel', 'Scarica in Excel: il foglio della programmazione pronto da stampare o mandare, più il '
                'calendario del mese in un secondo foglio.', '[data-guida="programmazione-excel"]'),
+         ]),
+    dict(slug='riepilogo-live', gruppo='Ambulatori', titolo='Il riepilogo live: la giornata adesso, stanza per stanza',
+         in_breve='Menu Ambulatori → Riepilogo live: quanti appuntamenti sono fatti, in corso e da fare, ogni stanza '
+                  'con il medico di turno e fino a quando è libera, le mezze giornate libere dei prossimi giorni. Si '
+                  'rinnova da solo ogni minuto.',
+         endpoint='live.pagina', apri=('live.pagina', {}), foto='/riepilogo-live?struttura=1',
+         passi=[
+             P('I numeri di oggi', 'Appuntamenti, fatti, in corso, ancora da fare, in ritardo, in struttura, stanze '
+               'occupate ora e da confermare per il prossimo giorno: si aggiornano da soli ogni minuto.',
+               '[data-guida="live-numeri"]'),
+             P('Le stanze adesso', 'Per ogni stanza: visita in corso e fino a quando, oppure libera fino al prossimo '
+               'appuntamento o alla fine del turno, oppure nessun medico; sotto, il medico di turno e i conti del '
+               'giorno.', '[data-guida="live-stanze"]'),
+             P('Ora per ora', 'Una colonna per ogni ora di apertura: quanti appuntamenti e, in scuro, quanti sono già '
+               'arrivati.', '[data-guida="live-ore"]'),
+             P('Mezze giornate libere', 'Le stanze senza nessuno nei prossimi sette giorni, dalla pianificazione degli '
+               'ambulatori: da lì si mette un medico.', '[data-guida="live-libere"]'),
+             P('Modo schermo', 'Caratteri grandi e niente menu, per il secondo monitor o lo schermo della direzione: '
+               'si lascia aperta e si rinnova da sola.', '[data-guida="live-schermo"]'),
          ]),
     # ------------------------------------------------------- email e WhatsApp
     dict(slug='email-casella', gruppo='Email e WhatsApp', titolo='Collegare l\'email della clinica',
@@ -750,7 +770,10 @@ def giorno_con_fasce(entro=21):
 
 def indirizzo_apri(a, guida=True):
     endpoint, argomenti = a['apri']
-    valori = {'OGGI': date.today().isoformat(), 'MESE': date.today().strftime('%Y-%m')}
+    oggi = date.today()
+    valori = {'OGGI': oggi.isoformat(), 'MESE': oggi.strftime('%Y-%m'),
+              # la settimana prossima: tutta nel futuro, cosi' la pianificazione ha sempre il «+»
+              'LUNEDI_PROSSIMO': (oggi + timedelta(days=7 - oggi.weekday())).isoformat()}
     if 'FASCE' in argomenti.values():
         g, sid = giorno_con_fasce()
         valori['FASCE'] = g.isoformat()

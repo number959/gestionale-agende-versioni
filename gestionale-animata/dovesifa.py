@@ -1012,23 +1012,36 @@ def registro():
 
 @bp.route('/registro/<mese>.xlsx')
 def registro_excel(mese):
+    """Il registro del mese in Excel: una riga per paziente indirizzato, i
+    totali e, sotto, quanti per struttura di destinazione. Stile comune degli
+    Excel (comune.tabella_excel)."""
     s = ses()
     primo, ultimo = mese_da(mese)
     import openpyxl
-    from openpyxl.styles import Font
+    from comune import apri_foglio_excel, imposta_stampa_excel, tabella_excel, FORMATO_DATA
     righe = _del_mese(s, primo, ultimo, (Indirizzato.quando, Indirizzato.id))
     libro = openpyxl.Workbook()
     ws = libro.active
     ws.title = 'Indirizzati'
-    ws.append(['Data', 'Ora', 'Paziente', 'Prestazione', 'Branca', 'Struttura', 'Come', 'Note'])
-    for c in ws[1]:
-        c.font = Font(bold=True)
+    intestazioni = ['Data', 'Ora', 'Paziente', 'Prestazione', 'Branca', 'Struttura', 'Come', 'Note']
+    dati = [[x.quando.date(), x.quando.strftime('%H:%M'), x.paziente, x.prestazione, x.branca, x.gruppo_nome,
+             CANALI.get(x.canale, x.canale), x.note] for x in righe]
+    nome_mese = '%s %d' % (servizi.MESI[primo.month - 1], primo.year)
+    testa = apri_foglio_excel(ws, 'Pazienti indirizzati alle altre strutture del gruppo',
+                              '%s · %d in tutto' % (nome_mese.capitalize(), len(dati)), None, colonne=len(intestazioni))
+    riga = tabella_excel(ws, testa, intestazioni, (11, 7, 28, 42, 28, 24, 16, 30), dati, formati={1: FORMATO_DATA},
+                         totali={1: 'Totale', 3: '%d indirizzat%s' % (len(dati), 'o' if len(dati) == 1 else 'i')},
+                         a_capo=(8,))
+    # quanti per struttura di destinazione: il dato che il gruppo chiede
+    conteggi = {}
     for x in righe:
-        ws.append([x.quando.date(), x.quando.strftime('%H:%M'), x.paziente, x.prestazione, x.branca, x.gruppo_nome,
-                   CANALI.get(x.canale, x.canale), x.note])
-        ws.cell(row=ws.max_row, column=1).number_format = 'DD/MM/YYYY'
-    for lettera, larga in zip('ABCDEFGH', (11, 7, 28, 42, 28, 24, 16, 30)):
-        ws.column_dimensions[lettera].width = larga
+        conteggi[x.gruppo_nome] = conteggi.get(x.gruppo_nome, 0) + 1
+    if conteggi:
+        ws.cell(riga, 1, 'Per struttura di destinazione').font = openpyxl.styles.Font(name='Calibri', size=11, bold=True)
+        tabella_excel(ws, riga + 1, ['Struttura', 'Pazienti indirizzati'], (28, 20),
+                      sorted(([k, v] for k, v in conteggi.items()), key=lambda kv: (-kv[1], kv[0])),
+                      totali={1: 'Totale', 2: 'somma'}, filtro=False, blocca=False)
+    imposta_stampa_excel(ws, True, '%d:%d' % (testa, testa), None, None, 'Pazienti indirizzati · %s' % nome_mese)
     return scarica_excel(libro, 'Pazienti indirizzati %s.xlsx' % primo.strftime('%Y-%m'))
 
 

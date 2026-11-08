@@ -693,6 +693,35 @@ allontanava dall'agenda); mattina e pomeriggio divisi alle 14 (`ambulatori.META`
 sola, `anagrafiche.stanza_gia_assegnata`, condivisa con la scheda del turno. Prove `prove_112.py` e
 `prove_112_browser.py`.
 
+**Richieste del 7–8 novembre** (Giovanni, dalla chat): «verifica tutto», stampe e report migliorati,
+una dashboard animata da esporre su internet, un riepilogo live di agende e ambulatori.
+
+- **Revisione della 1.12** con agenti indipendenti (correttezza dei calcoli, sicurezza delle pagine,
+  Excel, equivalenza del refactor di `anagrafiche`): nessun difetto grave; sistemate le cose trovate
+  (giorni della matrice solo con turni delle stanze mostrate, festivo che chiude la mezza giornata
+  senza turno di un giorno, motivi di assenza e chiusura in parole semplici con l'articolo giusto
+  davanti a 1, 8 e 11, specialità con maiuscole diverse in un gruppo solo, `testo_excel` su ogni
+  testo degli Excel, altezza delle righe, «Togli» con data valida e mai su un turno già finito).
+- **Foglio del giorno** rifatto e **Excel con un aspetto solo** (vedi *Viste e stampe* nel
+  `LEGGIMI.md`): la pagina di stampa è una tabella con testata e piede ripetuti, numero di pagina nel
+  margine, conteggi e turni per stanza, colonne in più solo dove servono, totali, colonne a scelta
+  (data di nascita, casella da spuntare), preferenza «anche disdetti»; gli Excel passano dagli aiuti
+  di `comune.py` (titolo con struttura e periodo, intestazione blu, A4 adattato, intestazioni
+  ripetute, piede con il numero di pagina, totali).
+- **Riepilogo live** (`live.py`, *Ambulatori → Riepilogo live*, con «Modo schermo» per il secondo
+  monitor): la giornata adesso e ogni stanza; il JSON `/riepilogo-live.json` con soli conteggi è il
+  formato pensato per il cruscotto su internet.
+- **Dashboard su internet**: non ancora nel programma. Due pagine private pubblicate per Giovanni dalla
+  sessione: il prototipo animato con quattro stili e il riepilogo live con dati finti
+  (https://claude.ai/artifact/QBveCZQsB1AHyNigxoPNE9) e il documento delle proposte
+  (https://claude.ai/artifact/V1HQkTgpQud35dL6MCwF2N): cosa si vede, il motion design, la
+  riservatezza (il programma pubblicherebbe solo conteggi, cifrati; la chiave nel collegamento), le
+  tre strade a confronto (file cifrato sullo spazio web del gruppo via FTPS o su GitHub Pages, senza
+  server, consigliata; oppure un piccolo servizio su Cloudflare con accesso per persona, quando
+  servirà per più strutture), costi, tempi (5–6 giorni per la prima strada, versione 1.13) e le
+  decisioni che spettano a Giovanni. Il file del prototipo è anche in
+  `strumenti/cruscotto_prototipo/` (vedi sotto).
+
 ## Cose aperte
 
 - **Le notti del cambio dell'ora** (trovato dalla revisione della 1.11, non cambiato): un turno di

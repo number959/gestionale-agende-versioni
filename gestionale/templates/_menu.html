@@ -8,7 +8,7 @@
 {%- set _n_conf = n_da_confermare() if n_da_confermare is defined else 0 %}
 {%- set _segreteria = _sez in ('conferme', 'chiusura', 'confermare', 'cose', 'attesa', 'disponibilita', 'elenco') %}
 {%- set _configura = _sez in ('anagrafiche', 'gruppo', 'impostazioni', 'importa', 'invii', 'aggiornamenti') %}
-{%- set _ambulatori = _sez in ('ambulatori', 'programmazione') %}
+{%- set _ambulatori = _sez in ('ambulatori', 'programmazione', 'live') %}
 <nav class="menu" aria-label="Pagine">
   <a href="{{ url_for('cruscotto.oggi', struttura=_sid) }}"{% if _sez == 'oggi' %} class="attivo"{% endif %} data-guida="menu-oggi">Oggi</a>
   <a data-tasto="g" href="{{ url_for('giorno', iso=_data, struttura=_sid) }}"{% if _sez == 'giorno' %} class="attivo"{% endif %} data-guida="menu-giorno">Giorno</a>
@@ -24,6 +24,7 @@
     <div class="tendina" role="menu">
       <a href="{{ url_for('ambulatori.settimana', iso=_data, struttura=_sid) }}"{% if _sez == 'ambulatori' %} class="attivo"{% endif %}><b>Pianificazione della settimana</b><small>chi sta in quale stanza, mattina e pomeriggio; le stanze libere</small></a>
       <a href="{{ url_for('ambulatori.mese', aaaamm=_data[:7], struttura=_sid) }}"{% if _sez == 'programmazione' %} class="attivo"{% endif %}><b>Programmazione del mese</b><small>per specialità e medico, con le date in cui viene</small></a>
+      <a href="{{ url_for('live.pagina', struttura=_sid) }}"{% if _sez == 'live' %} class="attivo"{% endif %}><b>Riepilogo live</b><small>adesso: come va la giornata, stanza per stanza; si aggiorna da solo</small></a>
     </div>
   </div>
   <a data-tasto="d" href="{{ url_for('dovesifa.pagina', struttura=_sid) }}"{% if _sez == 'dove' %} class="attivo"{% endif %} data-guida="menu-dove">Dove si fa</a>

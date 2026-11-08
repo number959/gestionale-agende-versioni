@@ -59,7 +59,7 @@
           {% endfor %}
         {% else %}
           <tr class="primo-del-gruppo spento"><td>{{ giorni_nomi[giorno.data.weekday()] }} {{ giorno.data.day }}</td>
-            <td colspan="3">{% if i.chiusura %}chiusa: {{ i.chiusura }}{% elif i.festivo and i.chiude_festivo %}chiusa: {{ i.festivo }}{% else %}nessun medico in turno{% endif %}</td></tr>
+            <td colspan="3">{% if i.chiusura %}{{ motivo_chiusura(i.chiusura) }}{% elif i.festivo and i.chiude_festivo %}{{ motivo_chiusura(i.festivo) }}{% else %}nessun medico in turno{% endif %}</td></tr>
         {% endif %}
       {% endfor %}
     </table>

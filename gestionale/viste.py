@@ -401,27 +401,38 @@ def statistiche():
 @bp.route('/statistiche/excel')
 def statistiche_excel():
     from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
-    from openpyxl.utils import get_column_letter
     s = ses()
     st, _ = struttura_scelta(s)
     if st is None:
         abort(404)
     dal, al = periodo_statistiche()
     d = servizi.statistiche(s, st.id, dal, al)
+    from comune import apri_foglio_excel, imposta_stampa_excel, tabella_excel, FORMATO_DATA, FORMATO_EURO
     wb = Workbook()
-    grassetto, fondo = Font(bold=True), PatternFill('solid', fgColor='FF00B0F0')
+    periodo = 'dal %s al %s' % (dal.strftime('%d/%m/%Y'), al.strftime('%d/%m/%Y'))
+    CON_TOTALI = ('Stanze', 'Medici', 'Prestazioni', 'Giorni', 'Indirizzati')
 
     def foglio(titolo, intestazioni, righe, primo=False):
+        """Un foglio con l'aspetto comune a tutti gli Excel (1.12): titolo con la
+        struttura e il periodo, intestazione blu, A4, piede con il numero di pagina;
+        gli importi in euro dove la colonna lo dice, i totali dove hanno senso."""
         ws = wb.active if primo else wb.create_sheet()
         ws.title = titolo
-        ws.append(intestazioni)
-        for c in ws[1]:
-            c.font, c.fill = grassetto, fondo
-        for r in righe:
-            ws.append(r)
-        for i, _ in enumerate(intestazioni, start=1):
-            ws.column_dimensions[get_column_letter(i)].width = 22
+        formati = {i: FORMATO_EURO for i, testo in enumerate(intestazioni, start=1) if 'EUR' in testo or 'Importi' in testo}
+        testa = apri_foglio_excel(ws, 'Statistiche · %s' % titolo, periodo.capitalize(), st, colonne=len(intestazioni))
+        pulite = [[(v.date() if isinstance(v, datetime) else v) for v in r] for r in righe]
+        totali = None
+        if titolo in CON_TOTALI:
+            totali = {1: 'Totale'}
+            for i, testo in enumerate(intestazioni, start=1):
+                if i > 1 and testo not in ('Saturazione %',):
+                    totali[i] = 'somma'
+        tabella_excel(ws, testa, intestazioni, [26] + [18] * (len(intestazioni) - 1), pulite, formati=formati,
+                      totali=totali)
+        for i in range(testa + 1, ws.max_row + 1):          # le date del Riepilogo scritte all'italiana
+            if isinstance(ws.cell(i, 2).value, date):
+                ws.cell(i, 2).number_format = FORMATO_DATA
+        imposta_stampa_excel(ws, False, '%d:%d' % (testa, testa), None, st, 'statistiche %s' % periodo)
         return ws
 
     ore = lambda m: round(m / 60.0, 2)
@@ -446,8 +457,10 @@ def statistiche_excel():
             for p in d['per_prestazione']])
     foglio('Giorni', ['Giorno', 'Appuntamenti'],
            [[servizi.GIORNI[i], n] for i, n in enumerate(d['per_giorno_settimana'])])
-    foglio('Provenienza', ['Come ci hanno conosciuto', 'Pazienti nuovi'],
-           [list(x) for x in d['per_provenienza']] + [[]] + [['Inviati da', '']] + [list(x) for x in d['inviati']])
+    ws = foglio('Provenienza', ['Come ci hanno conosciuto', 'Pazienti nuovi'], [list(x) for x in d['per_provenienza']])
+    if d['inviati']:
+        tabella_excel(ws, ws.max_row + 2, ['Inviati da', 'Pazienti nuovi'], [26, 18], [list(x) for x in d['inviati']],
+                      filtro=False, blocca=False)
     import dovesifa
     indirizzati = dovesifa.conteggi_periodo(s, dal, al, st.id)
     if indirizzati:

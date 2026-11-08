@@ -38,7 +38,8 @@ from sqlalchemy import select
 import calendario
 import servizi
 from anagrafiche import Modulo, stanza_gia_assegnata
-from comune import data_da, destinazione_sicura, intero, mese_da, scarica_excel, struttura_scelta, testo_excel
+from comune import (data_da, destinazione_sicura, imposta_stampa_excel, intero, mese_da, scarica_excel,
+                    stile_intestazione_excel, struttura_scelta, testo_excel)
 from modelli import Operatore, Risorsa, Turno
 
 bp = Blueprint('ambulatori', __name__, url_prefix='/ambulatori')
@@ -121,11 +122,17 @@ def matrice(ses, lunedi, st, tipo=False):
     qualsiasi."""
     giorni_tutti = [lunedi + timedelta(days=i) for i in range(7)]
     regole = servizi.Regole(ses, giorni_tutti[0], giorni_tutti[-1])
-    giorni = [g for g in giorni_tutti if g.weekday() in st.giorni_aperti or regole.turni_validi(g, st)]
+    stanze = stanze_della(st)
+    ids = {r.id for r in stanze}
+
+    def con_turni(g):
+        return any(t.risorsa_id in ids and not (tipo and servizi.e_di_un_giorno(t)) for t in regole.turni_validi(g, st))
+
+    giorni = [g for g in giorni_tutti if g.weekday() in st.giorni_aperti or con_turni(g)]
     meta = mezze_giornate(st)
     info = {g: regole.giorno(g, st) for g in giorni}
     righe, libere, parziali = [], 0, 0
-    for r in stanze_della(st):
+    for r in stanze:
         celle = []
         for g in giorni:
             i = info[g]
@@ -168,10 +175,35 @@ def _gruppo(specialita):
     return s[:1].upper() + s[1:] if s else SENZA_SPECIALITA
 
 
+def _il(giorno):
+    """'il 2', ma 'l\'1', 'l\'8', 'l\'11'."""
+    return ("l'%d" if giorno in (1, 8, 11) else 'il %d') % giorno
+
+
+def _dal(giorno):
+    return ("dall'%d" if giorno in (1, 8, 11) else 'dal %d') % giorno
+
+
+def _al(giorno):
+    return ("all'%d" if giorno in (1, 8, 11) else 'al %d') % giorno
+
+
 def _elenco_giorni(giorni):
-    """'il 2, il 9 e il 16'."""
-    testi = ['il %d' % g.day for g in giorni]
+    """'il 2, il 9 e il 16' (con l'apostrofo davanti a 1, 8 e 11)."""
+    testi = [_il(g.day) for g in giorni]
     return testi[0] if len(testi) == 1 else ', '.join(testi[:-1]) + ' e ' + testi[-1]
+
+
+def motivo_assenza(motivo):
+    """'assente: ferie'; senza motivo solo 'assente'."""
+    m = (motivo or '').strip()
+    return 'assente' if not m or m.lower() == 'assente' else 'assente: %s' % m.lower()
+
+
+def motivo_chiusura(motivo):
+    """'chiusa: manutenzione'; senza motivo solo 'chiusa'."""
+    m = (motivo or '').strip()
+    return 'chiusa' if not m or m.lower() == 'chiusura' else 'chiusa: %s' % m.lower()
 
 
 def programmazione(ses, anno, mese, st):
@@ -197,11 +229,11 @@ def programmazione(ses, anno, mese, st):
         for g in date_valide:
             i = info[g]
             if t.operatore_id in i['assenze']:
-                saltate.append((g, 'assente: %s' % i['assenze'][t.operatore_id].lower()))
+                saltate.append((g, motivo_assenza(i['assenze'][t.operatore_id])))
             elif i['chiusura']:
-                saltate.append((g, 'chiusa: %s' % i['chiusura'].lower()))
+                saltate.append((g, motivo_chiusura(i['chiusura'])))
             elif i['chiude_festivo'] and not singolo:
-                saltate.append((g, 'chiusa: %s' % i['festivo'].lower()))
+                saltate.append((g, motivo_chiusura(i['festivo'])))
             else:
                 presenti.append(g)
         note = []
@@ -209,9 +241,9 @@ def programmazione(ses, anno, mese, st):
             note.append('un giorno solo')
         else:
             if t.valido_da and t.valido_da > primo:
-                note.append('dal %d' % t.valido_da.day)
+                note.append(_dal(t.valido_da.day))
             if t.valido_a and t.valido_a < ultimo:
-                note.append('fino al %d' % t.valido_a.day)
+                note.append('fino ' + _al(t.valido_a.day))
         motivi = {}
         for g, motivo in saltate:
             motivi.setdefault(motivo, []).append(g)
@@ -230,7 +262,7 @@ def programmazione(ses, anno, mese, st):
                               r['giorno'], r['ora_inizio'], r['risorsa'].ordine, r['risorsa'].nome))
     gruppi = []
     for r in righe:
-        if not gruppi or gruppi[-1]['specialita'] != r['specialita']:
+        if not gruppi or gruppi[-1]['specialita'].casefold() != r['specialita'].casefold():
             gruppi.append({'specialita': r['specialita'], 'righe': []})
         gruppi[-1]['righe'].append(r)
     # il calendario: giorno per giorno, chi c'e' in quale stanza
@@ -255,22 +287,14 @@ _spesso = Side(style='medium', color=BLU)
 
 
 def _intestazione(c, testo):
-    c.value = testo
-    c.font = Font(bold=True, color='FFFFFF')
-    c.fill = PatternFill('solid', fgColor=BLU)
-    c.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    """L'intestazione nello stile comune degli Excel (comune.stile_intestazione_excel)."""
+    stile_intestazione_excel(c, testo)
     c.border = BORDO
 
 
-def _stampa(ws, righe_titolo, orizzontale=True):
-    ws.page_setup.orientation = 'landscape' if orizzontale else 'portrait'
-    ws.page_setup.paperSize = ws.PAPERSIZE_A4
-    ws.page_setup.fitToWidth = 1
-    ws.page_setup.fitToHeight = 0
-    ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
-    ws.print_title_rows = righe_titolo
-    ws.oddFooter.right.text = 'Pagina &P di &N'
-    ws.page_margins.left = ws.page_margins.right = 0.4
+def _stampa(ws, righe_titolo, orizzontale=True, st=None, periodo=''):
+    """A4 che sta in larghezza, righe ripetute, testata e pie' di pagina comuni."""
+    imposta_stampa_excel(ws, orizzontale, righe_titolo, None, st, periodo)
 
 
 def _titolo(ws, riga, testo, colonne, dimensione=14):
@@ -294,9 +318,10 @@ def excel_matrice(st, vista, adesso=None):
     domenica = lunedi + timedelta(days=6)
     _titolo(ws, 1, testo_excel(st.nome), colonne, 16)
     _titolo(ws, 2, TITOLO_MATRICE, colonne, 13)
-    periodo = ('Settimana tipo: i turni che si ripetono ogni settimana, senza assenze e chiusure' if vista['tipo'] else
-               'Settimana dal %d %s al %d %s %d' % (lunedi.day, servizi.MESI[lunedi.month - 1], domenica.day,
-                                                   servizi.MESI[domenica.month - 1], domenica.year))
+    settimana = 'dal %d %s al %d %s %d' % (lunedi.day, servizi.MESI[lunedi.month - 1], domenica.day,
+                                             servizi.MESI[domenica.month - 1], domenica.year)
+    periodo = ('Settimana tipo: i turni che si ripetono ogni settimana (quelli validi nella settimana %s), senza '
+               'assenze e chiusure' % settimana if vista['tipo'] else 'Settimana %s' % settimana)
     ws.cell(3, 1, periodo).font = Font(italic=True)
     ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=colonne)
     ws.cell(4, 1, 'Destinatario: %s   ·   Compilato da: %s   ·   Data: %s' % (
@@ -311,7 +336,7 @@ def excel_matrice(st, vista, adesso=None):
         i = vista['info'][g]
         testo = '%s %d/%d' % (servizi.GIORNI[g.weekday()].capitalize(), g.day, g.month)
         if not vista['tipo'] and (i['chiusura'] or i['festivo']):
-            testo += '\n%s' % (i['chiusura'] or i['festivo'])
+            testo += '\n%s' % testo_excel(i['chiusura'] or i['festivo'])
         if vista['tipo']:
             testo = servizi.GIORNI[g.weekday()].capitalize()
         _intestazione(ws.cell(r0, c1), testo)
@@ -333,24 +358,28 @@ def excel_matrice(st, vista, adesso=None):
             c.border = BORDO
             c.alignment = Alignment(vertical='top', wrap_text=True)
             if cella['chiuso']:
-                c.value = 'CHIUSO: %s' % cella['chiuso']
+                c.value = testo_excel('CHIUSO: %s' % cella['chiuso'])
                 c.fill = grigio
                 c.font = Font(color='5B6B75', italic=True)
             elif cella['tutta_libera']:
-                c.value = 'DISPONIBILE' + ''.join('\n(%s assente: %s)' % (testo_excel(o.etichetta), motivo.lower())
-                                                  for o, motivo, _ in cella['assenti'])
+                c.value = testo_excel('DISPONIBILE' + ''.join('\n(%s %s)' % (o.etichetta, motivo_assenza(motivo))
+                                                              for o, motivo, _ in cella['assenti']))
                 c.fill = verde
                 c.font = Font(bold=True, color='1E6B2E')
             else:
                 testi = ['%s %s' % (testo_excel(p['operatore'].etichetta), fascia(p['da'], p['a']).replace('–', '-'))
                          for p in cella['presenze']]
                 testi += ['libero %s' % fascia(da, a).replace('–', '-') for da, a in cella['libere']]
-                testi += ['(%s assente: %s)' % (testo_excel(o.etichetta), motivo.lower()) for o, motivo, _ in cella['assenti']]
-                c.value = '\n'.join(testi)
+                testi += ['(%s %s)' % (o.etichetta, motivo_assenza(motivo)) for o, motivo, _ in cella['assenti']]
+                c.value = testo_excel('\n'.join(testi))
                 if cella['libere']:
                     c.fill = verde_chiaro
-        ws.row_dimensions[riga].height = max(30, 15 * max(1, max(
-            (len(x['presenze']) + len(x['libere']) + len(x['assenti']) for x in r['celle']), default=1)))
+        # l'altezza: una riga di testo ogni 22 caratteri circa, in una colonna larga 19
+        righe_testo = 1
+        for k in range(len(r['celle'])):
+            v = ws.cell(riga, 2 + k).value or ''
+            righe_testo = max(righe_testo, sum(max(1, -(-len(pezzo) // 22)) for pezzo in str(v).split('\n')))
+        ws.row_dimensions[riga].height = max(30, 15 * righe_testo)
         riga += 1
     if not vista['righe']:
         ws.cell(riga, 1, 'Nessuna stanza attiva in questa struttura.')
@@ -372,7 +401,7 @@ def excel_matrice(st, vista, adesso=None):
     ws.cell(riga, 1, '_' * 30)
     ws.cell(riga, 1 + colonne // 2, '_' * 30)
     ws.freeze_panes = ws.cell(r0 + 2, 2)
-    _stampa(ws, '%d:%d' % (r0, r0 + 1))
+    _stampa(ws, '%d:%d' % (r0, r0 + 1), True, st, 'matrice ambulatori · ' + periodo.lower().split(':')[0])
     return wb
 
 
@@ -402,11 +431,11 @@ def excel_programmazione(st, vista, adesso=None):
     riga = r0 + 1
     for gruppo in vista['gruppi']:
         for n, r in enumerate(gruppo['righe']):
-            valori = [gruppo['specialita'], testo_excel(r['operatore'].etichetta),
+            valori = [testo_excel(gruppo['specialita']), testo_excel(r['operatore'].etichetta),
                       servizi.GIORNI[r['giorno']].capitalize(),
-                      ', '.join(str(g.day) for g in r['date']) or '—',
+                      (r['date'][0].day if len(r['date']) == 1 else ', '.join(str(g.day) for g in r['date'])) or '—',
                       fascia(r['ora_inizio'], r['ora_fine']).replace('–', '-'), testo_excel(r['risorsa'].nome),
-                      '; '.join(r['note'])]
+                      testo_excel('; '.join(r['note']))]
             for c, v in enumerate(valori, start=1):
                 cella = ws.cell(riga, c, v)
                 cella.border = BORDO
@@ -423,7 +452,7 @@ def excel_programmazione(st, vista, adesso=None):
     ws.freeze_panes = ws.cell(r0 + 1, 1)
     if vista['righe']:
         ws.auto_filter.ref = 'A%d:%s%d' % (r0, get_column_letter(len(intestazioni)), riga - 1)
-    _stampa(ws, '%d:%d' % (r0, r0))
+    _stampa(ws, '%d:%d' % (r0, r0), True, st, 'programmazione ambulatori · ' + nome_mese)
     # il calendario: giorno per giorno
     wc = wb.create_sheet('Calendario')
     _titolo(wc, 1, 'Calendario di %s — %s' % (nome_mese, testo_excel(st.nome)), 5, 14)
@@ -439,7 +468,7 @@ def excel_programmazione(st, vista, adesso=None):
         motivo = i['chiusura'] or (i['festivo'] if i['chiude_festivo'] else None)
         if not giorno['presenze']:
             for c, v in enumerate([g, servizi.GIORNI[g.weekday()].capitalize(),
-                                   ('chiusa: %s' % motivo) if motivo else 'nessun medico in turno', '', ''], start=1):
+                                   testo_excel(motivo_chiusura(motivo)) if motivo else 'nessun medico in turno', '', ''], start=1):
                 cella = wc.cell(riga, c, v)
                 cella.border, cella.fill = BORDO, grigio
             wc.cell(riga, 1).number_format = 'dd/mm/yyyy'
@@ -457,7 +486,7 @@ def excel_programmazione(st, vista, adesso=None):
             wc.cell(riga, 1).number_format = 'dd/mm/yyyy'
             riga += 1
     wc.freeze_panes = 'A4'
-    _stampa(wc, '3:3', orizzontale=False)
+    _stampa(wc, '3:3', False, st, 'calendario · ' + nome_mese)
     return wb
 
 
@@ -493,7 +522,7 @@ def settimana(iso):
                            medici=medici, lunedi=lunedi, oggi=date.today(), titolo=_titolo_settimana(lunedi),
                            prima=(lunedi - timedelta(days=7)).isoformat(), dopo=(lunedi + timedelta(days=7)).isoformat(),
                            giorni_nomi=servizi.GIORNI, fascia=fascia, sezione='ambulatori', data_menu=g.isoformat(),
-                           aaaamm=lunedi.strftime('%Y-%m'))
+                           aaaamm=lunedi.strftime('%Y-%m'), motivo_assenza=motivo_assenza, motivo_chiusura=motivo_chiusura)
 
 
 @bp.route('/settimana/<iso>.xlsx')
@@ -505,7 +534,7 @@ def settimana_excel(iso):
     lunedi, _ = _settimana_di(iso)
     tipo = request.args.get('tipo') == '1'
     vista = matrice(s, lunedi, st, tipo=tipo)
-    nome = 'matrice-ambulatori-%s.xlsx' % ('settimana-tipo' if tipo else lunedi.isoformat())
+    nome = 'matrice-ambulatori-%s%s.xlsx' % (lunedi.isoformat(), '-settimana-tipo' if tipo else '')
     return scarica_excel(excel_matrice(st, vista), nome)
 
 
@@ -524,7 +553,7 @@ def mese(aaaamm):
                            mese_nome=servizi.MESI[primo.month - 1],
                            prima=prima.strftime('%Y-%m'), dopo=dopo.strftime('%Y-%m'), aaaamm=primo.strftime('%Y-%m'),
                            oggi=date.today(), giorni_nomi=servizi.GIORNI, fascia=fascia, sezione='programmazione',
-                           data_menu=max(primo, min(date.today(), ultimo)).isoformat())
+                           data_menu=max(primo, min(date.today(), ultimo)).isoformat(), motivo_chiusura=motivo_chiusura)
 
 
 @bp.route('/mese/<aaaamm>.xlsx')
@@ -603,11 +632,17 @@ def togli():
     st, _ = struttura_scelta(s)
     if st is None:
         return render_template('da_configurare.html'), 200
-    g = data_da(request.form.get('data'))
+    g = Modulo(request.form).data('data', 'Giorno')
+    if g is None:
+        flash('Giorno non valido: il turno non è stato toccato.', 'errore')
+        return redirect(url_for('ambulatori.settimana', iso=date.today().isoformat(), struttura=st.id))
     lunedi = calendario.lunedi_di(g)
     t = s.get(Turno, intero(request.form.get('turno')))
     if t is None or t.risorsa.struttura_id != st.id:
         flash('Turno non trovato: forse è già stato tolto.', 'errore')
+        return redirect(_torna(st, g))
+    if t.valido_a is not None and t.valido_a < lunedi:
+        flash('Quel turno era già finito il %s: non c\'è niente da togliere.' % t.valido_a.strftime('%d/%m/%Y'), 'avviso')
         return redirect(_torna(st, g))
     with _lucchetto:
         chi = '%s, %s dalle %s alle %s' % (t.operatore.etichetta, servizi.GIORNI[t.giorno_settimana],

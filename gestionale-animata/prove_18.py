@@ -981,11 +981,14 @@ def p_excel():
     j = righe['Modellini Carla']
     assert ws.cell(row=j, column=2 + 9).value == '8–12' and ws.cell(row=j, column=2 + 31 + 4).value == 1
     el = wb['Elenco']
-    assert el.max_row == 1 + 4, el.max_row
+    # 1.12: titolo, «esportato il», riga vuota, intestazione, le righe, la riga dei totali
+    testa = next(i for i in range(1, 8) if el.cell(i, 1).value == 'Data')
+    assert el.max_row == testa + 4 + 1 and el.cell(el.max_row, 1).value == 'Totale', (testa, el.max_row)
     r = C.get('/personale/turni/mese/2026-12.xlsx?area=Degenza')
     el = load_workbook(BytesIO(r.data))['Elenco']
-    valori = [el.cell(row=x, column=10).value for x in range(2, el.max_row + 1)]
-    assert 'Ambulatori' not in valori and el.max_row == 1 + 3, valori
+    testa = next(i for i in range(1, 8) if el.cell(i, 1).value == 'Data')
+    valori = [el.cell(row=x, column=10).value for x in range(testa + 1, el.max_row + 1)]
+    assert 'Ambulatori' not in valori and el.max_row == testa + 3 + 1, valori
 
 
 def p_oggi():
