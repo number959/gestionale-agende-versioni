@@ -12,8 +12,10 @@ Scritto il 5 ottobre 2026 alla versione 1.7, aggiornato il 12 ottobre 2026 alla 
 versione 1.9.1 (l'email con qualsiasi casella, senza bisogno della verifica in due passaggi
 di Gmail), il 31 ottobre 2026 alla versione **1.10** (le fasce di ogni ambulatorio), quando
 Giovanni ha chiesto di continuare il lavoro con **Claude Code** sul suo PC (vedi *Passare a
-Claude Code*), e il 1° novembre 2026 alla versione **1.11** (l'autoriparazione e un giro di
-correzioni: vedi *La 1.11*).
+Claude Code*), il 1° novembre 2026 alla versione **1.11** (l'autoriparazione e un giro di
+correzioni: vedi *La 1.11*), l'8 novembre 2026 alla **1.12** (ambulatori, riepilogo live, stampe ed
+Excel, certificati: vedi *La 1.12*) e lo stesso giorno alla **1.12.1** (le cose aperte chiuse e le
+prove su un Windows vero: vedi *La 1.12.1*).
 
 ## In breve
 
@@ -92,6 +94,16 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
+- **Versione 1.12.1, pubblicata l'8 novembre 2026**: la release `v1.12.1`, segnata come ultima, con
+  i due Setup, i due file delle versioni e, per la prima volta, il PDF della guida (53 pagine),
+  costruiti dall'automazione di GitHub. Porta le ore vere nelle notti del cambio dell'ora, i codici
+  dei turni scritti di seguito, lo svuotamento dei file rovinati messi da parte, e le prove su un
+  Windows vero con GitHub Actions (verdi in tutte e due le cartelle, anche nel browser). Vedi *La
+  1.12.1*. Dentro c'è la **1.12** (pubblicata la notte prima): il menu *Ambulatori* con la
+  pianificazione della settimana, la matrice e la programmazione del mese in Excel, il *Riepilogo
+  live*, il foglio del giorno rifatto, tutti gli Excel con lo stesso aspetto, e i certificati dei
+  siti portati dentro il programma (la causa dell'errore degli aggiornamenti della 1.9 alla clinica).
+  Alla clinica c'è ancora la 1.9 animata: la 1.12.1 va messa una volta a mano (vedi *Cose aperte*).
 - **Versione 1.11, pubblicata il 1° novembre 2026**: la release `v1.11` nel progetto delle versioni,
   segnata come ultima, con i quattro file costruiti dall'automazione di GitHub (vedi *La 1.11*).
   L'indirizzo pubblico risponde «1.11» e i Setup pubblicati sono stati provati sopra la 1.10 con i
