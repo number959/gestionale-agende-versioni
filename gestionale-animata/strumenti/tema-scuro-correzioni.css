@@ -84,5 +84,7 @@
   html.scuro .mezza.passata, html.scuro .mezza.chiusa { background: transparent; border: 1px dashed #6B7886; }
   html.scuro .avanzamento-live .gr-disdetti, html.scuro .conti-oggi-live .gr-disdetti i { background: #6B7886; }
   html.scuro .tabella-periodo tfoot th { background: #22303F; color: #E1E7ED; }
+  html.scuro .occupazione { background: #2E3843; }
+  html.scuro .occupazione span { background: #4F86D6; }
   @media (max-width: 700px) { html.scuro .conti-oggi-live .totale { border-right: 0; } }
 }

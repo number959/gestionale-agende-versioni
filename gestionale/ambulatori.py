@@ -740,8 +740,11 @@ def testo_ore(minuti):
 def ore_in_parole(minuti):
     """450 -> '7 ore e 30 minuti', 60 -> '1 ora', 0 -> '0 ore'."""
     h, m = divmod(int(round(minuti or 0)), 60)
+    minuti_ = '%d minut%s' % (m, 'o' if m == 1 else 'i')
+    if not h and m:
+        return minuti_
     ore = '%d or%s' % (h, 'a' if h == 1 else 'e')
-    return ore + (' e %d minut%s' % (m, 'o' if m == 1 else 'i') if m else '')
+    return ore + (' e %s' % minuti_ if m else '')
 
 
 def titolo_periodo(da, a):
@@ -759,6 +762,8 @@ def il_percento(valore):
     """'il 54%', ma 'l'11,6%', 'l'8%', 'l'80%' (davanti a una vocale l'articolo si apostrofa)."""
     intero_ = int(valore)
     testo = ('%g' % round(valore, 1)).replace('.', ',')
+    if intero_ == 0:
+        return 'lo %s%%' % testo
     return ("l'%s%%" if str(intero_).startswith('8') or intero_ in (1, 11) else 'il %s%%') % testo
 
 
@@ -766,15 +771,31 @@ def _percento(parte, tutto):
     return round(100.0 * parte / tutto, 1) if tutto else None
 
 
+def stanze_del_periodo(ses, st, da, a):
+    """Le stanze del riepilogo: quelle attive (senza sale operatorie) e anche quelle disattivate dopo, se nel
+    periodo avevano appuntamenti: in un mese passato il lavoro fatto in una stanza chiusa poi conta ancora."""
+    stanze = list(stanze_della(st))
+    spente = ses.scalars(select(Risorsa).where(Risorsa.struttura_id == st.id, Risorsa.attiva == False,
+                                               Risorsa.tipo != 'SALA_OPERATORIA').order_by(Risorsa.ordine)).all()
+    inizio, fine = datetime.combine(da, time(0)), datetime.combine(a + timedelta(days=1), time(0))
+    for r in spente:
+        if ses.scalar(select(Appuntamento.id).where(Appuntamento.risorsa_id == r.id, Appuntamento.inizio >= inizio,
+                                                    Appuntamento.inizio < fine).limit(1)):
+            stanze.append(r)
+    return stanze
+
+
 def riepilogo_periodo(ses, st, da, a, adesso=None):
     """Tutti i numeri del riepilogo fra 'da' e 'a' (compresi), gia' pronti per la pagina, l'Excel e il JSON."""
     adesso = adesso or datetime.now()
-    stanze = stanze_della(st)
-    per_id = {r.id: r for r in stanze}
     regole = servizi.Regole(ses, da, a)
+    stanze = stanze_del_periodo(ses, st, da, a)
+    per_id = {r.id: r for r in stanze}
+    attive = {r.id for r in stanze_della(st)}
+    # anche il giorno prima: la coda dopo la mezzanotte di una visita cominciata la sera prima conta nel giorno dopo
     appuntamenti = ses.scalars(select(Appuntamento).where(
         Appuntamento.risorsa_id.in_(list(per_id) or [0]),
-        Appuntamento.inizio >= datetime.combine(da, time(0)),
+        Appuntamento.inizio >= datetime.combine(da - timedelta(days=1), time(0)),
         Appuntamento.inizio < datetime.combine(a + timedelta(days=1), time(0)))).all()
     etichette = {o.id: o.etichetta for o in ses.scalars(select(Operatore))}
 
@@ -784,29 +805,42 @@ def riepilogo_periodo(ses, st, da, a, adesso=None):
         return x
 
     totale = dict(conti(), mezze=0, libere=0)
-    righe_stanze = {r.id: dict(conti(), stanza=r.nome, medici=[], mezze=0, libere=0) for r in stanze}
+    righe_stanze = {r.id: dict(conti(), stanza=r.nome + ('' if r.id in attive else ' (non più attiva)'), medici=[],
+                               mezze=0, libere=0) for r in stanze}
     righe_medici = {}
     giorni = []
-    per_giorno = {}
+    per_giorno, code = {}, {}
     for x in appuntamenti:
         per_giorno.setdefault(x.inizio.date(), []).append(x)
+        if x.fine.date() > x.inizio.date():
+            code.setdefault(x.inizio.date() + timedelta(days=1), []).append(x)
 
-    def minuti(dt, g):
-        return 24 * 60 if dt.date() > g else dt.hour * 60 + dt.minute
+    def intervallo(x, g):
+        """I minuti dell'appuntamento x nel giorno g (la parte prima o dopo la mezzanotte)."""
+        da_m = x.inizio.hour * 60 + x.inizio.minute if x.inizio.date() == g else 0
+        a_m = x.fine.hour * 60 + x.fine.minute if x.fine.date() == g else 24 * 60
+        return da_m, a_m
 
     g = da
     while g <= a:
         info = regole.giorno(g, st)
         chiusa = info['chiusura'] or (info['festivo'] if info['chiude_festivo'] else None)
+        del_giorno = [x for x in per_giorno.get(g, []) if x.risorsa_id in per_id]
+        nel_giorno = del_giorno + [x for x in code.get(g, []) if x.risorsa_id in per_id]
+        turni_giorno = {r.id: regole.turni_effettivi(g, st, r.id, info) for r in stanze}
+        attivo = any(turni_giorno.values()) or bool(del_giorno)
         riga_g = dict(conti(), data=g.isoformat(), giorno=servizi.GIORNI[g.weekday()],
-                      etichetta='%s %d/%d' % (servizi.GIORNI[g.weekday()], g.day, g.month), chiusa=chiusa,
-                      aperto=info['giorno_di_apertura'])
-        del_giorno = per_giorno.get(g, [])
+                      etichetta='%s %d/%d' % (servizi.GIORNI[g.weekday()], g.day, g.month),
+                      # chiusa solo se quel giorno non c'e' niente: un turno di un giorno nel festivo lo apre
+                      chiusa=chiusa if not attivo else None, aperto=info['giorno_di_apertura'] or attivo,
+                      chiusa_ma_aperta=chiusa if attivo else None)
+        # i medici: la loro presenza nel giorno, unita su tutte le stanze (due stanze insieme non contano doppio)
+        turni_medico, occupa_medico = {}, {}
         for r in stanze:
-            turni = regole.turni_effettivi(g, st, r.id, info)
-            qui = [x for x in del_giorno if x.risorsa_id == r.id]
+            turni = turni_giorno[r.id]
+            qui = [x for x in nel_giorno if x.risorsa_id == r.id]
             int_turni = unisci_intervalli((_minuti(t.ora_inizio), _minuti(t.ora_fine)) for t in turni)
-            int_occ = unisci_intervalli((minuti(x.inizio, g), minuti(x.fine, g)) for x in qui if x.stato in STATI_OCCUPANO)
+            int_occ = unisci_intervalli(intervallo(x, g) for x in qui if x.stato in STATI_OCCUPANO)
             m_turno, m_occ = durata_intervalli(int_turni), sovrapposizione(int_turni, int_occ)
             m_fuori = durata_intervalli(int_occ) - m_occ
             for d in (totale, righe_stanze[r.id], riga_g):
@@ -814,35 +848,47 @@ def riepilogo_periodo(ses, st, da, a, adesso=None):
                 d['minuti_occupati'] += m_occ
                 d['minuti_fuori_turno'] += m_fuori
             for t in turni:
+                turni_medico.setdefault(t.operatore_id, []).append((_minuti(t.ora_inizio), _minuti(t.ora_fine)))
+                m = righe_medici.setdefault(t.operatore_id, dict(conti(), medico=etichette.get(t.operatore_id, '?'),
+                                                                 giorni=set(), stanze=[]))
+                m['giorni'].add(g)
+                if r.nome not in m['stanze']:
+                    m['stanze'].append(r.nome)
                 if etichette.get(t.operatore_id) and etichette[t.operatore_id] not in righe_stanze[r.id]['medici']:
                     righe_stanze[r.id]['medici'].append(etichette[t.operatore_id])
-            for oid in sorted({t.operatore_id for t in turni} | {x.operatore_id for x in qui}):
-                m = righe_medici.setdefault(oid, dict(conti(), medico=etichette.get(oid, '?'), giorni=set(), stanze=[]))
-                t_op = unisci_intervalli((_minuti(t.ora_inizio), _minuti(t.ora_fine)) for t in turni if t.operatore_id == oid)
-                o_op = unisci_intervalli((minuti(x.inizio, g), minuti(x.fine, g)) for x in qui
-                                         if x.operatore_id == oid and x.stato in STATI_OCCUPANO)
-                m['minuti_turno'] += durata_intervalli(t_op)
-                m['minuti_occupati'] += sovrapposizione(t_op, o_op)
-                m['minuti_fuori_turno'] += durata_intervalli(o_op) - sovrapposizione(t_op, o_op)
-                if t_op:
-                    m['giorni'].add(g)
-                    if r.nome not in m['stanze']:
-                        m['stanze'].append(r.nome)
             for x in qui:
+                if x.stato in STATI_OCCUPANO:
+                    occupa_medico.setdefault(x.operatore_id, []).append(intervallo(x, g))
+            for x in qui:
+                if x.inizio.date() != g:
+                    continue                      # la coda della sera prima: conta nei minuti, non negli appuntamenti
                 gruppo = gruppo_periodo(x, adesso)
-                for d in (totale, righe_stanze[r.id], riga_g, righe_medici[x.operatore_id]):
+                m = righe_medici.setdefault(x.operatore_id, dict(conti(), medico=etichette.get(x.operatore_id, '?'),
+                                                                 giorni=set(), stanze=[]))
+                for d in (totale, righe_stanze[r.id], riga_g, m):
                     d['totale'] += 1
                     d[gruppo] += 1
+        for oid in set(turni_medico) | set(occupa_medico):
+            t_op = unisci_intervalli(turni_medico.get(oid, []))
+            o_op = unisci_intervalli(occupa_medico.get(oid, []))
+            m = righe_medici.setdefault(oid, dict(conti(), medico=etichette.get(oid, '?'), giorni=set(), stanze=[]))
+            m['minuti_turno'] += durata_intervalli(t_op)
+            m['minuti_occupati'] += sovrapposizione(t_op, o_op)
+            m['minuti_fuori_turno'] += durata_intervalli(o_op) - sovrapposizione(t_op, o_op)
         giorni.append(riga_g)
         g += timedelta(days=1)
 
-    # le mezze giornate senza nessun medico, dalla matrice degli ambulatori (come la pianificazione)
+    # le mezze giornate senza nessun medico, dalla matrice degli ambulatori (come la pianificazione); in un giorno
+    # che non e' di apertura (la domenica) contano solo quelle con un turno, non tutte le stanze
+    aperti = {x['data'] for x in giorni if x['aperto'] and x['chiusa'] is None}
     lunedi = calendario.lunedi_di(da)
     while lunedi <= a:
         for riga in matrice(ses, lunedi, st)['righe']:
             r = righe_stanze.get(riga['risorsa'].id)
             for c in riga['celle']:
-                if r is None or not (da <= c['data'] <= a) or c['chiuso']:
+                if r is None or not (da <= c['data'] <= a) or c['chiuso'] or c['data'].isoformat() not in aperti:
+                    continue
+                if c['data'].weekday() not in st.giorni_aperti and c['tutta_libera']:
                     continue
                 r['mezze'] += 1
                 totale['mezze'] += 1
@@ -867,6 +913,12 @@ def riepilogo_periodo(ses, st, da, a, adesso=None):
     # la frase in cima
     if not totale['totale'] and not totale['minuti_turno']:
         frase = 'Nel periodo non ci sono appuntamenti né turni nelle stanze.'
+    elif not totale['totale']:
+        frase = '%s: nessun appuntamento nelle stanze.' % (titolo_periodo(da, a)[:1].upper() + titolo_periodo(da, a)[1:])
+        frase += ' %s di turno, senza visite.' % ore_in_parole(totale['minuti_turno']).capitalize()
+        if totale['mezze']:
+            frase += ' %d mezz%s giornat%s su %d senza nessun medico.' % (
+                totale['libere'], 'a' if totale['libere'] == 1 else 'e', 'a' if totale['libere'] == 1 else 'e', totale['mezze'])
     else:
         pezzi = ['%d appuntament%s' % (totale['totale'], 'o' if totale['totale'] == 1 else 'i')]
         dettagli = ['%d fatt%s' % (totale['fatti'], 'o' if totale['fatti'] == 1 else 'i')]
@@ -910,8 +962,8 @@ def excel_riepilogo(st, r, adesso=None):
     ws.row_dimensions[riga].height = 48
     t = r['totale']
     righe = [['Appuntamenti', t['totale']]] + [[nome.capitalize(), t[k]] for k, nome in GRUPPI_PERIODO] + [
-        ['Ore di turno', round(t['minuti_turno'] / 60, 2)], ['Ore occupate (dentro i turni)', round(t['minuti_occupati'] / 60, 2)],
-        ['Ore prenotate fuori turno', round(t['minuti_fuori_turno'] / 60, 2)],
+        ['Ore di turno', t['minuti_turno'] / 60], ['Ore occupate (dentro i turni)', t['minuti_occupati'] / 60],
+        ['Ore prenotate fuori turno', t['minuti_fuori_turno'] / 60],
         ['Occupazione delle ore di turno', t['occupazione']], ['Non presentati su chi doveva venire', t['non_presentati_su']],
         ['Mezze giornate', t['mezze']], ['Mezze giornate senza nessun medico', t['libere']]]
     tabella_excel(ws, riga + 2, ['Cosa', 'Quanto'], [42, 14], righe, filtro=False, blocca=False)
@@ -922,31 +974,33 @@ def excel_riepilogo(st, r, adesso=None):
             ws.cell(n, 2).number_format = FORMATO_PERCENTO
     imposta_stampa_excel(ws, orizzontale=False, struttura=st, periodo=r['titolo'])
 
-    def foglio(nome, intestazioni, larghezze, righe_f, formati, orizzontale=True):
+    def foglio(nome, intestazioni, larghezze, righe_f, formati, orizzontale=True, a_capo=(), senza_somma=()):
         w = wb.create_sheet(nome)
         rr = apri_foglio_excel(w, 'Riepilogo di agende e ambulatori · %s' % nome.lower(), r['titolo'], st, adesso,
                                colonne=len(intestazioni))
-        tabella_excel(w, rr, intestazioni, larghezze, righe_f, formati=formati, zebra=True,
-                      totali={k: 'somma' for k in range(3, len(intestazioni) + 1) if k not in formati or formati[k] != FORMATO_PERCENTO})
+        tabella_excel(w, rr, intestazioni, larghezze, righe_f, formati=formati, zebra=True, a_capo=a_capo,
+                      totali={k: 'somma' for k in range(3, len(intestazioni) + 1)
+                              if formati.get(k) != FORMATO_PERCENTO and k not in senza_somma})
         imposta_stampa_excel(w, orizzontale=orizzontale, righe_titolo='%d:%d' % (rr, rr), struttura=st, periodo=r['titolo'])
 
     numeri = ['Appuntamenti', 'Fatti', 'Non presentati', 'Disdetti', 'Da segnare', 'Da fare']
     chiavi = ['totale'] + [k for k, _ in GRUPPI_PERIODO]
     foglio('Stanze', ['Stanza', 'Medici', 'Ore di turno', 'Ore occupate', 'Occupazione'] + numeri +
            ['Mezze giornate', 'Senza medico'], [20, 30, 11, 11, 12, 13, 9, 13, 10, 11, 9, 12, 12],
-           [[x['stanza'], ', '.join(x['medici']), round(x['minuti_turno'] / 60, 2), round(x['minuti_occupati'] / 60, 2),
+           [[x['stanza'], ', '.join(x['medici']), x['minuti_turno'] / 60, x['minuti_occupati'] / 60,
              x['occupazione']] + [x[k] for k in chiavi] + [x['mezze'], x['libere']] for x in r['stanze']],
-           {3: FORMATO_ORE, 4: FORMATO_ORE, 5: FORMATO_PERCENTO})
+           {3: FORMATO_ORE, 4: FORMATO_ORE, 5: FORMATO_PERCENTO}, a_capo=(2,))
     foglio('Medici', ['Medico', 'Stanze', 'Giorni di turno', 'Ore di turno', 'Ore occupate', 'Occupazione'] + numeri +
            ['Non presentati %'], [24, 30, 10, 11, 11, 12, 13, 9, 13, 10, 11, 9, 13],
-           [[x['medico'], ', '.join(x['stanze']), x['n_giorni'], round(x['minuti_turno'] / 60, 2),
-             round(x['minuti_occupati'] / 60, 2), x['occupazione']] + [x[k] for k in chiavi] + [x['non_presentati_su']]
+           [[x['medico'], ', '.join(x['stanze']), x['n_giorni'], x['minuti_turno'] / 60,
+             x['minuti_occupati'] / 60, x['occupazione']] + [x[k] for k in chiavi] + [x['non_presentati_su']]
             for x in r['medici']],
-           {4: FORMATO_ORE, 5: FORMATO_ORE, 6: FORMATO_PERCENTO, 13: FORMATO_PERCENTO})
+           {4: FORMATO_ORE, 5: FORMATO_ORE, 6: FORMATO_PERCENTO, 13: FORMATO_PERCENTO}, a_capo=(2,), senza_somma=(3,))
     if r['giorni_periodo'] > 1:
         foglio('Giorni', ['Giorno', 'Chiusa', 'Ore di turno', 'Ore occupate', 'Occupazione'] + numeri,
                [16, 22, 11, 11, 12, 13, 9, 13, 10, 11, 9],
-               [[x['etichetta'], x['chiusa'] or '', round(x['minuti_turno'] / 60, 2), round(x['minuti_occupati'] / 60, 2),
+               [[x['etichetta'], x['chiusa'] or ('' if x['aperto'] else 'giorno di chiusura'), x['minuti_turno'] / 60,
+                 x['minuti_occupati'] / 60,
                  x['occupazione']] + [x[k] for k in chiavi] for x in r['giorni']],
                {3: FORMATO_ORE, 4: FORMATO_ORE, 5: FORMATO_PERCENTO}, orizzontale=False)
     return wb
@@ -976,11 +1030,16 @@ def _vicini(da, a, nome):
         return ({'da': (da - timedelta(days=7)).isoformat(), 'a': (a - timedelta(days=7)).isoformat()},
                 {'da': (da + timedelta(days=7)).isoformat(), 'a': (a + timedelta(days=7)).isoformat()})
     if nome in ('mese', 'mese-scorso') or (da.day == 1 and (a + timedelta(days=1)).day == 1):
-        prima_fine = da - timedelta(days=1)
-        dopo_inizio = a + timedelta(days=1)
-        dopo_fine = (dopo_inizio + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-        return ({'da': prima_fine.replace(day=1).isoformat(), 'a': prima_fine.isoformat()},
-                {'da': dopo_inizio.isoformat(), 'a': dopo_fine.isoformat()})
+        # uno o piu' mesi interi: lo stesso numero di mesi prima e dopo
+        mesi = (a.year - da.year) * 12 + a.month - da.month + 1
+
+        def primo_del_mese(g, k):
+            n = g.year * 12 + g.month - 1 + k
+            return date(n // 12, n % 12 + 1, 1)
+        prima_da = primo_del_mese(da, -mesi)
+        dopo_da = primo_del_mese(da, mesi)
+        return ({'da': prima_da.isoformat(), 'a': (da - timedelta(days=1)).isoformat()},
+                {'da': dopo_da.isoformat(), 'a': (primo_del_mese(dopo_da, mesi) - timedelta(days=1)).isoformat()})
     n = (a - da).days + 1
     return ({'da': (da - timedelta(days=n)).isoformat(), 'a': (da - timedelta(days=1)).isoformat()},
             {'da': (a + timedelta(days=1)).isoformat(), 'a': (a + timedelta(days=n)).isoformat()})

@@ -863,6 +863,15 @@ La più seria era nelle prove: quella della riservatezza del JSON chiedeva il ri
 senza appuntamenti e non avrebbe mai visto un nome di paziente; ora usa l'orologio fermo
 (`_OraFerma` in `prove_112.py`) su un'ora con turni e visite.
 
+Una seconda revisione, sul riepilogo del periodo, ha confermato 22 segnalazioni (15 cose distinte),
+anche qui nessuna che perdesse dati, tutte corrette e provate. Le più serie: un medico in due stanze
+nello stesso momento (un turno di un giorno messo sopra quello di ogni settimana) contava le ore due
+volte e dimezzava la sua occupazione; le visite che passano la mezzanotte e le stanze disattivate poi
+sparivano dai conti; un festivo con un turno di un giorno sembrava chiuso; le frecce su due mesi interi
+andavano di un mese solo. Decisione: le ore di un medico sono l'unione dei suoi turni del giorno su tutte
+le stanze, quindi due medici nella stessa stanza possono sommare più ore della stanza (giusto: erano in
+due). La prova nuova (`p_periodo_revisione` in `prove_112.py`) è una settimana con i numeri contati a mano.
+
 Per vedere la pagina come in un giorno di lavoro di domenica o la sera, un gestionale di prova con
 l'ora del riepilogo ferma: `strumenti/demo.py` lanciato con `live.datetime` sostituito da una classe
 con `now()` fisso (lo script usato è nella cartella provvisoria della sessione, poche righe: importa

@@ -205,7 +205,11 @@ temporanea.
   disdetto no), il resto è «fuori turno». I cinque gruppi (`gruppo_periodo`) sommano al totale per stanza,
   per giorno e per medico; totali = somma delle stanze = somma dei giorni: `prove_112.py` lo confronta con
   insiemi di minuti contati a parte. Al massimo `MASSIMO_GIORNI_RIEPILOGO` giorni. Gli articoli davanti ai
-  numeri passano da `_dal`, `_al` e `il_percento` (l'8, l'11, l'80%).
+  numeri passano da `_dal`, `_al` e `il_percento` (lo 0, l'8, l'11, l'80%). Le ore di un medico sono
+  l'unione dei suoi turni del giorno su tutte le stanze, mai la somma stanza per stanza; i minuti dopo la
+  mezzanotte vanno nel giorno dopo (si leggono anche gli appuntamenti del giorno prima del periodo), ma
+  l'appuntamento conta nel giorno in cui comincia; un giorno con turni o appuntamenti non è chiuso; le
+  stanze disattivate entrano (`stanze_del_periodo`) se nel periodo avevano appuntamenti.
 - Stampe (dalla 1.12): il foglio del giorno è una `table.impaginazione` con testata in `thead` e
   piede in `tfoot` (il browser li ripete su ogni pagina); il numero di pagina viene dai margin box di
   `@page` in `stile.css`. Le colonne di partenza del foglio sono `viste.COLONNE_DI_PARTENZA`: una

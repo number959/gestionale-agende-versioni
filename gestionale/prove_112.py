@@ -1548,6 +1548,168 @@ def p_periodo():
 prova('riepilogo del periodo (1.12.2): stanze, medici e giorni contro gli insiemi di minuti, testi, pagine, Excel, JSON', p_periodo)
 
 
+def p_periodo_revisione():
+    """1.12.2, dalla revisione del riepilogo del periodo: lo stesso medico in due stanze insieme, turni e visite che
+    si sovrappongono, la visita che passa la mezzanotte, il festivo e la domenica con un turno di un giorno, la stanza
+    disattivata, le mezze giornate contate a mano, la fine della visita proprio adesso, le frecce sui mesi, le frasi,
+    l'Excel che torna con la pagina e nessun dato dei pazienti."""
+    from modelli import Appuntamento, Paziente
+    S, I, C = mondo()
+    s = S()
+    st = s.get(Struttura, 1)
+    pz = Paziente(cognome='Testabianca', nome='Rita', telefono='3339990001', email='rita@example.com')
+    s.add(pz)
+    s.add(Risorsa(nome='Ambulatorio 6', struttura_id=1, ordine=6, attiva=False))
+    s.commit()
+    I['Ambulatorio 6'] = s.scalars(select(Risorsa).where(Risorsa.nome == 'Ambulatorio 6')).one().id
+    MAR, MER, GIO, DOM = (LUN + timedelta(days=k) for k in (1, 2, 3, 6))
+    # Galasso lunedi 9-13 in Ambulatorio 3 e, solo il 7/12, 11-15 in Ambulatorio 4: per lui 9-15, sei ore e non otto
+    turno(S, I['Galasso'], I['Ambulatorio 3'], 0, time(9), time(13))
+    singolo(S, I['Galasso'], I['Ambulatorio 4'], LUN, time(11), time(15))
+    # Lippiello mercoledi 9-13 e, solo il 9/12, 12-16 nella stessa stanza: 9-16
+    turno(S, I['Lippiello'], I['Ambulatorio 1'], 2, time(9), time(13))
+    singolo(S, I['Lippiello'], I['Ambulatorio 1'], MER, time(12), time(16))
+    # martedi 8/12 (Immacolata, la struttura chiude) e domenica 13/12: Fintini con un turno di un giorno 9-12
+    singolo(S, I['Fintini'], I['Ambulatorio 2'], MAR, time(9), time(12))
+    singolo(S, I['Fintini'], I['Ambulatorio 2'], DOM, time(9), time(12))
+    # Esempietti il martedi 15-18 in Ambulatorio 5: il festivo lo toglie, la settimana dopo c'e'
+    turno(S, I['Esempietti'], I['Ambulatorio 5'], 1, time(15), time(18))
+
+    def app(stanza, medico, giorno, h, m, durata, stato='PRENOTATO'):
+        inizio = datetime.combine(giorno, time(h, m))
+        s.add(Appuntamento(risorsa_id=I[stanza], operatore_id=I[medico], paziente_id=pz.id, inizio=inizio,
+                           fine=inizio + timedelta(minutes=durata), stato=stato))
+    app('Ambulatorio 3', 'Galasso', LUN, 11, 0, 60, 'ARRIVATO')
+    app('Ambulatorio 4', 'Galasso', LUN, 11, 30, 60)                       # nello stesso momento, nell'altra stanza
+    app('Ambulatorio 3', 'Galasso', LUN, 13, 30, 30, 'CONFERMATO')         # fuori turno per la stanza, non per lui
+    app('Ambulatorio 2', 'Fintini', LUN, 23, 30, 60, 'ARRIVATO')           # fino alle 00:30 di martedi
+    app('Ambulatorio 2', 'Fintini', MAR, 10, 0, 30, 'ARRIVATO')
+    app('Ambulatorio 1', 'Lippiello', MER, 10, 0, 30, 'NON_PRESENTATO')
+    app('Ambulatorio 1', 'Lippiello', MER, 10, 15, 30)                     # finisce proprio adesso: da segnare
+    app('Ambulatorio 1', 'Lippiello', MER, 10, 45, 15)                     # comincia adesso: da fare
+    app('Ambulatorio 1', 'Lippiello', MER, 14, 0, 30, 'DISDETTO')
+    app('Ambulatorio 6', 'Fintini', GIO, 10, 0, 30, 'ARRIVATO')            # stanza disattivata dopo
+    app('Ambulatorio 2', 'Fintini', DOM, 9, 0, 30)
+    s.commit()
+    adesso = datetime.combine(MER, time(10, 45))
+    r = AM.riepilogo_periodo(s, st, LUN, DOM, adesso=adesso)
+    stanze = {x['stanza']: x for x in r['stanze']}
+    attese = {   # turno, occupati, fuori turno, totale, fatti, non presentati, disdetti, da segnare, da fare, mezze, libere
+        'Ambulatorio 1': (420, 60, 0, 4, 0, 1, 1, 1, 1, 10, 8),
+        'Ambulatorio 2': (360, 60, 60, 3, 2, 0, 0, 0, 1, 12, 10),
+        'Ambulatorio 3': (240, 60, 30, 2, 1, 0, 0, 1, 0, 10, 9),
+        'Ambulatorio 4': (240, 60, 0, 1, 0, 0, 0, 1, 0, 10, 8),
+        'Ambulatorio 5': (0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 10),
+        'Sala endoscopia': (0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 10),
+        'Ambulatorio 6 (non più attiva)': (0, 0, 30, 1, 1, 0, 0, 0, 0, 0, 0),
+    }
+    chiavi = ('minuti_turno', 'minuti_occupati', 'minuti_fuori_turno', 'totale', 'fatti', 'non_presentati', 'disdetti',
+              'da_segnare', 'da_fare', 'mezze', 'libere')
+    assert set(stanze) == set(attese), sorted(stanze)
+    for nome, valori in attese.items():
+        assert tuple(stanze[nome][k] for k in chiavi) == valori, (nome, tuple(stanze[nome][k] for k in chiavi), valori)
+    assert (stanze['Ambulatorio 1']['non_presentati_su'], stanze['Ambulatorio 3']['non_presentati_su'],
+            stanze['Ambulatorio 4']['non_presentati_su']) == (100.0, 0.0, None)
+    t = r['totale']
+    assert tuple(t[k] for k in chiavi) == (1260, 240, 120, 11, 4, 1, 1, 3, 2, 62, 55), tuple(t[k] for k in chiavi)
+    # i medici: le ore di ognuno sono l'unione dei suoi turni nel giorno, su tutte le stanze
+    medici = {m['medico']: m for m in r['medici']}
+    attesi = {'Galasso': (360, 120, 0, 3, 1), 'Lippiello Anna': (420, 60, 0, 4, 1), 'Fintini Ugo': (360, 60, 90, 4, 2)}
+    assert set(medici) == set(attesi), sorted(medici)
+    for nome, (turno_, occ, fuori, tot, giorni) in attesi.items():
+        m = medici[nome]
+        assert (m['minuti_turno'], m['minuti_occupati'], m['minuti_fuori_turno'], m['totale'], m['n_giorni']) == \
+            (turno_, occ, fuori, tot, giorni), (nome, m)
+        assert m['minuti_occupati'] <= m['minuti_turno'], m
+    assert medici['Galasso']['stanze'] == ['Ambulatorio 3', 'Ambulatorio 4'], medici['Galasso']['stanze']
+    assert medici['Galasso']['occupazione'] == round(100 * 120 / 360, 1)
+    # i giorni: il festivo e la domenica con un turno non sono «chiusi»
+    giorni = {x['data']: x for x in r['giorni']}
+    mar, dom = giorni[MAR.isoformat()], giorni[DOM.isoformat()]
+    assert (mar['etichetta'], mar['chiusa'], mar['aperto'], mar['chiusa_ma_aperta']) == \
+        ('martedì 8/12', None, True, 'Immacolata Concezione'), mar
+    assert (mar['minuti_turno'], mar['minuti_occupati'], mar['minuti_fuori_turno'], mar['totale']) == (180, 30, 30, 1), mar
+    assert (dom['chiusa'], dom['aperto'], dom['minuti_turno'], dom['totale']) == (None, True, 180, 1), dom
+    lun = giorni[LUN.isoformat()]
+    assert (lun['etichetta'], lun['minuti_turno'], lun['minuti_fuori_turno'], lun['totale']) == ('lunedì 7/12', 480, 60, 4), lun
+    # la frase, parola per parola
+    assert r['frase'] == ('Dal 7 al 13 dicembre 2026: 11 appuntamenti, 4 fatti, 1 non presentato (20%), 1 disdetto, '
+                          '3 ancora da segnare e 2 da fare. Le stanze sono state occupate per il 19% delle ore di turno '
+                          '(4 ore su 21 ore). 55 mezze giornate su 62 senza nessun medico.'), r['frase']
+    # solo il martedi: la coda dopo la mezzanotte conta nei minuti fuori turno, non negli appuntamenti
+    r1 = AM.riepilogo_periodo(s, st, MAR, MAR, adesso=adesso)
+    a2 = {x['stanza']: x for x in r1['stanze']}['Ambulatorio 2']
+    assert (a2['minuti_fuori_turno'], a2['totale'], a2['mezze'], a2['libere']) == (30, 1, 1, 0), a2
+    assert {m['medico']: m['minuti_fuori_turno'] for m in r1['medici']} == {'Fintini Ugo': 30}, r1['medici']
+    r1 = AM.riepilogo_periodo(s, st, LUN, LUN, adesso=adesso)
+    assert {x['stanza']: x for x in r1['stanze']}['Ambulatorio 2']['minuti_fuori_turno'] == 30
+    assert 'Ambulatorio 6 (non più attiva)' not in [x['stanza'] for x in r1['stanze']]
+    # la settimana dopo: nessun appuntamento, la frase lo dice senza «0 fatti»; la domenica vuota e' di chiusura
+    dopo_da, dopo_a = LUN + timedelta(days=7), DOM + timedelta(days=7)
+    r2 = AM.riepilogo_periodo(s, st, dopo_da, dopo_a, adesso=adesso)
+    assert r2['frase'] == ('Dal 14 al 20 dicembre 2026: nessun appuntamento nelle stanze. 11 ore di turno, senza visite. '
+                           '69 mezze giornate su 72 senza nessun medico.'), r2['frase']
+    dom2 = r2['giorni'][-1]
+    assert (dom2['chiusa'], dom2['aperto'], dom2['minuti_turno']) == (None, False, 0), dom2
+    assert [x['stanza'] for x in r2['stanze']] == [x.nome for x in AM.stanze_della(st)]
+    s.close()
+    # le parole
+    assert (AM.il_percento(0), AM.il_percento(0.5), AM.il_percento(1), AM.il_percento(100)) == ('lo 0%', 'lo 0,5%', "l'1%", 'il 100%')
+    assert (AM.ore_in_parole(45), AM.ore_in_parole(1), AM.ore_in_parole(120)) == ('45 minuti', '1 minuto', '2 ore')
+    # le frecce: la settimana, lo stesso numero di giorni, uno e due mesi interi
+    V = AM._vicini
+    assert V(LUN, DOM, '') == ({'da': '2026-11-30', 'a': '2026-12-06'}, {'da': '2026-12-14', 'a': '2026-12-20'})
+    assert V(LUN, MER, '') == ({'da': '2026-12-04', 'a': '2026-12-06'}, {'da': '2026-12-10', 'a': '2026-12-12'})
+    assert V(date(2026, 11, 1), date(2026, 11, 30), '') == ({'da': '2026-10-01', 'a': '2026-10-31'}, {'da': '2026-12-01', 'a': '2026-12-31'})
+    assert V(date(2026, 11, 1), date(2026, 12, 31), '') == ({'da': '2026-09-01', 'a': '2026-10-31'}, {'da': '2027-01-01', 'a': '2027-02-28'})
+    assert V(date(2027, 1, 1), date(2027, 1, 31), 'mese') == ({'da': '2026-12-01', 'a': '2026-12-31'}, {'da': '2027-02-01', 'a': '2027-02-28'})
+    # la pagina e l'Excel della settimana: gli stessi numeri, nessun dato della paziente
+    indirizzo = '?struttura=1&da=%s&a=%s' % (LUN, DOM)
+    pagina = testo(C.get('/ambulatori/riepilogo' + indirizzo))
+    assert 'Ambulatorio 6 (non più attiva)' in pagina and 'Immacolata Concezione, ma con turni o appuntamenti' in pagina
+    _, wb = excel(C, '/ambulatori/riepilogo.xlsx' + indirizzo)
+    for ws in wb.worksheets:
+        for riga in ws.iter_rows(values_only=True):
+            for v in riga:
+                assert not (isinstance(v, str) and any(x in v for x in ('Testabianca', 'Rita', '3339990001', 'example.com'))), (ws.title, v)
+    for vietato in ('Testabianca', 'Rita', '3339990001', 'example.com'):
+        assert vietato not in pagina, vietato
+    s = S()
+    r = AM.riepilogo_periodo(s, s.get(Struttura, 1), LUN, DOM)
+    s.close()
+    ws = wb['Stanze']
+    righe = {x[0]: x for x in ws.iter_rows(values_only=True) if x[0] in {y['stanza'] for y in r['stanze']} | {'Totale'}}
+    for x in r['stanze']:
+        e = righe[x['stanza']]
+        assert (e[1] or '') == ', '.join(x['medici']) and e[2] == x['minuti_turno'] / 60 and e[3] == x['minuti_occupati'] / 60, (e, x)
+        assert list(e[5:13]) == [x[k] for k in ('totale', 'fatti', 'non_presentati', 'disdetti', 'da_segnare', 'da_fare',
+                                                 'mezze', 'libere')], (e, x)
+    assert righe['Totale'][2] == r['totale']['minuti_turno'] / 60 == 21, righe['Totale']
+    riga_stanza = next(c.row for c in ws['A'] if c.value == 'Ambulatorio 3')
+    assert ws.cell(riga_stanza, 2).alignment.wrap_text, 'i medici vanno a capo'
+    wm = wb['Medici']
+    totale_m = next(x for x in wm.iter_rows(values_only=True) if x[0] == 'Totale')
+    assert totale_m[2] in (None, '') and totale_m[3] == (360 + 420 + 360) / 60, totale_m
+    _, wb2 = excel(C, '/ambulatori/riepilogo.xlsx?struttura=1&da=%s&a=%s' % (dopo_da, dopo_a))
+    giorni_x = {x[0]: x for x in wb2['Giorni'].iter_rows(values_only=True) if x[0]}
+    assert giorni_x['domenica 20/12'][1] == 'giorno di chiusura' and giorni_x['lunedì 14/12'][1] in (None, ''), giorni_x['domenica 20/12']
+    # una mezza giornata sola senza medico: al singolare
+    s = S()
+    for nome in ('Ambulatorio 2', 'Ambulatorio 3', 'Ambulatorio 4', 'Ambulatorio 5', 'Sala endoscopia'):
+        s.get(Risorsa, I[nome]).attiva = False
+    s.commit()
+    s.close()
+    mer3 = MER + timedelta(days=14)
+    pagina = testo(C.get('/ambulatori/riepilogo?struttura=1&da=%s&a=%s' % (mer3, mer3)))
+    assert '<b>1</b> mezza giornata su 2 senza nessun medico' in pagina, 'singolare'
+    assert 'Mercoledì 23 dicembre 2026: nessun appuntamento nelle stanze. 4 ore di turno, senza visite. ' \
+           '1 mezza giornata su 2 senza nessun medico.' in pagina
+
+
+prova('riepilogo del periodo (1.12.2, dalla revisione): medico in due stanze, sovrapposizioni, mezzanotte, festivo e '
+      'domenica, stanza disattivata, mezze contate a mano, frasi, frecce, Excel uguale alla pagina', p_periodo_revisione)
+
+
 def l_revisione():
     """1.12.2, dalla revisione: festivo con un turno di un giorno, chiusura senza motivo, turni piu' tardi senza
     appuntamenti, la sala operatoria fuori dai conti, turni attaccati, visite fuori orario, tacche vicine."""

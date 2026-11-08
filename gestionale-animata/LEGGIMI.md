@@ -711,10 +711,26 @@ in grigio, il giorno apre la giornata). L'Excel ha i fogli Riepilogo, Stanze, Me
 giorno, Giorni, con gli aiuti di `comune.py`; «Stampa» stampa la pagina. Nel JSON e nell'Excel solo
 conteggi, ore, stanze e medici.
 
+Regole fissate dalla revisione della 1.12.2. **Medici**: le ore di un medico sono l'unione dei suoi
+turni del giorno su tutte le stanze (con due stanze nello stesso momento non contano doppio) e le ore
+occupate sono i suoi appuntamenti dentro quell'unione; per questo due medici nella stessa stanza
+possono sommare più ore della stanza. **Mezzanotte**: una visita che passa la mezzanotte conta come
+appuntamento nel giorno in cui comincia, ma i minuti dopo la mezzanotte vanno nel giorno dopo (anche se
+il periodo comincia proprio quel giorno). **Festivi e domeniche**: un giorno con turni o appuntamenti
+non è «chiuso» anche se la struttura chiude (la riga dice «Immacolata Concezione, ma con turni o
+appuntamenti»); nei giorni che non sono di apertura contano solo le mezze giornate con un medico, non
+tutte le stanze libere. **Stanze disattivate**: compaiono, con «(non più attiva)», nei periodi in cui
+avevano appuntamenti. **Frecce**: uno o più mesi interi vanno allo stesso numero di mesi prima e dopo.
+**Excel**: le ore non arrotondate (i totali tornano con il foglio Riepilogo), i «Giorni di turno» dei
+medici senza totale, «giorno di chiusura» nei giorni in cui la struttura non apre. **Parole**: «lo 0%»,
+«45 minuti», «nessun appuntamento» invece di «0 appuntamenti, 0 fatti», «1 mezza giornata».
+
 Le prove sono `prove_112.py` (le celle della matrice contro un calcolo minuto per minuto fatto a
 parte, la programmazione, i due Excel riaperti, mettere e togliere, le protezioni, il foglio del
 giorno, il riepilogo del periodo contro gli insiemi di minuti di Python su tre periodi, con un non
-presentato, una visita fuori turno e una a cavallo della fine del turno, il riepilogo live: dalla 1.12.2 i quattro gruppi che sommano al totale a dieci ore diverse,
+presentato, una visita fuori turno e una a cavallo della fine del turno, e una settimana contata a mano
+con i casi della revisione (stesso medico in due stanze, sovrapposizioni, mezzanotte, festivo e domenica
+con un turno, stanza disattivata, frasi parola per parola, l'Excel uguale alla pagina), il riepilogo live: dalla 1.12.2 i quattro gruppi che sommano al totale a dieci ore diverse,
 anche stanza per stanza, le frasi, la linea del tempo, le ore e la tabella delle mezze giornate) e
 `prove_112_browser.py` (anche la pagina del riepilogo, a qualsiasi ora giri: conti, righe, turni e
 visite come nel JSON, linea di adesso, notifiche nascoste, telefono senza scorrimento laterale).
@@ -2714,6 +2730,7 @@ falliscono, cioè il difetto c'era davvero.
 | Prove sul Windows di GitHub (1.12.1) | `pid_vero` usava `wmic`, che non c'è più; una prova voleva zero certificati di sistema; una porta chiusa sembrava un sito che non risponde; gli appunti con a capo CRLF | Processi letti con Toolhelp (`ctypes`); la prova conta che il programma abbia più certificati del sistema; 5 secondi di attesa per la porta chiusa; a capo normalizzati nel confronto |
 | Riepilogo live poco chiaro (segnalato da Giovanni l'8 novembre 2026) | Otto numeri che non sommavano al totale, «in ritardo» solo per tre ore, il medico scritto due volte, «libera fino alle» senza dire perché, sessanta mezze giornate in una lista, le notifiche sopra le stanze | Dalla 1.12.2: quattro gruppi che sommano, una frase in cima, la linea del tempo con turni e visite, le mezze giornate in una tabellina, niente notifiche su quella pagina |
 | Nessun riepilogo «non live» (richiesta di Giovanni dell'8 novembre 2026) | Per sapere com'era andata una settimana o un mese bisognava mettere insieme statistiche, pianificazione e agende | Dalla 1.12.2 *Ambulatori → Riepilogo del periodo*: ore di turno e occupate, conti e mezze giornate libere per stanza, medico e giorno, in Excel e da stampare |
+| Riepilogo del periodo, prima della pubblicazione (revisione della 1.12.2) | Un medico in due stanze nello stesso momento contava le ore doppie; le visite dopo la mezzanotte e le stanze disattivate sparivano; un festivo con un turno sembrava chiuso; due mesi interi con le frecce diventavano uno; «il 0%» | Ore del medico unite su tutte le stanze, la coda dopo la mezzanotte nel giorno dopo, le stanze disattivate con i loro appuntamenti, il festivo aperto se ha turni, le frecce sullo stesso numero di mesi, «lo 0%»; una prova contata a mano |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo

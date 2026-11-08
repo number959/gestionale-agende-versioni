@@ -49,7 +49,7 @@
       <li><b>{{ t.ore_turno }}</b> di turno nelle stanze</li>
       <li><b>{{ t.ore_occupate }}</b> occupate{% if t.occupazione is not none %} (<b>{{ ('%g' % t.occupazione)|replace('.', ',') }}%</b>){% endif %}</li>
       {% if t.minuti_fuori_turno %}<li class="attenzione"><b>{{ t.ore_fuori_turno }}</b> prenotate fuori dai turni</li>{% endif %}
-      {% if t.mezze %}<li><b>{{ t.libere }}</b> mezze giornate su {{ t.mezze }} senza nessun medico</li>{% endif %}
+      {% if t.mezze %}<li><b>{{ t.libere }}</b> {{ 'mezza giornata' if t.libere == 1 else 'mezze giornate' }} su {{ t.mezze }} senza nessun medico</li>{% endif %}
     </ul>
   </section>
 
@@ -65,7 +65,7 @@
       <td class="n">{{ x.ore_turno }}</td><td class="n">{{ x.ore_occupate }}</td>
       <td>{% if x.occupazione is not none %}<span class="occupazione"><span style="width: {{ [x.occupazione, 100]|min }}%"></span></span> {{ ('%g' % x.occupazione)|replace('.', ',') }}%{% else %}—{% endif %}{% if x.minuti_fuori_turno %}<small class="fuori-turno" title="Appuntamenti fuori dai turni della stanza">+{{ x.ore_fuori_turno }} fuori turno</small>{% endif %}</td>
       <td class="n">{{ x.totale }}</td><td class="n">{{ x.fatti }}</td><td class="n{% if x.non_presentati %} acceso-rosso{% endif %}">{{ x.non_presentati }}</td><td class="n">{{ x.disdetti }}</td><td class="n{% if x.da_segnare %} acceso{% endif %}">{{ x.da_segnare }}</td><td class="n">{{ x.da_fare }}</td>
-      <td class="n">{{ x.libere }} su {{ x.mezze }}</td>
+      <td class="n">{% if x.mezze %}{{ x.libere }} su {{ x.mezze }}{% else %}—{% endif %}</td>
     </tr>
     {% endfor %}
     </tbody>
@@ -100,7 +100,7 @@
     <tbody>
     {% for x in r.giorni %}
     <tr class="{% if x.chiusa or not x.aperto %}chiuso{% endif %}">
-      <td><a href="{{ url_for('giorno', iso=x.data, struttura=sid) }}" title="Apri la giornata">{{ x.etichetta }}</a>{% if x.chiusa %} <small class="nota-riga">chiusa: {{ x.chiusa }}</small>{% elif not x.aperto %} <small class="nota-riga">giorno di chiusura</small>{% endif %}</td>
+      <td><a href="{{ url_for('giorno', iso=x.data, struttura=sid) }}" title="Apri la giornata">{{ x.etichetta }}</a>{% if x.chiusa %} <small class="nota-riga">chiusa: {{ x.chiusa }}</small>{% elif x.chiusa_ma_aperta %} <small class="nota-riga">{{ x.chiusa_ma_aperta }}, ma con turni o appuntamenti</small>{% elif not x.aperto %} <small class="nota-riga">giorno di chiusura</small>{% endif %}</td>
       <td class="n">{{ x.ore_turno }}</td>
       <td>{% if x.occupazione is not none %}<span class="occupazione"><span style="width: {{ [x.occupazione, 100]|min }}%"></span></span> {{ ('%g' % x.occupazione)|replace('.', ',') }}%{% else %}—{% endif %}</td>
       <td class="n">{{ x.totale }}</td><td class="n">{{ x.fatti }}</td><td class="n{% if x.non_presentati %} acceso-rosso{% endif %}">{{ x.non_presentati }}</td><td class="n">{{ x.disdetti }}</td><td class="n{% if x.da_segnare %} acceso{% endif %}">{{ x.da_segnare }}</td><td class="n">{{ x.da_fare }}</td>
