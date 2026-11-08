@@ -122,6 +122,30 @@ jobs:
           PY
           fi
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # Il PDF della guida («Come fare», tutti gli articoli con le immagini) dal gestionale di
+      # prova con Chromium: va nella release accanto ai Setup. Se qualcosa non riesce la release
+      # si fa lo stesso, senza PDF (le guide sono comunque dentro il programma).
+      - name: PDF della guida
+        id: pdf
+        continue-on-error: true
+        shell: bash
+        working-directory: gestionale
+        run: |
+          set -e
+          V=${{ steps.v.outputs.versione }}
+          python -m pip install --quiet --disable-pip-version-check -r requirements.txt playwright
+          python -m playwright install --with-deps chromium
+          python strumenti/demo.py --porta 5001 --dati "$RUNNER_TEMP/demo" > "$RUNNER_TEMP/demo.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:5001/salute > /dev/null && break; sleep 2; done
+          curl -sf http://127.0.0.1:5001/salute > /dev/null || { cat "$RUNNER_TEMP/demo.log"; exit 1; }
+          python strumenti/genera_pdf_guida.py http://127.0.0.1:5001 "../Guida-Gestionale-Agende-$V.pdf"
+          kill $(cat "$RUNNER_TEMP/demo/demo.pid") || true
+          ls -la "../Guida-Gestionale-Agende-$V.pdf"
+
       - name: Release v${{ steps.v.outputs.versione }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -131,17 +155,20 @@ jobs:
           V=${{ steps.v.outputs.versione }}
           ULTIMA=${{ inputs.ultima }}
           FLAG="--latest=$ULTIMA"
+          PDF=""; [ -f "Guida-Gestionale-Agende-$V.pdf" ] && PDF="Guida-Gestionale-Agende-$V.pdf"
           if gh release view "v$V" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             echo "la release v$V esiste gia': i quattro file vengono sostituiti"
             gh release upload "v$V" --repo "$GITHUB_REPOSITORY" --clobber \
               file/gestionale/GestionaleAgende-setup.exe file/gestionale/aggiornamento.json \
-              file/gestionale-animata/GestionaleAgende-animata-setup.exe file/gestionale-animata/aggiornamento-animata.json
+              file/gestionale-animata/GestionaleAgende-animata-setup.exe file/gestionale-animata/aggiornamento-animata.json \
+              $PDF
             gh release edit "v$V" --repo "$GITHUB_REPOSITORY" $FLAG
           else
             gh release create "v$V" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" $FLAG \
               --title "Gestionale Agende $V" --notes-file note.md \
               file/gestionale/GestionaleAgende-setup.exe file/gestionale/aggiornamento.json \
-              file/gestionale-animata/GestionaleAgende-animata-setup.exe file/gestionale-animata/aggiornamento-animata.json
+              file/gestionale-animata/GestionaleAgende-animata-setup.exe file/gestionale-animata/aggiornamento-animata.json \
+              $PDF
           fi
 
       - name: Controllo dall'indirizzo pubblico (come fa il programma)
