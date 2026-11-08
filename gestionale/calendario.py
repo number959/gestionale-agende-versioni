@@ -5,7 +5,7 @@ Le festivita' nazionali sono fisse tranne Pasquetta, che dipende dalla
 Pasqua: si calcola con l'algoritmo gregoriano "anonimo" (Meeus/Jones/Butcher),
 valido per qualunque anno del calendario gregoriano.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 
 # (mese, giorno, nome, primo anno di validita')
 FESTE_FISSE = [
@@ -92,3 +92,32 @@ def settimane_del_mese(anno, mese):
         settimane.append([g + timedelta(days=i) for i in range(7)])
         g += timedelta(days=7)
     return settimane
+
+
+def cambio_ora(anno):
+    """Le due domeniche del cambio dell'ora (regola europea, in Italia dal 1996):
+    l'ultima di marzo, quando alle 2:00 l'orologio va alle 3:00 (ora legale), e
+    l'ultima di ottobre, quando alle 3:00 torna alle 2:00 (ora solare)."""
+    def ultima_domenica(mese):
+        g = date(anno, mese, 31)
+        return g - timedelta(days=(g.weekday() + 1) % 7)
+    return ultima_domenica(3), ultima_domenica(10)
+
+
+def minuti_veri(inizio, fine):
+    """I minuti passati davvero fra due orari scritti con l'ora italiana. Nella notte
+    di marzo l'ora fra le 2:00 e le 3:00 non esiste: un turno che attraversa le 3:00
+    dura un'ora in meno; in quella di ottobre l'ora fra le 2:00 e le 3:00 passa due
+    volte: un turno che attraversa le 3:00 dura un'ora in piu'. Un orario scritto
+    fra le 2:00 e le 3:00 conta come prima del cambio (a ottobre la prima volta che
+    passa), come fa Python con il fuso orario di Roma. Fine prima dell'inizio: 0."""
+    if fine <= inizio:
+        return 0
+    minuti = int((fine - inizio).total_seconds() // 60)
+    for anno in range(inizio.year, fine.year + 1):
+        marzo, ottobre = cambio_ora(anno)
+        if inizio < datetime.combine(marzo, time(3)) <= fine:
+            minuti -= 60
+        if inizio < datetime.combine(ottobre, time(3)) <= fine:
+            minuti += 60
+    return max(minuti, 0)

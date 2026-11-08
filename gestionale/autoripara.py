@@ -291,6 +291,76 @@ def _metti_da_parte(percorso, momento):
     return os.path.dirname(backup.copia_grezza(percorso, momento))
 
 
+GIORNI_DANNEGGIATI = 90       # «Svuota» toglie solo i file messi da parte da piu' di tre mesi
+
+
+def _file_danneggiati(percorso_db):
+    """[(percorso, quando, byte)] dei file in backup\\danneggiati (database e giornali).
+    'quando' viene dal nome (danneggiato-AAAA-MM-GG_HHMMSS.db, come li scrive
+    backup.copia_grezza), altrimenti dalla data del file."""
+    cartella = os.path.join(backup.cartella_predefinita(percorso_db), backup.DANNEGGIATI)
+    try:
+        nomi = os.listdir(cartella)
+    except OSError:
+        return []
+    uscita = []
+    for nome in nomi:
+        percorso = os.path.join(cartella, nome)
+        if not os.path.isfile(percorso):
+            continue
+        m = re.match(r'danneggiato-(\d{4}-\d{2}-\d{2}_\d{6})\.db', nome)
+        try:
+            quando = (datetime.strptime(m.group(1), '%Y-%m-%d_%H%M%S') if m
+                      else datetime.fromtimestamp(os.path.getmtime(percorso)))
+            uscita.append((percorso, quando, os.path.getsize(percorso)))
+        except (ValueError, OSError, OverflowError):
+            continue
+    return uscita
+
+
+def testo_byte(byte):
+    """«3 KB», «12,5 MB»: per la pagina e il diario."""
+    if byte < 1048576:
+        return '%d KB' % max(1, byte // 1024) if byte else '0 KB'
+    return ('%.1f MB' % (byte / 1048576)).replace('.', ',')
+
+
+def dimensione_danneggiati(percorso_db, piu_vecchi_di_giorni=GIORNI_DANNEGGIATI, adesso=None):
+    """Quanto occupa backup\\danneggiati: file e byte in tutto, e quelli «vecchi»
+    (messi da parte da piu' di 'piu_vecchi_di_giorni' giorni: quelli che «Svuota»
+    toglie), con i testi pronti per la pagina."""
+    limite = (adesso or datetime.now()) - timedelta(days=piu_vecchi_di_giorni)
+    tutti = _file_danneggiati(percorso_db)
+    vecchi = [x for x in tutti if x[1] < limite]
+    byte, byte_vecchi = sum(b for _, _, b in tutti), sum(b for _, _, b in vecchi)
+    return {'file': len(tutti), 'byte': byte, 'testo': testo_byte(byte),
+            'vecchi': len(vecchi), 'byte_vecchi': byte_vecchi, 'testo_vecchi': testo_byte(byte_vecchi)}
+
+
+def svuota_danneggiati(percorso_db, piu_vecchi_di_giorni=GIORNI_DANNEGGIATI, adesso=None):
+    """Cancella i file rovinati messi da parte da piu' di 'piu_vecchi_di_giorni'
+    giorni; quelli recenti restano (possono servire all'assistenza). Solo su
+    richiesta, dalla pagina Controllo del programma: il programma da solo non
+    cancella mai niente. Restituisce (file cancellati, byte liberati) e, se ha
+    tolto qualcosa, lo annota nel diario."""
+    limite = (adesso or datetime.now()) - timedelta(days=piu_vecchi_di_giorni)
+    cancellati, liberati = 0, 0
+    for percorso, quando, byte in _file_danneggiati(percorso_db):
+        if quando >= limite:
+            continue
+        try:
+            os.remove(percorso)
+        except OSError:
+            logging.exception('autoriparazione: file rovinato non cancellato: %s', percorso)
+            continue
+        cancellati += 1
+        liberati += byte
+    if cancellati:
+        annota('Svuotati, su richiesta, i file rovinati messi da parte da più di %d giorni: %d file, %s liberati'
+               % (piu_vecchi_di_giorni, cancellati, testo_byte(liberati)), 'ok', tipo='danneggiati')
+    return cancellati, liberati
+
+
 def _pagina_con_righe(percorso, numero):
     """La pagina 'numero' del file e' una pagina di una tabella con delle righe?
     (Il tipo della pagina e' il suo primo byte: 13 foglia e 5 interna di una

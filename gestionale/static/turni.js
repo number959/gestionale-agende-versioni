@@ -182,7 +182,10 @@
 
   /* ------------------------------------------------------------ codice scritto da tastiera
      Si aspetta un attimo solo se il codice potrebbe continuare (M e MA):
-     altrimenti vale subito. Invio lo conferma, Esc lo lascia perdere. */
+     altrimenti vale subito. Invio lo conferma, Esc lo lascia perdere. Dalla
+     1.12.1 i codici scritti di seguito senza aspettare (M e subito P) si
+     separano: vale il codice piu' lungo con cui comincia quello che si e'
+     scritto, e le lettere dopo ricominciano da capo. */
   function nuovoBuffer(mostra, applica) {
     var testo = '';
     var timer = null;
@@ -197,17 +200,29 @@
       mostra('');
       if (t) { applica(t); } else if (scritto) { sconosciuto(scritto); }
     };
+    var scrivi = function (car) {
+      testo += car.toUpperCase();
+      clearTimeout(timer);
+      var esatto = !!PER_CODICE[testo];
+      var continua = TIPI.some(function (t) { return t.codice.length > testo.length && t.codice.indexOf(testo) === 0; });
+      if (!esatto && !continua) {
+        // «MP» non e' un codice: vale «M» (il codice piu' lungo con cui comincia) e «P» ricomincia da capo
+        var s = testo;
+        var n = s.length - 1;
+        while (n > 0 && !PER_CODICE[s.slice(0, n)]) { n -= 1; }
+        testo = '';
+        mostra('');
+        if (!n) { sconosciuto(s); return; }
+        applica(PER_CODICE[s.slice(0, n)]);
+        s.slice(n).split('').forEach(scrivi);
+        return;
+      }
+      if (esatto && !continua) { conferma(); return; }
+      mostra(testo);
+      timer = setTimeout(conferma, 800);
+    };
     return {
-      scrivi: function (car) {
-        testo += car.toUpperCase();
-        clearTimeout(timer);
-        var esatto = !!PER_CODICE[testo];
-        var continua = TIPI.some(function (t) { return t.codice.length > testo.length && t.codice.indexOf(testo) === 0; });
-        if (!esatto && !continua) { var s = testo; testo = ''; mostra(''); sconosciuto(s); return; }
-        if (esatto && !continua) { conferma(); return; }
-        mostra(testo);
-        timer = setTimeout(conferma, 800);
-      },
+      scrivi: scrivi,
       conferma: conferma,
       attivo: function () { return testo !== ''; },
       annulla: function () { clearTimeout(timer); testo = ''; mostra(''); }

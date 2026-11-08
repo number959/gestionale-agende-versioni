@@ -5,7 +5,7 @@
   <h1>Controllo del programma</h1>
   <p class="sotto">Il programma controlla da solo il database, le copie di sicurezza e i lavori in sottofondo, e ripara
     quello che può senza perdere dati: un file danneggiato non si cancella mai, va da parte per l'assistenza. Qui si vede
-    com'è adesso e cosa ha fatto.</p>
+    com'è adesso e cosa ha fatto. I file messi da parte da più di tre mesi si possono togliere da qui, con una conferma.</p>
 
   {% if problemi %}
     {% for livello, testo in problemi %}<p class="avviso errore">{{ testo }}</p>{% endfor %}
@@ -25,6 +25,8 @@
     {% endfor %}
     <tr><td>Spazio libero sul disco</td>
         <td>{% if spazio is none %}non si legge{% else %}{{ '{:,.0f}'.format(spazio / 1048576).replace(',', '.') }} MB{% endif %}</td></tr>
+    <tr><td>File rovinati messi da parte</td>
+        <td id="danneggiati">{% if not danneggiati or not danneggiati.file %}nessuno{% else %}{{ danneggiati.file }} file, {{ danneggiati.testo }} in <code>backup\danneggiati</code>{% if danneggiati.vecchi %}; {{ danneggiati.vecchi }} da più di {{ giorni_danneggiati }} giorni ({{ danneggiati.testo_vecchi }}){% endif %}{% endif %}</td></tr>
     <tr><td>Indirizzo del programma</td><td><code>http://127.0.0.1:{{ porta }}/</code></td></tr>
     <tr><td>Versione</td><td>{{ versione_programma }}</td></tr>
   </table>
@@ -33,6 +35,14 @@
     <button class="bottone primario" type="submit">Controlla adesso</button>
     <span class="nota-riga">Controllo completo del database (qualche secondo), dei lavori in sottofondo e dello spazio sul disco.</span>
   </form>
+  {% if danneggiati and danneggiati.vecchi %}
+  <form method="post" class="in-linea" id="svuota-danneggiati">
+    <input type="hidden" name="azione" value="svuota-danneggiati">
+    <button class="bottone" type="submit"
+            onclick="return confirm('Cancellare {{ danneggiati.vecchi }} file rovinati messi da parte da più di {{ giorni_danneggiati }} giorni ({{ danneggiati.testo_vecchi }})? Quelli più recenti restano. Non si può tornare indietro.')">Svuota i file rovinati più vecchi di {{ giorni_danneggiati }} giorni</button>
+    <span class="nota-riga">I file rovinati restano da parte per l'assistenza: si tolgono solo da qui, mai da soli.</span>
+  </form>
+  {% endif %}
 
   <h2 class="sezione" id="diario">Cosa ha fatto da solo</h2>
   {% if eventi %}

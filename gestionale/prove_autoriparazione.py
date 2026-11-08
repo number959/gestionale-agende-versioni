@@ -1012,6 +1012,72 @@ def g_pagina():
         S.motore.dispose()
 
 
+def g_danneggiati():
+    """1.12.1: la pagina dice quanto occupano i file rovinati messi da parte e,
+    solo su richiesta e con conferma, toglie quelli da piu' di 90 giorni."""
+    c = cartella_nuova('g_danneggiati')
+    p = database_con_dati(c, 10, 2)
+    S, C = client_su(p)
+    autoripara.imposta_cartella(c)
+    salvati = dict(autoripara._sorvegliati)
+    autoripara._sorvegliati.clear()
+    try:
+        d = autoripara.dimensione_danneggiati(p)
+        assert (d['file'], d['byte'], d['vecchi']) == (0, 0, 0), d
+        t = C.get('/autoriparazione').get_data(as_text=True)
+        assert 'File rovinati messi da parte' in t and 'nessuno' in t and 'svuota-danneggiati' not in t, t[:400]
+        # cinque file: due database vecchi (uno con il suo giornale), uno di 89 giorni fa, uno recente
+        adesso = datetime.now()
+        quando = lambda giorni: (adesso - timedelta(days=giorni)).strftime('%Y-%m-%d_%H%M%S')
+        vecchio = backup.copia_grezza(p, quando(100))
+        with open(vecchio + '-journal', 'wb') as f:
+            f.write(b'x' * 3000)
+        vecchio2 = backup.copia_grezza(p, quando(91))
+        quasi = backup.copia_grezza(p, quando(89))
+        recente = backup.copia_grezza(p, quando(10))
+        misura = os.path.getsize(p)
+        d = autoripara.dimensione_danneggiati(p)
+        assert (d['file'], d['byte'], d['vecchi'], d['byte_vecchi']) == (5, misura * 4 + 3000, 3, misura * 2 + 3000), d
+        assert autoripara.dimensione_danneggiati(p, piu_vecchi_di_giorni=120)['vecchi'] == 0
+        assert autoripara.dimensione_danneggiati(p, adesso=adesso + timedelta(days=2))['vecchi'] == 4
+        # un file con un nome qualsiasi conta con la data del file (di oggi: recente)
+        altro = os.path.join(os.path.dirname(vecchio), 'appunti.txt')
+        with open(altro, 'w') as f:
+            f.write('nota')
+        d = autoripara.dimensione_danneggiati(p)
+        assert (d['file'], d['vecchi']) == (6, 3), d
+        t = C.get('/autoriparazione').get_data(as_text=True)
+        assert '6 file' in t and '3 da più di 90 giorni' in t and 'id="svuota-danneggiati"' in t and 'confirm(' in t, t[:800]
+        prima = len(eventi_qui(c))
+        r = C.post('/autoriparazione', data={'azione': 'svuota-danneggiati'})
+        assert r.status_code == 302, r.status_code
+        assert not os.path.exists(vecchio) and not os.path.exists(vecchio + '-journal') and not os.path.exists(vecchio2), \
+            'i vecchi dovevano sparire'
+        assert os.path.exists(quasi) and os.path.exists(recente) and os.path.exists(altro), 'tolto un file recente'
+        d = autoripara.dimensione_danneggiati(p)
+        assert (d['file'], d['vecchi']) == (3, 0), d
+        ev = eventi_qui(c)
+        assert len(ev) == prima + 1 and ev[0].get('tipo') == 'danneggiati' and '3 file' in ev[0]['testo'] and \
+            'su richiesta' in ev[0]['testo'], ev[:1]
+        t = C.get('/autoriparazione').get_data(as_text=True)
+        assert 'Tolti 3 file rovinati' in t and 'svuota-danneggiati' not in t and '3 file' in t, t[:800]
+        # una seconda volta non c'e' niente da togliere: lo dice, e nel diario non si aggiunge niente
+        C.post('/autoriparazione', data={'azione': 'svuota-danneggiati'})
+        t = C.get('/autoriparazione').get_data(as_text=True)
+        assert 'Niente da togliere' in t and len(eventi_qui(c)) == prima + 1, t[:600]
+        assert os.path.exists(quasi) and os.path.exists(recente)
+        # la cartella che non c'e', e «Controlla adesso» (senza azione) come prima
+        assert autoripara.dimensione_danneggiati(os.path.join(c, 'altra', 'x.db'))['file'] == 0
+        assert autoripara.svuota_danneggiati(os.path.join(c, 'altra', 'x.db')) == (0, 0)
+        assert C.post('/autoriparazione').status_code == 302
+        assert 'il database è integro' in C.get('/autoriparazione').get_data(as_text=True)
+        assert autoripara.testo_byte(0) == '0 KB' and autoripara.testo_byte(3000) == '2 KB' and \
+            autoripara.testo_byte(13 * 1048576 + 524288) == '13,5 MB', 'testo dei byte'
+    finally:
+        autoripara._sorvegliati.update(salvati)
+        S.motore.dispose()
+
+
 def g_notifiche():
     c = cartella_nuova('g_notifiche')
     p = database_con_dati(c, 10, 2)
@@ -1052,6 +1118,7 @@ def g_diario():
 
 
 for nome, f in [('registro che non cresce per sempre', g_registro), ('pagina Controllo del programma', g_pagina),
+                ('file rovinati messi da parte: quanto occupano e «Svuota» quelli da più di 90 giorni (1.12.1)', g_danneggiati),
                 ('notifiche delle riparazioni', g_notifiche), ('diario: rovinato, scritto insieme, limitato', g_diario)]:
     prova(nome, f)
 
@@ -1080,14 +1147,46 @@ def programma(localappdata, porta):
     return p
 
 
+def _figli_windows(ppid):
+    """[(pid, nome dell'eseguibile)] dei processi figli di ppid, dall'elenco dei
+    processi di Windows (Toolhelp, con ctypes): wmic non c'e' piu' nei Windows
+    recenti (1.12.1: il Windows di GitHub Actions)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Voce(ctypes.Structure):
+        _fields_ = [('dwSize', wintypes.DWORD), ('cntUsage', wintypes.DWORD), ('th32ProcessID', wintypes.DWORD),
+                    ('th32DefaultHeapID', ctypes.c_size_t), ('th32ModuleID', wintypes.DWORD),
+                    ('cntThreads', wintypes.DWORD), ('th32ParentProcessID', wintypes.DWORD),
+                    ('pcPriClassBase', ctypes.c_long), ('dwFlags', wintypes.DWORD), ('szExeFile', ctypes.c_wchar * 260)]
+
+    k32 = ctypes.windll.kernel32
+    k32.CreateToolhelp32Snapshot.restype = ctypes.c_void_p
+    k32.Process32FirstW.argtypes = k32.Process32NextW.argtypes = [ctypes.c_void_p, ctypes.POINTER(Voce)]
+    k32.CloseHandle.argtypes = [ctypes.c_void_p]
+    foto = k32.CreateToolhelp32Snapshot(0x2, 0)                    # TH32CS_SNAPPROCESS
+    figli = []
+    if not foto or foto == ctypes.c_void_p(-1).value:
+        return figli
+    try:
+        v = Voce()
+        v.dwSize = ctypes.sizeof(Voce)
+        c = k32.Process32FirstW(foto, ctypes.byref(v))
+        while c:
+            if v.th32ParentProcessID == ppid:
+                figli.append((v.th32ProcessID, v.szExeFile))
+            c = k32.Process32NextW(foto, ctypes.byref(v))
+    finally:
+        k32.CloseHandle(foto)
+    return figli
+
+
 def pid_vero(p):
     """Il pid del gestionale avviato con p: su Windows, da un venv, python.exe e'
-    un lanciatore e il programma e' suo figlio, con un altro pid."""
+    un lanciatore e il programma e' suo figlio (un altro python), con un altro pid."""
     if os.name != 'nt':
         return p.pid
-    r = subprocess.run(['wmic', 'process', 'where', 'ParentProcessId=%d' % p.pid, 'get', 'ProcessId'],
-                       capture_output=True, text=True, errors='replace')
-    figli = [int(x) for x in r.stdout.split() if x.isdigit()]
+    figli = [pid for pid, nome in _figli_windows(p.pid) if nome.lower().startswith('python')]
     return figli[0] if len(figli) == 1 else p.pid
 
 

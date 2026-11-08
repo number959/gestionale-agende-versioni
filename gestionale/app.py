@@ -812,6 +812,16 @@ def autoriparazione():
         if not pdb:
             flash('Il database non è un file: il controllo non si può fare.', 'errore')
             return redirect(url_for('autoriparazione'))
+        if request.form.get('azione') == 'svuota-danneggiati':
+            # 1.12.1: i file rovinati messi da parte da piu' di tre mesi, solo su richiesta e con conferma
+            n, byte = autoripara.svuota_danneggiati(pdb)
+            if n:
+                flash('Tolti %d file rovinati messi da parte da più di %d giorni (%s liberati). Quelli più recenti '
+                      'restano.' % (n, autoripara.GIORNI_DANNEGGIATI, autoripara.testo_byte(byte)), 'ok')
+            else:
+                flash('Niente da togliere: nessun file rovinato messo da parte da più di %d giorni.'
+                      % autoripara.GIORNI_DANNEGGIATI, 'ok')
+            return redirect(url_for('autoriparazione'))
         ses().close()
         autoripara.controlla_lavori()
         autoripara.controlla_spazio(os.path.dirname(pdb))
@@ -842,6 +852,8 @@ def autoriparazione():
                            esito_db=st.get('esito_db'), controllo_db=st.get('controllo_db'), percorso_db=pdb,
                            backup=backup.stato, allarme=backup.allarme(), lavori=autoripara.lavori(),
                            spazio=st.get('spazio_libero'), porta=st.get('porta') or autoripara.PORTA,
+                           danneggiati=autoripara.dimensione_danneggiati(pdb) if pdb else None,
+                           giorni_danneggiati=autoripara.GIORNI_DANNEGGIATI,
                            eventi=autoripara.eventi()[:30], sid=None, sezione='impostazioni')
 
 

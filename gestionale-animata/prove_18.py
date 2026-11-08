@@ -27,6 +27,7 @@ logging.getLogger().setLevel(logging.CRITICAL)
 
 from sqlalchemy import select
 
+import calendario
 import servizi
 import viste
 import personale as PE
@@ -212,8 +213,22 @@ def festivo_atteso(g):
         g == pasqua(g.year) + timedelta(days=1)
 
 
+def minuti_attesi(inizio, fine):
+    """I minuti veri fra due orari secondo il fuso orario di Roma di Python (indipendente
+    dal programma); se il fuso non c'e', quelli del programma."""
+    if fine <= inizio:
+        return 0
+    try:
+        from zoneinfo import ZoneInfo
+        roma = ZoneInfo('Europe/Rome')
+    except Exception:
+        return calendario.minuti_veri(inizio, fine)
+    return max(int((fine.replace(tzinfo=roma).timestamp() - inizio.replace(tzinfo=roma).timestamp()) // 60), 0)
+
+
 def conti_attesi(S, pids, dal, al):
-    """Ore, notti, festivi e assenze calcolati qui dai turni del database."""
+    """Ore, notti, festivi e assenze calcolati qui dai turni del database (minuti veri
+    anche nelle notti del cambio dell'ora)."""
     s = S()
     try:
         c = defaultdict(lambda: {'lavoro': 0, 'notti': 0, 'festivi': 0, 'assenze': 0, 'reperibilita': 0})
@@ -223,11 +238,11 @@ def conti_attesi(S, pids, dal, al):
             cat = t.tipo.categoria if t.tipo is not None else 'LAVORO'
             if cat == 'LAVORO':
                 pausa = t.tipo.pausa_min if t.tipo is not None else 0
-                c[t.persona_id]['lavoro'] += max(int((t.fine - t.inizio).total_seconds() // 60) - (pausa or 0), 0)
+                c[t.persona_id]['lavoro'] += max(minuti_attesi(t.inizio, t.fine) - (pausa or 0), 0)
                 c[t.persona_id]['notti'] += t.fine.date() > t.inizio.date()
                 c[t.persona_id]['festivi'] += festivo_atteso(t.giorno)
             elif cat == 'REPERIBILITA':
-                c[t.persona_id]['reperibilita'] += int((t.fine - t.inizio).total_seconds() // 60)
+                c[t.persona_id]['reperibilita'] += minuti_attesi(t.inizio, t.fine)
             elif cat == 'ASSENZA':
                 c[t.persona_id]['assenze'] += 1
         return c
@@ -1132,6 +1147,183 @@ def d_struttura():
 prova('database nuovo: i dieci tipi di turno di partenza', d_nuovo)
 prova('aggiornamento dalla versione 8: copia di sicurezza, tabelle e tipi, una volta sola', d_migrazione)
 prova('piu\' strutture: chi e\' di un\'altra sede non compare', d_struttura)
+
+
+# ================================================================ cambio dell'ora
+area('il cambio dell\'ora (1.12.1)')
+
+
+def o_domeniche():
+    attese = {2025: ((3, 30), (10, 26)), 2026: ((3, 29), (10, 25)), 2027: ((3, 28), (10, 31)), 2028: ((3, 26), (10, 29))}
+    for anno, (m, o) in attese.items():
+        marzo, ottobre = calendario.cambio_ora(anno)
+        assert (marzo, ottobre) == (date(anno, *m), date(anno, *o)), (anno, marzo, ottobre)
+        assert marzo.weekday() == ottobre.weekday() == 6
+    # confrontate con il fuso orario di Roma di Python, dove c'e': quel giorno dura 23 o 25 ore
+    try:
+        from zoneinfo import ZoneInfo
+        roma = ZoneInfo('Europe/Rome')
+    except Exception as e:
+        return 'senza il fuso di Roma (%s): solo le date attese' % e.__class__.__name__
+    for anno in range(2024, 2040):
+        marzo, ottobre = calendario.cambio_ora(anno)
+        for g, ore in ((marzo, 23), (ottobre, 25)):
+            a = datetime.combine(g, time(0), tzinfo=roma)
+            b = datetime.combine(g + timedelta(days=1), time(0), tzinfo=roma)
+            assert (b.timestamp() - a.timestamp()) == ore * 3600, (g, ore)
+        # e nessun altro giorno dell'anno cambia
+        g = date(anno, 1, 1)
+        while g.year == anno:
+            a = datetime.combine(g, time(0), tzinfo=roma)
+            b = datetime.combine(g + timedelta(days=1), time(0), tzinfo=roma)
+            assert (b.timestamp() - a.timestamp() == 24 * 3600) == (g not in (marzo, ottobre)), g
+            g += timedelta(days=1)
+    return 'date uguali al fuso di Roma dal 2024 al 2039'
+
+
+def o_minuti_veri():
+    D, mv = datetime, calendario.minuti_veri
+    assert mv(D(2026, 3, 28, 22), D(2026, 3, 29, 8)) == 540          # la notte di marzo: un'ora in meno
+    assert mv(D(2026, 10, 24, 22), D(2026, 10, 25, 8)) == 660        # la notte di ottobre: un'ora in piu'
+    assert mv(D(2026, 3, 21, 22), D(2026, 3, 22, 8)) == 600          # una notte normale
+    assert mv(D(2026, 10, 25, 22), D(2026, 10, 26, 8)) == 600        # la notte dopo il cambio: normale
+    assert mv(D(2026, 3, 29, 8), D(2026, 3, 29, 16)) == 480          # di giorno, la domenica del cambio: come sempre
+    assert mv(D(2026, 10, 25, 8), D(2026, 10, 25, 16)) == 480
+    assert mv(D(2026, 3, 28, 22), D(2026, 3, 29, 2)) == 240          # finisce proprio al salto
+    assert mv(D(2026, 3, 28, 22), D(2026, 3, 29, 3)) == 240          # le 2 e le 3 di marzo sono lo stesso istante
+    assert mv(D(2026, 3, 29, 2, 30), D(2026, 3, 29, 8)) == 270       # un inizio nell'ora che non esiste: come prima del salto
+    assert mv(D(2026, 10, 24, 22), D(2026, 10, 25, 3)) == 360        # fino alle 3 di ottobre: l'ora ripetuta c'e' tutta
+    assert mv(D(2026, 10, 24, 22), D(2026, 10, 25, 2, 30)) == 270    # fine dentro l'ora ripetuta: la prima volta che passa
+    assert mv(D(2026, 10, 25, 2, 30), D(2026, 10, 25, 8)) == 390     # inizio dentro l'ora ripetuta: la prima volta, poi torna
+    assert mv(D(2026, 10, 25, 3), D(2026, 10, 25, 8)) == 300         # dopo il ritorno: come sempre
+    assert mv(D(2026, 3, 29, 8), D(2026, 3, 29, 8)) == 0 and mv(D(2026, 3, 29, 9), D(2026, 3, 29, 8)) == 0
+    # periodi lunghi: un mese con un cambio, un anno con tutti e due (si compensano)
+    assert mv(D(2026, 3, 1), D(2026, 4, 1)) == 31 * 24 * 60 - 60
+    assert mv(D(2026, 10, 1), D(2026, 11, 1)) == 31 * 24 * 60 + 60
+    assert mv(D(2026, 1, 1), D(2027, 1, 1)) == 365 * 24 * 60
+    # con il fuso di Roma di Python, dove c'e', su tutte le notti 22-08 di tre anni
+    try:
+        from zoneinfo import ZoneInfo
+        roma = ZoneInfo('Europe/Rome')
+    except Exception:
+        return
+    def veri(a, b):      # mai sotto zero: nell'ora che non esiste Python puo' dare un tempo negativo
+        return max((b.replace(tzinfo=roma).timestamp() - a.replace(tzinfo=roma).timestamp()) // 60, 0)
+    g, n = date(2025, 1, 1), 0
+    while g < date(2028, 1, 1):
+        a, b = D.combine(g, time(22)), D.combine(g + timedelta(days=1), time(8))
+        assert mv(a, b) == veri(a, b), (g, mv(a, b), veri(a, b))
+        n += 1
+        g += timedelta(days=1)
+    # e ogni quarto d'ora di inizio e di fine intorno alle due notti del 2026 e del 2027
+    quarti = 0
+    for domenica in calendario.cambio_ora(2026) + calendario.cambio_ora(2027):
+        vigilia = D.combine(domenica - timedelta(days=1), time(12))
+        istanti = [vigilia + timedelta(minutes=15 * i) for i in range(4 * 36)]      # dalle 12 del sabato alle 24 della domenica
+        for a in istanti:
+            for b in istanti:
+                if b > a:
+                    assert mv(a, b) == veri(a, b), (a, b, mv(a, b), veri(a, b))
+                    quarti += 1
+    return '%d notti e %d coppie di orari uguali al fuso di Roma' % (n, quarti)
+
+
+def o_turni():
+    S, C = mondo()
+    P = persone(S)
+    a, b = P['Fittizi'], P['Esempio']
+    s = S()
+    s.add(TipoTurno(codice='NP', nome='Notte con pausa', categoria='LAVORO', ora_inizio=time(22), ora_fine=time(8),
+                    pausa_min=30, ordine=99))
+    s.commit()
+    s.close()
+    mettere(S, a, date(2026, 3, 28), 'N')                            # 21-07 nella notte di marzo
+    mettere(S, a, date(2026, 10, 24), 'N')                           # 21-07 nella notte di ottobre
+    mettere(S, a, date(2026, 3, 21), 'N')                            # una notte normale
+    mettere(S, a, date(2026, 3, 29), None, time(8), time(16))        # di giorno, la domenica del cambio
+    mettere(S, a, date(2026, 10, 25), None, time(22), time(8))       # la notte dopo il cambio
+    mettere(S, b, date(2026, 3, 28), None, time(22), time(8))        # a mano, senza tipo
+    mettere(S, b, date(2026, 10, 24), 'NP')                          # con la pausa: si toglie dopo
+    mettere(S, b, date(2026, 3, 21), 'NP')
+    s = S()
+    minuti = {(t.persona_id, t.giorno): t.minuti for t in s.scalars(select(TurnoPersonale))}
+    notti = {(t.persona_id, t.giorno): t.di_notte for t in s.scalars(select(TurnoPersonale))}
+    s.close()
+    assert minuti[(a, date(2026, 3, 28))] == 540, minuti
+    assert minuti[(a, date(2026, 10, 24))] == 660, minuti
+    assert minuti[(a, date(2026, 3, 21))] == 600, minuti
+    assert minuti[(a, date(2026, 3, 29))] == 480, minuti
+    assert minuti[(a, date(2026, 10, 25))] == 600, minuti
+    assert minuti[(b, date(2026, 3, 28))] == 540, minuti
+    assert minuti[(b, date(2026, 10, 24))] == 660 - 30 and minuti[(b, date(2026, 3, 21))] == 600 - 30, minuti
+    assert notti[(a, date(2026, 3, 28))] and notti[(a, date(2026, 10, 24))] and not notti[(a, date(2026, 3, 29))]
+    # la pagina della settimana: le ore della persona sono quelle vere
+    r = C.get('/personale/turni/settimana/2026-03-23')
+    assert r.status_code == 200, r.status_code
+    s = S()
+    lista = PE.turni_tra(s, date(2026, 3, 23), date(2026, 3, 29), [a])
+    s.close()
+    assert PE.testo_ore(sum(t.minuti for t in lista)) == '17', [t.minuti for t in lista]    # 9 + 8, non 18
+
+
+def o_riposi():
+    S, C = mondo()
+    P = persone(S)
+    a, b = P['Fittizi'], P['Esempio']
+    # marzo: dall'1 di notte alle 12 l'orologio dice 11 ore, ma ne passano 10
+    mettere(S, a, date(2026, 3, 28), None, time(17), time(1))
+    avv = mettere(S, a, date(2026, 3, 29), None, time(12), time(20))
+    assert any('solo 10 ore di riposo prima del turno' in x for x in avv), avv
+    # ottobre: dall'1 alle 11 l'orologio dice 10 ore, ma ne passano 11: nessun avviso
+    mettere(S, b, date(2026, 10, 24), None, time(17), time(1))
+    avv = mettere(S, b, date(2026, 10, 25), None, time(11), time(19))
+    assert not avv, avv
+    # una settimana qualunque resta com'era
+    mettere(S, b, date(2026, 11, 7), None, time(17), time(1))
+    avv = mettere(S, b, date(2026, 11, 8), None, time(11), time(19))
+    assert any('solo 10 ore di riposo prima del turno' in x for x in avv), avv
+    s = S()
+    flag = PE.avvisi_celle(PE.turni_tra(s, date(2026, 3, 22), date(2026, 3, 29)))
+    assert flag.get((a, date(2026, 3, 29))) == 'riposo di 10 ore prima', flag
+    flag = PE.avvisi_celle(PE.turni_tra(s, date(2026, 10, 18), date(2026, 10, 25)))
+    assert (b, date(2026, 10, 25)) not in flag, flag
+    flag = PE.avvisi_celle(PE.turni_tra(s, date(2026, 11, 1), date(2026, 11, 8)))
+    assert flag.get((b, date(2026, 11, 8))) == 'riposo di 10 ore prima', flag
+    assert PE.riposi(s, a, datetime(2026, 3, 29, 12), datetime(2026, 3, 29, 20)) == (600, None)
+    assert PE.riposi(s, b, datetime(2026, 10, 25, 11), datetime(2026, 10, 25, 19)) == (660, None)
+    s.close()
+
+
+def o_excel():
+    from openpyxl import load_workbook
+    S, C = mondo()
+    P = persone(S)
+    mettere(S, P['Fittizi'], date(2026, 3, 28), 'N')
+    mettere(S, P['Fittizi'], date(2026, 3, 30), 'M')
+    r = C.get('/personale/turni/mese/2026-03.xlsx')
+    assert r.status_code == 200
+    wb = load_workbook(BytesIO(r.data))
+    ws = wb['Turni 03-2026']
+    assert "cambio dell'ora" in ws['A2'].value, ws['A2'].value
+    righe = {ws.cell(row=i, column=1).value: i for i in range(1, ws.max_row + 1)}
+    i = righe['Fittizi Ada']
+    assert str(ws.cell(row=i, column=2 + 31 + 1).value).startswith('16 '), ws.cell(row=i, column=34).value   # 9 + 7, non 17
+    assert ws.cell(row=i, column=2 + 31 + 2).value == 1, 'una notte'
+    el = wb['Elenco']
+    testa = next(i for i in range(1, 8) if el.cell(i, 1).value == 'Data')
+    ore = {str(el.cell(row=x, column=1).value)[:10]: el.cell(row=x, column=9).value for x in range(testa + 1, el.max_row)}
+    assert ore == {'2026-03-28': 9, '2026-03-30': 7}, ore
+    # un mese senza cambio dell'ora: niente nota
+    r = C.get('/personale/turni/mese/2026-12.xlsx')
+    ws = load_workbook(BytesIO(r.data))['Turni 12-2026']
+    assert "cambio dell'ora" not in ws['A2'].value, ws['A2'].value
+
+
+prova('le domeniche del cambio dell\'ora: ultima di marzo e di ottobre, come il fuso di Roma', o_domeniche)
+prova('i minuti veri: un\'ora in meno a marzo, una in piu\' a ottobre, il resto uguale', o_minuti_veri)
+prova('i turni di quelle notti: 9 e 11 ore, pausa tolta, il giorno e le altre notti come prima', o_turni)
+prova('i riposi fra due turni contano le ore vere: avviso a marzo, nessuno a ottobre', o_riposi)
+prova('l\'Excel del mese: le ore vere, la nota solo nei mesi con il cambio', o_excel)
 
 
 # ================================================================ WhatsApp

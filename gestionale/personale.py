@@ -184,10 +184,10 @@ def riposi(s, persona_id, inizio, fine, escludi_ids=()):
         TurnoPersonale.persona_id == persona_id, TurnoPersonale.inizio != None,
         TurnoPersonale.giorno >= inizio.date() - timedelta(days=2),
         TurnoPersonale.giorno <= fine.date() + timedelta(days=1))).all()
-    prima = [inizio - t.fine for t in vicini if t.id not in escludi_ids and t.fine <= inizio]
-    dopo = [t.inizio - fine for t in vicini if t.id not in escludi_ids and t.inizio >= fine]
-    return (int(min(prima).total_seconds() // 60) if prima else None,
-            int(min(dopo).total_seconds() // 60) if dopo else None)
+    # minuti passati davvero: nelle notti del cambio dell'ora non sono quelli dell'orologio
+    prima = [calendario.minuti_veri(t.fine, inizio) for t in vicini if t.id not in escludi_ids and t.fine <= inizio]
+    dopo = [calendario.minuti_veri(fine, t.inizio) for t in vicini if t.id not in escludi_ids and t.inizio >= fine]
+    return (min(prima) if prima else None, min(dopo) if dopo else None)
 
 
 def avvisi_riposo(s, turno):
@@ -497,8 +497,10 @@ def avvisi_celle(turni):
     for lista in per_persona.values():
         lista.sort(key=lambda t: t.inizio)
         for a, b in zip(lista, lista[1:]):
-            pausa = (b.inizio - a.fine).total_seconds() // 60
-            if 0 <= pausa < RIPOSO_MINIMO:
+            if b.inizio < a.fine:
+                continue                                  # sovrapposti: non e' un riposo
+            pausa = calendario.minuti_veri(a.fine, b.inizio)     # minuti veri, anche al cambio dell'ora
+            if pausa < RIPOSO_MINIMO:
                 avvisi[(b.persona_id, b.giorno)] = ('nessun riposo prima' if not pausa else
                                                     'riposo di %s ore prima' % testo_ore(pausa))
     return avvisi
@@ -1347,9 +1349,11 @@ def esporta_mese(s, st, primo, ultimo, ruolo='', area=''):
                         tabella_excel, FORMATO_DATA, FORMATO_DATA_ORA, FORMATO_ORE)
     # il titolo e la riga «esportato il», poi l'intestazione alla riga 3 come prima
     ws.cell(row=1, column=1, value=testo_excel(titolo)).font = Font(name='Calibri', bold=True, size=14, color=blu)
-    ws.cell(row=2, column=1, value='Esportato il %s alle %s dal Gestionale Agende' % (
-        datetime.now().strftime('%d/%m/%Y'), datetime.now().strftime('%H:%M'))).font = carattere_excel(size=9, italic=True,
-                                                                                                        color='5B6B75')
+    esportato = 'Esportato il %s alle %s dal Gestionale Agende' % (datetime.now().strftime('%d/%m/%Y'),
+                                                                   datetime.now().strftime('%H:%M'))
+    if any(g in calendario.cambio_ora(g.year) for g in giorni):
+        esportato += ". Nella notte del cambio dell'ora le ore sono quelle passate davvero"
+    ws.cell(row=2, column=1, value=esportato).font = carattere_excel(size=9, italic=True, color='5B6B75')
     riga = 3
     intestazioni = ['Cognome e nome', 'Qualifica'] + ['%s\n%d' % (GIORNI_CORTI[g.weekday()], g.day) for g in giorni] + \
                    ['Ore', 'Notti', 'Festivi', 'Assenze']

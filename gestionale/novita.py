@@ -19,8 +19,9 @@ NOVITA = [
                    'ottobre, una in meno a marzo), nelle ore del mese, nei riposi e nei controlli dei turni.',
              guida='turni-personale'),
         dict(titolo='Codici dei turni scritti di seguito',
-             testo='Nei turni del personale si possono scrivere più codici attaccati («MP» per mattina e pomeriggio): '
-                   'il programma li separa come li separerebbe una persona, provando prima i codici più lunghi.',
+             testo='Nei turni del personale si possono scrivere i codici uno dopo l\'altro senza aspettare («M» e subito '
+                   '«P»: mattina oggi, pomeriggio domani): il programma li separa come farebbe una persona, provando '
+                   'prima i codici più lunghi (MA, PE e RE restano un codice solo).',
              guida='turni-personale'),
         dict(titolo='I file rovinati messi da parte si possono svuotare',
              testo='In Impostazioni → Controllo del programma si vede quanto spazio occupano i database rovinati messi '

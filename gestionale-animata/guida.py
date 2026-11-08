@@ -544,8 +544,10 @@ ARTICOLI = [
                'anche nei giorni dopo. Se c\'è da ricontrollare qualcosa, lo dice.', '#diario'),
              P('Se si blocca', 'Se il programma non risponde più, basta cliccare di nuovo l\'icona Agende: quello '
                'bloccato si chiude e se ne apre uno nuovo, in mezzo minuto.'),
-             P('Niente si perde', 'Un database rovinato non si cancella mai: resta in backup\\danneggiati, per '
-               'l\'assistenza. Le copie di sicurezza si fanno ogni giorno e ogni due ore se ci sono modifiche.'),
+             P('Niente si perde', 'Un database rovinato non si cancella mai da solo: resta in backup\\danneggiati, per '
+               'l\'assistenza. Da Controllo del programma si vede quanto spazio occupano questi file e, con una '
+               'conferma, si tolgono quelli messi da parte da più di tre mesi. Le copie di sicurezza si fanno ogni '
+               'giorno e ogni due ore se ci sono modifiche.'),
          ]),
     dict(slug='aggiornare', gruppo='Configurazione', titolo='Aggiornare a una versione nuova',
          in_breve='Quando esce una versione nuova il programma lo dice: «Aggiorna adesso», e in un minuto si riapre '

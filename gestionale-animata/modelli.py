@@ -12,6 +12,8 @@ from datetime import datetime, date, time, timedelta
 import logging
 import re
 
+import calendario
+
 from sqlalchemy import (create_engine, Column, Integer, String, Boolean, Date,
                         Time, DateTime, Text, ForeignKey, UniqueConstraint,
                         LargeBinary, Index, text, select)
@@ -933,11 +935,13 @@ class TurnoPersonale(Base):
 
     @property
     def minuti(self):
-        """Minuti del turno, pausa tolta; 0 per riposi e assenze."""
+        """Minuti del turno, pausa tolta; 0 per riposi e assenze. Nelle notti del
+        cambio dell'ora contano i minuti passati davvero (calendario.minuti_veri):
+        la notte di marzo un'ora in meno, quella di ottobre un'ora in piu'."""
         if not self.con_orario:
             return 0
         pausa = (self.tipo.pausa_min or 0) if self.tipo is not None else 0
-        return max(int((self.fine - self.inizio).total_seconds() // 60) - pausa, 0)
+        return max(calendario.minuti_veri(self.inizio, self.fine) - pausa, 0)
 
     @property
     def di_notte(self):

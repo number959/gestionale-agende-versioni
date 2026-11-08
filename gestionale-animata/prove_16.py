@@ -835,7 +835,9 @@ def h_elenco_mozilla():
                        env=dict(os.environ, SSL_CERT_FILE=os.devnull, SSL_CERT_DIR=os.path.join(PROVVISORIA, 'nessuna')))
     assert r.returncode == 0, r.stderr[-800:]
     sistema, gestionale = (int(x) for x in r.stdout.split())
-    assert sistema == 0 and gestionale > 100, (sistema, gestionale)
+    # su Linux senza i file di sistema il contesto di Python resta vuoto; su Windows l'elenco di Windows
+    # c'e' sempre (e' quello del PC, non un file): conta che il programma abbia anche l'elenco Mozilla
+    assert (sistema == 0 or os.name == 'nt') and gestionale > 100 and gestionale >= sistema, (sistema, gestionale)
     assert 'elenco Mozilla' in comune.certificati_in_uso(), comune.certificati_in_uso()
     for base, pagina in (('https://github.com/u/r/releases/latest/download/', 'https://github.com/u/r/releases/latest'),
                          ('https://github.com/u/r/releases/download/v1.9/', 'https://github.com/u/r/releases/tag/v1.9'),
@@ -847,7 +849,7 @@ def h_elenco_mozilla():
         e = ssl.SSLCertVerificationError(1, motivo)
         e.verify_message = motivo
         assert atteso in comune.spiega_certificato(e), (motivo, comune.spiega_certificato(e))
-    return '%d autorità senza i certificati di sistema' % gestionale
+    return '%d autorità con %d di sistema' % (gestionale, sistema)
 
 
 def h_senza_risposta():
@@ -866,6 +868,9 @@ def h_senza_risposta():
     chiuso.bind(('127.0.0.1', 0))
     porta = chiuso.getsockname()[1]
     chiuso.close()
+    # su Windows una porta chiusa su 127.0.0.1 si dice «rifiutata» solo dopo un paio di secondi di
+    # tentativi: con un secondo di attesa sembrerebbe un sito che non risponde
+    AG.ATTESA_RETE = 5
     imposta(S, aggiornamenti_indirizzo='https://127.0.0.1:%d/agg/' % porta)
     AG.controlla(fabbrica)
     assert 'internet non raggiungibile' in (AG.stato['errore'] or ''), AG.stato['errore']

@@ -354,9 +354,21 @@ non siano cambiate); con le fasce proprie colonne e celle si confrontano con un 
 per minuto e riga per riga, i controlli con le fasce toccate calcolate a parte, la prima
 disponibilità con il controllo vero ora per ora; e poi i casi scritti a mano. Con
 `PROVE_GIRI=500` usa più giorni inventati (predefinito 120); su Linux è passata anche così.
-Finora tutte le prove sono state lanciate solo su Linux: su Windows le prove con i certificati
-(`prove_15.py`, `prove_16.py`, `prove_191.py`) cercano il comando `openssl`, che c'è nella
-riga di comando di Git for Windows.
+Su Windows le prove con i certificati (`prove_15.py`, `prove_16.py`, `prove_191.py`) cercano il
+comando `openssl`, che c'è nella riga di comando di Git for Windows.
+
+**Su un Windows vero, da GitHub (dalla 1.12.1).** Fino alla 1.12 le prove erano state lanciate
+solo su Linux e nel Windows finto di Wine. Ora il workflow `.github/workflows/prove.yml` («Prove su
+Windows», pagina *Actions* del progetto) le lancia su un Windows di GitHub (`windows-latest`, Python
+3.13) nelle due cartelle, a ogni push di un ramo `ccr-*` o a mano (*Run workflow*): tutte le
+raccolte senza browser, poi `strumenti/demo.py` in sottofondo e quelle nel browser (Chromium di
+Playwright, `tutte_le_prove.py --solo-browser`); ci vogliono una ventina di minuti, e i registri di
+ogni raccolta si scaricano dall'esecuzione (artefatti `registri-gestionale` e
+`registri-gestionale-animata`). Al primo giro (8 novembre 2026) 24 raccolte su 26 erano verdi in
+tutte e due le cartelle, 2550 casi di `campagna.py` compresi; le tre prove rotte erano differenze
+fra Linux e Windows nelle prove stesse, non difetti del programma, e sono state sistemate (vedi *La
+1.12.1*). Il workflow non pubblica niente: serve a vedere su Windows quello che qui si vede solo
+su Linux.
 
 ## Guide: immagini e video
 
@@ -373,7 +385,9 @@ Tutte e due devono finire senza "non trovati". Si fa in tutte e due le versioni:
 dell'animata hanno le sue icone. `prove_guida.py` controlla che ogni guida abbia immagine e
 video. Il PDF della guida (`/aiuto/stampa` in A4, circa 43 pagine):
 `python strumenti/genera_pdf_guida.py http://127.0.0.1:5001`, che scrive
-«Guida Gestionale Agende <versione>.pdf» (alla 1.10, 48 pagine).
+«Guida Gestionale Agende <versione>.pdf» (alla 1.10, 48 pagine; alla 1.12.1, 53). Dalla 1.12.1
+lo genera anche il workflow «Pubblica una versione» e lo mette nella release come quinto file
+(`Guida-Gestionale-Agende-<versione>.pdf`): non va più rifatto a mano a ogni versione.
 
 Le pagine fotografate usano i segnaposto `{martedi}` (il martedì di questa settimana),
 `{domani}` e `{oggi}`, come i dati di `strumenti/demo.py`, che sono costruiti attorno a oggi.
@@ -737,28 +751,55 @@ prove di `prove_16.py`, non da quella simulazione). Tutte le raccolte senza brow
 cartelle (26 raccolte ciascuna, 2550 casi di `campagna.py`), prove nel browser verdi nella normale
 e nell'animata (quelle dell'animata comprese).
 
+## La 1.12.1
+
+Fatta l'8 novembre 2026, nella stessa sessione, dopo la richiesta di Giovanni di chiudere le cose
+aperte. Niente di nuovo nel database (schema 11). Cosa porta:
+
+- **Le ore vere nelle notti del cambio dell'ora** (trovato dalla revisione della 1.11): una notte
+  21–07 vale 9 ore nell'ultima domenica di marzo e 11 in quella di ottobre, nei conti del mese,
+  nell'Excel (la riga «Esportato il…» lo dice nei mesi con il cambio) e nei riposi fra due turni.
+  Decisione: la regola europea (ultima domenica di marzo e di ottobre, alle 3:00) è scritta a mano
+  in `calendario.cambio_ora` e `calendario.minuti_veri`, invece di usare `zoneinfo`: su Windows il
+  fuso di Roma vuole il pacchetto `tzdata`, e un eseguibile PyInstaller senza darebbe risultati
+  sbagliati in silenzio; la regola è fissa dal 1996 e `prove_18.py` la confronta con `zoneinfo` dove
+  c'è (ogni giorno dal 2024 al 2039, 41.000 coppie di orari). Un orario scritto nell'ora che non
+  esiste o in quella ripetuta si legge come prima del cambio, la stessa convenzione di Python. Il
+  tipo di turno senza data (`TipoTurno.minuti`) resta nominale (600 per N). Se Giovanni e Federica
+  preferissero le ore dell'orologio (per le buste paga), basta far tornare `TurnoPersonale.minuti`
+  a `fine - inizio`: è un punto solo.
+- **Codici dei turni scritti di seguito**: «M» e subito «P» non sono più «codice sconosciuto MP»,
+  ma M sul giorno e P su quello dopo, come scrivendoli con calma (`nuovoBuffer` in `turni.js`:
+  vale il codice più lungo con cui comincia il testo, il resto ricomincia da capo). Provato in
+  `prove_18_browser.py`.
+- **`backup\danneggiati` si può svuotare**: *Controllo del programma* dice quanti file ci sono e
+  quanto occupano, e con una conferma toglie quelli da più di 90 giorni
+  (`autoripara.svuota_danneggiati`, `GIORNI_DANNEGGIATI`); i recenti restano sempre, il programma
+  da solo non cancella mai niente. Nel diario resta la riga. Provato in `prove_autoriparazione.py`.
+- **Le prove su un Windows vero**, con GitHub Actions (`prove.yml`, vedi *Prove*): al primo giro tre
+  prove rotte, tutte nelle prove e non nel programma: `pid_vero` usava `wmic`, che Windows Server
+  2025 (il `windows-latest` di GitHub) e i Windows 11 recenti non hanno più (ora legge i processi
+  figli con Toolhelp, `ctypes`; il programma non ha mai usato `wmic`); `h_elenco_mozilla` voleva zero
+  certificati di sistema, ma su Windows l'elenco delle radici è del PC e c'è sempre (ora controlla
+  che il programma ne abbia di più grazie all'elenco Mozilla); `h_senza_risposta` con una porta
+  chiusa su 127.0.0.1 riceveva «non risponde» invece di «non raggiungibile», perché Windows dice
+  «rifiutata» solo dopo un paio di secondi di tentativi (ora aspetta 5 secondi).
+- **Il PDF della guida nella release**: il workflow «Pubblica una versione» avvia il gestionale di
+  prova, genera il PDF con Chromium e lo carica come quinto file (53 pagine alla 1.12.1). Se il
+  passo non riesce la release si fa lo stesso, senza PDF.
+- `tutte_le_prove.py --solo-browser` (solo le prove nel browser, per chi ha già fatto le altre).
+
 ## Cose aperte
 
-- **Le notti del cambio dell'ora** (trovato dalla revisione della 1.11, non cambiato): un turno di
-  notte nelle due notti in cui cambia l'ora conta 10 ore, mentre le ore vere sono 11 a ottobre e 9
-  a marzo (`TurnoPersonale.minuti`, anche nell'Excel). Se contare le ore vere o quelle
-  dell'orologio lo decide Giovanni con Federica (sono ore che possono finire in busta paga); per le
-  ore vere serve `tzdata` dentro l'eseguibile o la regola europea scritta a mano.
-- **Codici dei turni scritti di seguito** («M» poi «P» entro un attimo diventa «MP», codice
-  sconosciuto): funziona come documentato (le lettere scritte durante l'attesa formano un codice
-  solo, così si scrivono MA, PE e RE), ma se Federica ci inciampa si può cambiare.
-- `backup\danneggiati` cresce senza limite (i file rovinati non si cancellano mai, apposta): se un
-  giorno occupa troppo, si svuota a mano.
-
-- In Claude Code, per prima cosa: le prove su Windows vero, mai lanciate finora (vedi *Passare a
-  Claude Code*); alla 1.11 le raccolte senza browser sono state lanciate con il Python di Windows
-  in Wine e quattro prove che non andavano su Windows sono state sistemate (la password protetta
-  con DPAPI, una cartella non scrivibile, il pid di un venv, la prova delle icone animate di
-  domenica); `prove_15.py`, `prove_16.py` e `prove_191.py` vogliono `openssl` sul PATH (c'è nella
-  riga di comando di Git for Windows, non in PowerShell).
+- **Ore del cambio dell'ora**: dalla 1.12.1 contano le ore vere (vedi *La 1.12.1*). Se per le
+  buste paga Giovanni e Federica vogliono quelle dell'orologio, è un punto solo da cambiare.
 - Alla clinica c'è la 1.9 animata e il suo controllo degli aggiornamenti non riesce (il certificato,
-  vedi *La 1.12*): la 1.12 va messa una volta a mano, dal Setup scaricato nel browser, oppure
-  dopo aver aperto github.com con Edge. Il PDF della guida da rigenerare.
+  vedi *La 1.12*): la 1.12.1 va messa una volta a mano, dal Setup scaricato nel browser dalla pagina
+  delle versioni (dove c'è anche il PDF della guida), oppure dopo aver aperto github.com con Edge.
+  Da lì in poi «Aggiorna adesso» torna a funzionare da solo.
+- In Claude Code sul PC di Giovanni le prove si lanciano come qui; su un Windows vero le ha già
+  fatte GitHub (`prove.yml`): se una prova non va sul suo PC e va su GitHub, è il PC (antivirus,
+  `openssl` non sul PATH: c'è nella riga di comando di Git for Windows, non in PowerShell).
 - **Fasce dei turni**: con Federica, scegliere la durata delle fasce dei turni che ne hanno
   bisogno (per esempio le sedute di endoscopia e gli ambulatori con le visite ogni 20 minuti),
   da *Configura → Anagrafiche*, il turno, *Durata delle fasce*. Salvando ogni turno il programma

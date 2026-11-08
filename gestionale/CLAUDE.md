@@ -73,7 +73,15 @@ Tutto il resto deve risultare uguale byte per byte (`allinea_animata.py` lo cont
 python strumenti/tutte_le_prove.py                 # tutte quelle senza browser, circa 5 minuti
 python strumenti/demo.py --porta 5001              # in un'altra finestra: gestionale con i dati finti
 python strumenti/tutte_le_prove.py --browser http://127.0.0.1:5001 --solo prove_17_browser
+python strumenti/tutte_le_prove.py --browser http://127.0.0.1:5001 --solo-browser   # solo quelle nel browser
 ```
+
+Su un Windows vero le lancia GitHub: il workflow `.github/workflows/prove.yml` («Prove su Windows»,
+pagina *Actions*) fa tutte e due le cartelle a ogni push del ramo di lavoro o a mano, prima senza
+browser e poi nel browser sul gestionale di prova; i registri sono negli artefatti dell'esecuzione.
+Una prova che va su Linux e non su Windows si guarda lì (alla 1.12.1: `wmic` non c'è più nei
+Windows recenti, mai usarlo; l'elenco delle radici di Windows c'è sempre; una porta chiusa su
+127.0.0.1 si dice rifiutata solo dopo un paio di secondi).
 
 Senza `--solo` e con `--browser` le lancia tutte, anche quelle nel browser (Playwright con
 Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_tendine_browser.py`,
@@ -90,7 +98,8 @@ Le prove senza browser: `prove.py`, `prove2.py`, `prove100.py`, `prove200.py`,
 `prove_143.py`, `prove_145.py`, `prove_146.py`, `prove_guida.py`, `prove_15.py`, `prove_16.py`,
 `prove_17.py` (codice fiscale, confrontato anche con una libreria indipendente), `prove_18.py`
 (turni del personale con oracoli, annulla e rifai, modifiche a caso con invarianti;
-registrazione del numero WhatsApp con una finta Meta), `prove_19.py` (Dove si fa: lettura del
+registrazione del numero WhatsApp con una finta Meta; dalla 1.12.1 le notti del cambio dell'ora
+contro il fuso di Roma di Python), `prove_19.py` (Dove si fa: lettura del
 file in tanti modi, importazione e versioni nuove, ricerca contro un oracolo su 1200
 prestazioni inventate, pagine, protezioni, aggiornamento dalla 9), `prove_191.py` (l'email con
 qualsiasi casella: tipi e server proposti, modulo con errori e avvisi, invio con nome utente
@@ -98,7 +107,8 @@ diverso e senza password, ogni errore con il suo consiglio, con lo stesso finto 
 di `prove_15.py`), `prove_110.py` (le fasce dei turni: senza fasce proprie tutto identico alle
 funzioni della 1.9.1 copiate dentro la prova, con le fasce proprie contro calcoli fatti a
 parte; `PROVE_GIRI=500` per più giorni inventati), `prove_autoriparazione.py` (dalla 1.11: ogni
-guasto creato apposta e riparato, anche sul programma vero avviato in processi a parte), `prove_112.py` (dalla 1.12: gli
+guasto creato apposta e riparato, anche sul programma vero avviato in processi a parte; dalla 1.12.1
+anche lo svuotamento dei file rovinati messi da parte), `prove_112.py` (dalla 1.12: gli
 ambulatori: matrice della settimana contro un oracolo minuto per minuto, programmazione del mese, i due Excel,
 Metti e Togli, la regola della stanza e il ritorno alla pagina di partenza) e
 `campagna.py` (casi generati con oracoli e
@@ -140,8 +150,10 @@ temporanea.
   server). L'avvio (`app.principale`) passa prima da `autoripara.entra` (un gestionale solo:
   lucchetto su `gestionale.lock`, `gestionale.pid`, `/salute`) e da `autoripara.all_avvio` (il
   database controllato e, se serve, riparato prima di `crea_sessione`). Regole da non rompere: un
-  file del database rovinato non si cancella mai (va in `backup\danneggiati` con il suo giornale,
-  `backup.copia_grezza`); con il giornale di un salvataggio interrotto decide SQLite (non si
+  file del database rovinato non si cancella mai da solo (va in `backup\danneggiati` con il suo giornale,
+  `backup.copia_grezza`; dalla 1.12.1 solo *Controllo del programma*, su richiesta e con conferma, toglie
+  quelli messi da parte da più di `GIORNI_DANNEGGIATI` giorni con `autoripara.svuota_danneggiati`, mai i
+  recenti); con il giornale di un salvataggio interrotto decide SQLite (non si
   controlla la testa del file prima); un database solo occupato non si ripara; «senza perdere
   niente» solo se `_solo_indici` lo dice (una pagina «never used» con righe sono righe perse:
   `_pagina_con_righe`); le copie si aprono in sola lettura (`backup.solo_lettura`) e si verificano
@@ -186,7 +198,13 @@ temporanea.
   da solo: su Windows l'elenco delle radici si riempie solo quando le incontra Edge.
 - Turni del personale: le regole stanno solo in `personale.py` (sovrapposizioni anche con
   la notte del giorno prima, riposi e assenze tutto il giorno, riposo sotto le 11 ore solo
-  avvisato); `static/turni.js` manda la richiesta a `POST /personale/turni/cambia` e
+  avvisato). Cambio dell'ora (dalla 1.12.1): le date stanno solo in `calendario.cambio_ora` e i
+  minuti veri in `calendario.minuti_veri`; li usano `TurnoPersonale.minuti`, `personale.riposi` e
+  `personale.avvisi_celle`. Ogni altro punto che misura un tempo fra due orari dei turni passa da lì,
+  mai da `fine - inizio`; `prove_18.py` confronta tutto con il fuso di Roma di Python (la regola è
+  scritta a mano perché l'eseguibile non ha `tzdata`). In `turni.js` il codice scritto da tastiera
+  (`nuovoBuffer`) separa i codici scritti di seguito: il più lungo con cui comincia il testo, poi
+  il resto da capo. `static/turni.js` manda la richiesta a `POST /personale/turni/cambia` e
   ridisegna quello che risponde, una richiesta alla volta (coda). La risposta porta lo
   stato di prima delle celle cambiate; *ripristina* (Annulla) è tutto o niente. Il disegno
   della cella è due volte, nella macro `contenuto()` di `_personale_cella.html` e in
@@ -304,7 +322,8 @@ serve disinstallare.
 3. In ciascuna cartella `CREA_EXE.bat` e `CREA_SETUP.bat` (o `strumenti/wine/costruisci.sh`),
    poi le prove sul programma installato sopra la versione precedente.
 4. Una release nel progetto delle versioni, con i quattro file di `Output` delle due
-   cartelle (il tag è la versione con una "v" davanti) e segnata come ultima ("latest"):
+   cartelle (il tag è la versione con una "v" davanti) e segnata come ultima ("latest"); il
+   workflow `pubblica.yml` ci mette anche il PDF della guida, generato dal gestionale di prova:
 
    ```
    gh release create v1.10 --repo number959/gestionale-agende-versioni --latest \

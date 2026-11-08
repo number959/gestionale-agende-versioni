@@ -1171,7 +1171,10 @@ Menu **Turni** (dalla 1.8). Tre viste dello stesso planning, con le schede *Gior
 turno: i tipi divisi per categoria, *Orario diverso, area, nota* (un orario scritto a mano,
 l'area, una nota, un secondo turno nello stesso giorno) e *Togli*. Con una cella scelta
 basta scrivere il codice: il turno si mette e si passa al giorno dopo; un codice che può
-continuare (M e MA) aspetta un attimo, oppure Invio. Le frecce si spostano; Maiusc+frecce
+continuare (M e MA) aspetta un attimo, oppure Invio. Dalla 1.12.1 i codici scritti uno dopo
+l'altro senza aspettare (M e subito P) si separano come farebbe una persona: vale il codice più
+lungo con cui comincia quello che si è scritto (MA, PE e RE restano un codice solo), le lettere
+dopo ricominciano da capo sul giorno seguente. Le frecce si spostano; Maiusc+frecce
 o trascinando si scelgono più celle, anche di più persone, Ctrl+clic ne aggiunge una; Canc
 toglie; Invio apre la scelta, Esc la chiude. **Ctrl+Z** annulla l'ultima modifica e
 **Ctrl+Y** la rifà, anche con *Annulla* nell'avviso in basso: le celle tornano esattamente
@@ -1195,6 +1198,14 @@ giorno non ha ancora un turno.
 reperibilità a parte), notti (turni che finiscono il giorno dopo), festivi (domeniche,
 festività del calendario e patrono della struttura) e giorni di assenza, con il dettaglio
 passandoci sopra. Le ore del contratto del periodo sono le ore a settimana × giorni ÷ 7.
+Nelle due notti del cambio dell'ora (dalla 1.12.1) le ore di un turno sono quelle passate
+davvero, non quelle che dice l'orologio: la notte dell'ultima domenica di marzo dura un'ora in
+meno (alle 2:00 si passa alle 3:00), quella dell'ultima domenica di ottobre un'ora in più (alle
+3:00 si torna alle 2:00). Così una notte 21–07 vale 9 ore a marzo e 11 a ottobre, e anche il
+riposo fra due turni si misura con le ore vere. L'Excel del mese lo ricorda nella riga
+«Esportato il…» quando il mese contiene il cambio. La regola europea (dal 1996) è scritta nel
+programma, `calendario.cambio_ora` e `calendario.minuti_veri`, senza dipendere dal fuso orario
+di Windows; `prove_18.py` la confronta con il fuso di Roma di Python.
 Sotto ogni ruolo la riga **Copertura** dice quanti per turno quel giorno (M2 P2 N1), in
 rosso dove una copertura minima non è raggiunta.
 
@@ -1510,7 +1521,15 @@ cosa che si ripara): le ultime 100 riparazioni, con quando, cosa e il dettaglio 
 Lo mostra *Impostazioni → Controllo del programma* (`/autoriparazione`: com'è adesso il database, le
 copie, i lavori in sottofondo, lo spazio, la porta; *Controlla adesso* fa il controllo completo,
 `integrity_check`), e la campanella avvisa per tre giorni (*Riparato da solo*, o in rosso se serve
-l'assistenza). Una pagina che si rompe mostra una spiegazione in parole semplici al posto
+l'assistenza).
+
+**I file rovinati messi da parte** (dalla 1.12.1). La pagina dice quanti file ci sono in
+`backup\danneggiati` e quanto occupano, e quanti sono da più di 90 giorni. Il bottone *Svuota i
+file rovinati più vecchi di 90 giorni* (solo se ce ne sono, con una conferma) cancella quelli,
+`autoripara.svuota_danneggiati`, e lo annota nel diario; quelli più recenti restano sempre, perché
+possono servire all'assistenza. Il programma da solo non cancella mai niente lì dentro: la cartella
+cresce finché qualcuno non la svuota da qui. La data di un file è quella nel suo nome
+(`danneggiato-AAAA-MM-GG_HHMMSS.db`), per un file con un altro nome quella del file. Una pagina che si rompe mostra una spiegazione in parole semplici al posto
 dell'errore del server (il disco pieno e il database occupato con il loro messaggio).
 
 Per le prove: `GESTIONALE_PORTA` cambia la porta del programma (al PC della clinica non c'è: le
@@ -1541,7 +1560,8 @@ l'accettazione usa già.
 
 **Accanto al database (dalla 1.11)**: `autoriparazione.json` (il diario delle riparazioni),
 `gestionale.lock` e `gestionale.pid` (il gestionale aperto), `gestionale.log.1`… (i registri
-vecchi), `backup\danneggiati` (i file rovinati messi da parte, mai cancellati) e, solo se il
+vecchi), `backup\danneggiati` (i file rovinati messi da parte, che si tolgono solo da *Controllo del
+programma*, quelli da più di 90 giorni) e, solo se il
 programma non è partito, `avvio-non-riuscito.html`. Vedi *Autoriparazione*.
 
 **Aggiornamento alla 1.11.** Il database non cambia (resta allo schema 11): niente copia di
@@ -1959,6 +1979,19 @@ comportamento dell'antivirus del PC e l'apertura del browser predefinito; per gl
 aggiornamenti, una versione più nuova pubblicata davvero su GitHub (il percorso è lo stesso provato su
 https, con l'indirizzo vero al posto di quello di prova).
 
+**Su un Windows vero (dalla 1.12.1).** Il workflow `.github/workflows/prove.yml` («Prove su
+Windows», nella pagina *Actions* del progetto) lancia `tutte_le_prove.py` nelle due cartelle su un
+Windows di GitHub (`windows-latest`, Python 3.13, Chromium di Playwright, `openssl` di Git for
+Windows), prima le raccolte senza browser e poi quelle nel browser contro `strumenti/demo.py`
+(`--solo-browser`), a ogni push del ramo di lavoro o a mano; i registri delle prove si scaricano
+dall'esecuzione. Al primo giro erano rotte tre prove, tutte per differenze fra Linux e Windows, mai
+per il programma: `pid_vero` di `prove_autoriparazione.py` usava `wmic`, che i Windows recenti non
+hanno più (ora legge i processi con Toolhelp, `ctypes`); una prova di `prove_16.py` voleva zero
+certificati di sistema, ma su Windows l'elenco delle radici è del PC e c'è sempre (ora conta che il
+programma ne abbia di più, con l'elenco Mozilla); e una porta chiusa su 127.0.0.1 su Windows viene
+detta «rifiutata» solo dopo un paio di secondi di tentativi, con un solo secondo di attesa sembrava
+un sito che non risponde (ora la prova aspetta 5 secondi).
+
 ## Email e WhatsApp: come funzionano dentro
 
 Ogni messaggio passa da una **coda** nel database (tabella `invii`), che è anche il
@@ -2045,9 +2078,11 @@ python prove_15.py           # 69 prove sulla 1.5: campi del paziente, email aut
 python prove_17.py           # 33 prove sulla 1.7: codice fiscale (controllo, omocodia, calcolo e lettura confrontati
                              # con python-codicefiscale su migliaia di casi), luoghi, scheda, prenotazione,
                              # aggiornamento dello schema, Controllo dei codici fiscali, importazione, unione
-python prove_18.py           # 29 prove sulla 1.8: turni del personale (regole contro oracoli scritti a parte, conti,
+python prove_18.py           # 34 prove sulla 1.8: turni del personale (regole contro oracoli scritti a parte, conti,
                              # schema, copia, annulla e rifai, protezioni, 260 modifiche a caso con invarianti,
-                             # aggiornamento dalla 8) e registrazione del numero WhatsApp con una finta Meta
+                             # aggiornamento dalla 8), registrazione del numero WhatsApp con una finta Meta e, dalla
+                             # 1.12.1, le notti del cambio dell'ora (le date e i minuti veri confrontati con il fuso
+                             # di Roma di Python su ogni giorno dal 2024 al 2039 e su 41.000 coppie di orari)
 python prove_19.py           # 27 prove sulla 1.9: Dove si fa (lettura del file in tanti modi e con i suoi errori,
                              # importazione e versioni nuove, ricerca contro un oracolo su 1200 prestazioni
                              # inventate, pagine, registro, statistiche, protezioni, aggiornamento dalla 9)
@@ -2061,18 +2096,20 @@ python prove_110.py          # 22 prove sulla 1.10: le fasce dei turni. Senza fa
                              # calcolo minuto per minuto e riga per riga, controlli contro le fasce toccate calcolate a
                              # parte, prima disponibilità contro il controllo vero ora per ora; casi scritti a mano,
                              # appuntamenti presi prima delle fasce, pagine, modulo, Excel, aggiornamento dalla 10
-python prove_autoriparazione.py  # 54 prove sulla 1.11: l'autoriparazione. Ogni guasto creato apposta: database
+python prove_autoriparazione.py  # 61 prove sulla 1.11: l'autoriparazione. Ogni guasto creato apposta: database
                              # mancante, vuoto, con la testa rovinata, un indice o una pagina dei dati rovinati, il
                              # giornale di un salvataggio interrotto, occupato; riparazione all'avvio e a programma
                              # aperto; un gestionale bloccato (finti gestionali in processi a parte), uno che sta
                              # partendo, un programma che non è il nostro (mai chiuso), la porta occupata; lavori
                              # fermi, poco spazio, copie con la cartella irraggiungibile, l'orologio indietro, il
                              # ripristino sopra un database rovinato; e il programma vero (app.principale) avviato,
-                             # bloccato, sostituito, riparato e riavviato da solo
+                             # bloccato, sostituito, riparato e riavviato da solo; dalla 1.12.1 i file rovinati messi
+                             # da parte (quanto occupano, «Svuota» quelli da più di 90 giorni, i recenti restano)
 python prove_111.py          # le correzioni della 1.11, una prova per difetto (messaggi, agenda, schede,
                              # importazione), ognuna fallisce con il codice della 1.10
-python prove_16.py           # 45 prove sulla 1.6: Aggiorna adesso da una cartella e da un finto GitHub su https
-                             # (rimandi, errori del sito, certificati, file delle versioni storpiati, Setup rovinati),
+python prove_16.py           # 47 prove sulla 1.6: Aggiorna adesso da una cartella e da un finto GitHub su https
+                             # (rimandi, errori del sito, certificati anche con certificati.pem e senza quelli di
+                             # sistema, file delle versioni storpiati, Setup rovinati),
                              # installazione, esito al riavvio, novità, videoguide, installer e file delle versioni,
                              # indirizzo predefinito su GitHub e Rimetti (senza rete)
 python prove_15_browser.py http://127.0.0.1:5000   # 14 controlli nel browser sulle pagine della 1.5 e sui caratteri
@@ -2082,8 +2119,9 @@ python prove_16_browser.py http://127.0.0.1:5001   # 19 controlli: finestra dei 
 python prove_17_browser.py http://127.0.0.1:5001   # 16 controlli: codice fiscale mentre si scrive, calcolo,
                              # suggerimenti del luogo, prenotazione, pagina di controllo (salva pazienti di prova)
 python prove_tendine_browser.py http://127.0.0.1:5001   # 150 controlli: le tendine sopra la pagina e le notifiche, a 1366x657
-python prove_18_browser.py http://127.0.0.1:5001   # 55 controlli sui turni: griglia, tastiera, annulla e rifai, scelta del turno
-                             # (dove si apre, mai coperta), schema, giorno a ore, schermo stretto, movimento ridotto
+python prove_18_browser.py http://127.0.0.1:5001   # 56 controlli sui turni: griglia, tastiera (anche due codici scritti
+                             # di seguito senza aspettare), annulla e rifai, scelta del turno (dove si apre, mai
+                             # coperta), schema, giorno a ore, schermo stretto, movimento ridotto
 python prove_19_browser.py http://127.0.0.1:5001   # 37 controlli su Dove si fa: ricerca mentre si scrive, frecce, scheda della
                              # struttura, messaggio cambiato, Copia, WhatsApp e Stampa, registro con Annulla, paziente,
                              # ricerca rapida, schermo stretto, tema scuro (segna pazienti indirizzati di prova)
@@ -2542,6 +2580,10 @@ falliscono, cioè il difetto c'era davvero.
 | Dove si fa: «ecografia dell'addome», «rx dell'anca» | Zero risultati: «dell'» non era fra le parole vuote | Aggiunte le parole con l'apostrofo |
 | Richieste JSON di forma inattesa | Errore del server (solo a mano) | Un JSON che non è un dizionario non ha campi |
 | Controllo degli aggiornamenti: «il certificato del sito degli aggiornamenti non è valido» (1.9 alla clinica) | Windows non aveva ancora la radice nuova di GitHub (la aggiunge solo quando la incontra con Edge); Python usa l'elenco di Windows così com'è | L'elenco Mozilla (certifi) dentro il programma, più il file `certificati.pem` accanto al database; il motivo spiegato e il collegamento per il Setup a mano |
+| Turni di notte nelle notti del cambio dell'ora (trovato dalla revisione della 1.11) | Contavano 10 ore sia a marzo sia a ottobre, anche nell'Excel e nei riposi | Dalla 1.12.1 contano le ore passate davvero (9 e 11): `calendario.minuti_veri`, con la regola europea scritta nel programma |
+| Due codici dei turni scritti di seguito senza aspettare («M» e subito «P») | «Nessun turno ha il codice MP» | Dalla 1.12.1 si separano: vale il codice più lungo con cui comincia il testo, le lettere dopo ricominciano sul giorno seguente |
+| `backup\danneggiati` cresceva senza limite | I file rovinati messi da parte non si toglievano mai, nemmeno dopo anni | Dalla 1.12.1 *Controllo del programma* dice quanto occupano e li svuota su richiesta, solo quelli da più di 90 giorni |
+| Prove sul Windows di GitHub (1.12.1) | `pid_vero` usava `wmic`, che non c'è più; una prova voleva zero certificati di sistema; una porta chiusa sembrava un sito che non risponde | Processi letti con Toolhelp (`ctypes`); la prova conta che il programma abbia più certificati del sistema; 5 secondi di attesa per la porta chiusa |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo

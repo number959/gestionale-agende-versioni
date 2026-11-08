@@ -2,7 +2,8 @@
 avviato con i dati di prova (strumenti/demo.py):
     python prove_18_browser.py http://127.0.0.1:5001
 - griglia del mese: clic e scelta del turno, codice scritto da tastiera (anche
-  quelli che potrebbero continuare, M e MA), frecce, Canc, Ctrl+Z e Ctrl+Y,
+  quelli che potrebbero continuare, M e MA, e due di seguito senza aspettare,
+  M e P: dalla 1.12.1), frecce, Canc, Ctrl+Z e Ctrl+Y,
   piu' celle con Maiusc+frecce e trascinando, orario scritto a mano, errori e
   avvisi (sovrapposizioni, riposi brevi), totali e copertura ridisegnati;
 - la scelta del turno: dove si apre (dentro lo schermo, mai sopra la cella,
@@ -128,6 +129,14 @@ with sync_playwright() as p:
     pg.wait_for_timeout(200)
     quieta()
     ok('MA scritto di seguito', codici(cella(A1, 8)) == ['MA'], codici(cella(A1, 8)))
+    # 1.12.1: due codici scritti di seguito senza aspettare («M» e subito «P»): M sul 9, P sul 10
+    pg.keyboard.type('mp', delay=50)
+    pg.keyboard.press('Enter')
+    quieta()
+    ok('M e subito P: due codici, un giorno ciascuno', (codici(cella(A1, 9)), codici(cella(A1, 10))) == (['M'], ['P']),
+       (codici(cella(A1, 9)), codici(cella(A1, 10))))
+    pg.keyboard.press('ArrowLeft')
+    pg.keyboard.press('ArrowLeft')
     chiudi_avvisi()
     pg.keyboard.press('x')
     pg.wait_for_timeout(150)
