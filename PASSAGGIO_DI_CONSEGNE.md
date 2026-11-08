@@ -722,6 +722,21 @@ una dashboard animata da esporre su internet, un riepilogo live di agende e ambu
   decisioni che spettano a Giovanni. Il file del prototipo è anche in
   `strumenti/cruscotto_prototipo/` (vedi sotto).
 
+**La 1.12 è stata pubblicata così**, l'8 novembre 2026: l'automazione «Pubblica una versione» avviata
+dalla sessione (esecuzione n. 2, riuscita in due minuti), release `v1.12` segnata come ultima con i
+quattro file (le impronte nei file delle versioni coincidono con quelle che GitHub calcola per i
+Setup). Prima, nel Windows finto: le due cartelle costruite con `costruisci.sh`; **la simulazione
+dell'aggiornamento** della clinica: installata la 1.11 pubblicata, poi «Aggiorna adesso» verso la
+1.12 da una cartella (`prova_aggiorna_adesso.py`, 14 controlli a posto: copia di sicurezza, Setup
+silenzioso, riavvio, novità, dati intatti, Setup installato tolto dopo due minuti), poi i 50
+controlli di `prove_installato.py` sulla 1.12; infine il controllo degli aggiornamenti della 1.12
+installata contro il vero indirizzo GitHub, attraverso il proxy della sessione con il suo
+certificato in `certificati.pem`: «Il programma è aggiornato» (nella sessione il certificato del
+proxy è anche in `SSL_CERT_FILE`, che Python legge: il caso «radice sconosciuta» è coperto dalle
+prove di `prove_16.py`, non da quella simulazione). Tutte le raccolte senza browser verdi nelle due
+cartelle (26 raccolte ciascuna, 2550 casi di `campagna.py`), prove nel browser verdi nella normale
+e nell'animata (quelle dell'animata comprese).
+
 ## Cose aperte
 
 - **Le notti del cambio dell'ora** (trovato dalla revisione della 1.11, non cambiato): un turno di

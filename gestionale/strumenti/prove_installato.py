@@ -74,8 +74,10 @@ controlla('Aggiornamenti: indirizzo predefinito in uso, oppure «Rimetti l\'indi
           (not predefinito) or 'rimetti-predefinito' in b.decode(), campo.group(1) if campo else None)
 controlla('Aggiornamenti: l\'elenco Mozilla dei certificati (certifi) è dentro l\'eseguibile',
           'l\'elenco Mozilla del 20' in t, re.findall(r'si fida sono[^.]*', t)[:1])
+# il collegamento alla pagina delle versioni c'e' quando l'indirizzo e' un sito (non una cartella di prova)
 controlla('Aggiornamenti: il collegamento alla pagina delle versioni per il Setup a mano',
-          (not predefinito) or 'href="%s/releases/latest"' % predefinito in b.decode(), re.findall(r'href="https://github[^"]*"', b.decode())[:3])
+          (not predefinito) or 'rimetti-predefinito' in b.decode() or 'href="%s/releases/latest"' % predefinito in b.decode(),
+          re.findall(r'href="https://github[^"]*"', b.decode())[:3])
 s, b, _ = get('/aggiornamenti/stato.json')
 d = json.loads(b)
 controlla('stato.json', s == 200 and d['versione'] == ATTESA, d)
