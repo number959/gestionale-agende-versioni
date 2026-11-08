@@ -139,6 +139,10 @@ with sync_playwright() as p:
     import json as _json
     import urllib.request as _url
     dati = _json.loads(_url.urlopen(B + '/riepilogo-live.json?struttura=1', timeout=30).read().decode('utf-8'))
+    # le notifiche gia' viste nelle pagine di prima non contano: si azzera la memoria e si guardano le richieste
+    pg.evaluate("sessionStorage.removeItem('notifiche-viste')")
+    richieste_notifiche = []
+    pg.on('request', lambda q: richieste_notifiche.append(q.url) if '/notifiche' in q.url else None)
     pg.goto(B + '/riepilogo-live?struttura=1')
     pg.wait_for_selector('#riepilogo-live .frase-live')
     ok('riepilogo live: la frase in cima, in parole', len(pg.inner_text('.frase-live').strip()) > 20, pg.inner_text('.frase-live'))
@@ -158,8 +162,8 @@ with sync_playwright() as p:
     ok('riepilogo live: le notifiche non coprono la pagina', pg.evaluate("getComputedStyle(document.getElementById('notifiche')).display") == 'none')
     pg.wait_for_timeout(1500)
     ok('riepilogo live: le notifiche non si chiedono nemmeno (non risultano viste nelle altre pagine)',
-       pg.evaluate("sessionStorage.getItem('notifiche-viste')") in (None, '{}') and pg.locator('#notifiche .notifica').count() == 0,
-       pg.evaluate("sessionStorage.getItem('notifiche-viste')"))
+       not richieste_notifiche and pg.evaluate("sessionStorage.getItem('notifiche-viste')") in (None, '{}') and
+       pg.locator('#notifiche .notifica').count() == 0, (richieste_notifiche, pg.evaluate("sessionStorage.getItem('notifiche-viste')")))
     misura = pg.evaluate("(() => { const r = document.querySelector('.legenda-live .gr-turno').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })()")
     ok('riepilogo live: i quadratini della legenda sono tutti piccoli (nessuna classe di altre pagine)', misura[0] <= 16, misura)
     pg.set_viewport_size({'width': 390, 'height': 844})
