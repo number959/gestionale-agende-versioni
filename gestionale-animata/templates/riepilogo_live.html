@@ -6,7 +6,7 @@
 <div class="barra">
   <span class="marchio">{% include "_marchio.html" %}</span>
   <h1 class="giorno">Riepilogo live <small class="sotto-titolo">{{ r.giorno }}</small></h1>
-  <span class="conteggio vivo-live"><span class="punto-live" aria-hidden="true"></span>aggiornato alle <span id="live-ora">{{ r.aggiornato }}</span>, si rinnova ogni minuto</span>
+  <span class="conteggio vivo-live"><span class="punto-live" aria-hidden="true"></span><span>aggiornato alle <b id="live-ora">{{ r.aggiornato }}</b>, si rinnova da solo ogni minuto</span></span>
   <div class="comandi">
     {% if strutture|length > 1 %}
     <form method="get" style="display:inline"><select name="struttura" onchange="this.form.submit()">
@@ -24,33 +24,61 @@
   </div>
 </div>
 <div class="contenuto pagina-live-contenuto" id="riepilogo-live" data-indirizzo="{{ url_for('live.pagina', struttura=sid, schermo=1 if schermo else none) }}">
-  {% if r.chiusa %}<p class="avviso avviso-giallo">Oggi la struttura è chiusa: {{ r.chiusa }}.</p>{% endif %}
-  <section class="numeri-live" data-guida="live-numeri">
-    <div class="numero-live"><b>{{ r.oggi.totale }}</b><span>appuntamenti oggi</span></div>
-    <div class="numero-live"><b>{{ r.oggi.fatte }}</b><span>fatti</span></div>
-    <div class="numero-live{% if r.oggi.in_corso %} acceso{% endif %}"><b>{{ r.oggi.in_corso }}</b><span>in corso</span></div>
-    <div class="numero-live"><b>{{ r.oggi.restanti }}</b><span>ancora da fare</span></div>
-    <div class="numero-live{% if r.oggi.in_ritardo %} attenzione{% endif %}"><b>{{ r.oggi.in_ritardo }}</b><span>in ritardo</span></div>
-    <div class="numero-live"><b>{{ r.oggi.in_struttura }}</b><span>in struttura</span></div>
-    <div class="numero-live"><b>{{ r.stanze_occupate }}<small>/{{ r.stanze|length }}</small></b><span>stanze occupate ora</span></div>
-    <div class="numero-live{% if r.oggi.da_confermare %} attenzione{% endif %}"><b>{{ r.oggi.da_confermare }}</b><span>da confermare{% if r.oggi.prossimo_giorno %} per il prossimo giorno{% endif %}</span></div>
+  {% set o = r.oggi %}
+  <section class="riassunto-live" data-guida="live-numeri">
+    <p class="frase-live{% if r.chiusa %} chiusa{% endif %}">{{ r.riassunto }}</p>
+    {% if o.totale %}
+    <div class="avanzamento-live" role="img" aria-label="{{ o.fatte }} fatti, {{ o.in_corso }} in corso, {{ o.da_segnare }} da segnare, {{ o.restanti }} da fare, su {{ o.totale }}">
+      {% for chiave, valore, nome in (('fatto', o.fatte, 'fatti'), ('in-corso', o.in_corso, 'in corso'), ('da-segnare', o.da_segnare, 'da segnare'), ('da-fare', o.restanti, 'da fare')) %}{% if valore %}<span class="{{ chiave }}" style="width: {{ (100 * valore / o.totale)|round(2) }}%" title="{{ valore }} {{ nome }}"></span>{% endif %}{% endfor %}
+    </div>
+    {% endif %}
+    <ul class="conti-oggi-live">
+      <li class="totale"><b>{{ o.totale }}</b> appuntament{{ 'o' if o.totale == 1 else 'i' }} oggi</li>
+      <li class="fatto"><i aria-hidden="true"></i><b>{{ o.fatte }}</b> fatt{{ 'o' if o.fatte == 1 else 'i' }}</li>
+      <li class="in-corso"><i aria-hidden="true"></i><b>{{ o.in_corso }}</b> in corso</li>
+      <li class="da-segnare{% if o.da_segnare %} acceso{% endif %}"><i aria-hidden="true"></i><b>{{ o.da_segnare }}</b> da segnare <small>orario passato, arrivo non segnato{% if o.da_segnare and not schermo %} · <a href="{{ url_for('cruscotto.oggi', struttura=sid) }}">segnali in Oggi</a>{% endif %}</small></li>
+      <li class="da-fare"><i aria-hidden="true"></i><b>{{ o.restanti }}</b> da fare</li>
+    </ul>
+    <ul class="fatti-live">
+      <li><b>{{ r.stanze_con_medico }}</b> di {{ r.stanze|length }} stanze con un medico adesso</li>
+      <li><b>{{ o.in_struttura }}</b> pazient{{ 'e' if o.in_struttura == 1 else 'i' }} in struttura adesso</li>
+      {% if o.disdetti or o.non_presentati %}<li><b>{{ o.disdetti }}</b> disdett{{ 'o' if o.disdetti == 1 else 'i' }} e <b>{{ o.non_presentati }}</b> non presentat{{ 'o' if o.non_presentati == 1 else 'i' }} oggi</li>{% endif %}
+      {% if o.prossimo_giorno %}<li class="{% if o.da_confermare %}attenzione{% endif %}"><b>{{ o.da_confermare }}</b> da confermare per {{ o.prossimo_giorno_etichetta }}</li>{% endif %}
+    </ul>
   </section>
-  <div class="avanzamento-live" title="{{ r.oggi.fatte }} fatti, {{ r.oggi.in_corso }} in corso, {{ r.oggi.restanti }} ancora da fare">
-    {% set tot = r.oggi.totale or 1 %}
-    <span class="fatti" style="width: {{ (100 * r.oggi.fatte / tot)|round(1) }}%"></span><span class="in-corso" style="width: {{ (100 * r.oggi.in_corso / tot)|round(1) }}%"></span>
-  </div>
 
-  <h2 class="sezione">Le stanze adesso</h2>
-  <div class="stanze-live" data-guida="live-stanze">
+  <h2 class="sezione">Le stanze adesso <small class="sotto-titolo">il turno del medico, le visite di oggi e, in rosso, l'ora di adesso</small></h2>
+  <div class="linea-live" data-guida="live-stanze">
+    <div class="riga-live asse-live" aria-hidden="true">
+      <div class="nome-live"></div>
+      <div class="pista-live">{% for h in r.asse.ore %}<span class="tacca-live{% if loop.first %} prima{% elif loop.last %} ultima{% endif %}" style="left: {{ h.sx }}%">{{ h.ora }}</span>{% endfor %}{% if r.asse.adesso is not none %}<span class="adesso-etichetta" style="left: {{ r.asse.adesso }}%">{{ r.aggiornato }}</span>{% endif %}</div>
+    </div>
     {% for x in r.stanze %}
-    <div class="stanza-live stato-{{ x.stato|replace(' ', '-') }}">
-      <div class="testa"><b>{{ x.stanza }}</b><span class="stato-live">{% if x.stato == 'occupata' %}visita in corso{% if x.fino %} fino alle {{ x.fino }}{% endif %}{% elif x.stato == 'libera' %}libera{% if x.fino %} fino alle {{ x.fino }}{% endif %}{% elif x.stato == 'senza turno' %}{% if x.fino %}nessun medico fino alle {{ x.fino }}{% else %}nessun medico oggi{% endif %}{% elif x.stato == 'finita' %}giornata finita{% else %}chiusa{% endif %}</span></div>
-      {% if x.medico %}<div class="medico-live">{{ x.medico }}</div>{% elif x.turni %}<div class="medico-live muto">{{ x.turni|join(', ') }}</div>{% endif %}
-      <div class="conti-live">{{ x.fatte }} fatt{{ 'o' if x.fatte == 1 else 'i' }} · {{ x.in_corso }} in corso · {{ x.restanti }} da fare{% if x.prossima %} · prossimo alle {{ x.prossima }}{% endif %}</div>
+    <div class="riga-live stato-{{ x.stato|replace(' ', '-') }}">
+      <div class="nome-live">
+        <b>{{ x.stanza }}</b>
+        <span class="stato-live">{{ x.frase }}</span>
+        {% if x.medico %}<span class="medico-live">{{ x.medico }}</span>{% endif %}
+        <small class="conti-live">{% if x.totale %}{{ x.fatte }} fatt{{ 'o' if x.fatte == 1 else 'i' }}{% if x.in_corso %} · {{ x.in_corso }} in corso{% endif %}{% if x.da_segnare %} · <span class="da-segnare">{{ x.da_segnare }} da segnare</span>{% endif %} · {{ x.restanti }} da fare{% else %}nessun appuntamento oggi{% endif %}</small>
+      </div>
+      <div class="pista-live" title="{% if x.turni %}Turni: {{ x.turni|join(', ') }}{% else %}Nessun turno oggi{% endif %}">
+        {% for h in r.asse.ore %}<span class="ora-griglia" style="left: {{ h.sx }}%"></span>{% endfor %}
+        {% for t in x.linea.turni %}<span class="turno-live" style="left: {{ t.sx }}%; width: {{ t.larg }}%"><span>{{ t.medico }} {{ t.da }}–{{ t.a }}</span></span>{% endfor %}
+        {% for v in x.linea.visite %}<span class="visita-live {{ v.stato }}" style="left: {{ v.sx }}%; width: {{ v.larg }}%" title="{{ v.da }}–{{ v.a }}: {{ nomi_stato[v.stato] }}"></span>{% endfor %}
+        {% if r.asse.adesso is not none %}<span class="adesso-live" style="left: {{ r.asse.adesso }}%"></span>{% endif %}
+      </div>
     </div>
     {% else %}
     <p class="vuoto">Nessuna stanza attiva.</p>
     {% endfor %}
+    <ul class="legenda-live">
+      <li><i class="turno"></i>turno del medico</li>
+      <li><i class="fatto"></i>visita fatta</li>
+      <li><i class="in-corso"></i>in corso</li>
+      <li><i class="da-segnare"></i>orario passato, arrivo non segnato</li>
+      <li><i class="da-fare"></i>da fare</li>
+      <li><i class="ora-di-adesso"></i>adesso</li>
+    </ul>
   </div>
 
   <div class="due-colonne-live">
@@ -58,23 +86,35 @@
       <h2 class="sezione">Visite ora per ora</h2>
       <div class="ore-live" data-guida="live-ore">
         {% set massimo = (r.per_ora|map(attribute='totale')|max) or 1 %}
-        {% for o in r.per_ora %}
-        <div class="ora-live" title="{{ o.ora }}: {{ o.totale }} appuntamenti, {{ o.arrivati }} arrivati">
-          <div class="colonna"><span class="barra-ora" style="height: {{ (100 * o.totale / massimo)|round(0)|int }}%"><span class="barra-arrivati" style="height: {{ (100 * o.arrivati / (o.totale or 1))|round(0)|int }}%"></span></span></div>
-          <small>{{ o.ora[:2] }}</small>
+        {% for h in r.per_ora %}
+        <div class="ora-live quando-{{ h.quando }}" title="{{ h.ora }}: {{ h.totale }} appuntament{{ 'o' if h.totale == 1 else 'i' }}, {{ h.arrivati }} arrivat{{ 'o' if h.arrivati == 1 else 'i' }}">
+          <span class="numero-ora">{% if h.totale %}{{ h.totale }}{% endif %}</span>
+          <div class="colonna"><span class="barra-ora" style="height: {{ (100 * h.totale / massimo)|round(0)|int }}%"><span class="barra-arrivati" style="height: {{ (100 * h.arrivati / (h.totale or 1))|round(0)|int }}%"></span></span></div>
+          <small>{{ h.ora[:2] }}</small>
         </div>
         {% endfor %}
       </div>
-      <p class="nota">Colonna piena: appuntamenti dell'ora; parte scura: già arrivati.</p>
+      <p class="nota"><i class="chiave-arrivati" aria-hidden="true"></i>già arrivati <i class="chiave-totale" aria-hidden="true"></i>tutti gli appuntamenti dell'ora; l'ora di adesso è bordata.</p>
     </section>
     <section>
-      <h2 class="sezione">Mezze giornate libere <small class="sotto-titolo">nei prossimi {{ 7 }} giorni{% if r.n_libere > r.libere|length %}: le prime {{ r.libere|length }} di {{ r.n_libere }}{% endif %}</small></h2>
-      {% if r.libere %}
-      <ul class="libere-live" data-guida="live-libere">
-        {% for l in r.libere %}<li><b>{{ l.giorno }} {{ l.data[8:] }}/{{ l.data[5:7] }}</b> {{ l.meta }} ({{ l.orario }}) · {{ l.stanza }}</li>{% endfor %}
-      </ul>
-      {% else %}<p class="vuoto">Nessuna mezza giornata libera nei prossimi giorni.</p>{% endif %}
-      <p class="nota">Dalla <a href="{{ url_for('ambulatori.settimana', iso=r.data, struttura=sid) }}">pianificazione degli ambulatori</a>: da lì si mette un medico in una stanza libera.</p>
+      <h2 class="sezione">Mezze giornate libere <small class="sotto-titolo">stanze senza nessun medico, nei prossimi {{ 7 }} giorni{% if r.n_libere %}: {{ r.n_libere }}{% endif %}</small></h2>
+      {% set tab = r.libere_tabella %}
+      {% if tab.giorni %}
+      <div class="scorri-live" data-guida="live-libere">
+      <table class="libere-tab">
+        <thead><tr><th></th>{% for nome in tab.stanze %}<th scope="col">{{ nome }}</th>{% endfor %}</tr></thead>
+        <tbody>
+        {% for g in tab.giorni %}
+        <tr{% if g.oggi %} class="oggi"{% endif %}><th scope="row">{% if g.oggi %}oggi{% else %}{{ g.etichetta }}{% endif %}</th>
+          {% for celle in g.celle %}{% set stanza = tab.stanze[loop.index0] %}<td>{% for stato in celle %}{% set meta = tab.meta[loop.index0] %}<span class="mezza {{ stato }}" title="{{ stanza }}, {{ meta }}: {{ {'libera': 'libera, nessun medico', 'occupata': 'c\'è un medico', 'passata': 'già passata', 'chiusa': 'chiusa'}[stato] }}">{% if stato == 'libera' %}{{ meta[0]|upper }}{% endif %}</span>{% endfor %}</td>{% endfor %}
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <p class="nota"><span class="mezza libera" aria-hidden="true">M</span> mattina libera <span class="mezza libera" aria-hidden="true">P</span> pomeriggio libero <span class="mezza occupata" aria-hidden="true"></span> c'è un medico <span class="mezza passata" aria-hidden="true"></span> già passata o chiusa</p>
+      {% else %}<p class="vuoto" data-guida="live-libere">Nessuna mezza giornata libera nei prossimi giorni.</p>{% endif %}
+      <p class="nota">Dalla <a href="{{ url_for('ambulatori.settimana', iso=r.data, struttura=sid) }}">pianificazione degli ambulatori</a> si mette un medico in una stanza libera.</p>
     </section>
   </div>
 </div>

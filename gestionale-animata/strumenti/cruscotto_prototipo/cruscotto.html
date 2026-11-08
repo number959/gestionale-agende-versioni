@@ -161,10 +161,16 @@ h1, h2, h3 { font-family: var(--titoli); margin: 0; text-wrap: balance; }
 .live .giornata { display: flex; flex-direction: column; gap: 10px; }
 .live .avanzamento { height: 12px; border-radius: 999px; background: var(--superficie-2); overflow: hidden; display: flex; border: 1px solid var(--bordo); }
 .live .avanzamento span { display: block; height: 100%; transition: width .9s cubic-bezier(.2,.8,.2,1); }
-.live .avanzamento .fatti { background: var(--ok); } .live .avanzamento .in-corso { background: var(--primario-2); }
+.live .avanzamento { gap: 2px; }
+.live .avanzamento .fatti, .live .mini .fatti i { background: var(--ok); } .live .avanzamento .in-corso, .live .mini .in-corso i { background: var(--primario-2); }
+.live .avanzamento .da-segnare, .live .mini .da-segnare i { background: var(--attenzione); } .live .avanzamento .da-fare, .live .mini .da-fare i { background: var(--primario-tenue); box-shadow: inset 0 0 0 1px var(--primario-2); }
+.live .frase { margin: 0; font-weight: 600; font-size: 14px; line-height: 1.45; }
 .live .mini { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .live .mini div { background: var(--superficie-2); border-radius: 10px; padding: 8px 10px; }
 .live .mini b { display: block; font: 800 22px/1.1 var(--titoli); } .live .mini span { font-size: 11.5px; color: var(--muto); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+.live .mini i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: 0; }
+.live .mini .da-segnare.acceso b { color: var(--attenzione); }
+.live .mini .totale { grid-column: 1 / -1; }
 .live .stanze-live { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; align-content: start; }
 .live .stanza-live { border: 1px solid var(--bordo); border-left-width: 5px; border-radius: 10px; padding: 8px 10px; background: var(--superficie-2); animation: entra .6s cubic-bezier(.2,.8,.2,1) both; }
 .live .stanza-live b { display: block; font-family: var(--titoli); font-size: 14px; }
@@ -299,7 +305,8 @@ h1, h2, h3 { font-family: var(--titoli); margin: 0; text-wrap: balance; }
   <section class="riquadro live" aria-labelledby="t-live">
     <h2 id="t-live">Riepilogo live · agende e ambulatori <small>come va la giornata, stanza per stanza; si rinnova da solo</small></h2>
     <div class="giornata">
-      <div class="avanzamento" id="live-avanzamento" title="fatti, in corso, ancora da fare"><span class="fatti" style="width:0%"></span><span class="in-corso" style="width:0%"></span></div>
+      <p class="frase" id="live-frase"></p>
+      <div class="avanzamento" id="live-avanzamento" title="fatti, in corso, da segnare, da fare: sommano agli appuntamenti di oggi"><span class="fatti" style="width:0%"></span><span class="in-corso" style="width:0%"></span><span class="da-segnare" style="width:0%"></span><span class="da-fare" style="width:0%"></span></div>
       <div class="mini" id="live-mini"></div>
     </div>
     <div class="stanze-live" id="live-stanze"></div>
@@ -487,30 +494,40 @@ h1, h2, h3 { font-family: var(--titoli); margin: 0; text-wrap: balance; }
   // ------------------------------------------------ riepilogo live
   function riepilogoLive() {
     var adesso = new Date(), oraDec = adesso.getHours() + adesso.getMinutes() / 60;
-    var fatti = 0, inCorso = 0, daFare = 0, occupate = 0, libere = 0, carte = [];
-    agendaStanze.forEach(function (s) {
-      var corrente = null, prossimo = null, f = 0, c = 0, d = 0;
-      s.blocchi.forEach(function (b) {
+    var fatti = 0, inCorso = 0, daSegnare = 0, daFare = 0, occupate = 0, libere = 0, conMedico = 0, carte = [], primo = null;
+    agendaStanze.forEach(function (s, i) {
+      var corrente = null, prossimo = null, f = 0, c = 0, d = 0, x = 0;
+      s.blocchi.forEach(function (b, j) {
         if (b.libero) return;
-        if (b.a <= oraDec) f += b.n; else if (b.da <= oraDec) { c += 1; d += b.n - 1; corrente = b; } else { d += b.n; if (!prossimo) prossimo = b; }
+        // come nel programma: ogni appuntamento in un gruppo solo, e i gruppi sommano al totale
+        if (b.a <= oraDec) { var mancati = (i + j) % 3 === 0 ? 1 : 0; f += b.n - mancati; x += mancati; }
+        else if (b.da <= oraDec) { c += 1; d += b.n - 1; corrente = b; } else { d += b.n; if (!prossimo) prossimo = b; }
+        if (b.da > oraDec && (!primo || b.da < primo.da)) primo = { da: b.da, stanza: s.nome };
       });
-      fatti += f; inCorso += c; daFare += d;
+      fatti += f; inCorso += c; daFare += d; daSegnare += x;
+      if (corrente || s.blocchi.some(function (b) { return !b.libero && b.da <= oraDec && oraDec < b.a + 0.5; })) conMedico++;
       var stato, classe, testo;
       if (oraDec < APERTURA || oraDec >= CHIUSURA) { classe = 'senza'; stato = 'chiusa'; }
       else if (corrente) { classe = 'occupata'; occupate++; stato = 'visita in corso fino alle ' + ora(Math.floor(corrente.a), Math.round(corrente.a % 1 * 60)); }
       else if (prossimo) { classe = 'libera'; libere++; stato = 'libera fino alle ' + ora(Math.floor(prossimo.da), Math.round(prossimo.da % 1 * 60)); }
       else { classe = 'senza'; stato = 'giornata finita'; }
       var medico = corrente ? corrente.medico.n : (prossimo ? prossimo.medico.n + ' dalle ' + ora(Math.floor(prossimo.da), Math.round(prossimo.da % 1 * 60)) : '');
-      carte.push({ nome: s.nome, classe: classe, stato: stato, medico: medico, f: f, c: c, d: d });
+      carte.push({ nome: s.nome, classe: classe, stato: stato, medico: medico, f: f, c: c, d: d, x: x });
     });
-    var tot = Math.max(1, fatti + inCorso + daFare);
+    var totale = fatti + inCorso + daSegnare + daFare, tot = Math.max(1, totale);
     var av = document.getElementById('live-avanzamento');
-    av.children[0].style.width = (100 * fatti / tot) + '%'; av.children[1].style.width = (100 * inCorso / tot) + '%';
-    document.getElementById('live-mini').innerHTML = [[fatti, 'fatti'], [inCorso, 'in corso'], [daFare, 'ancora da fare'], [occupate + '/' + agendaStanze.length, 'stanze occupate ora']]
-      .map(function (x) { return '<div><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('');
+    [fatti, inCorso, daSegnare, daFare].forEach(function (v, k) { av.children[k].style.width = (100 * v / tot) + '%'; });
+    var frase = 'Alle ' + ora(adesso.getHours(), adesso.getMinutes()) + ': ' + inCorso + (inCorso === 1 ? ' visita' : ' visite') + ' in corso, ' +
+      conMedico + ' stanze su ' + agendaStanze.length + ' con un medico adesso.';
+    if (daSegnare) frase += ' ' + daSegnare + (daSegnare === 1 ? ' paziente' : ' pazienti') + ' con l\'orario passato da segnare arrivat' + (daSegnare === 1 ? 'o.' : 'i.');
+    if (primo) frase += ' Prossimo appuntamento alle ' + ora(Math.floor(primo.da), Math.round(primo.da % 1 * 60)) + ' in ' + primo.stanza + '.';
+    document.getElementById('live-frase').textContent = frase;
+    document.getElementById('live-mini').innerHTML = '<div class="totale"><b>' + totale + '</b><span>appuntamenti oggi, in quattro gruppi</span></div>' +
+      [[fatti, 'fatti', 'fatti'], [inCorso, 'in corso', 'in-corso'], [daSegnare, 'da segnare', 'da-segnare' + (daSegnare ? ' acceso' : '')], [daFare, 'da fare', 'da-fare']]
+      .map(function (x) { return '<div class="' + x[2] + '"><b>' + x[0] + '</b><span><i aria-hidden="true"></i>' + x[1] + '</span></div>'; }).join('');
     document.getElementById('live-stanze').innerHTML = carte.map(function (k, i) {
       return '<div class="stanza-live ' + k.classe + '" style="animation-delay:' + (i * 0.05) + 's"><b>' + k.nome + '</b><span class="stato">' + k.stato + '</span>' +
-        (k.medico ? '<small>' + k.medico + '</small>' : '') + '<small>' + k.f + ' fatti · ' + k.c + ' in corso · ' + k.d + ' da fare</small></div>';
+        (k.medico ? '<small>' + k.medico + '</small>' : '') + '<small>' + k.f + ' fatti · ' + k.c + ' in corso · ' + (k.x ? k.x + ' da segnare · ' : '') + k.d + ' da fare</small></div>';
     }).join('');
     var GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'], chip = ['<span class="titolo">Mezze giornate libere nei prossimi giorni:</span>'];
     for (var g = 1; g <= 6 && chip.length < 8; g++) {

@@ -1263,7 +1263,7 @@ def l_riepilogo():
     assert r['oggi']['restanti'] == 3 and r['oggi']['fatte'] == 0
     # visite ora per ora: alle 10 una, alle 15 una (arrivata), alle 16 una
     ore = {x['ora']: x for x in r['per_ora']}
-    assert ore['10:00']['totale'] == 1 and ore['15:00'] == {'ora': '15:00', 'totale': 1, 'arrivati': 1} and ore['16:00']['totale'] == 1
+    assert ore['10:00']['totale'] == 1 and (ore['15:00']['totale'], ore['15:00']['arrivati']) == (1, 1) and ore['16:00']['totale'] == 1
     assert ore['08:00']['totale'] == 0 and '20:00' not in ore and len(ore) == 12
     # le mezze giornate libere: nei prossimi 7 giorni, mai nel passato, mai il festivo chiuso, mai la sala operatoria
     r = live.riepilogo(s, st, adesso=datetime.combine(LUN, time(15, 40)))
@@ -1304,7 +1304,84 @@ def l_pagina_e_json():
     assert C2.get('/riepilogo-live').status_code == 200 and json.loads(C2.get('/riepilogo-live.json').data)['errore']
 
 
+def l_chiaro():
+    """1.12.2: i quattro gruppi sommano al totale (anche stanza per stanza), le frasi in parole semplici,
+    la linea del tempo con turni e visite, le ore passate e quella di adesso, le mezze giornate per giorno."""
+    from modelli import Turno
+    S, I, C, live = _mondo_live()
+    s = S()
+    # un secondo turno uguale di Lippiello nella stessa stanza: il nome una volta sola
+    s.add(Turno(operatore_id=I['Lippiello'], risorsa_id=I['Ambulatorio 1'], giorno_settimana=0, ora_inizio=time(15),
+                ora_fine=time(20), valido_da=LUN - timedelta(days=30)))
+    s.commit()
+    st = s.get(Struttura, 1)
+    for h, m in ((8, 5), (10, 0), (10, 20), (11, 0), (15, 0), (15, 40), (16, 10), (16, 40), (19, 59), (21, 0)):
+        r = live.riepilogo(s, st, adesso=datetime.combine(LUN, time(h, m)))
+        o = r['oggi']
+        assert o['fatte'] + o['in_corso'] + o['da_segnare'] + o['restanti'] == o['totale'] == 3, (h, m, o)
+        for x in r['stanze']:
+            assert x['fatte'] + x['in_corso'] + x['da_segnare'] + x['restanti'] == x['totale'], (h, m, x)
+            for t in x['linea']['turni'] + x['linea']['visite']:
+                assert 0 <= t['sx'] <= 100 and 0 <= t['larg'] and t['sx'] + t['larg'] <= 100.01, (h, m, x['stanza'], t)
+        assert all(0 <= o_['sx'] <= 100 for o_ in r['asse']['ore']) and r['asse']['ore'][0]['sx'] == 0
+        assert r['asse']['ore'][-1]['sx'] == 100, r['asse']
+    stanze = lambda r: {x['stanza']: x for x in r['stanze']}
+    # le 15:40: la visita delle 15 fatta, quella delle 16 da fare, Provolo delle 10 da segnare
+    r = live.riepilogo(s, st, adesso=datetime.combine(LUN, time(15, 40)))
+    a1, a2 = stanze(r)['Ambulatorio 1'], stanze(r)['Ambulatorio 2']
+    assert r['oggi']['da_segnare'] == 1 and a2['da_segnare'] == 1 and a1['da_segnare'] == 0, (r['oggi'], a2)
+    assert a1['medico'] == 'Lippiello Anna' and a1['turni'] == ['Lippiello Anna 15:00–20:00'], a1
+    assert a1['frase'] == 'Libera, prossimo paziente alle 16:00' and a1['motivo'] == 'appuntamento', a1
+    assert a2['frase'] == 'Nessun medico oggi' and a2['motivo'] is None, a2
+    assert [t['medico'] for t in a1['linea']['turni']] == ['Lippiello Anna'] and a1['linea']['turni'][0]['da'] == '15:00'
+    assert [v['stato'] for v in a1['linea']['visite']] == ['fatto', 'da-fare'], a1['linea']
+    assert [v['stato'] for v in a2['linea']['visite']] == ['da-segnare'], a2['linea']
+    assert r['asse']['da'] == '08:00' and r['asse']['a'] == '20:00' and abs(r['asse']['adesso'] - 100 * (460 / 720)) < 0.01, r['asse']
+    assert r['riassunto'].startswith('Alle 15:40: 0 visite in corso, 1 stanza su 6 con un medico adesso.'), r['riassunto']
+    assert "1 paziente con l'orario passato non è segnato arrivato" in r['riassunto'], r['riassunto']
+    assert r['riassunto'].endswith('Prossimo appuntamento alle 16:00 in Ambulatorio 1.'), r['riassunto']
+    ore = {x['ora']: x['quando'] for x in r['per_ora']}
+    assert (ore['10:00'], ore['15:00'], ore['16:00']) == ('passata', 'adesso', 'dopo'), ore
+    # le 16:10 la visita delle 16 in corso; le 16:40 libera fino a fine turno (la delle 17 e' disdetta)
+    r = live.riepilogo(s, st, adesso=datetime.combine(LUN, time(16, 10)))
+    a1 = stanze(r)['Ambulatorio 1']
+    assert a1['frase'] == 'Visita in corso fino alle 16:30' and [v['stato'] for v in a1['linea']['visite']] == ['fatto', 'in-corso']
+    assert r['riassunto'].startswith('Alle 16:10: 1 visita in corso'), r['riassunto']
+    r = live.riepilogo(s, st, adesso=datetime.combine(LUN, time(16, 40)))
+    a1 = stanze(r)['Ambulatorio 1']
+    assert a1['frase'] == 'Libera fino a fine turno (20:00)' and a1['motivo'] == 'fine turno', a1
+    # Provolo delle 16 non e' arrivato: alle 16:40 anche lui da segnare
+    assert r['oggi']['da_segnare'] == 2 and 'Nessun altro appuntamento oggi.' in r['riassunto'], (r['oggi'], r['riassunto'])
+    # la mattina presto: nessun medico fino alle 15, poi Lippiello; la sera: turni finiti, la linea di adesso fuori
+    r = live.riepilogo(s, st, adesso=datetime.combine(LUN, time(8, 5)))
+    a1 = stanze(r)['Ambulatorio 1']
+    assert a1['frase'] == 'Nessun medico fino alle 15:00, poi Lippiello Anna' and a1['prossimo_medico'] == 'Lippiello Anna', a1
+    r = live.riepilogo(s, st, adesso=datetime.combine(LUN, time(21, 0)))
+    assert stanze(r)['Ambulatorio 1']['frase'] == 'Turni finiti per oggi' and r['asse']['adesso'] is None
+    # le mezze giornate libere: la tabella dice le stesse della lista, oggi la mattina e' passata, niente festivo
+    r = live.riepilogo(s, st, adesso=datetime.combine(LUN, time(15, 40)))
+    tab = r['libere_tabella']
+    assert 'Sala operatoria' not in tab['stanze'] and tab['meta'] == ['mattina', 'pomeriggio'], tab['stanze']
+    assert sum(g['libere'] for g in tab['giorni']) == r['n_libere'] > 0
+    assert tab['giorni'][0]['oggi'] and all(c[0] == 'passata' for c in tab['giorni'][0]['celle']), tab['giorni'][0]
+    assert (LUN + timedelta(days=1)).isoformat() not in [g['data'] for g in tab['giorni']], 'martedi 8 e festivo chiuso'
+    i2 = tab['stanze'].index('Ambulatorio 2')
+    assert tab['giorni'][0]['celle'][i2] == ['passata', 'libera'], tab['giorni'][0]['celle'][i2]
+    gruppi = r['libere_giorni']
+    assert sum(len(g['stanze']) for g in gruppi) <= r['n_libere'] and gruppi[0]['oggi'], gruppi[:1]
+    assert any(v['quando'] == 'tutto il giorno' for g in gruppi for v in g['stanze']), gruppi
+    # la pagina: la frase, la linea del tempo, la tabella; le notifiche non coprono la pagina
+    t = testo(C.get('/riepilogo-live?struttura=1'))
+    for pezzo in ('class="frase-live', 'class="riga-live', 'class="pista-live"', 'class="libere-tab"', 'da segnare',
+                  'turno del medico'):
+        assert pezzo in t, pezzo
+    css = open(os.path.join(CARTELLA, 'static', 'stile.css'), encoding='utf-8').read()
+    assert 'body.pagina-live .notifiche { display: none; }' in css
+    s.close()
+
+
 prova('riepilogo live: numeri di oggi, stanze adesso (libera fino alle, in corso, senza medico), ore, mezze giornate libere', l_riepilogo)
+prova('riepilogo live (1.12.2): quattro gruppi che sommano, frasi, linea del tempo, ore, mezze giornate per giorno', l_chiaro)
 prova('riepilogo live: pagina, modo schermo, JSON senza dati dei pazienti, struttura mancante', l_pagina_e_json)
 
 

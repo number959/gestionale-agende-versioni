@@ -13,6 +13,15 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.12.2', [
+        dict(titolo='Il riepilogo live più chiaro',
+             testo='In cima una frase dice com\'è la giornata. Gli appuntamenti di oggi sono divisi in fatti, in corso, '
+                   'da segnare (orario passato senza l\'arrivo segnato) e da fare, e i quattro numeri sommano al totale. '
+                   'Ogni stanza ha la sua linea del tempo con il turno del medico, le visite colorate e una linea rossa '
+                   'sull\'ora di adesso, e dice perché è libera e fino a quando. Le mezze giornate libere sono in una '
+                   'tabellina per giorno e per stanza. Le notifiche non coprono più la pagina.',
+             guida='riepilogo-live'),
+    ]),
     ('1.12.1', [
         dict(titolo='Le ore vere nelle notti del cambio dell\'ora',
              testo='Un turno di notte a cavallo del cambio dell\'ora legale conta le ore davvero lavorate (una in più a '

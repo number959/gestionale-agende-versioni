@@ -185,6 +185,13 @@ temporanea.
   conteggi, orari, stanze e medici, mai un dato di pazienti (`prove_112.py` lo controlla con i nomi
   inventati): chi aggiunge un campo lo tiene così, perché è il formato del futuro cruscotto su
   internet. La pagina si rinnova con `fetch` di se stessa ogni minuto; `?schermo=1` toglie il menu.
+  Dalla 1.12.2 gli appuntamenti attivi di oggi sono in quattro gruppi che devono sommare al totale
+  (`live.stato_visita`: fatto, in corso, da segnare, da fare), anche stanza per stanza: un gruppo
+  nuovo si aggiunge lì e in `prove_112.py`, che controlla le somme a dieci ore diverse. Le frasi
+  (`riassunto` e `frase` di ogni stanza) e le posizioni della linea del tempo (`linea`, `asse`, in
+  percento) le calcola `live.py`, non la pagina. Nei rettangoli delle visite solo orario e stato,
+  mai nomi. La classe `adesso` è già di un'altra pagina: nel riepilogo si usano `quando-adesso`,
+  `adesso-live` e `ora-di-adesso`.
 - Stampe (dalla 1.12): il foglio del giorno è una `table.impaginazione` con testata in `thead` e
   piede in `tfoot` (il browser li ripete su ogni pagina); il numero di pagina viene dai margin box di
   `@page` in `stile.css`. Le colonne di partenza del foglio sono `viste.COLONNE_DI_PARTENZA`: una

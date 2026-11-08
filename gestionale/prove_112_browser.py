@@ -12,7 +12,10 @@ avviato con i dati di prova (strumenti/demo.py):
   con il suo nome;
 - la programmazione del mese: la tabella e l'Excel scaricato con il suo nome;
 - il gruppo Ambulatori del menu e' segnato attivo in tutte e due le pagine;
-  nessun errore JavaScript.
+- dalla 1.12.2 il riepilogo live: la frase, i quattro gruppi che sommano al
+  totale, una riga per stanza con turni e visite come nel JSON, la linea di
+  adesso, le notifiche nascoste, il telefono senza scorrimento laterale e il
+  modo schermo; nessun errore JavaScript.
 Mette e toglie un turno sui dati di prova: alla fine sono come prima."""
 import os
 import sys
@@ -128,6 +131,36 @@ with sync_playwright() as p:
        scaricato.value.suggested_filename == 'programmazione-ambulatori-%s.xlsx' % LUN.strftime('%Y-%m'), scaricato.value.suggested_filename)
     pg.locator('details.calendario-mese summary').click()
     ok('il calendario del mese si apre', pg.locator('details.calendario-mese[open] table tr').count() > 1)
+
+    # 1.12.2: il riepilogo live piu' chiaro, a qualsiasi ora la prova giri
+    import json as _json
+    import urllib.request as _url
+    dati = _json.loads(_url.urlopen(B + '/riepilogo-live.json?struttura=1', timeout=30).read().decode('utf-8'))
+    pg.goto(B + '/riepilogo-live?struttura=1')
+    pg.wait_for_selector('#riepilogo-live .frase-live')
+    ok('riepilogo live: la frase in cima, in parole', len(pg.inner_text('.frase-live').strip()) > 20, pg.inner_text('.frase-live'))
+    conti = pg.locator('.conti-oggi-live li b').all_inner_texts()
+    ok('riepilogo live: fatti, in corso, da segnare e da fare sommano agli appuntamenti di oggi',
+       len(conti) == 5 and sum(int(x) for x in conti[1:]) == int(conti[0]) == dati['oggi']['totale'], conti)
+    righe = pg.locator('.linea-live .riga-live:not(.asse-live)')
+    ok('riepilogo live: una riga per stanza, ognuna con la sua frase', righe.count() == len(dati['stanze']) and
+       all(x.strip() for x in pg.locator('.linea-live .riga-live .stato-live').all_inner_texts()), righe.count())
+    ok('riepilogo live: i turni sulla linea del tempo come nel JSON',
+       pg.locator('.pista-live .turno-live').count() == sum(len(x['linea']['turni']) for x in dati['stanze']) and
+       pg.locator('.pista-live .visita-live').count() == sum(len(x['linea']['visite']) for x in dati['stanze']))
+    linee = pg.locator('.pista-live .adesso-live').count()
+    ok('riepilogo live: la linea di adesso in ogni stanza, o in nessuna fuori orario',
+       linee == (len(dati['stanze']) if dati['asse']['adesso'] is not None else 0), linee)
+    ok('riepilogo live: le notifiche non coprono la pagina', pg.evaluate("getComputedStyle(document.getElementById('notifiche')).display") == 'none')
+    pg.set_viewport_size({'width': 390, 'height': 844})
+    pg.wait_for_timeout(300)
+    ok('riepilogo live: sul telefono la pagina non scorre di lato',
+       pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'), pg.evaluate('document.documentElement.scrollWidth'))
+    pg.set_viewport_size({'width': 1366, 'height': 820})
+    pg.goto(B + '/riepilogo-live?struttura=1&schermo=1')
+    pg.wait_for_selector('#riepilogo-live .linea-live')
+    ok('riepilogo live: il modo schermo senza menu, con la linea del tempo', pg.locator('nav.menu').count() == 0 and
+       pg.locator('.linea-live .riga-live').count() == len(dati['stanze']) + 1)
     ok('nessun errore JavaScript', not err, err[:3])
     br.close()
 

@@ -626,23 +626,27 @@ ARTICOLI += [
                'calendario del mese in un secondo foglio.', '[data-guida="programmazione-excel"]'),
          ]),
     dict(slug='riepilogo-live', gruppo='Ambulatori', titolo='Il riepilogo live: la giornata adesso, stanza per stanza',
-         in_breve='Menu Ambulatori → Riepilogo live: quanti appuntamenti sono fatti, in corso e da fare, ogni stanza '
-                  'con il medico di turno e fino a quando è libera, le mezze giornate libere dei prossimi giorni. Si '
-                  'rinnova da solo ogni minuto.',
+         in_breve='Menu Ambulatori → Riepilogo live: una frase dice com\'è la giornata, gli appuntamenti di oggi sono '
+                  'divisi in fatti, in corso, da segnare e da fare, e ogni stanza ha la sua linea del tempo con il turno '
+                  'del medico, le visite e l\'ora di adesso. Si rinnova da solo ogni minuto.',
          endpoint='live.pagina', apri=('live.pagina', {}), foto='/riepilogo-live?struttura=1',
          passi=[
-             P('I numeri di oggi', 'Appuntamenti, fatti, in corso, ancora da fare, in ritardo, in struttura, stanze '
-               'occupate ora e da confermare per il prossimo giorno: si aggiornano da soli ogni minuto.',
-               '[data-guida="live-numeri"]'),
-             P('Le stanze adesso', 'Per ogni stanza: visita in corso e fino a quando, oppure libera fino al prossimo '
-               'appuntamento o alla fine del turno, oppure nessun medico; sotto, il medico di turno e i conti del '
-               'giorno.', '[data-guida="live-stanze"]'),
-             P('Ora per ora', 'Una colonna per ogni ora di apertura: quanti appuntamenti e, in scuro, quanti sono già '
-               'arrivati.', '[data-guida="live-ore"]'),
-             P('Mezze giornate libere', 'Le stanze senza nessuno nei prossimi sette giorni, dalla pianificazione degli '
-               'ambulatori: da lì si mette un medico.', '[data-guida="live-libere"]'),
+             P('La giornata in una frase', 'In cima, in parole semplici: quante visite sono in corso, quante stanze hanno '
+               'un medico, chi ha l\'orario passato senza l\'arrivo segnato e il prossimo appuntamento. Sotto, la barra '
+               'e i quattro numeri, che sommano agli appuntamenti di oggi: fatti, in corso, da segnare (si segnano in '
+               'Oggi) e da fare.', '[data-guida="live-numeri"]'),
+             P('Le stanze adesso', 'Una riga per stanza. A sinistra cosa succede adesso: visita in corso fino a quando, '
+               'libera fino al prossimo paziente o alla fine del turno, oppure nessun medico e chi arriva. A destra la '
+               'giornata: la fascia azzurra è il turno del medico, i rettangoli sono le visite (verde fatta, blu in corso, '
+               'arancione da segnare, bianco da fare), la linea rossa è l\'ora di adesso.', '[data-guida="live-stanze"]'),
+             P('Ora per ora', 'Una colonna per ogni ora di apertura, con il numero sopra: in scuro quanti sono già '
+               'arrivati. L\'ora di adesso è bordata di rosso.', '[data-guida="live-ore"]'),
+             P('Mezze giornate libere', 'Una riga per giorno e una colonna per stanza: M e P in verde sono la mattina e il '
+               'pomeriggio senza nessun medico, nei prossimi sette giorni. Si riempiono dalla pianificazione degli '
+               'ambulatori.', '[data-guida="live-libere"]'),
              P('Modo schermo', 'Caratteri grandi e niente menu, per il secondo monitor o lo schermo della direzione: '
-               'si lascia aperta e si rinnova da sola.', '[data-guida="live-schermo"]'),
+               'si lascia aperta e si rinnova da sola. Su questa pagina le notifiche non compaiono sopra le stanze.',
+               '[data-guida="live-schermo"]'),
          ]),
     # ------------------------------------------------------- email e WhatsApp
     dict(slug='email-casella', gruppo='Email e WhatsApp', titolo='Collegare l\'email della clinica',

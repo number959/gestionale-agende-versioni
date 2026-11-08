@@ -640,22 +640,50 @@ compilavano a mano. Tutto in `ambulatori.py`; le sale operatorie restano fuori (
 
 
 **Riepilogo live** (`live.py`, menu *Ambulatori → Riepilogo live*, `/riepilogo-live` e
-`/riepilogo-live.json`): la giornata adesso. In alto i numeri di oggi (appuntamenti, fatti, in corso,
-ancora da fare, in ritardo, in struttura, stanze occupate ora, da confermare per il prossimo
-giorno) e la barra di avanzamento; poi ogni stanza attiva (senza le sale operatorie) con lo stato
-adesso: *visita in corso fino alle*, *libera fino alle* (il prossimo appuntamento o la fine del
-turno), *nessun medico fino alle*, *giornata finita*, *chiusa*; il medico di turno e i conti del
-giorno; le visite ora per ora (in scuro gli arrivati); le mezze giornate libere dei prossimi
-sette giorni, prese dalla matrice degli ambulatori. La pagina si rinnova da sola ogni minuto
-(ricarica il proprio contenuto con `fetch`, senza sfarfallio); con `?schermo=1` («Modo schermo»)
-niente menu e caratteri grandi, per il secondo monitor. Il JSON ha gli stessi numeri: solo
-conteggi, orari, nomi di stanze e medici, mai un paziente (una prova lo controlla con i nomi
-inventati) ed è il formato pensato per alimentare un giorno il cruscotto su internet (vedi le
-proposte nel `PASSAGGIO_DI_CONSEGNE.md`).
+`/riepilogo-live.json`): la giornata adesso. Dalla 1.12.2 la pagina è rifatta perché si legga a colpo
+d'occhio (alla 1.12 era una fila di otto numeri che non tornavano, «in ritardo» contava solo le
+ultime tre ore e chi era arrivato stamattina senza essere segnato non stava da nessuna parte).
+
+- **In cima** una frase in parole semplici (`riassunto`): quante visite sono in corso, quante stanze
+  hanno un medico adesso, quanti pazienti hanno l'orario passato senza l'arrivo segnato e il prossimo
+  appuntamento. Sotto, una barra a quattro colori e i quattro numeri, che sommano agli appuntamenti
+  attivi di oggi: **fatti** (arrivati, visita finita), **in corso** (l'orario è adesso), **da
+  segnare** (orario passato, arrivo non segnato: si sistemano in *Oggi*) e **da fare** (più tardi).
+  Ogni appuntamento sta in un gruppo solo (`live.stato_visita`). Una riga più piccola dice le stanze
+  con un medico, i pazienti in struttura, disdetti e non presentati, e quanti sono da confermare per
+  il prossimo giorno, con la data.
+- **Le stanze adesso**: una riga per stanza (senza le sale operatorie). A sinistra la frase della
+  stanza (*Visita in corso fino alle…*, *Libera, prossimo paziente alle…*, *Libera fino a fine turno
+  (…)*, *Nessun medico fino alle…, poi …*, *Turni finiti per oggi*, *Nessun medico oggi*, *Chiusa
+  oggi*), il medico di turno (una volta sola anche con due turni uguali) e i conti della stanza. A
+  destra la linea del tempo dall'apertura alla chiusura (allargata se un turno o una visita escono):
+  la fascia azzurra è il turno del medico, i rettangoli le visite colorate per gruppo, la linea rossa
+  l'ora di adesso. Le posizioni le calcola `live.py` in percento (`linea`, `asse`); la pagina non
+  ha bisogno di JavaScript per disegnarle. Nei rettangoli non c'è nessun nome: solo orario e stato.
+- **Visite ora per ora**: il numero sopra ogni colonna, in scuro gli arrivati, le ore passate più
+  chiare e quella di adesso bordata di rosso.
+- **Mezze giornate libere**: una tabellina con una riga per giorno (i prossimi sette, senza i giorni
+  in cui tutto è chiuso) e una colonna per stanza; M e P in verde sono mattina e pomeriggio senza
+  nessun medico, dalla matrice degli ambulatori (`libere_tabella`; restano anche la lista `libere` e
+  `libere_giorni` nel JSON).
+- Su questa pagina le notifiche a comparsa non si vedono (`body.pagina-live .notifiche`): coprivano
+  le stanze; restano nelle altre pagine.
+
+La pagina si rinnova da sola ogni minuto (ricarica il proprio contenuto con `fetch`, senza
+sfarfallio); con `?schermo=1` («Modo schermo») niente menu e caratteri grandi, per il secondo
+monitor. Il JSON ha gli stessi numeri: solo conteggi, orari, nomi di stanze e medici, mai un paziente
+(una prova lo controlla con i nomi inventati) ed è il formato pensato per alimentare un giorno il
+cruscotto su internet (vedi le proposte nel `PASSAGGIO_DI_CONSEGNE.md`). Per vedere la pagina com'è in
+un giorno di lavoro mentre è domenica o sera, il riepilogo prende l'ora da `live.riepilogo(..., adesso=)`:
+le prove la passano, e per le immagini della guida si è usato un gestionale di prova con
+`live.datetime` fermo a un martedì alle 10:40.
 
 Le prove sono `prove_112.py` (le celle della matrice contro un calcolo minuto per minuto fatto a
 parte, la programmazione, i due Excel riaperti, mettere e togliere, le protezioni, il foglio del
-giorno, il riepilogo live) e `prove_112_browser.py`.
+giorno, il riepilogo live: dalla 1.12.2 i quattro gruppi che sommano al totale a dieci ore diverse,
+anche stanza per stanza, le frasi, la linea del tempo, le ore e la tabella delle mezze giornate) e
+`prove_112_browser.py` (anche la pagina del riepilogo, a qualsiasi ora giri: conti, righe, turni e
+visite come nel JSON, linea di adesso, notifiche nascoste, telefono senza scorrimento laterale).
 
 ## Conferme
 
@@ -2591,6 +2619,7 @@ falliscono, cioè il difetto c'era davvero.
 | Due codici dei turni scritti di seguito senza aspettare («M» e subito «P») | «Nessun turno ha il codice MP» | Dalla 1.12.1 si separano: vale il codice più lungo con cui comincia il testo, le lettere dopo ricominciano sul giorno seguente |
 | `backup\danneggiati` cresceva senza limite | I file rovinati messi da parte non si toglievano mai, nemmeno dopo anni | Dalla 1.12.1 *Controllo del programma* dice quanto occupano e li svuota su richiesta, solo quelli da più di 90 giorni |
 | Prove sul Windows di GitHub (1.12.1) | `pid_vero` usava `wmic`, che non c'è più; una prova voleva zero certificati di sistema; una porta chiusa sembrava un sito che non risponde; gli appunti con a capo CRLF | Processi letti con Toolhelp (`ctypes`); la prova conta che il programma abbia più certificati del sistema; 5 secondi di attesa per la porta chiusa; a capo normalizzati nel confronto |
+| Riepilogo live poco chiaro (segnalato da Giovanni l'8 novembre 2026) | Otto numeri che non sommavano al totale, «in ritardo» solo per tre ore, il medico scritto due volte, «libera fino alle» senza dire perché, sessanta mezze giornate in una lista, le notifiche sopra le stanze | Dalla 1.12.2: quattro gruppi che sommano, una frase in cima, la linea del tempo con turni e visite, le mezze giornate in una tabellina, niente notifiche su quella pagina |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo

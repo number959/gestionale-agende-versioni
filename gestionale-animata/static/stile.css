@@ -588,47 +588,105 @@ details.calendario-mese tr.spento td { color: #5B6B75; font-style: italic; }
   table.matrice td.libera, table.matrice td.parziale, table.matrice td.chiusa { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
-/* ------------------------------------------- riepilogo live (1.12) */
+/* ------------------------------------------- riepilogo live (1.12, piu' chiaro dalla 1.12.2) */
 .vivo-live { display: inline-flex; align-items: center; gap: 8px; }
 .punto-live { width: 9px; height: 9px; border-radius: 50%; background: #2E7D32; animation: battito-live 2s ease-out infinite; }
 @keyframes battito-live { 0% { box-shadow: 0 0 0 0 rgba(46, 125, 50, .5); } 70% { box-shadow: 0 0 0 9px rgba(46, 125, 50, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0); } }
-.numeri-live { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 6px 0 10px; }
-.numero-live { background: #FFFFFF; border: 1px solid #CFD5D8; border-radius: 10px; padding: 10px 12px; }
-.numero-live b { display: block; font: 800 30px/1.1 var(--titoli); color: #16263F; letter-spacing: -.02em; }
-.numero-live b small { font-size: 15px; color: #5B6B75; font-weight: 600; }
-.numero-live span { font-size: 12px; color: #5B6B75; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
-.numero-live.acceso { border-color: var(--primario); background: var(--primario-tenue); }
-.numero-live.attenzione { border-color: #D9822B; background: #FBEBDD; }
-.avanzamento-live { height: 10px; background: #E4E8EA; border-radius: 999px; overflow: hidden; display: flex; margin: 0 0 6px; }
-.avanzamento-live .fatti { background: #2E7D32; transition: width .6s; } .avanzamento-live .in-corso { background: var(--primario-2, #2E6DB4); transition: width .6s; }
-.stanze-live { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
-.stanza-live { background: #FFFFFF; border: 1px solid #CFD5D8; border-left-width: 5px; border-radius: 10px; padding: 10px 12px; }
-.stanza-live .testa { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
-.stanza-live .testa b { font-family: var(--titoli); font-size: 15px; }
-.stanza-live .stato-live { font-size: 12.5px; font-weight: 600; }
-.stanza-live.stato-occupata { border-left-color: var(--primario); } .stanza-live.stato-occupata .stato-live { color: var(--primario); }
-.stanza-live.stato-libera { border-left-color: #2E7D32; background: #F1F8EC; } .stanza-live.stato-libera .stato-live { color: #1E6B2E; }
-.stanza-live.stato-senza-turno, .stanza-live.stato-finita, .stanza-live.stato-chiusa { border-left-color: #9AA5AB; background: #F4F5F3; }
-.stanza-live.stato-senza-turno .stato-live, .stanza-live.stato-finita .stato-live, .stanza-live.stato-chiusa .stato-live { color: #5B6B75; }
-.medico-live { font-weight: 600; font-size: 13.5px; margin-top: 4px; } .medico-live.muto { font-weight: 400; color: #5B6B75; font-size: 12.5px; }
-.conti-live { font-size: 12.5px; color: #46596A; margin-top: 4px; }
-.due-colonne-live { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-.ore-live { display: flex; gap: 6px; align-items: flex-end; height: 120px; padding: 4px 0; }
+/* sulla pagina che si guarda da lontano le notifiche non coprono le stanze: restano nelle altre pagine */
+body.pagina-live .notifiche { display: none; }
+/* in cima: la frase, la barra dei quattro gruppi e i conti che sommano al totale */
+.riassunto-live { background: #FFFFFF; border: 1px solid #CFD5D8; border-radius: 10px; padding: 14px 16px; margin: 6px 0 4px; }
+.frase-live { font-size: 16px; font-weight: 600; color: #16263F; margin: 0 0 10px; line-height: 1.45; }
+.frase-live.chiusa { color: #8A5A00; }
+.avanzamento-live { height: 14px; display: flex; gap: 2px; border-radius: 999px; overflow: hidden; background: #E4E8EA; margin: 0 0 12px; }
+.avanzamento-live span { display: block; height: 100%; transition: width .6s; }
+.avanzamento-live .fatto, .conti-oggi-live .fatto i { background: #2E7D32; }
+.avanzamento-live .in-corso, .conti-oggi-live .in-corso i { background: #154381; }
+.avanzamento-live .da-segnare, .conti-oggi-live .da-segnare i { background: #D9822B; }
+.avanzamento-live .da-fare, .conti-oggi-live .da-fare i { background: #AFC4E2; }
+.conti-oggi-live { list-style: none; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 24px; margin: 0; padding: 0; font-size: 14px; color: #46596A; }
+.conti-oggi-live li { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 4px; }
+.conti-oggi-live i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 3px; align-self: center; }
+.conti-oggi-live b { font: 800 24px/1 var(--titoli); color: #16263F; letter-spacing: -.01em; }
+.conti-oggi-live .totale { padding-right: 24px; border-right: 1px solid #CFD5D8; }
+.conti-oggi-live small { flex-basis: 100%; font-size: 11.5px; color: #5B6B75; padding-left: 19px; }
+.conti-oggi-live .da-segnare.acceso b { color: #B35F16; }
+.fatti-live { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid #E8ECEF; font-size: 13px; color: #46596A; }
+.fatti-live b { color: #16263F; } .fatti-live .attenzione b { color: #B35F16; }
+/* le stanze su una linea del tempo: a sinistra cosa succede adesso, a destra il turno e le visite */
+.linea-live { background: #FFFFFF; border: 1px solid #CFD5D8; border-radius: 10px; padding: 6px 14px 10px; }
+.riga-live { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 14px; align-items: center; padding: 8px 0; border-top: 1px solid #E8ECEF; }
+.riga-live.asse-live { border-top: 0; padding: 2px 0 0; }
+.nome-live { display: flex; flex-direction: column; gap: 1px; min-width: 0; border-left: 5px solid #9AA5AB; padding-left: 10px; }
+.asse-live .nome-live { border-left: 0; }
+.nome-live b { font-family: var(--titoli); font-size: 15px; color: #16263F; }
+.stato-live { font-size: 13px; font-weight: 600; color: #5B6B75; }
+.medico-live { font-size: 13px; font-weight: 600; color: #16263F; }
+.conti-live { font-size: 12px; color: #5B6B75; }
+.conti-live .da-segnare { color: #B35F16; font-weight: 600; }
+.riga-live.stato-occupata .nome-live { border-left-color: #154381; } .riga-live.stato-occupata .stato-live { color: #154381; }
+.riga-live.stato-libera .nome-live { border-left-color: #2E7D32; } .riga-live.stato-libera .stato-live { color: #1E6B2E; }
+.pista-live { position: relative; height: 36px; background: #F4F5F3; border-radius: 6px; }
+.asse-live .pista-live { height: 20px; background: transparent; }
+.tacca-live { position: absolute; top: 2px; transform: translateX(-50%); font-size: 11px; color: #5B6B75; }
+.tacca-live.prima { transform: none; } .tacca-live.ultima { transform: translateX(-100%); }
+.ora-griglia { position: absolute; top: 0; bottom: 0; width: 1px; background: #E4E8EA; }
+.turno-live { position: absolute; top: 2px; bottom: 2px; background: #E3ECF8; border: 1px solid #AFC4E2; border-radius: 5px; overflow: hidden; }
+.turno-live span { position: absolute; left: 6px; right: 4px; top: 2px; font-size: 10.5px; font-weight: 600; color: #154381; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.visita-live { position: absolute; bottom: 5px; height: 12px; min-width: 4px; border-radius: 3px; box-shadow: 0 0 0 1px #FFFFFF; }
+.visita-live.fatto { background: #2E7D32; } .visita-live.in-corso { background: #154381; }
+.visita-live.da-segnare { background: #D9822B; } .visita-live.da-fare { background: #FFFFFF; border: 2px solid #6E8FBF; }
+.adesso-live { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #C62828; border-radius: 2px; z-index: 2; }
+.adesso-etichetta { position: absolute; top: 0; transform: translateX(-50%); background: #C62828; color: #FFFFFF; font-size: 11px; font-weight: 700; padding: 0 5px; border-radius: 4px; z-index: 2; }
+.legenda-live { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid #E8ECEF; font-size: 12px; color: #5B6B75; }
+.legenda-live i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.legenda-live .turno { background: #E3ECF8; border: 1px solid #AFC4E2; } .legenda-live .fatto { background: #2E7D32; }
+.legenda-live .in-corso { background: #154381; } .legenda-live .da-segnare { background: #D9822B; }
+.legenda-live .da-fare { background: #FFFFFF; border: 2px solid #6E8FBF; } .legenda-live .ora-di-adesso { width: 3px; height: 13px; background: #C62828; }
+/* sotto: le visite ora per ora e le mezze giornate libere per giorno */
+.due-colonne-live { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+.due-colonne-live > section { min-width: 0; }
+.ore-live { display: flex; gap: 6px; align-items: flex-end; height: 140px; padding: 4px 0; }
 .ora-live { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.numero-ora { font-size: 11px; font-weight: 700; color: #46596A; height: 15px; }
 .ora-live .colonna { flex: 1; width: 100%; display: flex; align-items: flex-end; background: #F0F1EE; border-radius: 4px; }
-.barra-ora { display: block; width: 100%; background: var(--primario-chiaro, #afc4e2); border-radius: 4px 4px 0 0; position: relative; min-height: 2px; }
-.barra-arrivati { position: absolute; left: 0; right: 0; bottom: 0; background: var(--primario); border-radius: 0 0 0 0; }
+.barra-ora { display: block; width: 100%; background: #AFC4E2; border-radius: 4px 4px 0 0; position: relative; min-height: 2px; }
+.barra-arrivati { position: absolute; left: 0; right: 0; bottom: 0; background: #154381; }
 .ora-live small { font-size: 11px; color: #5B6B75; margin-top: 3px; }
-.libere-live { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.libere-live li { font-size: 13.5px; padding: 5px 10px; background: #F1F8EC; border-left: 4px solid #2E7D32; border-radius: 6px; }
+.ora-live.quando-passata .colonna { opacity: .7; }
+.ora-live.quando-adesso .colonna { box-shadow: inset 0 0 0 2px #C62828; } .ora-live.quando-adesso small { color: #C62828; font-weight: 700; }
+.chiave-arrivati, .chiave-totale { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 10px; vertical-align: -1px; }
+.chiave-arrivati { background: #154381; margin-left: 0; } .chiave-totale { background: #AFC4E2; }
+.scorri-live { overflow-x: auto; }
+.libere-tab { border-collapse: separate; border-spacing: 0 3px; width: 100%; font-size: 12.5px; }
+.libere-tab th { font-weight: 600; color: #46596A; text-align: center; padding: 0 4px 2px; vertical-align: bottom; line-height: 1.2; }
+.libere-tab tbody th { text-align: left; color: #16263F; font-weight: 700; white-space: nowrap; padding-right: 10px; }
+.libere-tab tr.oggi th { color: #154381; }
+.libere-tab td { text-align: center; padding: 0 3px; white-space: nowrap; }
+.mezza { display: inline-block; width: 24px; height: 20px; line-height: 18px; margin: 0 1px; border-radius: 4px; border: 1px solid #DDE3E6; background: #EEF0EE; font-size: 11px; font-weight: 700; text-align: center; vertical-align: middle; color: #FFFFFF; }
+.mezza.libera { background: #2E7D32; border-color: #2E7D32; }
+.mezza.passata, .mezza.chiusa { background: #FFFFFF; border-style: dashed; }
+.nota .mezza { width: 18px; height: 16px; line-height: 14px; font-size: 10px; margin-left: 8px; }
+.nota .mezza:first-child { margin-left: 0; }
 /* modo schermo: caratteri grandi, niente menu */
 body.schermo .barra h1 { font-size: 30px; }
-body.schermo .numero-live b { font-size: 44px; }
-body.schermo .numero-live span, body.schermo .conti-live, body.schermo .libere-live li { font-size: 15px; }
-body.schermo .stanza-live .testa b { font-size: 19px; } body.schermo .stanza-live .stato-live { font-size: 15px; }
-body.schermo .stanze-live { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
-@media (max-width: 900px) { .due-colonne-live { grid-template-columns: 1fr; } }
-@media print { .punto-live { animation: none; } .numero-live, .stanza-live, .libere-live li, .barra-ora, .barra-arrivati, .avanzamento-live span { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+body.schermo .frase-live { font-size: 22px; }
+body.schermo .conti-oggi-live { font-size: 17px; } body.schermo .conti-oggi-live b { font-size: 36px; }
+body.schermo .fatti-live, body.schermo .conti-live { font-size: 15px; }
+body.schermo .riga-live { grid-template-columns: 360px minmax(0, 1fr); }
+body.schermo .nome-live b { font-size: 19px; } body.schermo .stato-live, body.schermo .medico-live { font-size: 16px; }
+body.schermo .pista-live { height: 46px; } body.schermo .asse-live .pista-live { height: 22px; }
+body.schermo .turno-live span { font-size: 13px; } body.schermo .visita-live { height: 15px; bottom: 6px; }
+body.schermo .tacca-live, body.schermo .adesso-etichetta { font-size: 13px; }
+body.schermo .libere-tab { font-size: 15px; } body.schermo .mezza { width: 30px; height: 24px; line-height: 22px; font-size: 13px; }
+@media (max-width: 900px) { .due-colonne-live { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) {
+  .riga-live, body.schermo .riga-live { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .asse-live .nome-live { display: none; }
+  .conti-oggi-live .totale { border-right: 0; padding-right: 0; flex-basis: 100%; }
+  .libere-tab th { font-size: 11px; } .mezza { width: 20px; }
+}
+@media print { .punto-live { animation: none; } .riassunto-live, .avanzamento-live span, .conti-oggi-live i, .pista-live, .turno-live, .visita-live, .adesso-live, .legenda-live i, .barra-ora, .barra-arrivati, .mezza { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 
 table.mese td { height: 108px; }
 table.mese td.fuori { background: #F0F1EE; }
