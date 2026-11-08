@@ -22,19 +22,26 @@ import os
 import random
 import re
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import calendario  # noqa: E402
 from playwright.sync_api import sync_playwright
 
 B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
 esiti = []
 OGGI = date.today()
-# un mese lontano, ogni volta diverso: le celle partono vuote
+# un mese lontano, ogni volta diverso: le celle partono vuote (PROVE_MESE=AAAA-MM per sceglierlo)
 MESE = OGGI.replace(day=1)
 for _ in range(random.Random().randint(3, 30)):
     MESE = (MESE + timedelta(days=32)).replace(day=1)
+if os.environ.get('PROVE_MESE'):
+    MESE = date.fromisoformat(os.environ['PROVE_MESE'] + '-01')
 AAAAMM = MESE.strftime('%Y-%m')
+# il riposo fra il pomeriggio del 24 (fino alle 21) e la mattina del 25 (dalle 7): 10 ore, ma nella
+# notte del cambio dell'ora sono 9 (marzo) o 11 (ottobre), e con 11 non c'e' nessun avviso (1.12.1)
+ORE_RIPOSO = calendario.minuti_veri(datetime.combine(MESE.replace(day=24), time(21)),
+                                    datetime.combine(MESE.replace(day=25), time(7))) // 60
 
 
 def ok(n, c, d=''):
@@ -213,8 +220,13 @@ with sync_playwright() as p:
     pg.keyboard.press('Enter')
     quieta()
     pg.wait_for_timeout(150)
-    ok('poco riposo (pomeriggio e poi mattina): avviso e segno nella cella', 'solo 10 ore di riposo' in avviso('avviso') and
-       cella(A1, 25).locator('.segno-riposo').count() == 1, avviso('avviso'))
+    if ORE_RIPOSO < 11:
+        ok('poco riposo (pomeriggio e poi mattina, %d ore): avviso e segno nella cella' % ORE_RIPOSO,
+           'solo %d ore di riposo' % ORE_RIPOSO in avviso('avviso') and cella(A1, 25).locator('.segno-riposo').count() == 1,
+           avviso('avviso'))
+    else:
+        ok("la notte del cambio dell'ora di ottobre: 11 ore vere di riposo, nessun avviso",
+           'ore di riposo' not in avviso('avviso') and cella(A1, 25).locator('.segno-riposo').count() == 0, avviso('avviso'))
 
     # ------------------------------------------------ solo tastiera nella scelta
     cella(A1, 27).focus()

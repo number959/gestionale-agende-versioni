@@ -1068,7 +1068,23 @@ def g_danneggiati():
         assert os.path.exists(quasi) and os.path.exists(recente)
         # la cartella che non c'e', e «Controlla adesso» (senza azione) come prima
         assert autoripara.dimensione_danneggiati(os.path.join(c, 'altra', 'x.db'))['file'] == 0
-        assert autoripara.svuota_danneggiati(os.path.join(c, 'altra', 'x.db')) == (0, 0)
+        assert autoripara.svuota_danneggiati(os.path.join(c, 'altra', 'x.db')) == (0, 0, 0)
+        # lo svuotamento chiesto da chi usa il programma non e' una riparazione: niente campanella
+        assert not [x for x in C.get('/notifiche.json').get_json() if x['chiave'].startswith('autoripara-')
+                    and 'Svuotati' in x['testo']], 'lo svuotamento in campanella'
+        # un file che non si lascia cancellare (aperto da un altro programma): lo si dice, non «niente da togliere»
+        vecchio3 = backup.copia_grezza(p, quando(200))
+        rimuovi = os.remove
+        autoripara.os.remove = lambda x: (_ for _ in ()).throw(PermissionError(32, 'in uso')) if x == vecchio3 else rimuovi(x)
+        try:
+            assert autoripara.svuota_danneggiati(p) == (0, 0, 1)
+            C.post('/autoriparazione', data={'azione': 'svuota-danneggiati'})
+            t = C.get('/autoriparazione').get_data(as_text=True)
+            assert '1 file non si sono potuti cancellare' in t and 'Niente da togliere' not in t, t[:900]
+        finally:
+            autoripara.os.remove = rimuovi
+        assert autoripara.svuota_danneggiati(p) == (1, os.path.getsize(p), 0) and not os.path.exists(vecchio3)
+        assert len(eventi_qui(c)) == prima + 2
         assert C.post('/autoriparazione').status_code == 302
         assert 'il database è integro' in C.get('/autoriparazione').get_data(as_text=True)
         assert autoripara.testo_byte(0) == '0 KB' and autoripara.testo_byte(3000) == '2 KB' and \

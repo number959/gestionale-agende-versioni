@@ -1526,8 +1526,10 @@ l'assistenza).
 **I file rovinati messi da parte** (dalla 1.12.1). La pagina dice quanti file ci sono in
 `backup\danneggiati` e quanto occupano, e quanti sono da più di 90 giorni. Il bottone *Svuota i
 file rovinati più vecchi di 90 giorni* (solo se ce ne sono, con una conferma) cancella quelli,
-`autoripara.svuota_danneggiati`, e lo annota nel diario; quelli più recenti restano sempre, perché
-possono servire all'assistenza. Il programma da solo non cancella mai niente lì dentro: la cartella
+`autoripara.svuota_danneggiati`, e lo annota nel diario (senza campanella: l'ha chiesto chi usa il
+programma, non è una riparazione); quelli più recenti restano sempre, perché possono servire
+all'assistenza. Se un file non si lascia cancellare (aperto da un altro programma) la pagina lo dice,
+invece di «niente da togliere». Il programma da solo non cancella mai niente lì dentro: la cartella
 cresce finché qualcuno non la svuota da qui. La data di un file è quella nel suo nome
 (`danneggiato-AAAA-MM-GG_HHMMSS.db`), per un file con un altro nome quella del file. Una pagina che si rompe mostra una spiegazione in parole semplici al posto
 dell'errore del server (il disco pieno e il database occupato con il loro messaggio).
@@ -1991,7 +1993,11 @@ certificati di sistema, ma su Windows l'elenco delle radici è del PC e c'è sem
 programma ne abbia di più, con l'elenco Mozilla); e una porta chiusa su 127.0.0.1 su Windows viene
 detta «rifiutata» solo dopo un paio di secondi di tentativi, con un solo secondo di attesa sembrava
 un sito che non risponde (ora la prova aspetta 5 secondi); e negli appunti di Windows gli a capo
-diventano CRLF, per cui il confronto di «Copia» in `prove_19_browser.py` ora li normalizza.
+diventano CRLF, per cui il confronto di «Copia» in `prove_19_browser.py` ora li normalizza. Un
+quinto caso non era Windows ma il caso: `prove_18_browser.py` sceglie un mese a caso nel futuro, e
+in un marzo in cui il 25 è l'ultima domenica il riposo fra il pomeriggio del 24 e la mattina del 25
+vale 9 ore vere, non 10 (dalla 1.12.1): ora la prova calcola le ore attese con `calendario.minuti_veri`
+(`PROVE_MESE=AAAA-MM` sceglie il mese, per rifare il caso).
 
 ## Email e WhatsApp: come funzionano dentro
 

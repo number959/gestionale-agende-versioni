@@ -814,13 +814,16 @@ def autoriparazione():
             return redirect(url_for('autoriparazione'))
         if request.form.get('azione') == 'svuota-danneggiati':
             # 1.12.1: i file rovinati messi da parte da piu' di tre mesi, solo su richiesta e con conferma
-            n, byte = autoripara.svuota_danneggiati(pdb)
+            n, byte, non_riusciti = autoripara.svuota_danneggiati(pdb)
             if n:
                 flash('Tolti %d file rovinati messi da parte da più di %d giorni (%s liberati). Quelli più recenti '
                       'restano.' % (n, autoripara.GIORNI_DANNEGGIATI, autoripara.testo_byte(byte)), 'ok')
-            else:
+            elif not non_riusciti:
                 flash('Niente da togliere: nessun file rovinato messo da parte da più di %d giorni.'
                       % autoripara.GIORNI_DANNEGGIATI, 'ok')
+            if non_riusciti:
+                flash('%d file non si sono potuti cancellare: forse sono aperti da un altro programma. Riprovare più '
+                      'tardi, o chiudere il programma che li tiene aperti.' % non_riusciti, 'errore')
             return redirect(url_for('autoriparazione'))
         ses().close()
         autoripara.controlla_lavori()

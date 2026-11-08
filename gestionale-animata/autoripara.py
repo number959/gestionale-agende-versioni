@@ -341,10 +341,10 @@ def svuota_danneggiati(percorso_db, piu_vecchi_di_giorni=GIORNI_DANNEGGIATI, ade
     """Cancella i file rovinati messi da parte da piu' di 'piu_vecchi_di_giorni'
     giorni; quelli recenti restano (possono servire all'assistenza). Solo su
     richiesta, dalla pagina Controllo del programma: il programma da solo non
-    cancella mai niente. Restituisce (file cancellati, byte liberati) e, se ha
-    tolto qualcosa, lo annota nel diario."""
+    cancella mai niente. Restituisce (file cancellati, byte liberati, file che non
+    si sono potuti cancellare) e, se ha tolto qualcosa, lo annota nel diario."""
     limite = (adesso or datetime.now()) - timedelta(days=piu_vecchi_di_giorni)
-    cancellati, liberati = 0, 0
+    cancellati, liberati, non_riusciti = 0, 0, 0
     for percorso, quando, byte in _file_danneggiati(percorso_db):
         if quando >= limite:
             continue
@@ -352,13 +352,15 @@ def svuota_danneggiati(percorso_db, piu_vecchi_di_giorni=GIORNI_DANNEGGIATI, ade
             os.remove(percorso)
         except OSError:
             logging.exception('autoriparazione: file rovinato non cancellato: %s', percorso)
+            non_riusciti += 1
             continue
         cancellati += 1
         liberati += byte
     if cancellati:
-        annota('Svuotati, su richiesta, i file rovinati messi da parte da più di %d giorni: %d file, %s liberati'
-               % (piu_vecchi_di_giorni, cancellati, testo_byte(liberati)), 'ok', tipo='danneggiati')
-    return cancellati, liberati
+        annota('Svuotati, su richiesta, i file rovinati messi da parte da più di %d giorni: %d file, %s liberati%s'
+               % (piu_vecchi_di_giorni, cancellati, testo_byte(liberati),
+                  '' if not non_riusciti else ' (%d non si sono potuti cancellare)' % non_riusciti), 'ok', tipo='danneggiati')
+    return cancellati, liberati, non_riusciti
 
 
 def _pagina_con_righe(percorso, numero):
@@ -1229,6 +1231,8 @@ def notifiche(adesso, collegamento, giorni=3):
     problemi di adesso. Ognuna con la sua chiave: chiusa una volta, non torna."""
     uscita = []
     for e in eventi(adesso - timedelta(days=giorni)):
+        if e.get('tipo') == 'danneggiati':
+            continue                   # l'ha chiesto chi usa il programma: non e' una riparazione da annunciare
         uscita.append({'chiave': 'autoripara-%s-%s' % (e['quando'].strftime('%Y%m%d%H%M%S'), _impronta(e['testo'])),
                        'titolo': 'Riparato da solo' if e['livello'] == 'ok' else 'Controllo del programma',
                        'testo': e['testo'], 'link': collegamento, 'azioni': [],

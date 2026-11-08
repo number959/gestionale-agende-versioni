@@ -785,7 +785,16 @@ aperte. Niente di nuovo nel database (schema 11). Cosa porta:
   chiusa su 127.0.0.1 riceveva «non risponde» invece di «non raggiungibile», perché Windows dice
   «rifiutata» solo dopo un paio di secondi di tentativi (ora aspetta 5 secondi); «Copia» di Dove si fa
   (`prove_19_browser.py`) confrontava gli appunti alla lettera, e su Windows gli a capo sono CRLF (ora
-  li normalizza). Al terzo giro tutte le raccolte senza browser erano verdi nelle due cartelle.
+  li normalizza); e `prove_18_browser.py`, che sceglie un mese a caso nel futuro, in un marzo con il
+  cambio dell'ora la notte 24→25 si aspettava 10 ore di riposo invece delle 9 vere (ora le calcola con
+  `calendario.minuti_veri`; `PROVE_MESE=AAAA-MM` forza il mese). Al terzo giro tutte le raccolte senza
+  browser erano verdi nelle due cartelle, al quarto anche quelle nel browser dell'animata.
+- **Revisione avversaria** della 1.12.1 (quattro revisori e due verificatori per segnalazione, come per
+  la 1.12): il limite orario della sessione ne ha fermata metà; delle segnalazioni arrivate due erano
+  giuste e sono state corrette: «Svuota» diceva «niente da togliere» anche quando un file non si era
+  potuto cancellare (ora lo dice, con il consiglio), e lo svuotamento finiva in campanella come «Riparato
+  da solo» (ora il diario lo tiene, la campanella no). Il cambio dell'ora non ha avuto segnalazioni; i
+  codici di seguito e le prove su Windows sono stati rivisti a mano e dal giro su GitHub.
 - **Il PDF della guida nella release**: il workflow «Pubblica una versione» avvia il gestionale di
   prova, genera il PDF con Chromium e lo carica come quinto file (53 pagine alla 1.12.1). Se il
   passo non riesce la release si fa lo stesso, senza PDF.
