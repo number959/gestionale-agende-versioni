@@ -10,7 +10,7 @@ from math import gcd
 from sqlalchemy import select, func
 from modelli import (Struttura, Risorsa, Operatore, Turno, Appuntamento, Modifica,
                      Assenza, Chiusura, Paziente, Prestazione, STATI_ATTIVI,
-                     ETICHETTA_TIPO_VISITA, cartella_risorse)
+                     ETICHETTA_TIPO_VISITA, ETICHETTA_STATO, cartella_risorse)
 import calendario
 
 PASSO = 30                      # minuti per fascia, se la struttura non dice altro
@@ -982,16 +982,24 @@ def statistiche(ses, struttura_id, dal, al):
 
 # ------------------------------------------------------------------ export
 def esporta_giorno(ses, g, struttura_id, percorso):
-    """Esporta la giornata nel formato dei fogli che l'accettazione usa oggi,
-    piu' un secondo foglio con l'elenco completo, recapiti compresi."""
+    """Esporta la giornata nel formato dei fogli che l'accettazione usa oggi
+    (una colonna doppia per stanza, una riga per fascia), piu' un secondo
+    foglio con l'elenco completo, recapiti compresi. Dalla 1.12 con lo stile
+    comune degli Excel (comune.tabella_excel e soci): il titolo con la
+    struttura, i turni dei medici nelle intestazioni delle stanze, le fasce
+    libere nel turno in azzurro e quelle fuori turno in grigio, la legenda,
+    il foglio A4 che sta in larghezza con le intestazioni ripetute."""
     from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.styles import Font, PatternFill, Alignment
     from openpyxl.utils import get_column_letter
+    # qui dentro: comune importa questo modulo
+    from comune import (apri_foglio_excel, bordo_excel, carattere_excel, imposta_stampa_excel, stile_intestazione_excel,
+                        testo_excel, EXCEL_BLU, EXCEL_GRIGIO, FORMATO_ORA)
 
-    sottile = Side(style='thin')
-    box = Border(left=sottile, right=sottile, top=sottile, bottom=sottile)
-    ciano = PatternFill('solid', fgColor='FF00B0F0')
-    verde = PatternFill('solid', fgColor='FFE2EFDA')
+    box = bordo_excel()
+    verde = PatternFill('solid', fgColor='FFE2EFDA')         # appuntamento
+    azzurro = PatternFill('solid', fgColor='FFEEF3FA')       # fascia libera dentro un turno
+    grigio = PatternFill('solid', fgColor='FFECEEF0')        # fuori turno, stanza chiusa
 
     vista = griglia(ses, g, struttura_id)
     colonne, elenco_fasce = vista['colonne'], vista['fasce']
@@ -999,9 +1007,11 @@ def esporta_giorno(ses, g, struttura_id, percorso):
     wb = Workbook()
     ws = wb.active
     ws.title = g.strftime('%d-%m-%Y')
+    ultima_colonna = 1 + 2 * len(colonne)
 
     # logo della struttura, dal database; senza logo il titolo va in A1
     colonna_titolo = 1
+    larghezze = [8] + [16, 24] * len(colonne)
     if st is not None and st.ha_logo:
         from io import BytesIO
         from openpyxl.drawing.image import Image as ImmagineXL
@@ -1010,8 +1020,7 @@ def esporta_giorno(ses, g, struttura_id, percorso):
         im.width, im.height = round(im.width * altezza / im.height), altezza
         ws.add_image(im, 'A1')
         ws.row_dimensions[1].height = 30
-        # il titolo parte dopo il logo: colonna A larga 8, le altre 22 e 26
-        larghezze = [8] + [22, 26] * len(colonne)
+        # il titolo parte dopo il logo: colonna A larga 8, le altre 16 e 24
         spazio, colonna_titolo = 0, 1
         for n, l in enumerate(larghezze, start=1):
             if spazio * 7 >= im.width + 10:
@@ -1021,32 +1030,36 @@ def esporta_giorno(ses, g, struttura_id, percorso):
     nome = st.nome if st is not None else ''
     titolo = ('%s - planning del %s' % (nome, etichetta_giorno(g))) if nome else \
         'Planning del %s' % etichetta_giorno(g)
-    t = ws.cell(1, colonna_titolo, titolo.upper())
-    t.font = Font(name='Calibri', size=14, bold=True)
-    if st is not None and st.societa:
-        ws.oddFooter.left.text = st.societa
-    ws.oddFooter.right.text = 'Pagina &P di &N'
+    tit = ws.cell(1, colonna_titolo, testo_excel(titolo.upper()))
+    tit.font = carattere_excel(size=14, bold=True, color=EXCEL_BLU)
+    tit.alignment = Alignment(vertical='center')
+    if ultima_colonna > colonna_titolo:
+        ws.merge_cells(start_row=1, start_column=colonna_titolo, end_row=1, end_column=ultima_colonna)
+    ws.row_dimensions[1].height = max(ws.row_dimensions[1].height or 15, 24)
 
-    ws.cell(2, 1, 'ORA').font = Font(bold=True, size=10)
-    ws.cell(2, 1).border = box
+    # intestazione: ORA e, per ogni stanza, il nome con i turni del giorno (chi c'e' e quando)
+    stile_intestazione_excel(ws.cell(2, 1), 'ORA')
+    con_turni = False
     for i, col in enumerate(colonne):
         c = 2 + i * 2
         ws.merge_cells(start_row=2, start_column=c, end_row=2, end_column=c + 1)
-        h = ws.cell(2, c, col['risorsa'].nome)
-        h.font = Font(bold=True, size=10)
-        h.fill = ciano
-        h.alignment = Alignment(horizontal='center')
-        ws.cell(2, c).border = box
+        turni_t = ' · '.join('%s %s-%s' % (t.operatore.etichetta, t.ora_inizio.strftime('%H:%M'),
+                                            t.ora_fine.strftime('%H:%M')) for t in col['turni'])
+        assenti_t = ' · '.join('%s assente' % o.etichetta for o, _ in col['assenti'])
+        sotto = ' · '.join(x for x in (turni_t, assenti_t) if x)
+        con_turni = con_turni or bool(sotto)
+        stile_intestazione_excel(ws.cell(2, c), col['risorsa'].nome + ('\n' + sotto if sotto else ''))
         ws.cell(2, c + 1).border = box
-        ws.column_dimensions[get_column_letter(c)].width = 22
-        ws.column_dimensions[get_column_letter(c + 1)].width = 26
-    ws.column_dimensions['A'].width = 8
+    ws.row_dimensions[2].height = 32 if con_turni else 18
+    for n, l in enumerate(larghezze, start=1):
+        ws.column_dimensions[get_column_letter(n)].width = l
 
+    normale = carattere_excel()
     for r, f in enumerate(elenco_fasce, start=3):
         o = ws.cell(r, 1, f)
-        o.number_format = 'h:mm'
-        o.font = Font(bold=True, size=10)
-        o.alignment = Alignment(horizontal='center')
+        o.number_format = FORMATO_ORA
+        o.font = carattere_excel(bold=True)
+        o.alignment = Alignment(horizontal='center', vertical='center')
         o.border = box
         for i, col in enumerate(colonne):
             cella = col['celle'][r - 3]
@@ -1060,34 +1073,62 @@ def esporta_giorno(ses, g, struttura_id, percorso):
                           '%s%s' % (a.prestazione.nome if a.prestazione else '',
                                     ' - ' + a.paziente.etichetta if a.paziente else ''))
                          for a in cella['apps']]
-                m = ws.cell(r, c, '\n'.join(x[0] for x in righe))
-                d = ws.cell(r, c + 1, '\n'.join(x[1] for x in righe))
+                m = ws.cell(r, c, testo_excel('\n'.join(x[0] for x in righe)))
+                d = ws.cell(r, c + 1, testo_excel('\n'.join(x[1] for x in righe)))
                 for x in (m, d):
                     x.fill = verde
-                    x.font = Font(size=10)
-                    x.alignment = Alignment(horizontal='center', wrap_text=True)
+                    x.font = normale
+                    x.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
                 if cella['righe'] > 1:
                     ws.merge_cells(start_row=r, start_column=c,
                                    end_row=r + cella['righe'] - 1, end_column=c)
                     ws.merge_cells(start_row=r, start_column=c + 1,
                                    end_row=r + cella['righe'] - 1, end_column=c + 1)
+                # piu' appuntamenti nella stessa cella: la riga cresce quanto basta per leggerli
+                serve = 13 * len(righe) + 4
+                ha = 15 * cella['righe']
+                if serve > ha:
+                    ws.row_dimensions[r].height = max(ws.row_dimensions[r].height or 15, 15 + serve - ha)
+            elif cella['stato'] == 'aperta':
+                for x in (ws.cell(r, c), ws.cell(r, c + 1)):
+                    x.fill = azzurro
+            elif cella['stato'] == 'chiusa':
+                for x in (ws.cell(r, c), ws.cell(r, c + 1)):
+                    x.fill = grigio
+    riga = 3 + len(elenco_fasce) + 1
+    legenda = ws.cell(riga, 1, 'Legenda: verde = appuntamento; azzurro = fascia libera nel turno di un medico; '
+                               'grigio = fuori turno o stanza chiusa. Nelle intestazioni i turni del giorno.')
+    legenda.font = carattere_excel(size=9, italic=True, color=EXCEL_GRIGIO)
+    ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=max(2, ultima_colonna))
+    # le stanze disattivate non hanno una colonna: i loro appuntamenti stanno nel foglio Elenco
+    apps = elenco_giorno(ses, g, struttura_id)
+    fuori = [a for a in apps if a.risorsa is not None and not a.risorsa.attiva and a.stato in STATI_ATTIVI]
+    if fuori:
+        nota = ws.cell(riga + 1, 1, '%d appuntament%s in stanze disattivate: nel foglio Elenco.'
+                       % (len(fuori), 'o' if len(fuori) == 1 else 'i'))
+        nota.font = carattere_excel(size=9, italic=True, color=EXCEL_GRIGIO)
+        ws.merge_cells(start_row=riga + 1, start_column=1, end_row=riga + 1, end_column=max(2, ultima_colonna))
 
     ws.freeze_panes = 'B3'
-    ws.page_setup.orientation = 'landscape'
-    _foglio_elenco(wb, ses, g, struttura_id, box, ciano)
+    imposta_stampa_excel(ws, True, '1:2', 'A:A', st, etichetta_giorno(g))
+    _foglio_elenco(wb, ses, g, struttura_id, apps)
     wb.active = 0
     wb.save(percorso)
     return percorso
 
 
-def _foglio_elenco(wb, ses, g, struttura_id, box, ciano):
+def _foglio_elenco(wb, ses, g, struttura_id, apps=None):
     """Secondo foglio: una riga per appuntamento, con le colonne delle agende
-    Excel dell'accettazione. Anche disdetti e non presentati, con lo stato."""
-    from comune import testo_excel        # qui dentro: comune importa questo modulo
-    from openpyxl.styles import Font, Alignment
-    from openpyxl.utils import get_column_letter
+    Excel dell'accettazione. Anche disdetti e non presentati (in grigio, i
+    disdetti barrati), con lo stato; la riga dei totali conta e somma solo gli
+    appuntamenti attivi. Ci sono anche gli appuntamenti nelle stanze
+    disattivate, che il planning non puo' mostrare (non hanno una colonna):
+    l'elenco e' il foglio completo, il planning lo dice."""
+    from openpyxl.styles import Font, PatternFill
+    from comune import apri_foglio_excel, imposta_stampa_excel, tabella_excel, EXCEL_GRIGIO, FORMATO_ORA, FORMATO_EURO
     ws = wb.create_sheet('Elenco')
-    apps = elenco_giorno(ses, g, struttura_id)
+    st = ses.get(Struttura, struttura_id)
+    apps = elenco_giorno(ses, g, struttura_id) if apps is None else apps
     extra = []
     for a in apps:
         for k in a.valori_extra:
@@ -1096,36 +1137,45 @@ def _foglio_elenco(wb, ses, g, struttura_id, box, ciano):
     intestazioni = ['ORA', 'FINE', 'STANZA', 'MEDICO', 'PAZIENTE', 'TELEFONO', 'EMAIL',
                     'PRESTAZIONE', 'TIPO', 'CONVENZIONE / ASSICURAZIONE', 'IMPORTO', 'STATO',
                     'NOTE'] + [e.upper() for e in extra]
-    larghezze = [7, 7, 18, 20, 24, 15, 24, 20, 13, 22, 10, 14, 30] + [16] * len(extra)
-    for c, (testo, l) in enumerate(zip(intestazioni, larghezze), start=1):
-        h = ws.cell(1, c, testo)
-        h.font = Font(bold=True, size=10)
-        h.fill = ciano
-        h.border = box
-        h.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-        ws.column_dimensions[get_column_letter(c)].width = l
-    for r, a in enumerate(apps, start=2):
-        valori = [a.inizio.time(), a.fine.time(), a.risorsa.nome if a.risorsa else '',
-                  a.operatore.etichetta if a.operatore else '',
-                  a.paziente.etichetta if a.paziente else '',
-                  a.paziente.telefono if a.paziente else '',
-                  a.paziente.email if a.paziente else '',
-                  a.prestazione.nome if a.prestazione else '', a.etichetta_tipo,
-                  a.convenzione or '',
-                  (a.importo_cent / 100.0) if a.importo_cent is not None else None,
-                  a.etichetta_stato, a.note or ''] + [a.valori_extra.get(e, '') for e in extra]
-        for c, v in enumerate(valori, start=1):
-            x = ws.cell(r, c, testo_excel(v))
-            x.border = box
-            x.font = Font(size=10)
-            if c in (1, 2):
-                x.number_format = 'h:mm'
-            elif c == 11:
-                x.number_format = '#,##0.00'
-    ws.freeze_panes = 'A2'
-    ws.auto_filter.ref = 'A1:%s%d' % (get_column_letter(len(intestazioni)), max(1, len(apps) + 1))
-    ws.page_setup.orientation = 'landscape'
-    ws.print_title_rows = '1:1'
+    larghezze = [7, 7, 16, 18, 24, 15, 24, 22, 13, 20, 11, 14, 30] + [16] * len(extra)
+    righe = []
+    for a in apps:
+        righe.append([a.inizio.time(), a.fine.time(), a.risorsa.nome if a.risorsa else '',
+                      a.operatore.etichetta if a.operatore else '',
+                      a.paziente.etichetta if a.paziente else '',
+                      a.paziente.telefono if a.paziente else '',
+                      a.paziente.email if a.paziente else '',
+                      a.prestazione.nome if a.prestazione else '', a.etichetta_tipo,
+                      a.convenzione or '',
+                      (a.importo_cent / 100.0) if a.importo_cent is not None else None,
+                      a.etichetta_stato, a.note or ''] + [a.valori_extra.get(e, '') for e in extra])
+    attivi = [a for a in apps if a.stato in STATI_ATTIVI]
+    n_disdetti = sum(1 for a in apps if a.stato == 'DISDETTO')
+    n_non = sum(1 for a in apps if a.stato == 'NON_PRESENTATO')
+    sotto = '%d appuntament%s attiv%s' % (len(attivi), 'o' if len(attivi) == 1 else 'i', 'o' if len(attivi) == 1 else 'i')
+    if n_disdetti or n_non:
+        sotto += ' (piu' + ' %d disdett%s' % (n_disdetti, 'o' if n_disdetti == 1 else 'i') * bool(n_disdetti) + \
+                 (' e' if n_disdetti and n_non else '') + ' %d non presentat%s' % (n_non, 'o' if n_non == 1 else 'i') * bool(n_non) + ')'
+    riga = apri_foglio_excel(ws, 'Elenco del %s' % etichetta_giorno(g), sotto, st, colonne=len(intestazioni))
+    grigio_f = Font(name='Calibri', size=10, italic=True, color=EXCEL_GRIGIO)
+    barrato_f = Font(name='Calibri', size=10, italic=True, color=EXCEL_GRIGIO, strike=True)
+    etichette_stati = {'DISDETTO': ETICHETTA_STATO.get('DISDETTO', 'Disdetto'),
+                       'NON_PRESENTATO': ETICHETTA_STATO.get('NON_PRESENTATO', 'Non presentato')}
+
+    def stile_riga(valori):
+        stato = valori[11]
+        if stato == etichette_stati['DISDETTO']:
+            return {'font': barrato_f}
+        if stato == etichette_stati['NON_PRESENTATO']:
+            return {'font': grigio_f}
+        return None
+
+    somma = sum(a.importo_cent for a in attivi if a.importo_cent is not None) / 100.0
+    totali = {1: 'Totale (solo attivi)', 5: '%d appuntament%s' % (len(attivi), 'o' if len(attivi) == 1 else 'i'),
+              11: somma}
+    tabella_excel(ws, riga, intestazioni, larghezze, righe, formati={1: FORMATO_ORA, 2: FORMATO_ORA, 11: FORMATO_EURO},
+                  totali=totali, a_capo=(13,) + tuple(range(14, 14 + len(extra))), stile_riga=stile_riga)
+    imposta_stampa_excel(ws, True, '%d:%d' % (riga, riga), None, st, 'Elenco del %s' % etichetta_giorno(g))
 
 
 # ================================================== stato e spostamenti (1.4)

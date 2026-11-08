@@ -839,9 +839,14 @@ def p_registro():
     import openpyxl
     ws = openpyxl.load_workbook(BytesIO(r.data)).active
     righe = list(ws.iter_rows(values_only=True))
-    assert righe[0] == ('Data', 'Ora', 'Paziente', 'Prestazione', 'Branca', 'Struttura', 'Come', 'Note'), righe[0]
-    assert [r_[2:7] for r_ in righe[1:]] == [('Fittizi Ada', 'Mammografia', 'DIAGNOSTICA PER IMMAGINI', 'Centro Nord',
-                                             'WhatsApp'), (None, None, None, 'Centro Sud', 'al telefono')], righe[1:]
+    # 1.12: sopra la tabella il titolo e il mese, sotto i totali e i conteggi per struttura
+    testa = next(i for i, r_ in enumerate(righe) if r_[0] == 'Data')
+    assert 'Pazienti indirizzati' in str(righe[0][0]) and testa > 1, righe[0]
+    assert righe[testa] == ('Data', 'Ora', 'Paziente', 'Prestazione', 'Branca', 'Struttura', 'Come', 'Note'), righe[testa]
+    assert [r_[2:7] for r_ in righe[testa + 1:testa + 3]] == [('Fittizi Ada', 'Mammografia', 'DIAGNOSTICA PER IMMAGINI', 'Centro Nord',
+                                             'WhatsApp'), (None, None, None, 'Centro Sud', 'al telefono')], righe[testa + 1:testa + 3]
+    assert righe[testa + 3][0] == 'Totale' and righe[testa + 3][2] == '2 indirizzati', righe[testa + 3]
+    assert ('Centro Nord', 1) in [r_[:2] for r_ in righe[testa + 4:]] and ('Centro Sud', 1) in [r_[:2] for r_ in righe[testa + 4:]], righe[testa + 4:]
     # togli: dall'avviso (JSON) e dal registro (modulo, si torna solo a pagine del programma)
     r = C.post(d['togli'], json={})
     assert json.loads(html(r)) == {'tolto': d['id']}

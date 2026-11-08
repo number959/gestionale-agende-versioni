@@ -40,7 +40,7 @@
       {% for g in vista.giorni %}{% set i = vista.info[g] %}
       <th colspan="{{ vista.meta|length }}" class="{% if g == oggi %}oggi{% endif %}{% if i.chiusura or (i.festivo and i.chiude_festivo) %} festivo{% endif %}">
         <a href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">{{ giorni_nomi[g.weekday()] }} {{ g.day }}/{{ g.month }}</a>
-        {% if i.chiusura %}<span class="sotto">chiusa: {{ i.chiusura }}</span>{% elif i.festivo %}<span class="sotto">{{ i.festivo }}</span>{% endif %}
+        {% if i.chiusura %}<span class="sotto">{{ motivo_chiusura(i.chiusura) }}</span>{% elif i.festivo %}<span class="sotto">{{ i.festivo }}</span>{% endif %}
       </th>{% endfor %}
     </tr>
     <tr>
@@ -55,7 +55,7 @@
       <td class="{% if c.chiuso %}chiusa{% elif c.tutta_libera %}libera{% else %}occupata{% if c.libere %} parziale{% endif %}{% endif %}"
           data-cella="{{ riga.risorsa.id }}_{{ c.data.isoformat() }}_{{ c.meta.nome }}">
         {% if c.chiuso %}
-          <span class="chiuso">chiusa: {{ c.chiuso }}</span>
+          <span class="chiuso">{{ motivo_chiusura(c.chiuso) }}</span>
         {% else %}
           {% for p in c.presenze %}
           <span class="turno-sett" style="border-left-color: {{ p.operatore.colore_sicuro }}">
@@ -68,7 +68,7 @@
             </form>
           </span>
           {% endfor %}
-          {% for o, motivo, t in c.assenti %}<span class="turno-sett assente">{{ o.cognome }} <small>assente: {{ motivo|lower }}</small></span>{% endfor %}
+          {% for o, motivo, t in c.assenti %}<span class="turno-sett assente">{{ o.cognome }} <small>{{ motivo_assenza(motivo) }}</small></span>{% endfor %}
           {% if c.tutta_libera %}<span class="disponibile">DISPONIBILE</span>{% endif %}
           {% for da, a in c.libere %}<span class="libero">libero {{ fascia(da, a) }}</span>{% endfor %}
           {% if medici and c.data >= oggi %}

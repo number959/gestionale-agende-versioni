@@ -1390,10 +1390,15 @@ def ec_export():
     wb = openpyxl.load_workbook(io.BytesIO(r.data))
     assert wb.active.title == domani.strftime('%d-%m-%Y'), 'il foglio attivo non e piu il planning'
     ws = wb['Elenco']
-    intest = [c.value for c in ws[1]]
+    # 1.12: sopra la tabella il titolo con la struttura e il giorno, sotto la riga dei totali
+    testa = next(i for i in range(1, 8) if ws.cell(i, 1).value == 'ORA')
+    assert 'Elenco del' in str(ws['A1'].value) and testa > 1, ws['A1'].value
+    intest = [c.value for c in ws[testa]]
     assert intest[:6] == ['ORA', 'FINE', 'STANZA', 'MEDICO', 'PAZIENTE', 'TELEFONO'], intest
-    righe_ = list(ws.iter_rows(min_row=2, values_only=True))
+    righe_ = [r_ for r_ in ws.iter_rows(min_row=testa + 1, values_only=True) if r_[0] is not None and not isinstance(r_[0], str)]
     assert len(righe_) == 3, 'righe nell elenco: %d' % len(righe_)
+    totale = next(r_ for r_ in ws.iter_rows(min_row=testa + 1, values_only=True) if isinstance(r_[0], str) and r_[0].startswith('Totale'))
+    assert totale[4] == '2 appuntamenti', totale
     stati = sorted(r[11] for r in righe_)
     assert stati == ['Confermato', 'Confermato', 'Disdetto'], stati
 

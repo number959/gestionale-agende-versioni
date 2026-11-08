@@ -636,6 +636,21 @@ table.tabella-stampa td.c-ora { white-space: nowrap; font-weight: 600; }
 table.tabella-stampa td.c-paziente { font-weight: 600; }
 table.tabella-stampa .c-importo { text-align: right; white-space: nowrap; }
 .piede-stampa { margin-top: 12px; font-size: 10.5px; color: #6A7A84; }
+/* 1.12: la pagina di stampa e' una tabella con testata (thead) e piede (tfoot), ripetuti su ogni foglio */
+table.impaginazione { width: 100%; border-collapse: collapse; }
+table.impaginazione > thead > tr > td, table.impaginazione > tbody > tr > td, table.impaginazione > tfoot > tr > td { padding: 0; border: 0; vertical-align: top; }
+.sotto-stanza { font-size: 11px; color: #46596A; margin: -2px 0 4px; }
+.turni-stampa { font-size: 11px; color: #46596A; margin: 0 0 8px; }
+.vuoto-stanza { font-size: 11px; color: #6A7A84; margin: 0 0 6px; font-style: italic; }
+.legenda-stampa { font-size: 10.5px; color: #6A7A84; margin: 10px 0 0; }
+table.tabella-stampa td.c-stanza, table.tabella-stampa td.c-telefono, table.tabella-stampa td.c-nascita { white-space: nowrap; }
+table.tabella-stampa td.c-note { min-width: 90px; }
+table.tabella-stampa .c-spunta { width: 58px; white-space: nowrap; text-align: center; }
+table.tabella-stampa .casella { display: inline-block; width: 11px; height: 11px; border: 1px solid #16263F; margin: 1px 4px; vertical-align: middle; }
+table.tabella-stampa tr.totale-stampa td { font-weight: 600; border-top: 2px solid #46596A; background: #F4F5F3; }
+table.tabella-stampa tr.stato-disdetto td { color: #8C979E; text-decoration: line-through; }
+table.tabella-stampa tr.stato-non_presentato td { color: #9C4A1A; }
+.solo-stampa { display: none; }
 .promemoria { max-width: 620px; margin: 20px auto; padding: 22px 26px; border: 1px solid #9AA5AB; }
 .logo-promemoria img { height: 44px; }
 .promemoria h1 { font-family: var(--titoli); font-size: 22px; margin: 12px 0 4px; }
@@ -659,6 +674,19 @@ table.dati-promemoria td { font-size: 16px; font-weight: 600; padding: 5px 0; bo
   tr, .voce { break-inside: avoid; }
   a { color: inherit; text-decoration: none; }
   .promemoria { border: 0; margin: 0 auto; }
+  /* 1.12: le stampe. Il numero di pagina nel margine del foglio (Chrome ed Edge recenti; altrove non compare) */
+  @page { @bottom-right { content: "Pagina " counter(page) " di " counter(pages); font: 9px 'Inter', 'Segoe UI', Arial, sans-serif; color: #6A7A84; } }
+  .solo-stampa { display: block; }
+  table.impaginazione > tbody > tr, table.impaginazione > tbody > tr > td { break-inside: auto; }
+  table.impaginazione > thead { display: table-header-group; }
+  table.impaginazione > tfoot { display: table-footer-group; }
+  table.tabella-stampa th, table.tabella-stampa tr.totale-stampa td, .nota-stampa { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .blocco-stampa h2, .sotto-stanza { break-after: avoid; }
+  .blocco-stampa.corto { break-inside: avoid; }
+  table.tabella-stampa thead { display: table-header-group; }
+  /* le pagine a schermo stampate con Ctrl+P: via pulsanti, collegamenti rapidi, moduli */
+  .pulsanti-stato, .contatti-rapidi, td.azione, th.azione, .appunti-giorno .bottone, details.nota-giorno { display: none !important; }
+  table.elenco thead { display: table-header-group; }
 }
 body.pagina-stampa .promemoria ~ * { display: none; }
 

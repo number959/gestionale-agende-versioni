@@ -494,8 +494,9 @@ def fai_export_giorno(g, nota):
         ws = openpyxl.load_workbook(percorso).active
         v = servizi.griglia(s, g, 1)
         s.close()
-        assert ws.max_row <= 2 + len(v['fasce']), \
-            '%d righe contro %d' % (ws.max_row, 2 + len(v['fasce']))
+        # 1.12: sotto la griglia una riga vuota, la legenda e (se serve) la nota sulle stanze disattivate
+        assert ws.max_row <= 2 + len(v['fasce']) + 3, \
+            '%d righe contro %d' % (ws.max_row, 2 + len(v['fasce']) + 3)
         fuori = [str(m) for m in ws.merged_cells.ranges if m.max_row > ws.max_row]
         assert not fuori, 'merge oltre la tabella: %s' % fuori[:1]
         assert ws.freeze_panes == 'B3', 'riquadri non bloccati'

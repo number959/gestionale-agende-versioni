@@ -19,6 +19,7 @@ stanza calcolato dai turni dei medici.
   stanza_gia_assegnata, e il ritorno alla pagina di partenza (torna).
 
 Nomi inventati; le date sono fisse (dicembre 2026: l'8 e' l'Immacolata)."""
+import json
 import logging
 import os
 import random
@@ -470,7 +471,7 @@ def c_gruppi_e_date():
     assert righe[1] == ('Cardiologia', 'Galasso', 0, [14, 21, 28], ['non il 7 (assente: ferie)']), righe[1]
     assert righe[2] == ('Dermatologia', 'Lippiello', 0, [7, 28], ['non il 14 e il 21 (assente: congresso)']), righe[2]
     # Fintini: martedi 8 Immacolata; giovedi 10 niente (il turno e' di martedi); poi il turno di un giorno
-    assert righe[3] == ('Senza specialità', 'Fintini', 1, [1, 15, 22, 29], ['non il 8 (chiusa: immacolata concezione)']), righe[3]
+    assert righe[3] == ('Senza specialità', 'Fintini', 1, [1, 15, 22, 29], ["non l'8 (chiusa: immacolata concezione)"]), righe[3]
     assert righe[4] == ('Senza specialità', 'Fintini', 2, [9], ['un giorno solo']), righe[4]
     assert len(righe) == 5 and v['medici'] == 4, (len(righe), v['medici'])
     # le date: esattamente i giorni della settimana del mese in cui il turno vale, tolti i saltati
@@ -578,7 +579,7 @@ def d_settimana():
     t = testo(r)
     assert 'id="matrice-ambulatori"' in t and 'data-lunedi="2026-12-07"' in t
     assert 'DISPONIBILE' in t and 'libero 14:00–15:00' in t and 'assente: ferie' in t, t[:200]
-    assert 'chiusa: Immacolata Concezione' in t and 'chiusa: Manutenzione' in t
+    assert 'chiusa: immacolata concezione' in t and 'chiusa: manutenzione' in t
     assert 'Settimana dal 7 dicembre al 13 dicembre 2026' in t
     assert 'Sala operatoria' not in t
     # i nomi aprono il turno, tornando qui
@@ -621,7 +622,7 @@ def d_mese():
     assert 'non il 7 (assente: ferie)' in t and 'un giorno solo' in t and '14, 21, 28' in t
     assert 'class="gruppo attivo" data-guida="menu-ambulatori"' in t
     assert '/ambulatori/mese/2026-12.xlsx?struttura=1' in t
-    assert 'Calendario del mese' in t and 'chiusa: Manutenzione' in t and 'chiusa: Immacolata Concezione' in t
+    assert 'Calendario del mese' in t and 'chiusa: manutenzione' in t and 'chiusa: immacolata concezione' in t
     assert 'nessun medico in turno' in t
     # il mese vuoto
     t = testo(C.get('/ambulatori/mese/2025-12'))
@@ -706,7 +707,7 @@ def e_matrice():
     assert ws.page_setup.orientation == 'landscape' and ws.page_setup.fitToWidth == 1
     # la settimana tipo
     r, wb = excel(C, '/ambulatori/settimana/2026-12-07.xlsx?struttura=1&tipo=1')
-    assert 'matrice-ambulatori-settimana-tipo.xlsx' in r.headers.get('Content-Disposition', '')
+    assert 'matrice-ambulatori-2026-12-07-settimana-tipo.xlsx' in r.headers.get('Content-Disposition', '')
     ws = wb['Matrice']
     assert ws['A3'].value.startswith('Settimana tipo') and ws.cell(6, 2).value == 'Lunedì' and ws.cell(6, 4).value == 'Martedì'
     i = {ws.cell(i, 1).value: i for i in range(8, 20)}['Ambulatorio 1']
@@ -730,8 +731,8 @@ def e_programmazione():
     righe = [[ws.cell(i, c).value if ws.cell(i, c).value is not None else '' for c in range(1, 8)] for i in range(6, 6 + 4)]
     assert righe[0] == ['Cardiologia', 'Galasso', 'Lunedì', '14, 21, 28', '08:00-13:00', 'Ambulatorio 1', 'non il 7 (assente: ferie)'], righe[0]
     assert righe[1] == ['Dermatologia', 'Lippiello Anna', 'Lunedì', '7, 14, 21, 28', '15:00-20:00', 'Ambulatorio 1', ''], righe[1]
-    assert righe[2] == ['Senza specialità', 'Fintini Ugo', 'Martedì', '1, 15, 22, 29', '08:00-20:00', 'Ambulatorio 2', 'non il 8 (chiusa: immacolata concezione)'], righe[2]
-    assert righe[3] == ['Senza specialità', 'Fintini Ugo', 'Mercoledì', '9', '09:00-11:00', 'Ambulatorio 3', 'un giorno solo'], righe[3]
+    assert righe[2] == ['Senza specialità', 'Fintini Ugo', 'Martedì', '1, 15, 22, 29', '08:00-20:00', 'Ambulatorio 2', "non l'8 (chiusa: immacolata concezione)"], righe[2]
+    assert righe[3] == ['Senza specialità', 'Fintini Ugo', 'Mercoledì', 9, '09:00-11:00', 'Ambulatorio 3', 'un giorno solo'], righe[3]
     assert ws.cell(10, 1).value is None, 'quattro righe: la sala operatoria no'
     assert ws.freeze_panes == 'A6' and ws.auto_filter.ref == 'A5:G9' and ws.print_title_rows.replace('$', '') == '5:5', (ws.freeze_panes, ws.auto_filter.ref)
     # la specialita' in grassetto solo sulla prima riga del suo gruppo
@@ -742,8 +743,8 @@ def e_programmazione():
     assert righe[0][:2] == [datetime(2026, 12, 1), 'Martedì'] and righe[0][2:] == ['Ambulatorio 2', 'Fintini Ugo', '08:00-20:00'], righe[0]
     date_righe = {r[0].date() if isinstance(r[0], datetime) else r[0]: r for r in righe if r[0]}
     assert date_righe[date(2026, 12, 2)][2] == 'nessun medico in turno'
-    assert date_righe[date(2026, 12, 8)][2] == 'chiusa: Immacolata Concezione' and colore(wc.cell(4 + righe.index(date_righe[date(2026, 12, 8)]), 1)) == 'E7E9E6'
-    assert date_righe[date(2026, 12, 10)][2] == 'chiusa: Manutenzione'
+    assert date_righe[date(2026, 12, 8)][2] == 'chiusa: immacolata concezione' and colore(wc.cell(4 + righe.index(date_righe[date(2026, 12, 8)]), 1)) == 'E7E9E6'
+    assert date_righe[date(2026, 12, 10)][2] == 'chiusa: manutenzione'
     assert date_righe[date(2026, 12, 7)][2:] == ['Ambulatorio 1', 'Lippiello Anna', '15:00-20:00']
     lun14 = righe.index(date_righe[date(2026, 12, 14)])
     assert righe[lun14][2:] == ['Ambulatorio 1', 'Galasso', '08:00-13:00'] and righe[lun14 + 1] == [None, None, 'Ambulatorio 1', 'Lippiello Anna', '15:00-20:00']
@@ -1098,6 +1099,103 @@ def g_scheda_turno_con_torna():
 
 prova('stanza_gia_assegnata: sovrapposizioni, validità, stesso medico, escludi_id, sostituzioni nei due versi', g_stanza_gia_assegnata)
 prova('scheda del turno con torna: salva, modifica ed elimina tornano alla pagina interna; senza torna alle anagrafiche', g_scheda_turno_con_torna)
+
+
+
+# ================================================================ stampe
+area('stampe (1.12)')
+
+
+def _appuntamenti_di_prova(S, I):
+    """Lunedi 7/12: in Ambulatorio 1 (Lippiello di turno 15-20, Galasso assente)
+    due visite con importo, una delle quali con un campo extra, e una disdetta;
+    in Ambulatorio 2 (nessun turno il lunedi) una visita senza importo."""
+    from modelli import Paziente, Appuntamento
+    s = S()
+    p1 = Paziente(cognome='Fintini', nome='Ugo', telefono='3330000001', data_nascita=date(1970, 5, 6))
+    p2 = Paziente(cognome='Esempietti', nome='Ada', telefono='3330000002')
+    s.add_all([p1, p2])
+    s.flush()
+
+    def app(rid, oid, ora, pid, **altro):
+        inizio = datetime.combine(LUN, time(ora))
+        a = Appuntamento(risorsa_id=rid, operatore_id=oid, paziente_id=pid, inizio=inizio,
+                         fine=inizio + timedelta(minutes=30), stato=altro.pop('stato', 'PRENOTATO'), **altro)
+        s.add(a)
+        return a
+
+    app(I['Ambulatorio 1'], I['Lippiello'], 15, p1.id, importo_cent=8000, extra=json.dumps({'Sedazione': 'Sì'}))
+    app(I['Ambulatorio 1'], I['Lippiello'], 16, p2.id, importo_cent=5000, note='porta gli esami')
+    app(I['Ambulatorio 1'], I['Lippiello'], 17, p1.id, importo_cent=9000, stato='DISDETTO')
+    app(I['Ambulatorio 2'], I['Fintini'], 10, p2.id)
+    s.commit()
+    s.close()
+
+
+def s_foglio_del_giorno():
+    S, I, C = mondo_pieno()
+    _appuntamenti_di_prova(S, I)
+    t = testo(C.get('/stampa/%s?struttura=1' % LUN.isoformat()))
+    # testata e piede ripetuti su ogni foglio, numero di pagina nel margine
+    assert 'class="testata-ripetuta"' in t and 'class="piede-ripetuto"' in t
+    # ogni stanza: conteggio, turno, assenti; la sala operatoria no
+    assert '<h2>Ambulatorio 1</h2>' in t and '<h2>Ambulatorio 2</h2>' in t and 'Sala operatoria' not in t
+    assert '2 appuntamenti · <b>turno:</b> Lippiello Anna 15:00–20:00 · Galasso assente' in t, t[t.find('Ambulatorio 1'):][:400]
+    assert '3 appuntamenti' in t, 'in testa solo gli attivi'
+    # le colonne in piu' solo nella stanza che le usa
+    assert t.count('<th>Sedazione</th>') == 1
+    tabella2 = t[t.find('<h2>Ambulatorio 2</h2>'):]
+    assert '<th>Sedazione</th>' not in tabella2 and 'Totale importi' not in tabella2, 'Ambulatorio 2: niente extra e niente totale'
+    # il totale degli importi della stanza e del giorno (solo gli attivi; il disdetto non c'e')
+    assert 'Totale importi</td><td class="c-importo">130,00 €' in t and 'importi del giorno 130,00 €' in t
+    assert 'Fintini Ugo' in t and t.count('17:00–17:30') == 0, 'il disdetto non si stampa di serie'
+    # con tutti: il disdetto barrato, la colonna Stato, la legenda, il totale non lo conta
+    t = testo(C.get('/stampa/%s?struttura=1&tutti=1' % LUN.isoformat()))
+    assert 'stato-disdetto' in t and '<th>Stato</th>' in t and 'Disdetti in grigio' in t
+    assert '3 appuntamenti · 1 disdetto' in t and '2 appuntamenti (1 fra disdetti e non presentati)' in t
+    assert '130,00 €' in t and '220,00' not in t
+    # una stanza con il medico di turno ma senza appuntamenti compare lo stesso (mercoledi: il turno di un
+    # giorno di Fintini in Ambulatorio 3; il martedi e' l'Immacolata e la struttura chiude)
+    t = testo(C.get('/stampa/%s?struttura=1' % (LUN + timedelta(days=2)).isoformat()))
+    assert '<h2>Ambulatorio 3</h2>' in t and 'Nessun appuntamento: la stanza è libera' in t and 'Fintini Ugo 09:00–11:00' in t
+    assert 'Sala operatoria' not in t and '<h2>Ambulatorio 1</h2>' not in t
+    t = testo(C.get('/stampa/%s?struttura=1' % (LUN + timedelta(days=1)).isoformat()))
+    assert 'Immacolata Concezione' in t and '<h2>' not in t, 'festivo chiuso: nessuna stanza'
+
+
+def s_preferenze_di_stampa():
+    S, I, C = mondo_pieno()
+    _appuntamenti_di_prova(S, I)
+    r = C.post('/impostazioni', data={'azione': 'stampa', 'colonne': ['importo', 'extra', 'nascita', 'spunta', 'telefono'],
+                                      'orientamento': 'orizzontale', 'ordine': 'ora', 'tutti': '1'}, headers=CASA)
+    assert r.status_code == 302
+    t = testo(C.get('/impostazioni'))
+    assert 'name="tutti" value="1" checked' in t and 'value="spunta" checked' in t and 'value="nascita" checked' in t
+    t = testo(C.get('/stampa/%s?struttura=1' % LUN.isoformat()))
+    # in ordine di ora: la riga dei medici di turno (senza la sala operatoria), le colonne scelte, il disdetto
+    assert '<b>Medici di turno:</b> Ambulatorio 1: Lippiello Anna 15:00–20:00' in t and 'Sala operatoria' not in t
+    assert '<th class="c-nascita">Nascita</th>' in t and '06/05/1970' in t
+    assert '<th class="c-spunta">Arrivato · pagato</th>' in t and t.count('class="casella"') >= 8
+    assert 'stato-disdetto' in t and '<th class="c-stanza">Stanza</th>' in t
+    assert '<th>Telefono</th>' not in t and 'class="c-telefono">Telefono' in t
+    # tutti=0 nell'indirizzo vince sulla preferenza
+    t = testo(C.get('/stampa/%s?struttura=1&tutti=0' % LUN.isoformat()))
+    assert 'stato-disdetto' not in t and 'Solo appuntamenti attivi' not in t and 'Anche disdetti' in t
+    # l'elenco del giorno: il pulsante Stampa segue la preferenza, la tabella ha il thead, la nota si stampa
+    from modelli import NotaGiorno
+    s = S()
+    s.add(NotaGiorno(struttura_id=1, data=LUN, testo='Lippiello arriva alle 15:30'))
+    s.commit()
+    s.close()
+    t = testo(C.get('/giorno/%s/elenco?struttura=1' % LUN.isoformat()))
+    assert 'href="/stampa/%s?struttura=1"' % LUN.isoformat() in t and 'per=ora' not in t
+    assert '<thead><tr><th>Ora</th>' in t and 'class="nota-stampa solo-stampa">Lippiello arriva alle 15:30' in t
+    t = testo(C.get('/stampa/%s?struttura=1' % LUN.isoformat()))
+    assert 'class="nota-stampa">Lippiello arriva alle 15:30' in t
+
+
+prova('foglio del giorno: testata e piede ripetuti, conteggi e turni per stanza, colonne in più solo dove servono, totali, stanze libere, con tutti', s_foglio_del_giorno)
+prova('preferenze di stampa: anche disdetti, data di nascita, casella da spuntare, ordine di ora; elenco del giorno con thead e nota stampata', s_preferenze_di_stampa)
 
 
 # =====================================================================

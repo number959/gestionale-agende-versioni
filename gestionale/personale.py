@@ -1343,16 +1343,18 @@ def esporta_mese(s, st, primo, ultimo, ruolo='', area=''):
         titolo += ' · ' + ETICHETTA_RUOLO[ruolo]
     if area:
         titolo += ' · ' + area
-    ws.cell(row=1, column=1, value=testo_excel(titolo)).font = Font(bold=True, size=14, color=blu)
+    from comune import (apri_foglio_excel, carattere_excel, imposta_stampa_excel, stile_intestazione_excel,
+                        tabella_excel, FORMATO_DATA, FORMATO_DATA_ORA, FORMATO_ORE)
+    # il titolo e la riga «esportato il», poi l'intestazione alla riga 3 come prima
+    ws.cell(row=1, column=1, value=testo_excel(titolo)).font = Font(name='Calibri', bold=True, size=14, color=blu)
+    ws.cell(row=2, column=1, value='Esportato il %s alle %s dal Gestionale Agende' % (
+        datetime.now().strftime('%d/%m/%Y'), datetime.now().strftime('%H:%M'))).font = carattere_excel(size=9, italic=True,
+                                                                                                        color='5B6B75')
     riga = 3
     intestazioni = ['Cognome e nome', 'Qualifica'] + ['%s\n%d' % (GIORNI_CORTI[g.weekday()], g.day) for g in giorni] + \
                    ['Ore', 'Notti', 'Festivi', 'Assenze']
     for i, testo in enumerate(intestazioni, 1):
-        c = ws.cell(row=riga, column=i, value=testo)
-        c.font = Font(bold=True, color='FFFFFF')
-        c.fill = PatternFill('solid', fgColor=blu)
-        c.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-        c.border = bordo
+        stile_intestazione_excel(ws.cell(row=riga, column=i), testo)
     ws.row_dimensions[riga].height = 30
     for j, g in enumerate(giorni):
         if festivo(g, st):
@@ -1401,39 +1403,26 @@ def esporta_mese(s, st, primo, ultimo, ruolo='', area=''):
     for k in range(4):
         ws.column_dimensions[get_column_letter(3 + len(giorni) + k)].width = 10
     ws.freeze_panes = 'C4'
-    ws.page_setup.orientation = 'landscape'
-    ws.page_setup.paperSize = ws.PAPERSIZE_A4
-    ws.page_setup.fitToWidth = 1
-    ws.page_setup.fitToHeight = 0
-    ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
-    # un turno per riga
+    imposta_stampa_excel(ws, True, '3:3', 'A:B', st, titolo.replace('Turni del personale · ', 'turni · '))
+    # un turno per riga (per le paghe), con i totali delle ore
     el = wb.create_sheet('Elenco')
     teste = ['Data', 'Giorno', 'Cognome e nome', 'Ruolo', 'Codice', 'Turno', 'Inizio', 'Fine', 'Ore', 'Area', 'Note']
-    for i, testo in enumerate(teste, 1):
-        c = el.cell(row=1, column=i, value=testo)
-        c.font = Font(bold=True, color='FFFFFF')
-        c.fill = PatternFill('solid', fgColor=blu)
     ids = {r['persona'].id for gr in gruppi for r in gr['righe']}
-    n = 2
+    righe_el = []
     for t in turni_tra(s, primo, ultimo, ids):
         if area and t.con_orario and (t.area or '') != area:
             continue
-        el.cell(row=n, column=1, value=t.giorno).number_format = 'DD/MM/YYYY'
-        el.cell(row=n, column=2, value=GIORNI_NOMI[t.giorno.weekday()])
-        el.cell(row=n, column=3, value=t.persona.etichetta)
-        el.cell(row=n, column=4, value=t.persona.ruolo_etichetta)
-        el.cell(row=n, column=5, value=t.codice if t.tipo is not None else '')
-        el.cell(row=n, column=6, value=t.tipo.nome if t.tipo is not None else 'Orario scritto a mano')
-        if t.con_orario:
-            el.cell(row=n, column=7, value=t.inizio).number_format = 'DD/MM/YYYY HH:MM'
-            el.cell(row=n, column=8, value=t.fine).number_format = 'DD/MM/YYYY HH:MM'
-            el.cell(row=n, column=9, value=round(t.minuti / 60, 2))
-        el.cell(row=n, column=10, value=testo_excel(t.area or ''))
-        el.cell(row=n, column=11, value=testo_excel(t.note or ''))
-        n += 1
-    for i, w in enumerate((12, 8, 26, 16, 8, 22, 17, 17, 7, 18, 30), 1):
-        el.column_dimensions[get_column_letter(i)].width = w
-    el.freeze_panes = 'A2'
+        righe_el.append([t.giorno, GIORNI_NOMI[t.giorno.weekday()], t.persona.etichetta, t.persona.ruolo_etichetta,
+                         t.codice if t.tipo is not None else '', t.tipo.nome if t.tipo is not None else 'Orario scritto a mano',
+                         t.inizio if t.con_orario else None, t.fine if t.con_orario else None,
+                         round(t.minuti / 60, 2) if t.con_orario else None, t.area or '', t.note or ''])
+    riga_el = apri_foglio_excel(el, titolo.replace('Turni del personale', 'Elenco dei turni'),
+                                '%d turn%s' % (len(righe_el), 'o' if len(righe_el) == 1 else 'i'), None, colonne=len(teste))
+    tabella_excel(el, riga_el, teste, (12, 8, 26, 16, 8, 22, 17, 17, 7, 18, 30), righe_el,
+                  formati={1: FORMATO_DATA, 7: FORMATO_DATA_ORA, 8: FORMATO_DATA_ORA, 9: FORMATO_ORE},
+                  totali={1: 'Totale', 3: '%d turn%s' % (len(righe_el), 'o' if len(righe_el) == 1 else 'i'), 9: 'somma'},
+                  a_capo=(11,))
+    imposta_stampa_excel(el, True, '%d:%d' % (riga_el, riga_el), None, st, titolo.replace('Turni del personale · ', 'turni · '))
     return wb
 
 

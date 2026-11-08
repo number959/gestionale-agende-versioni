@@ -52,6 +52,11 @@
       <label><input type="radio" name="ordine" value="stanza"{% if stampa.ordine == 'stanza' %} checked{% endif %}> una tabella per stanza</label>
       <label><input type="radio" name="ordine" value="ora"{% if stampa.ordine == 'ora' %} checked{% endif %}> tutto in ordine di ora</label>
     </div>
+    <div class="filtri" style="margin-top:10px">
+      <span>Stati</span>
+      <label><input type="checkbox" name="tutti" value="1"{% if stampa.tutti %} checked{% endif %}> anche disdetti e non presentati (barrati e in grigio, con la colonna Stato)</label>
+    </div>
+    <p class="nota-riga">Su ogni foglio stampato si ripetono testata e piede; ogni stanza dice quanti appuntamenti ha e chi è di turno; le stanze con un medico di turno ma senza appuntamenti compaiono lo stesso.</p>
     <div class="azioni"><button class="bottone primario" type="submit">Salva il foglio del giorno</button></div>
   </form>
 

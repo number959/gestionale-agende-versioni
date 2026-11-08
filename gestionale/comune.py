@@ -264,3 +264,192 @@ def indirizzo_mail(email, oggetto, testo, coda):
         if len(base) + len(corpo) <= MASSIMO_MAILTO:
             return base + corpo
     return base
+
+
+# ======================================================= fogli Excel comuni
+# Lo stesso aspetto per tutti i file Excel del programma (dalla 1.12): il
+# titolo blu con la struttura e il periodo, la riga «esportato il», le
+# intestazioni bianche su blu con i bordi sottili, i numeri in formato
+# italiano (ore, euro, date), la riga dei totali, il foglio A4 che sta nella
+# larghezza della pagina con le intestazioni ripetute e «Pagina X di Y».
+# Prima ogni export aveva il suo stile (ciano, solo grassetto, blu...) e quasi
+# nessuno stava in una pagina.
+EXCEL_BLU = '154381'
+EXCEL_BORDO = '9AA5AD'
+EXCEL_GRIGIO = '5B6B75'
+EXCEL_ZEBRA = 'F3F5F8'
+EXCEL_CARATTERE = 'Calibri'
+FORMATO_ORA = 'hh:mm'
+FORMATO_EURO = '#,##0.00 €'
+FORMATO_DATA = 'dd/mm/yyyy'
+FORMATO_DATA_ORA = 'dd/mm/yyyy hh:mm'
+FORMATO_ORE = '0.00'
+FORMATO_PERCENTO = '0.0"%"'
+
+
+def bordo_excel(spessore='thin', colore=EXCEL_BORDO):
+    """Il bordo di una cella, uguale sui quattro lati."""
+    from openpyxl.styles import Border, Side
+    lato = Side(style=spessore, color=colore)
+    return Border(left=lato, right=lato, top=lato, bottom=lato)
+
+
+def carattere_excel(**altro):
+    """Il carattere delle celle (Calibri 10), con le varianti chieste."""
+    from openpyxl.styles import Font
+    altro.setdefault('name', EXCEL_CARATTERE)
+    altro.setdefault('size', 10)
+    return Font(**altro)
+
+
+def stile_intestazione_excel(cella, testo=None):
+    """Una cella di intestazione: bianco in grassetto su blu, centrata, a capo
+    se serve, con il bordo."""
+    from openpyxl.styles import Alignment, PatternFill
+    if testo is not None:
+        cella.value = testo_excel(testo)
+    cella.font = carattere_excel(bold=True, color='FFFFFF')
+    cella.fill = PatternFill('solid', fgColor=EXCEL_BLU)
+    cella.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    cella.border = bordo_excel()
+    return cella
+
+
+def _senza_e_commerciale(testo):
+    """Nelle testate e nei pie' di pagina di Excel la «&» comanda: raddoppiata e' letterale."""
+    return (testo or '').replace('&', '&&')
+
+
+def apri_foglio_excel(ws, titolo, sottotitolo=None, struttura=None, adesso=None, colonne=1):
+    """Le prime righe di un foglio: il titolo in blu (con il nome della
+    struttura davanti, se non c'e' gia'), il sottotitolo (il periodo) e la riga
+    «Esportato il ... dal Gestionale Agende». Con 'colonne' le righe si uniscono
+    su quelle colonne, cosi' il titolo non viene tagliato sulla carta.
+    Restituisce la prima riga libera, lasciandone una vuota."""
+    from openpyxl.styles import Alignment
+    adesso = adesso or datetime.now()
+    nome = testo_excel(struttura.nome) if struttura is not None and getattr(struttura, 'nome', None) else ''
+    testo_titolo = testo_excel(titolo)
+    if nome and nome.lower() not in testo_titolo.lower():
+        testo_titolo = '%s — %s' % (nome, testo_titolo)
+    c = ws.cell(1, 1, testo_titolo)
+    c.font = carattere_excel(size=14, bold=True, color=EXCEL_BLU)
+    c.alignment = Alignment(vertical='center')
+    ws.row_dimensions[1].height = 22
+    riga = 2
+    if sottotitolo:
+        ws.cell(riga, 1, testo_excel(sottotitolo)).font = carattere_excel(size=11, bold=True)
+        riga += 1
+    ws.cell(riga, 1, 'Esportato il %s alle %s dal Gestionale Agende'
+            % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = carattere_excel(size=9, italic=True,
+                                                                                               color=EXCEL_GRIGIO)
+    if colonne > 1:
+        for r in range(1, riga + 1):
+            ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=colonne)
+    return riga + 2
+
+
+def _e_numero(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def tabella_excel(ws, riga, intestazioni, larghezze, righe, formati=None, totali=None, zebra=False, a_capo=(),
+                  stile_riga=None, filtro=True, blocca=True):
+    """Una tabella che comincia alla riga 'riga': l'intestazione, le righe dei
+    dati con i bordi e i testi ripuliti (testo_excel), i formati per colonna
+    ({colonna: formato}, colonne da 1), la riga dei totali ({colonna: 'somma' |
+    'conta' | un valore}, in grassetto con la riga sopra piu' spessa; senza
+    niente nella prima colonna ci va «Totale»), le colonne con il testo lungo
+    da mandare a capo, uno stile per riga (una funzione che dai valori della
+    riga dice {'font': ..., 'fill': ...} oppure None: per esempio i disdetti in
+    grigio), il filtro automatico e i riquadri bloccati sotto l'intestazione.
+    Restituisce la prima riga libera dopo la tabella (una vuota in mezzo)."""
+    from openpyxl.styles import Alignment, Border, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+    formati = formati or {}
+    bordo = bordo_excel()
+    for c, testo in enumerate(intestazioni, start=1):
+        stile_intestazione_excel(ws.cell(riga, c), testo)
+        if larghezze and c <= len(larghezze) and larghezze[c - 1]:
+            ws.column_dimensions[get_column_letter(c)].width = larghezze[c - 1]
+    ws.row_dimensions[riga].height = 30 if any(
+        len(str(t)) > (larghezze[i] if larghezze and i < len(larghezze) and larghezze[i] else 12)
+        for i, t in enumerate(intestazioni)) else 18
+    normale = carattere_excel()
+    zebra_fill = PatternFill('solid', fgColor=EXCEL_ZEBRA)
+    r = riga + 1
+    for n, valori in enumerate(righe):
+        extra = stile_riga(valori) if stile_riga else None
+        for c, v in enumerate(valori, start=1):
+            cella = ws.cell(r, c, testo_excel(v))
+            cella.border = bordo
+            cella.font = (extra or {}).get('font') or normale
+            if c in formati and (v is not None):
+                cella.number_format = formati[c]
+            if c in a_capo:
+                cella.alignment = Alignment(wrap_text=True, vertical='top')
+            elif _e_numero(v):
+                cella.alignment = Alignment(horizontal='right', vertical='top')
+            else:
+                cella.alignment = Alignment(vertical='top')
+            if (extra or {}).get('fill') is not None:
+                cella.fill = extra['fill']
+            elif zebra and n % 2:
+                cella.fill = zebra_fill
+        r += 1
+    fine_dati = r - 1
+    if totali:
+        spesso = Side(style='medium', color=EXCEL_BLU)
+        sottile = Side(style='thin', color=EXCEL_BORDO)
+        for c in range(1, len(intestazioni) + 1):
+            cella = ws.cell(r, c)
+            cella.border = Border(left=sottile, right=sottile, top=spesso, bottom=sottile)
+            cella.font = carattere_excel(bold=True)
+            regola = totali.get(c)
+            if regola == 'somma':
+                cella.value = sum(v[c - 1] for v in righe if c - 1 < len(v) and _e_numero(v[c - 1]))
+            elif regola == 'conta':
+                cella.value = len(righe)
+            elif regola is not None:
+                cella.value = testo_excel(regola)
+            if _e_numero(cella.value):
+                cella.alignment = Alignment(horizontal='right')
+                if c in formati:
+                    cella.number_format = formati[c]
+        if 1 not in totali:
+            ws.cell(r, 1).value = 'Totale'
+        r += 1
+    if blocca:
+        ws.freeze_panes = 'A%d' % (riga + 1)
+    if filtro and righe:
+        ws.auto_filter.ref = 'A%d:%s%d' % (riga, get_column_letter(len(intestazioni)), fine_dati)
+    return r + 1
+
+
+def imposta_stampa_excel(ws, orizzontale=True, righe_titolo=None, colonne_titolo=None, struttura=None, periodo='',
+                         margine=0.4):
+    """Il foglio su carta: A4, orizzontale o verticale, largo quanto la pagina
+    (anche su piu' pagine in altezza), le righe (e le colonne) da ripetere in
+    ogni pagina, in testa «struttura · periodo», in fondo la societa' (o la
+    struttura) a sinistra e «Pagina X di Y» a destra."""
+    from openpyxl.worksheet.properties import PageSetupProperties
+    ws.page_setup.orientation = 'landscape' if orizzontale else 'portrait'
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
+    if righe_titolo:
+        ws.print_title_rows = righe_titolo
+    if colonne_titolo:
+        ws.print_title_cols = colonne_titolo
+    nome = testo_excel(struttura.nome) if struttura is not None and getattr(struttura, 'nome', None) else ''
+    testa = ' · '.join(x for x in (nome, periodo) if x)
+    if testa:
+        ws.oddHeader.center.text = _senza_e_commerciale(testa)
+    societa = (getattr(struttura, 'societa', '') or '') if struttura is not None else ''
+    if societa or nome:
+        ws.oddFooter.left.text = _senza_e_commerciale(testo_excel(societa or nome))
+    ws.oddFooter.right.text = 'Pagina &P di &N'
+    ws.page_margins.left = ws.page_margins.right = margine
+    ws.page_margins.top = ws.page_margins.bottom = 0.6
+    return ws

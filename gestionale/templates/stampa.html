@@ -8,13 +8,15 @@
 {% if orientamento == 'verticale' %}<style>@media print { @page { size: A4 portrait; margin: 10mm; } }</style>{% endif %}
 <div class="comandi-stampa solo-schermo">
   <button class="bottone primario" type="button" onclick="window.print()">Stampa</button>
-  <a class="bottone" href="{{ url_for('viste.stampa', iso=g.isoformat(), struttura=sid, per='ora' if per == 'stanza' else 'stanza', tutti='1' if tutti else none) }}">{{ 'In ordine di ora' if per == 'stanza' else 'Una tabella per stanza' }}</a>
-  <a class="bottone" href="{{ url_for('viste.stampa', iso=g.isoformat(), struttura=sid, per=per, tutti=none if tutti else '1') }}">{{ 'Solo appuntamenti attivi' if tutti else 'Anche disdetti e non presentati' }}</a>
-  <a class="bottone" href="{{ url_for('viste.stampa', iso=g.isoformat(), struttura=sid, per=per, tutti='1' if tutti else none, orientamento='verticale' if orientamento == 'orizzontale' else 'orizzontale') }}">{{ 'Foglio verticale' if orientamento == 'orizzontale' else 'Foglio orizzontale' }}</a>
+  <a class="bottone" href="{{ url_for('viste.stampa', iso=g.isoformat(), struttura=sid, per='ora' if per == 'stanza' else 'stanza', tutti='1' if tutti else '0', orientamento=orientamento) }}">{{ 'In ordine di ora' if per == 'stanza' else 'Una tabella per stanza' }}</a>
+  <a class="bottone" href="{{ url_for('viste.stampa', iso=g.isoformat(), struttura=sid, per=per, tutti='0' if tutti else '1', orientamento=orientamento) }}">{{ 'Solo appuntamenti attivi' if tutti else 'Anche disdetti e non presentati' }}</a>
+  <a class="bottone" href="{{ url_for('viste.stampa', iso=g.isoformat(), struttura=sid, per=per, tutti='1' if tutti else '0', orientamento='verticale' if orientamento == 'orizzontale' else 'orizzontale') }}">{{ 'Foglio verticale' if orientamento == 'orizzontale' else 'Foglio orizzontale' }}</a>
   <a class="bottone" href="{{ url_for('viste.impostazioni') }}#stampa">Colonne…</a>
   <a class="bottone" href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">Torna alla giornata</a>
 </div>
-<div class="foglio foglio-{{ orientamento }}">
+{#- La pagina e' una tabella con testata e piede in thead e tfoot: il browser li ripete su ogni foglio stampato -#}
+<table class="impaginazione foglio foglio-{{ orientamento }}">
+<thead class="testata-ripetuta"><tr><td>
   <header class="testata-stampa">
     <div class="logo-stampa">{% include "_marchio.html" %}</div>
     <div class="dati-stampa">
@@ -23,37 +25,53 @@
     </div>
     <div class="data-stampa">
       <div class="giorno-stampa">{{ titolo }}</div>
-      <div>{{ totale }} appuntament{{ 'o' if totale == 1 else 'i' }}{% if info.festivo %} · {{ info.festivo }}{% endif %}{% if info.chiusura %} · chiusa: {{ info.chiusura }}{% endif %}</div>
+      <div>{{ totale }} appuntament{{ 'o' if totale == 1 else 'i' }}{% if tutti and conteggi.disdetti %} · {{ conteggi.disdetti }} disdett{{ 'o' if conteggi.disdetti == 1 else 'i' }}{% endif %}{% if tutti and conteggi.non_presentati %} · {{ conteggi.non_presentati }} non presentat{{ 'o' if conteggi.non_presentati == 1 else 'i' }}{% endif %}{% if info.festivo %} · {{ info.festivo }}{% endif %}{% if info.chiusura %} · chiusa: {{ info.chiusura }}{% endif %}</div>
     </div>
   </header>
+</td></tr></thead>
+<tfoot class="piede-ripetuto"><tr><td>
+  <footer class="piede-stampa">{% if st.societa %}{{ st.societa }} · {% endif %}{{ titolo }} · stampato il {{ adesso.strftime('%d/%m/%Y alle %H:%M') }}{% if totale_giorno %} · importi del giorno {{ totale_giorno }} €{% endif %}</footer>
+</td></tr></tfoot>
+<tbody><tr><td>
   {% if nota %}<div class="nota-stampa">{{ nota }}</div>{% endif %}
-  {% for nome, apps in gruppi %}
-  <section class="blocco-stampa">
-    {% if nome %}<h2>{{ nome }}</h2>{% endif %}
+  {% if per == 'ora' and turni_giorno %}<div class="turni-stampa"><b>Medici di turno:</b> {{ turni_giorno|join(' · ') }}</div>{% endif %}
+  {% for gr in gruppi %}
+  <section class="blocco-stampa{% if gr.apps|length <= 8 %} corto{% endif %}">
+    {% if gr.nome %}<h2>{{ gr.nome }}</h2>
+    <div class="sotto-stanza">{{ gr.n_attivi }} appuntament{{ 'o' if gr.n_attivi == 1 else 'i' }}{% if tutti and gr.n_altri %} ({{ gr.n_altri }} fra disdetti e non presentati){% endif %}{% if gr.turni %} · <b>turno:</b> {{ gr.turni|join(', ') }}{% endif %}{% if gr.assenti %} · {{ gr.assenti|join(', ') }}{% endif %}</div>
+    {% endif %}
+    {% if gr.apps %}
     <table class="tabella-stampa">
-      <thead><tr><th class="c-ora">Ora</th>{% if per == 'ora' %}<th>Stanza</th>{% endif %}<th>Paziente</th>{% if 'telefono' in c %}<th>Telefono</th>{% endif %}{% if 'prestazione' in c %}<th>Prestazione</th>{% endif %}{% if 'medico' in c %}<th>Medico</th>{% endif %}{% if 'tipo' in c %}<th>Tipo · convenzione</th>{% endif %}{% if 'importo' in c %}<th class="c-importo">Importo</th>{% endif %}{% for e in extra %}<th>{{ e }}</th>{% endfor %}{% if 'note' in c %}<th>Note</th>{% endif %}{% if tutti %}<th>Stato</th>{% endif %}</tr></thead>
+      <thead><tr><th class="c-ora">Ora</th>{% if per == 'ora' %}<th class="c-stanza">Stanza</th>{% endif %}<th>Paziente</th>{% if 'nascita' in c %}<th class="c-nascita">Nascita</th>{% endif %}{% if 'telefono' in c %}<th class="c-telefono">Telefono</th>{% endif %}{% if 'prestazione' in c %}<th>Prestazione</th>{% endif %}{% if 'medico' in c %}<th>Medico</th>{% endif %}{% if 'tipo' in c %}<th>Tipo · convenzione</th>{% endif %}{% if 'importo' in c %}<th class="c-importo">Importo</th>{% endif %}{% for e in gr.extra %}<th>{{ e }}</th>{% endfor %}{% if 'note' in c %}<th class="c-note">Note</th>{% endif %}{% if tutti %}<th>Stato</th>{% endif %}{% if 'spunta' in c %}<th class="c-spunta">Arrivato · pagato</th>{% endif %}</tr></thead>
       <tbody>
-      {% for a in apps %}
+      {% for a in gr.apps %}
         <tr class="stato-{{ a.stato|lower }}">
           <td class="c-ora">{{ a.inizio.strftime('%H:%M') }}–{{ a.fine.strftime('%H:%M') }}</td>
-          {% if per == 'ora' %}<td>{{ a.risorsa.nome }}</td>{% endif %}
+          {% if per == 'ora' %}<td class="c-stanza">{{ a.risorsa.nome }}</td>{% endif %}
           <td class="c-paziente">{{ a.paziente.etichetta if a.paziente else '' }}</td>
-          {% if 'telefono' in c %}<td>{% if a.paziente %}{{ a.paziente.telefono or '' }}{% if a.paziente.telefono2 %}<br>{{ a.paziente.telefono2 }}{% endif %}{% endif %}</td>{% endif %}
+          {% if 'nascita' in c %}<td class="c-nascita">{% if a.paziente and a.paziente.data_nascita %}{{ a.paziente.data_nascita.strftime('%d/%m/%Y') }}{% endif %}</td>{% endif %}
+          {% if 'telefono' in c %}<td class="c-telefono">{% if a.paziente %}{{ a.paziente.telefono or '' }}{% if a.paziente.telefono2 %}<br>{{ a.paziente.telefono2 }}{% endif %}{% endif %}</td>{% endif %}
           {% if 'prestazione' in c %}<td>{{ a.prestazione.nome if a.prestazione else '' }}</td>{% endif %}
           {% if 'medico' in c %}<td>{{ a.operatore.etichetta }}</td>{% endif %}
           {% if 'tipo' in c %}<td>{{ a.etichetta_tipo }}{% if a.etichetta_tipo and a.convenzione %} · {% endif %}{{ a.convenzione or '' }}</td>{% endif %}
           {% if 'importo' in c %}<td class="c-importo">{{ a.importo_testo }}</td>{% endif %}
-          {% for e in extra %}<td>{{ a.valori_extra.get(e, '') }}</td>{% endfor %}
-          {% if 'note' in c %}<td>{{ a.note or '' }}</td>{% endif %}
-          {% if tutti %}<td>{{ a.etichetta_stato }}</td>{% endif %}
+          {% for e in gr.extra %}<td>{{ a.valori_extra.get(e, '') }}</td>{% endfor %}
+          {% if 'note' in c %}<td class="c-note">{{ a.note or '' }}</td>{% endif %}
+          {% if tutti %}<td>{{ a.etichetta_stato }}{% if a.stato == 'ARRIVATO' and a.arrivato_alle %} <small>{{ a.arrivato_alle.strftime('%H:%M') }}</small>{% endif %}</td>{% endif %}
+          {% if 'spunta' in c %}<td class="c-spunta"><span class="casella"></span><span class="casella"></span></td>{% endif %}
         </tr>
       {% endfor %}
       </tbody>
+      {% if 'importo' in c and gr.totale %}<tfoot><tr class="totale-stampa"><td colspan="{{ 2 + (1 if per == 'ora' else 0) + (1 if 'nascita' in c else 0) + (1 if 'telefono' in c else 0) + (1 if 'prestazione' in c else 0) + (1 if 'medico' in c else 0) + (1 if 'tipo' in c else 0) }}">Totale importi{% if tutti and gr.n_altri %} (senza disdetti e non presentati){% endif %}</td><td class="c-importo">{{ gr.totale }} €</td>{% for e in gr.extra %}<td></td>{% endfor %}{% if 'note' in c %}<td></td>{% endif %}{% if tutti %}<td></td>{% endif %}{% if 'spunta' in c %}<td></td>{% endif %}</tr></tfoot>{% endif %}
     </table>
+    {% else %}
+    <p class="vuoto-stanza">Nessun appuntamento: la stanza è libera negli orari del turno.</p>
+    {% endif %}
   </section>
   {% else %}
   <p class="vuoto">Nessun appuntamento in questo giorno.</p>
   {% endfor %}
-  <footer class="piede-stampa">{% if st.societa %}{{ st.societa }} · {% endif %}stampato il {{ adesso.strftime('%d/%m/%Y alle %H:%M') }}</footer>
-</div>
+  {% if tutti and (conteggi.disdetti or conteggi.non_presentati) %}<p class="legenda-stampa">Disdetti in grigio e barrati, non presentati in marrone; i conteggi e i totali contano solo gli appuntamenti attivi.</p>{% endif %}
+</td></tr></tbody>
+</table>
 {% endblock %}

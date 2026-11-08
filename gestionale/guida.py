@@ -574,7 +574,7 @@ ARTICOLI = [
          passi=[
              P('Tema', 'Chiaro, scuro o come Windows: vale per questo PC. Le stampe restano chiare.', '#aspetto-tema'),
              P('Logo e colori', 'Configura → Anagrafiche → Nome, logo e colori: caricando un logo si propone il suo colore.'),
-             P('Foglio del giorno', 'Colonne e orientamento della stampa.', '#stampa'),
+             P('Foglio del giorno', 'Colonne, orientamento, se stampare anche disdetti e non presentati, la casella da spuntare a penna. Su ogni foglio si ripetono testata e piede; ogni stanza dice quanti appuntamenti ha e chi è di turno.', '#stampa'),
          ]),
 ]
 

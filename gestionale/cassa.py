@@ -241,50 +241,46 @@ def cassa_mese(aaaamm):
 
 @bp.route('/cassa/mese/<aaaamm>/excel')
 def cassa_mese_excel(aaaamm):
+    """Gli incassi del mese in Excel: il foglio «Per giorno» (solo i giorni con
+    incassi, un totale per metodo e la riga dei totali) e il foglio «Pagamenti»
+    (uno per riga, con i totali). Stile comune degli Excel (comune.tabella_excel)."""
     from openpyxl import Workbook
-    from openpyxl.styles import Font
+    from comune import apri_foglio_excel, imposta_stampa_excel, tabella_excel, FORMATO_DATA, FORMATO_DATA_ORA, FORMATO_EURO
     s = ses()
     st, _ = struttura_scelta(s)
     if st is None:
         abort(404)
     primo, ultimo = mese_da(aaaamm)
     r = riepilogo_mese(s, primo, ultimo, st.id)
+    periodo = 'incassi di %s %d' % (servizi.MESI[primo.month - 1], primo.year)
     wb = Workbook()
     ws = wb.active
     ws.title = 'Per giorno'
     intestazioni = ['Giorno', 'Pagamenti'] + [e for _, e in METODI_PAGAMENTO] + ['Totale']
-    ws.append(['%s - incassi di %s %d' % (st.nome, servizi.MESI[primo.month - 1], primo.year)])
-    ws['A1'].font = Font(bold=True, size=13)
-    ws.append(intestazioni)
-    for c in ws[2]:
-        c.font = Font(bold=True)
-    for x in r['giorni']:
-        ws.append([x['data'], x['n']] + [x['per_metodo'][k] / 100.0 for k, _ in METODI_PAGAMENTO]
-                  + [x['totale'] / 100.0])
-    ws.append(['Totale', r['n']] + [r['per_metodo'][k] / 100.0 for k, _ in METODI_PAGAMENTO] + [r['totale'] / 100.0])
-    for c in ws[ws.max_row]:
-        c.font = Font(bold=True)
-    for riga in ws.iter_rows(min_row=3):
-        riga[0].number_format = 'dd/mm/yyyy'
-        for c in riga[2:]:
-            c.number_format = '#,##0.00'
-    ws.column_dimensions['A'].width = 12
+    righe = [[x['data'], x['n']] + [x['per_metodo'][k] / 100.0 for k, _ in METODI_PAGAMENTO] + [x['totale'] / 100.0]
+             for x in r['giorni'] if x['n']]
+    riga = apri_foglio_excel(ws, 'Incassi di %s %d' % (servizi.MESI[primo.month - 1], primo.year),
+                             '%s € in %d pagament%s' % (('%.2f' % (r['totale'] / 100.0)).replace('.', ','), r['n'],
+                                                        'o' if r['n'] == 1 else 'i'), st,
+                             colonne=len(intestazioni))
+    formati = {1: FORMATO_DATA}
+    formati.update({c: FORMATO_EURO for c in range(3, len(intestazioni) + 1)})
+    totali = {1: 'Totale', 2: 'somma'}
+    totali.update({c: 'somma' for c in range(3, len(intestazioni) + 1)})
+    tabella_excel(ws, riga, intestazioni, [14, 11] + [14] * len(METODI_PAGAMENTO) + [14], righe, formati=formati,
+                  totali=totali)
+    imposta_stampa_excel(ws, False, '%d:%d' % (riga, riga), None, st, periodo)
     ws2 = wb.create_sheet('Pagamenti')
-    ws2.append(['Pagato il', 'Appuntamento', 'Paziente', 'Prestazione', 'Medico', 'Convenzione',
-                'Metodo', 'Importo'])
-    for c in ws2[1]:
-        c.font = Font(bold=True)
-    for a in r['pagati']:
-        ws2.append([a.pagato_il, a.inizio, a.paziente.etichetta if a.paziente else '',
-                    a.prestazione.nome if a.prestazione else '', a.operatore.etichetta if a.operatore else '',
-                    a.convenzione or '', ETICHETTA_PAGAMENTO.get(a.pagamento, a.pagamento),
-                    (a.pagato_cent or 0) / 100.0])
-    for riga in ws2.iter_rows(min_row=2):
-        riga[0].number_format = riga[1].number_format = 'dd/mm/yyyy hh:mm'
-        riga[7].number_format = '#,##0.00'
-    for colonna, larghezza in zip('ABCDEFGH', (17, 17, 26, 22, 20, 20, 12, 11)):
-        ws2.column_dimensions[colonna].width = larghezza
-    if st.societa:
-        ws.oddFooter.left.text = ws2.oddFooter.left.text = st.societa
+    intestazioni2 = ['Pagato il', 'Appuntamento', 'Paziente', 'Prestazione', 'Medico', 'Convenzione', 'Metodo', 'Importo']
+    righe2 = [[a.pagato_il, a.inizio, a.paziente.etichetta if a.paziente else '',
+               a.prestazione.nome if a.prestazione else '', a.operatore.etichetta if a.operatore else '',
+               a.convenzione or '', ETICHETTA_PAGAMENTO.get(a.pagamento, a.pagamento), (a.pagato_cent or 0) / 100.0]
+              for a in r['pagati']]
+    riga2 = apri_foglio_excel(ws2, 'Pagamenti di %s %d' % (servizi.MESI[primo.month - 1], primo.year),
+                              '%d pagament%s' % (r['n'], 'o' if r['n'] == 1 else 'i'), st, colonne=len(intestazioni2))
+    tabella_excel(ws2, riga2, intestazioni2, (17, 17, 26, 24, 20, 20, 12, 13), righe2,
+                  formati={1: FORMATO_DATA_ORA, 2: FORMATO_DATA_ORA, 8: FORMATO_EURO},
+                  totali={1: 'Totale', 3: '%d pagament%s' % (r['n'], 'o' if r['n'] == 1 else 'i'), 8: 'somma'})
+    imposta_stampa_excel(ws2, True, '%d:%d' % (riga2, riga2), None, st, periodo)
     nome = 'incassi-%s.xlsx' % primo.strftime('%Y-%m')
     return scarica_excel(wb, nome)
