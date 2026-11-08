@@ -14,8 +14,9 @@ di Gmail), il 31 ottobre 2026 alla versione **1.10** (le fasce di ogni ambulator
 Giovanni ha chiesto di continuare il lavoro con **Claude Code** sul suo PC (vedi *Passare a
 Claude Code*), il 1° novembre 2026 alla versione **1.11** (l'autoriparazione e un giro di
 correzioni: vedi *La 1.11*), l'8 novembre 2026 alla **1.12** (ambulatori, riepilogo live, stampe ed
-Excel, certificati: vedi *La 1.12*) e lo stesso giorno alla **1.12.1** (le cose aperte chiuse e le
-prove su un Windows vero: vedi *La 1.12.1*).
+Excel, certificati: vedi *La 1.12*), lo stesso giorno alla **1.12.1** (le cose aperte chiuse e le
+prove su un Windows vero: vedi *La 1.12.1*) e la sera alla **1.12.2** (il riepilogo live più
+chiaro: vedi *La 1.12.2*).
 
 ## In breve
 
@@ -94,6 +95,8 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
+- **Versione 1.12.2** (8 novembre 2026, sera): il riepilogo live rifatto perché si legga a colpo
+  d'occhio (vedi *La 1.12.2*). Il database non cambia.
 - **Versione 1.12.1, pubblicata l'8 novembre 2026**: la release `v1.12.1`, segnata come ultima, con
   i due Setup, i due file delle versioni e, per la prima volta, il PDF della guida (53 pagine),
   costruiti dall'automazione di GitHub. Porta le ore vere nelle notti del cambio dell'ora, i codici
@@ -826,6 +829,29 @@ ha fatto la copia di sicurezza, ha avviato il Setup in silenzio e si è riaperto
 novità (`prova_aggiorna_adesso.py` con l'indirizzo `…/releases/latest/download/`, 14 controlli su 14,
 dati intatti), quindi indirizzo predefinito rimesso e di nuovo `prove_installato.py` (50 su 50). Il
 certificato del proxy della sessione era in `certificati.pem`, come documentato in *La 1.12*.
+
+## La 1.12.2
+
+L'8 novembre 2026 sera Giovanni ha scritto che la schermata dei turni live (*Ambulatori → Riepilogo
+live*) era poco chiara. Guardata alle 10:40 di un martedì con i dati di prova, aveva ragione: otto
+numeri della stessa grandezza che non sommavano al totale (9 appuntamenti, 2 fatti, 0 in corso, 1 da
+fare e 6 «in ritardo», che erano pazienti di stamattina mai segnati arrivati; oltre tre ore non
+contavano più da nessuna parte), il medico scritto due volte con due turni uguali, «libera fino alle
+14:00» senza dire se arrivava un paziente o finiva il turno, nessuna idea di quando lavora chi, 66
+mezze giornate libere in una lista e le notifiche sopra le stanze. Rifatta (vedi *Riepilogo live* nel
+`LEGGIMI.md`): una frase in cima, quattro gruppi che sommano (fatti, in corso, da segnare, da fare),
+una riga per stanza con la linea del tempo del turno e delle visite e la linea rossa di adesso, le ore
+con i numeri, le mezze giornate in una tabellina M/P per giorno e stanza, niente notifiche su quella
+pagina. Le stesse scelte nel riepilogo del prototipo del cruscotto. Decisione: le frasi e le posizioni
+le calcola `live.py` (sono anche nel JSON per il futuro cruscotto), la pagina non ha JavaScript per
+disegnare; nei rettangoli delle visite solo orario e stato, mai nomi, perché la pagina può stare su
+uno schermo che vedono anche i pazienti.
+
+Per vedere la pagina come in un giorno di lavoro di domenica o la sera, un gestionale di prova con
+l'ora del riepilogo ferma: `strumenti/demo.py` lanciato con `live.datetime` sostituito da una classe
+con `now()` fisso (lo script usato è nella cartella provvisoria della sessione, poche righe: importa
+`live`, cambia `live.datetime`, poi `runpy.run_path('strumenti/demo.py')`). Immagini e video della
+guida *Il riepilogo live* sono fatti così, alle 10:40 di martedì 3 novembre.
 
 ## Cose aperte
 
