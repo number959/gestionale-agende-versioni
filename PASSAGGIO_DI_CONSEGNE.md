@@ -365,9 +365,9 @@ raccolte senza browser, poi `strumenti/demo.py` in sottofondo e quelle nel brows
 Playwright, `tutte_le_prove.py --solo-browser`); ci vogliono una ventina di minuti, e i registri di
 ogni raccolta si scaricano dall'esecuzione (artefatti `registri-gestionale` e
 `registri-gestionale-animata`). Al primo giro (8 novembre 2026) 24 raccolte su 26 erano verdi in
-tutte e due le cartelle, 2550 casi di `campagna.py` compresi; le tre prove rotte erano differenze
-fra Linux e Windows nelle prove stesse, non difetti del programma, e sono state sistemate (vedi *La
-1.12.1*). Il workflow non pubblica niente: serve a vedere su Windows quello che qui si vede solo
+tutte e due le cartelle, 2550 casi di `campagna.py` compresi; le prove rotte (tre, più una nel
+browser al giro dopo) erano differenze fra Linux e Windows nelle prove stesse, non difetti del
+programma, e sono state sistemate (vedi *La 1.12.1*). Il workflow non pubblica niente: serve a vedere su Windows quello che qui si vede solo
 su Linux.
 
 ## Guide: immagini e video
@@ -776,14 +776,16 @@ aperte. Niente di nuovo nel database (schema 11). Cosa porta:
   quanto occupano, e con una conferma toglie quelli da più di 90 giorni
   (`autoripara.svuota_danneggiati`, `GIORNI_DANNEGGIATI`); i recenti restano sempre, il programma
   da solo non cancella mai niente. Nel diario resta la riga. Provato in `prove_autoriparazione.py`.
-- **Le prove su un Windows vero**, con GitHub Actions (`prove.yml`, vedi *Prove*): al primo giro tre
-  prove rotte, tutte nelle prove e non nel programma: `pid_vero` usava `wmic`, che Windows Server
+- **Le prove su un Windows vero**, con GitHub Actions (`prove.yml`, vedi *Prove*): ai primi giri
+  quattro prove rotte, tutte nelle prove e non nel programma: `pid_vero` usava `wmic`, che Windows Server
   2025 (il `windows-latest` di GitHub) e i Windows 11 recenti non hanno più (ora legge i processi
   figli con Toolhelp, `ctypes`; il programma non ha mai usato `wmic`); `h_elenco_mozilla` voleva zero
   certificati di sistema, ma su Windows l'elenco delle radici è del PC e c'è sempre (ora controlla
   che il programma ne abbia di più grazie all'elenco Mozilla); `h_senza_risposta` con una porta
   chiusa su 127.0.0.1 riceveva «non risponde» invece di «non raggiungibile», perché Windows dice
-  «rifiutata» solo dopo un paio di secondi di tentativi (ora aspetta 5 secondi).
+  «rifiutata» solo dopo un paio di secondi di tentativi (ora aspetta 5 secondi); «Copia» di Dove si fa
+  (`prove_19_browser.py`) confrontava gli appunti alla lettera, e su Windows gli a capo sono CRLF (ora
+  li normalizza). Al terzo giro tutte le raccolte senza browser erano verdi nelle due cartelle.
 - **Il PDF della guida nella release**: il workflow «Pubblica una versione» avvia il gestionale di
   prova, genera il PDF con Chromium e lo carica come quinto file (53 pagine alla 1.12.1). Se il
   passo non riesce la release si fa lo stesso, senza PDF.

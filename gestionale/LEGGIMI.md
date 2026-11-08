@@ -1984,13 +1984,14 @@ Windows», nella pagina *Actions* del progetto) lancia `tutte_le_prove.py` nelle
 Windows di GitHub (`windows-latest`, Python 3.13, Chromium di Playwright, `openssl` di Git for
 Windows), prima le raccolte senza browser e poi quelle nel browser contro `strumenti/demo.py`
 (`--solo-browser`), a ogni push del ramo di lavoro o a mano; i registri delle prove si scaricano
-dall'esecuzione. Al primo giro erano rotte tre prove, tutte per differenze fra Linux e Windows, mai
-per il programma: `pid_vero` di `prove_autoriparazione.py` usava `wmic`, che i Windows recenti non
+dall'esecuzione. Ai primi giri erano rotte quattro prove, tutte per differenze fra Linux e Windows,
+mai per il programma: `pid_vero` di `prove_autoriparazione.py` usava `wmic`, che i Windows recenti non
 hanno più (ora legge i processi con Toolhelp, `ctypes`); una prova di `prove_16.py` voleva zero
 certificati di sistema, ma su Windows l'elenco delle radici è del PC e c'è sempre (ora conta che il
 programma ne abbia di più, con l'elenco Mozilla); e una porta chiusa su 127.0.0.1 su Windows viene
 detta «rifiutata» solo dopo un paio di secondi di tentativi, con un solo secondo di attesa sembrava
-un sito che non risponde (ora la prova aspetta 5 secondi).
+un sito che non risponde (ora la prova aspetta 5 secondi); e negli appunti di Windows gli a capo
+diventano CRLF, per cui il confronto di «Copia» in `prove_19_browser.py` ora li normalizza.
 
 ## Email e WhatsApp: come funzionano dentro
 
@@ -2583,7 +2584,7 @@ falliscono, cioè il difetto c'era davvero.
 | Turni di notte nelle notti del cambio dell'ora (trovato dalla revisione della 1.11) | Contavano 10 ore sia a marzo sia a ottobre, anche nell'Excel e nei riposi | Dalla 1.12.1 contano le ore passate davvero (9 e 11): `calendario.minuti_veri`, con la regola europea scritta nel programma |
 | Due codici dei turni scritti di seguito senza aspettare («M» e subito «P») | «Nessun turno ha il codice MP» | Dalla 1.12.1 si separano: vale il codice più lungo con cui comincia il testo, le lettere dopo ricominciano sul giorno seguente |
 | `backup\danneggiati` cresceva senza limite | I file rovinati messi da parte non si toglievano mai, nemmeno dopo anni | Dalla 1.12.1 *Controllo del programma* dice quanto occupano e li svuota su richiesta, solo quelli da più di 90 giorni |
-| Prove sul Windows di GitHub (1.12.1) | `pid_vero` usava `wmic`, che non c'è più; una prova voleva zero certificati di sistema; una porta chiusa sembrava un sito che non risponde | Processi letti con Toolhelp (`ctypes`); la prova conta che il programma abbia più certificati del sistema; 5 secondi di attesa per la porta chiusa |
+| Prove sul Windows di GitHub (1.12.1) | `pid_vero` usava `wmic`, che non c'è più; una prova voleva zero certificati di sistema; una porta chiusa sembrava un sito che non risponde; gli appunti con a capo CRLF | Processi letti con Toolhelp (`ctypes`); la prova conta che il programma abbia più certificati del sistema; 5 secondi di attesa per la porta chiusa; a capo normalizzati nel confronto |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo

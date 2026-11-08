@@ -166,6 +166,8 @@ with sync_playwright() as p:
     sc.locator('[data-azione="copia"]').click()
     pg.wait_for_timeout(400)
     appunti = pg.evaluate('navigator.clipboard.readText()')
+    # su Windows gli appunti rendono gli a capo come CRLF: il testo e' lo stesso
+    appunti = appunti.replace('\r\n', '\n')
     ok('Copia: il messaggio negli appunti', appunti == area_.input_value() and 'Messaggio copiato' in avviso(),
        (appunti[-40:], avviso()))
     prima = n_registro()

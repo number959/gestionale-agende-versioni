@@ -69,7 +69,14 @@ with sync_playwright() as p:
             ok('%s: pulsante Mostrami' % a['slug'], False); continue
         if a['endpoint'] != a['apri'][0]:
             continue    # la pagina giusta va aperta a mano (per esempio un appuntamento esistente)
-        link.click(); pg.wait_for_timeout(900)
+        link.click()
+        # il primo passo arriva dopo che la pagina e' caricata: su un PC lento (il Windows di GitHub,
+        # con le animazioni dell'animata) puo' volerci piu' di un secondo
+        try:
+            pg.wait_for_selector('.giro-fumetto', timeout=8000)
+        except Exception:
+            pass
+        pg.wait_for_timeout(300)
         passi = 0
         while pg.locator('.giro-fumetto').count() and passi < 30:
             passi += 1
