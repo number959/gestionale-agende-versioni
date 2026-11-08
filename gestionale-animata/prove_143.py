@@ -626,7 +626,10 @@ def ri_oracolo():
     assert righe['Totale'][2].value == sum(d['n'] for d in atteso.values())
     for m, d in atteso.items():
         foglio = next(w for w in wb.worksheets[1:] if w['A1'].value.startswith(m))
-        assert foglio.max_row - 2 == d['n'], (m, foglio.max_row)
+        # 1.12: blocco del titolo sopra, intestazione, le righe degli appuntamenti, la riga dei totali
+        valori = [r[0].value for r in foglio.iter_rows()]
+        testa, totale = valori.index('Giorno'), valori.index('Totale')
+        assert totale - testa - 1 == d['n'], (m, testa, totale, d['n'])
     return '%d medici, %d appuntamenti' % (len(atteso), sum(d['n'] for d in atteso.values()))
 
 

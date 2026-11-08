@@ -174,8 +174,10 @@ def export_regge():
     ws = openpyxl.load_workbook(f).active
     fasce = len(servizi.griglia(s, G, 1)['fasce'])
     s.close()
-    assert ws.max_row <= 2 + fasce, \
-        'export: %d righe contro le %d attese, un merge e uscito dalla tabella' % (ws.max_row, 2 + fasce)
+    # 1.12: sotto la griglia una riga vuota e la legenda; i merge degli appuntamenti restano nella griglia
+    assert ws.max_row <= 4 + fasce, \
+        'export: %d righe contro le %d attese, un merge e uscito dalla tabella' % (ws.max_row, 4 + fasce)
+    assert all(m.max_row <= 2 + fasce for m in ws.merged_cells.ranges if 3 <= m.min_row <= 2 + fasce), 'un merge e uscito dalla griglia'
 
 
 # --------------------------------------------- 10. data non valida

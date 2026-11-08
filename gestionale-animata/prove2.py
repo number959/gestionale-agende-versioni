@@ -114,9 +114,11 @@ def export_con_impilate():
     f = servizi.esporta_giorno(s, G, 1, os.path.join(tempfile.gettempdir(), 'prove2-export.xlsx'))
     import openpyxl
     ws = openpyxl.load_workbook(f).active
-    atteso = 2 + len(servizi.griglia(s, G, 1)['fasce'])
+    griglia = 2 + len(servizi.griglia(s, G, 1)['fasce'])
+    atteso = griglia + 2                  # 1.12: riga vuota e legenda sotto la griglia
     s.close()
     assert ws.max_row <= atteso, 'export: %d righe contro %d' % (ws.max_row, atteso)
+    assert all(m.max_row <= griglia for m in ws.merged_cells.ranges if 3 <= m.min_row <= griglia), 'un merge e uscito dalla griglia'
     return '%d righe' % ws.max_row
 
 for nome, f in [('modifica senza spostare orario', modifica_senza_spostare),

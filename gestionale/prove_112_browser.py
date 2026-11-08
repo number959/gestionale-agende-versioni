@@ -64,7 +64,7 @@ with sync_playwright() as p:
     attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
     ok('il menu: il gruppo Ambulatori è segnato attivo', attivo.count() and 'Ambulatori' in attivo.inner_text(), attivo.inner_text() if attivo.count() else 'nessun gruppo attivo')
     voci = pg.locator('nav.menu .gruppo.attivo .tendina a').all_inner_texts()
-    ok('nel gruppo: Pianificazione della settimana e Programmazione del mese', len(voci) == 2 and 'Pianificazione' in voci[0] and 'Programmazione' in voci[1], voci)
+    ok('nel gruppo: Pianificazione della settimana, Programmazione del mese e Riepilogo live', len(voci) == 3 and 'Pianificazione' in voci[0] and 'Programmazione' in voci[1] and 'Riepilogo live' in voci[2], voci)
 
     # Metti: una cella libera, il «+», Galasso, Metti
     cella = pg.locator('#matrice-ambulatori td.libera:has(details.metti)').first
@@ -110,7 +110,7 @@ with sync_playwright() as p:
     pg.locator('.gruppo-comandi .apri-gruppo').click()
     with pg.expect_download() as scaricato:
         pg.locator('.gruppo-comandi .tendina a', has_text='settimana tipo').click()
-    ok('la settimana tipo in Excel', scaricato.value.suggested_filename == 'matrice-ambulatori-settimana-tipo.xlsx', scaricato.value.suggested_filename)
+    ok('la settimana tipo in Excel', scaricato.value.suggested_filename == 'matrice-ambulatori-%s-settimana-tipo.xlsx' % LUN.isoformat(), scaricato.value.suggested_filename)
 
     # la programmazione del mese
     pg.goto(B + '/ambulatori/mese/%s?struttura=1' % LUN.strftime('%Y-%m'))
