@@ -648,6 +648,28 @@ ARTICOLI += [
                'si lascia aperta e si rinnova da sola. Su questa pagina le notifiche non compaiono sopra le stanze.',
                '[data-guida="live-schermo"]'),
          ]),
+    dict(slug='riepilogo-periodo', gruppo='Ambulatori', titolo='Il riepilogo del periodo: com\'è andata, stanza per stanza',
+         in_breve='Menu Ambulatori → Riepilogo del periodo: per un giorno, una settimana o un mese, le ore di turno '
+                  'delle stanze e quanto sono state occupate, le visite fatte, i non presentati, i disdetti, quelli '
+                  'ancora da segnare e le mezze giornate senza nessun medico, per stanza, per medico e giorno per '
+                  'giorno. Si scarica in Excel e si stampa.',
+         endpoint='ambulatori.riepilogo', apri=('ambulatori.riepilogo', {}),
+         foto='/ambulatori/riepilogo?struttura=1&periodo=settimana',
+         passi=[
+             P('Il periodo', 'Oggi, ieri, questa settimana, la settimana scorsa, questo mese o il mese scorso; oppure '
+               'due date a scelta (fino a tre mesi) e «Mostra». Le frecce in alto vanno al periodo prima e dopo.',
+               '[data-guida="periodo-scelta"]'),
+             P('Com\'è andata', 'In cima una frase riassume il periodo; sotto, gli appuntamenti divisi in fatti, non '
+               'presentati, disdetti, da segnare e da fare, che sommano al totale, e le ore di turno con quanto sono '
+               'state occupate.', '[data-guida="periodo-numeri"]'),
+             P('Le stanze', 'Per ogni stanza i medici, le ore di turno, le ore occupate (anche dai non presentati, che '
+               'tenevano il posto) e l\'occupazione in percento, i conti degli appuntamenti e le mezze giornate senza '
+               'nessun medico. Le visite prenotate fuori dai turni sono segnate a parte.', '[data-guida="periodo-stanze"]'),
+             P('I medici', 'Per ogni medico i giorni e le ore di turno, l\'occupazione e i suoi appuntamenti, con la '
+               'percentuale dei non presentati.', '[data-guida="periodo-medici"]'),
+             P('Excel e stampa', 'L\'Excel ha un foglio per il riepilogo, le stanze, i medici e i giorni; «Stampa» '
+               'stampa la pagina com\'è.', '[data-guida="periodo-excel"]'),
+         ]),
     # ------------------------------------------------------- email e WhatsApp
     dict(slug='email-casella', gruppo='Email e WhatsApp', titolo='Collegare l\'email della clinica',
          in_breve='Le email ai pazienti partono da una casella della clinica: quella del sito (bastano indirizzo e '

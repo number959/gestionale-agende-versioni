@@ -678,9 +678,28 @@ un giorno di lavoro mentre è domenica o sera, il riepilogo prende l'ora da `liv
 le prove la passano, e per le immagini della guida si è usato un gestionale di prova con
 `live.datetime` fermo a un martedì alle 10:40.
 
+**Riepilogo del periodo** (dalla 1.12.2; `ambulatori.riepilogo_periodo`, menu *Ambulatori → Riepilogo
+del periodo*, `/ambulatori/riepilogo`, `.xlsx` e `.json`): il riepilogo «non live», com'è andato un
+periodo. Si sceglie oggi, ieri, questa settimana, la settimana scorsa, questo mese, il mese scorso
+(`?periodo=`) o due date (`?da=&a=`, girate se al contrario, al massimo `MASSIMO_GIORNI_RIEPILOGO` = 93
+giorni); di partenza la settimana in corso; le frecce vanno alla settimana o al mese accanto, o allo
+stesso numero di giorni prima e dopo. In cima una frase e i cinque gruppi che sommano al totale degli
+appuntamenti delle stanze (fatti, non presentati, disdetti, da segnare, da fare: `gruppo_periodo`),
+poi le ore di turno e quelle occupate. **Ore di turno**: i turni effettivi di ogni stanza giorno per
+giorno (`servizi.Regole.turni_effettivi`: tolte assenze e chiusure), uniti, così due turni uguali non
+contano doppio. **Ore occupate**: le ore dentro i turni coperte da un appuntamento che tiene il posto
+(prenotato, confermato, arrivato e anche non presentato; il disdetto lo libera); le ore prenotate fuori
+dai turni sono a parte. Tabelle: per stanza (medici, ore, occupazione, conti, mezze giornate senza
+nessun medico dalla matrice degli ambulatori), per medico (giorni e ore di turno, occupazione nei suoi
+turni, conti, percentuale dei non presentati su chi doveva venire) e giorno per giorno (i giorni chiusi
+in grigio, il giorno apre la giornata). L'Excel ha i fogli Riepilogo, Stanze, Medici e, per più di un
+giorno, Giorni, con gli aiuti di `comune.py`; «Stampa» stampa la pagina. Nel JSON e nell'Excel solo
+conteggi, ore, stanze e medici.
+
 Le prove sono `prove_112.py` (le celle della matrice contro un calcolo minuto per minuto fatto a
 parte, la programmazione, i due Excel riaperti, mettere e togliere, le protezioni, il foglio del
-giorno, il riepilogo live: dalla 1.12.2 i quattro gruppi che sommano al totale a dieci ore diverse,
+giorno, il riepilogo del periodo contro gli insiemi di minuti di Python su tre periodi, con un non
+presentato, una visita fuori turno e una a cavallo della fine del turno, il riepilogo live: dalla 1.12.2 i quattro gruppi che sommano al totale a dieci ore diverse,
 anche stanza per stanza, le frasi, la linea del tempo, le ore e la tabella delle mezze giornate) e
 `prove_112_browser.py` (anche la pagina del riepilogo, a qualsiasi ora giri: conti, righe, turni e
 visite come nel JSON, linea di adesso, notifiche nascoste, telefono senza scorrimento laterale).
@@ -2620,6 +2639,7 @@ falliscono, cioè il difetto c'era davvero.
 | `backup\danneggiati` cresceva senza limite | I file rovinati messi da parte non si toglievano mai, nemmeno dopo anni | Dalla 1.12.1 *Controllo del programma* dice quanto occupano e li svuota su richiesta, solo quelli da più di 90 giorni |
 | Prove sul Windows di GitHub (1.12.1) | `pid_vero` usava `wmic`, che non c'è più; una prova voleva zero certificati di sistema; una porta chiusa sembrava un sito che non risponde; gli appunti con a capo CRLF | Processi letti con Toolhelp (`ctypes`); la prova conta che il programma abbia più certificati del sistema; 5 secondi di attesa per la porta chiusa; a capo normalizzati nel confronto |
 | Riepilogo live poco chiaro (segnalato da Giovanni l'8 novembre 2026) | Otto numeri che non sommavano al totale, «in ritardo» solo per tre ore, il medico scritto due volte, «libera fino alle» senza dire perché, sessanta mezze giornate in una lista, le notifiche sopra le stanze | Dalla 1.12.2: quattro gruppi che sommano, una frase in cima, la linea del tempo con turni e visite, le mezze giornate in una tabellina, niente notifiche su quella pagina |
+| Nessun riepilogo «non live» (richiesta di Giovanni dell'8 novembre 2026) | Per sapere com'era andata una settimana o un mese bisognava mettere insieme statistiche, pianificazione e agende | Dalla 1.12.2 *Ambulatori → Riepilogo del periodo*: ore di turno e occupate, conti e mezze giornate libere per stanza, medico e giorno, in Excel e da stampare |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo

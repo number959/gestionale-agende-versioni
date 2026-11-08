@@ -38,9 +38,10 @@ from sqlalchemy import select
 import calendario
 import servizi
 from anagrafiche import Modulo, stanza_gia_assegnata
-from comune import (data_da, destinazione_sicura, imposta_stampa_excel, intero, mese_da, scarica_excel,
-                    stile_intestazione_excel, struttura_scelta, testo_excel)
-from modelli import Operatore, Risorsa, Turno
+from comune import (FORMATO_ORE, FORMATO_PERCENTO, apri_foglio_excel, data_da, destinazione_sicura,
+                    imposta_stampa_excel, intero, json_sicuro, mese_da, scarica_excel, stile_intestazione_excel,
+                    struttura_scelta, tabella_excel, testo_excel)
+from modelli import Appuntamento, Operatore, Risorsa, Turno
 
 bp = Blueprint('ambulatori', __name__, url_prefix='/ambulatori')
 _fornitore = None
@@ -659,3 +660,365 @@ def togli():
         s.commit()
     flash(messaggio, 'ok')
     return redirect(_torna(st, g))
+
+
+# ================================================== riepilogo del periodo (1.12.2)
+# Il riepilogo «non live»: com'e' andato un giorno, una settimana o un mese, per stanza, per medico e
+# giorno per giorno. Ore di turno (i turni effettivi di ogni stanza, uniti), ore occupate (gli
+# appuntamenti che tengono il posto, dentro i turni), visite fatte, non presentati, disdetti, ancora da
+# segnare e da fare, mezze giornate senza nessun medico. Tutto calcolato, niente ricopiato; nel JSON e
+# nell'Excel solo conteggi, ore, stanze e medici, mai un paziente.
+MASSIMO_GIORNI_RIEPILOGO = 93
+STATI_OCCUPANO = ('PRENOTATO', 'CONFERMATO', 'ARRIVATO', 'NON_PRESENTATO')   # un disdetto libera il posto
+GRUPPI_PERIODO = (('fatti', 'fatti'), ('non_presentati', 'non presentati'), ('disdetti', 'disdetti'),
+                  ('da_segnare', 'da segnare'), ('da_fare', 'da fare'))
+SINGOLARI_PERIODO = {'fatti': 'fatto', 'non_presentati': 'non presentato', 'disdetti': 'disdetto',
+                     'da_segnare': 'da segnare', 'da_fare': 'da fare'}
+PERIODI = (('oggi', 'Oggi'), ('ieri', 'Ieri'), ('settimana', 'Questa settimana'),
+           ('settimana-scorsa', 'Settimana scorsa'), ('mese', 'Questo mese'), ('mese-scorso', 'Mese scorso'))
+
+
+def periodo_da(nome, oggi):
+    """(primo, ultimo giorno) di un periodo con nome, oppure None."""
+    lunedi = calendario.lunedi_di(oggi)
+    primo_mese = oggi.replace(day=1)
+    fine_mese = (primo_mese + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    return {
+        'oggi': (oggi, oggi), 'ieri': (oggi - timedelta(days=1), oggi - timedelta(days=1)),
+        'settimana': (lunedi, lunedi + timedelta(days=6)),
+        'settimana-scorsa': (lunedi - timedelta(days=7), lunedi - timedelta(days=1)),
+        'mese': (primo_mese, fine_mese),
+        'mese-scorso': ((primo_mese - timedelta(days=1)).replace(day=1), primo_mese - timedelta(days=1)),
+    }.get(nome)
+
+
+def unisci_intervalli(intervalli):
+    """[(da, a)] in minuti, uniti dove si toccano o si sovrappongono."""
+    uniti = []
+    for da, a in sorted(x for x in intervalli if x[1] > x[0]):
+        if uniti and da <= uniti[-1][1]:
+            uniti[-1][1] = max(uniti[-1][1], a)
+        else:
+            uniti.append([da, a])
+    return [tuple(x) for x in uniti]
+
+
+def durata_intervalli(intervalli):
+    return sum(a - da for da, a in intervalli)
+
+
+def sovrapposizione(primi, secondi):
+    """I minuti in comune fra due elenchi di intervalli gia' uniti."""
+    totale, i, j = 0, 0, 0
+    while i < len(primi) and j < len(secondi):
+        da, a = max(primi[i][0], secondi[j][0]), min(primi[i][1], secondi[j][1])
+        totale += max(0, a - da)
+        if primi[i][1] < secondi[j][1]:
+            i += 1
+        else:
+            j += 1
+    return totale
+
+
+def gruppo_periodo(a, adesso):
+    """Il gruppo di un appuntamento nel riepilogo del periodo: i cinque gruppi sommano al totale."""
+    if a.stato == 'ARRIVATO':
+        return 'fatti'
+    if a.stato == 'NON_PRESENTATO':
+        return 'non_presentati'
+    if a.stato == 'DISDETTO':
+        return 'disdetti'
+    return 'da_segnare' if a.fine <= adesso else 'da_fare'
+
+
+def testo_ore(minuti):
+    """450 -> '7 h 30', 420 -> '7 h', 0 -> '0 h'."""
+    h, m = divmod(int(round(minuti or 0)), 60)
+    return '%d h %02d' % (h, m) if m else '%d h' % h
+
+
+def ore_in_parole(minuti):
+    """450 -> '7 ore e 30 minuti', 60 -> '1 ora', 0 -> '0 ore'."""
+    h, m = divmod(int(round(minuti or 0)), 60)
+    ore = '%d or%s' % (h, 'a' if h == 1 else 'e')
+    return ore + (' e %d minut%s' % (m, 'o' if m == 1 else 'i') if m else '')
+
+
+def titolo_periodo(da, a):
+    """'martedì 3 novembre 2026', 'dal 2 all'8 novembre 2026', 'dal 26 ottobre al 1° novembre 2026'."""
+    if da == a:
+        return servizi.etichetta_giorno(da)
+    mese_a = '%s %d' % (servizi.MESI[a.month - 1], a.year)
+    if (da.year, da.month) == (a.year, a.month):
+        return '%s %s %s' % (_dal(da.day), _al(a.day), mese_a)
+    inizio = '%s %s' % (_dal(da.day), servizi.MESI[da.month - 1]) + ('' if da.year == a.year else ' %d' % da.year)
+    return '%s %s %s' % (inizio, _al(a.day), mese_a)
+
+
+def il_percento(valore):
+    """'il 54%', ma 'l'11,6%', 'l'8%', 'l'80%' (davanti a una vocale l'articolo si apostrofa)."""
+    intero_ = int(valore)
+    testo = ('%g' % round(valore, 1)).replace('.', ',')
+    return ("l'%s%%" if str(intero_).startswith('8') or intero_ in (1, 11) else 'il %s%%') % testo
+
+
+def _percento(parte, tutto):
+    return round(100.0 * parte / tutto, 1) if tutto else None
+
+
+def riepilogo_periodo(ses, st, da, a, adesso=None):
+    """Tutti i numeri del riepilogo fra 'da' e 'a' (compresi), gia' pronti per la pagina, l'Excel e il JSON."""
+    adesso = adesso or datetime.now()
+    stanze = stanze_della(st)
+    per_id = {r.id: r for r in stanze}
+    regole = servizi.Regole(ses, da, a)
+    appuntamenti = ses.scalars(select(Appuntamento).where(
+        Appuntamento.risorsa_id.in_(list(per_id) or [0]),
+        Appuntamento.inizio >= datetime.combine(da, time(0)),
+        Appuntamento.inizio < datetime.combine(a + timedelta(days=1), time(0)))).all()
+    etichette = {o.id: o.etichetta for o in ses.scalars(select(Operatore))}
+
+    def conti():
+        x = {k: 0 for k, _ in GRUPPI_PERIODO}
+        x.update(totale=0, minuti_turno=0, minuti_occupati=0, minuti_fuori_turno=0)
+        return x
+
+    totale = dict(conti(), mezze=0, libere=0)
+    righe_stanze = {r.id: dict(conti(), stanza=r.nome, medici=[], mezze=0, libere=0) for r in stanze}
+    righe_medici = {}
+    giorni = []
+    per_giorno = {}
+    for x in appuntamenti:
+        per_giorno.setdefault(x.inizio.date(), []).append(x)
+
+    def minuti(dt, g):
+        return 24 * 60 if dt.date() > g else dt.hour * 60 + dt.minute
+
+    g = da
+    while g <= a:
+        info = regole.giorno(g, st)
+        chiusa = info['chiusura'] or (info['festivo'] if info['chiude_festivo'] else None)
+        riga_g = dict(conti(), data=g.isoformat(), giorno=servizi.GIORNI[g.weekday()],
+                      etichetta='%s %d/%d' % (servizi.GIORNI[g.weekday()], g.day, g.month), chiusa=chiusa,
+                      aperto=info['giorno_di_apertura'])
+        del_giorno = per_giorno.get(g, [])
+        for r in stanze:
+            turni = regole.turni_effettivi(g, st, r.id, info)
+            qui = [x for x in del_giorno if x.risorsa_id == r.id]
+            int_turni = unisci_intervalli((_minuti(t.ora_inizio), _minuti(t.ora_fine)) for t in turni)
+            int_occ = unisci_intervalli((minuti(x.inizio, g), minuti(x.fine, g)) for x in qui if x.stato in STATI_OCCUPANO)
+            m_turno, m_occ = durata_intervalli(int_turni), sovrapposizione(int_turni, int_occ)
+            m_fuori = durata_intervalli(int_occ) - m_occ
+            for d in (totale, righe_stanze[r.id], riga_g):
+                d['minuti_turno'] += m_turno
+                d['minuti_occupati'] += m_occ
+                d['minuti_fuori_turno'] += m_fuori
+            for t in turni:
+                if etichette.get(t.operatore_id) and etichette[t.operatore_id] not in righe_stanze[r.id]['medici']:
+                    righe_stanze[r.id]['medici'].append(etichette[t.operatore_id])
+            for oid in sorted({t.operatore_id for t in turni} | {x.operatore_id for x in qui}):
+                m = righe_medici.setdefault(oid, dict(conti(), medico=etichette.get(oid, '?'), giorni=set(), stanze=[]))
+                t_op = unisci_intervalli((_minuti(t.ora_inizio), _minuti(t.ora_fine)) for t in turni if t.operatore_id == oid)
+                o_op = unisci_intervalli((minuti(x.inizio, g), minuti(x.fine, g)) for x in qui
+                                         if x.operatore_id == oid and x.stato in STATI_OCCUPANO)
+                m['minuti_turno'] += durata_intervalli(t_op)
+                m['minuti_occupati'] += sovrapposizione(t_op, o_op)
+                m['minuti_fuori_turno'] += durata_intervalli(o_op) - sovrapposizione(t_op, o_op)
+                if t_op:
+                    m['giorni'].add(g)
+                    if r.nome not in m['stanze']:
+                        m['stanze'].append(r.nome)
+            for x in qui:
+                gruppo = gruppo_periodo(x, adesso)
+                for d in (totale, righe_stanze[r.id], riga_g, righe_medici[x.operatore_id]):
+                    d['totale'] += 1
+                    d[gruppo] += 1
+        giorni.append(riga_g)
+        g += timedelta(days=1)
+
+    # le mezze giornate senza nessun medico, dalla matrice degli ambulatori (come la pianificazione)
+    lunedi = calendario.lunedi_di(da)
+    while lunedi <= a:
+        for riga in matrice(ses, lunedi, st)['righe']:
+            r = righe_stanze.get(riga['risorsa'].id)
+            for c in riga['celle']:
+                if r is None or not (da <= c['data'] <= a) or c['chiuso']:
+                    continue
+                r['mezze'] += 1
+                totale['mezze'] += 1
+                if c['tutta_libera']:
+                    r['libere'] += 1
+                    totale['libere'] += 1
+        lunedi += timedelta(days=7)
+
+    def rifinisci(d):
+        d['occupazione'] = _percento(d['minuti_occupati'], d['minuti_turno'])
+        d['non_presentati_su'] = _percento(d['non_presentati'], d['fatti'] + d['non_presentati'])
+        d['ore_turno'], d['ore_occupate'] = testo_ore(d['minuti_turno']), testo_ore(d['minuti_occupati'])
+        d['ore_fuori_turno'] = testo_ore(d['minuti_fuori_turno'])
+        return d
+
+    medici = []
+    for m in righe_medici.values():
+        m['n_giorni'] = len(m.pop('giorni'))
+        medici.append(rifinisci(m))
+    medici.sort(key=lambda m: (-m['minuti_turno'], -m['totale'], m['medico']))
+    rifinisci(totale)
+    # la frase in cima
+    if not totale['totale'] and not totale['minuti_turno']:
+        frase = 'Nel periodo non ci sono appuntamenti né turni nelle stanze.'
+    else:
+        pezzi = ['%d appuntament%s' % (totale['totale'], 'o' if totale['totale'] == 1 else 'i')]
+        dettagli = ['%d fatt%s' % (totale['fatti'], 'o' if totale['fatti'] == 1 else 'i')]
+        if totale['non_presentati']:
+            dettagli.append('%d non presentat%s%s' % (totale['non_presentati'], 'o' if totale['non_presentati'] == 1 else 'i',
+                                                      ' (%s%%)' % ('%g' % totale['non_presentati_su']).replace('.', ',')
+                                                      if totale['non_presentati_su'] is not None else ''))
+        if totale['disdetti']:
+            dettagli.append('%d disdett%s' % (totale['disdetti'], 'o' if totale['disdetti'] == 1 else 'i'))
+        if totale['da_segnare']:
+            dettagli.append('%d ancora da segnare' % totale['da_segnare'])
+        if totale['da_fare']:
+            dettagli.append('%d da fare' % totale['da_fare'])
+        frase = '%s: %s, %s.' % (titolo_periodo(da, a)[:1].upper() + titolo_periodo(da, a)[1:], pezzi[0],
+                                ', '.join(dettagli[:-1]) + (' e ' if len(dettagli) > 1 else '') + dettagli[-1])
+        if totale['minuti_turno']:
+            frase += ' Le stanze sono state occupate per %s delle ore di turno (%s su %s).' % (
+                il_percento(totale['occupazione']), ore_in_parole(totale['minuti_occupati']),
+                ore_in_parole(totale['minuti_turno']))
+        if totale['mezze']:
+            frase += ' %d mezz%s giornat%s su %d senza nessun medico.' % (
+                totale['libere'], 'a' if totale['libere'] == 1 else 'e', 'a' if totale['libere'] == 1 else 'e', totale['mezze'])
+    return {
+        'da': da.isoformat(), 'a': a.isoformat(), 'titolo': titolo_periodo(da, a), 'struttura': st.nome,
+        'giorni_periodo': (a - da).days + 1, 'frase': frase, 'totale': totale,
+        'stanze': [rifinisci(righe_stanze[r.id]) for r in stanze], 'medici': medici,
+        'giorni': [rifinisci(x) for x in giorni],
+        'aggiornato': adesso.strftime('%d/%m/%Y %H:%M'),
+    }
+
+
+def excel_riepilogo(st, r, adesso=None):
+    """Il riepilogo del periodo in Excel: la frase e i totali, poi le stanze, i medici e i giorni."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Riepilogo'
+    riga = apri_foglio_excel(ws, 'Riepilogo di agende e ambulatori', r['titolo'], st, adesso, colonne=6)
+    c = ws.cell(riga, 1, testo_excel(r['frase']))
+    c.alignment = Alignment(wrap_text=True, vertical='top')
+    ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=6)
+    ws.row_dimensions[riga].height = 48
+    t = r['totale']
+    righe = [['Appuntamenti', t['totale']]] + [[nome.capitalize(), t[k]] for k, nome in GRUPPI_PERIODO] + [
+        ['Ore di turno', round(t['minuti_turno'] / 60, 2)], ['Ore occupate (dentro i turni)', round(t['minuti_occupati'] / 60, 2)],
+        ['Ore prenotate fuori turno', round(t['minuti_fuori_turno'] / 60, 2)],
+        ['Occupazione delle ore di turno', t['occupazione']], ['Non presentati su chi doveva venire', t['non_presentati_su']],
+        ['Mezze giornate', t['mezze']], ['Mezze giornate senza nessun medico', t['libere']]]
+    tabella_excel(ws, riga + 2, ['Cosa', 'Quanto'], [42, 14], righe, filtro=False, blocca=False)
+    for n, v in enumerate(righe, start=riga + 3):
+        if v[0].startswith('Ore'):
+            ws.cell(n, 2).number_format = FORMATO_ORE
+        elif v[0].startswith(('Occupazione', 'Non presentati su')):
+            ws.cell(n, 2).number_format = FORMATO_PERCENTO
+    imposta_stampa_excel(ws, orizzontale=False, struttura=st, periodo=r['titolo'])
+
+    def foglio(nome, intestazioni, larghezze, righe_f, formati, orizzontale=True):
+        w = wb.create_sheet(nome)
+        rr = apri_foglio_excel(w, 'Riepilogo di agende e ambulatori · %s' % nome.lower(), r['titolo'], st, adesso,
+                               colonne=len(intestazioni))
+        tabella_excel(w, rr, intestazioni, larghezze, righe_f, formati=formati, zebra=True,
+                      totali={k: 'somma' for k in range(3, len(intestazioni) + 1) if k not in formati or formati[k] != FORMATO_PERCENTO})
+        imposta_stampa_excel(w, orizzontale=orizzontale, righe_titolo='%d:%d' % (rr, rr), struttura=st, periodo=r['titolo'])
+
+    numeri = ['Appuntamenti', 'Fatti', 'Non presentati', 'Disdetti', 'Da segnare', 'Da fare']
+    chiavi = ['totale'] + [k for k, _ in GRUPPI_PERIODO]
+    foglio('Stanze', ['Stanza', 'Medici', 'Ore di turno', 'Ore occupate', 'Occupazione'] + numeri +
+           ['Mezze giornate', 'Senza medico'], [20, 30, 11, 11, 12, 13, 9, 13, 10, 11, 9, 12, 12],
+           [[x['stanza'], ', '.join(x['medici']), round(x['minuti_turno'] / 60, 2), round(x['minuti_occupati'] / 60, 2),
+             x['occupazione']] + [x[k] for k in chiavi] + [x['mezze'], x['libere']] for x in r['stanze']],
+           {3: FORMATO_ORE, 4: FORMATO_ORE, 5: FORMATO_PERCENTO})
+    foglio('Medici', ['Medico', 'Stanze', 'Giorni di turno', 'Ore di turno', 'Ore occupate', 'Occupazione'] + numeri +
+           ['Non presentati %'], [24, 30, 10, 11, 11, 12, 13, 9, 13, 10, 11, 9, 13],
+           [[x['medico'], ', '.join(x['stanze']), x['n_giorni'], round(x['minuti_turno'] / 60, 2),
+             round(x['minuti_occupati'] / 60, 2), x['occupazione']] + [x[k] for k in chiavi] + [x['non_presentati_su']]
+            for x in r['medici']],
+           {4: FORMATO_ORE, 5: FORMATO_ORE, 6: FORMATO_PERCENTO, 13: FORMATO_PERCENTO})
+    if r['giorni_periodo'] > 1:
+        foglio('Giorni', ['Giorno', 'Chiusa', 'Ore di turno', 'Ore occupate', 'Occupazione'] + numeri,
+               [16, 22, 11, 11, 12, 13, 9, 13, 10, 11, 9],
+               [[x['etichetta'], x['chiusa'] or '', round(x['minuti_turno'] / 60, 2), round(x['minuti_occupati'] / 60, 2),
+                 x['occupazione']] + [x[k] for k in chiavi] for x in r['giorni']],
+               {3: FORMATO_ORE, 4: FORMATO_ORE, 5: FORMATO_PERCENTO}, orizzontale=False)
+    return wb
+
+
+def _periodo_chiesto():
+    """(da, a, nome del periodo o '') dall'indirizzo: ?periodo=settimana, oppure ?da=…&a=…; di partenza la
+    settimana in corso. Un intervallo al contrario si gira, uno troppo lungo si accorcia."""
+    oggi = date.today()
+    nome = request.args.get('periodo') or ''
+    trovato = periodo_da(nome, oggi)
+    if trovato:
+        return trovato[0], trovato[1], nome
+    if request.args.get('da') or request.args.get('a'):
+        da = data_da(request.args.get('da'), oggi)
+        a = data_da(request.args.get('a'), da)
+        da, a = min(da, a), max(da, a)
+        a = min(a, da + timedelta(days=MASSIMO_GIORNI_RIEPILOGO - 1))
+        return da, a, ''
+    da, a = periodo_da('settimana', oggi)
+    return da, a, 'settimana'
+
+
+def _vicini(da, a, nome):
+    """(prima, dopo) come parametri dell'indirizzo: la settimana o il mese accanto, altrimenti lo stesso numero di giorni."""
+    if nome in ('settimana', 'settimana-scorsa') or (da.weekday() == 0 and (a - da).days == 6):
+        return ({'da': (da - timedelta(days=7)).isoformat(), 'a': (a - timedelta(days=7)).isoformat()},
+                {'da': (da + timedelta(days=7)).isoformat(), 'a': (a + timedelta(days=7)).isoformat()})
+    if nome in ('mese', 'mese-scorso') or (da.day == 1 and (a + timedelta(days=1)).day == 1):
+        prima_fine = da - timedelta(days=1)
+        dopo_inizio = a + timedelta(days=1)
+        dopo_fine = (dopo_inizio + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        return ({'da': prima_fine.replace(day=1).isoformat(), 'a': prima_fine.isoformat()},
+                {'da': dopo_inizio.isoformat(), 'a': dopo_fine.isoformat()})
+    n = (a - da).days + 1
+    return ({'da': (da - timedelta(days=n)).isoformat(), 'a': (da - timedelta(days=1)).isoformat()},
+            {'da': (a + timedelta(days=1)).isoformat(), 'a': (a + timedelta(days=n)).isoformat()})
+
+
+@bp.route('/riepilogo')
+def riepilogo():
+    s = ses()
+    st, strutture = struttura_scelta(s)
+    if st is None:
+        return render_template('da_configurare.html'), 200
+    da, a, nome = _periodo_chiesto()
+    r = riepilogo_periodo(s, st, da, a)
+    prima, dopo = _vicini(da, a, nome)
+    return render_template('ambulatori_riepilogo.html', r=r, st=st, sid=st.id, strutture=strutture, periodi=PERIODI,
+                           periodo=nome, prima=prima, dopo=dopo, gruppi=GRUPPI_PERIODO, singolari=SINGOLARI_PERIODO,
+                           sezione='riepilogo-periodo',
+                           massimo=MASSIMO_GIORNI_RIEPILOGO, data_menu=min(a, date.today()).isoformat(),
+                           titolo='Riepilogo del periodo · %s' % r['titolo'])
+
+
+@bp.route('/riepilogo.xlsx')
+def riepilogo_excel():
+    s = ses()
+    st, _ = struttura_scelta(s)
+    if st is None:
+        return render_template('da_configurare.html'), 200
+    da, a, _ = _periodo_chiesto()
+    r = riepilogo_periodo(s, st, da, a)
+    nome = 'riepilogo-ambulatori-%s%s.xlsx' % (da.isoformat(), '' if da == a else '-%s' % a.isoformat())
+    return scarica_excel(excel_riepilogo(st, r), nome)
+
+
+@bp.route('/riepilogo.json')
+def riepilogo_json():
+    s = ses()
+    st, _ = struttura_scelta(s)
+    if st is None:
+        return json_sicuro({'errore': 'nessuna struttura'})
+    da, a, _ = _periodo_chiesto()
+    return json_sicuro(riepilogo_periodo(s, st, da, a))

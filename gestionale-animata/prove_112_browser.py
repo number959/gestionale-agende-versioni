@@ -15,7 +15,8 @@ avviato con i dati di prova (strumenti/demo.py):
 - dalla 1.12.2 il riepilogo live: la frase, i quattro gruppi che sommano al
   totale, una riga per stanza con turni e visite come nel JSON, la linea di
   adesso, le notifiche nascoste, il telefono senza scorrimento laterale e il
-  modo schermo; nessun errore JavaScript.
+  modo schermo; il riepilogo del periodo: i gruppi che sommano, i periodi
+  pronti, la freccia, l'Excel; nessun errore JavaScript.
 Mette e toglie un turno sui dati di prova: alla fine sono come prima."""
 import os
 import sys
@@ -67,7 +68,9 @@ with sync_playwright() as p:
     attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
     ok('il menu: il gruppo Ambulatori è segnato attivo', attivo.count() and 'Ambulatori' in attivo.inner_text(), attivo.inner_text() if attivo.count() else 'nessun gruppo attivo')
     voci = pg.locator('nav.menu .gruppo.attivo .tendina a').all_inner_texts()
-    ok('nel gruppo: Pianificazione della settimana, Programmazione del mese e Riepilogo live', len(voci) == 3 and 'Pianificazione' in voci[0] and 'Programmazione' in voci[1] and 'Riepilogo live' in voci[2], voci)
+    ok('nel gruppo: Pianificazione della settimana, Programmazione del mese, Riepilogo live e Riepilogo del periodo',
+       len(voci) == 4 and 'Pianificazione' in voci[0] and 'Programmazione' in voci[1] and 'Riepilogo live' in voci[2] and
+       'Riepilogo del periodo' in voci[3], voci)
 
     # Metti: una cella libera, il «+», Galasso, Metti
     cella = pg.locator('#matrice-ambulatori td.libera:has(details.metti)').first
@@ -161,6 +164,35 @@ with sync_playwright() as p:
     pg.wait_for_selector('#riepilogo-live .linea-live')
     ok('riepilogo live: il modo schermo senza menu, con la linea del tempo', pg.locator('nav.menu').count() == 0 and
        pg.locator('.linea-live .riga-live').count() == len(dati['stanze']) + 1)
+
+    # 1.12.2: il riepilogo del periodo
+    pg.goto(B + '/ambulatori/riepilogo?struttura=1&periodo=settimana')
+    pg.wait_for_selector('.pagina-periodo .frase-live')
+    ok('riepilogo del periodo: la frase e i cinque gruppi che sommano al totale',
+       (lambda c: len(c) == 6 and sum(int(x) for x in c[1:]) == int(c[0]))(pg.locator('.conti-oggi-live li b').all_inner_texts()),
+       pg.locator('.conti-oggi-live li b').all_inner_texts())
+    ok('riepilogo del periodo: «Questa settimana» scelto, sette giorni nella tabella',
+       pg.locator('.periodi-pronti .bottone.attivo').inner_text() == 'Questa settimana' and
+       pg.locator('.giorni-periodo tbody tr').count() == 7, pg.locator('.giorni-periodo tbody tr').count())
+    pg.locator('.periodi-pronti a', has_text='Oggi').click()
+    pg.wait_for_selector('.pagina-periodo .frase-live')
+    ok('riepilogo del periodo: «Oggi» un giorno solo, senza la tabella dei giorni',
+       pg.locator('.giorni-periodo').count() == 0 and 'periodo=oggi' in pg.url, pg.url)
+    pg.locator('a.passo[data-tasto="precedente"]').click()
+    pg.wait_for_selector('.pagina-periodo .frase-live')
+    ok('riepilogo del periodo: la freccia va al giorno prima', ('da=%s' % (OGGI - timedelta(days=1)).isoformat()) in pg.url, pg.url)
+    with pg.expect_download() as scarico:
+        pg.click('[data-guida="periodo-excel"]')
+    ok('riepilogo del periodo: l\'Excel si scarica con il suo nome',
+       scarico.value.suggested_filename == 'riepilogo-ambulatori-%s.xlsx' % (OGGI - timedelta(days=1)).isoformat(),
+       scarico.value.suggested_filename)
+    attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
+    ok('riepilogo del periodo: il gruppo Ambulatori è attivo', attivo.count() and 'Ambulatori' in attivo.inner_text())
+    pg.set_viewport_size({'width': 390, 'height': 844})
+    pg.wait_for_timeout(300)
+    ok('riepilogo del periodo: sul telefono la pagina non scorre di lato (scorrono le tabelle)',
+       pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'), pg.evaluate('document.documentElement.scrollWidth'))
+    pg.set_viewport_size({'width': 1366, 'height': 820})
     ok('nessun errore JavaScript', not err, err[:3])
     br.close()
 

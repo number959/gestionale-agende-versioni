@@ -21,6 +21,12 @@ NOVITA = [
                    'sull\'ora di adesso, e dice perché è libera e fino a quando. Le mezze giornate libere sono in una '
                    'tabellina per giorno e per stanza. Le notifiche non coprono più la pagina.',
              guida='riepilogo-live'),
+        dict(titolo='Il riepilogo del periodo',
+             testo='Ambulatori → Riepilogo del periodo: com\'è andato un giorno, una settimana o un mese. Le ore di '
+                   'turno delle stanze e quanto sono state occupate, le visite fatte, i non presentati, i disdetti e '
+                   'quelli ancora da segnare, le mezze giornate senza nessun medico, per stanza, per medico e giorno per '
+                   'giorno. Si scarica in Excel e si stampa.',
+             guida='riepilogo-periodo'),
     ]),
     ('1.12.1', [
         dict(titolo='Le ore vere nelle notti del cambio dell\'ora',

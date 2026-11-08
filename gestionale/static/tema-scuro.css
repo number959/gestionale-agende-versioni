@@ -195,6 +195,19 @@
   html.scuro .mezza { border: 1px solid #38464D; background: #222B35; color: #FFFFFF; }
   html.scuro .mezza.libera { background: #29702D; border-color: #64C669; }
   html.scuro .mezza.passata, html.scuro .mezza.chiusa { background: #1C242D; }
+  html.scuro .scelta-periodo .bottone.attivo { background: #133C74; border-color: #377EDE; color: #FFFFFF; }
+  html.scuro .scelta-periodo label { color: #A9B7C4; }
+  html.scuro .avanzamento-live .non-presentati, html.scuro .conti-oggi-live .non-presentati i { background: #A1221B; }
+  html.scuro .avanzamento-live .disdetti, html.scuro .conti-oggi-live .disdetti i { background: #3A4246; }
+  html.scuro .conti-oggi-live .non-presentati.acceso b { color: #E49793; }
+  html.scuro .tabella-periodo td.medici-periodo { color: #A9B7C4; }
+  html.scuro .tabella-periodo td.acceso { color: #E5BB96; }
+  html.scuro .tabella-periodo td.acceso-rosso { color: #E49793; }
+  html.scuro .tabella-periodo tfoot th { border-top: 2px solid #377EDE; background: #252B35; color: #E1E7ED; }
+  html.scuro .tabella-periodo tr.chiuso td { color: #B1BABE; background: #141A21; }
+  html.scuro .occupazione { background: #10151B; }
+  html.scuro .occupazione span { background: #133C74; }
+  html.scuro .fuori-turno { color: #E5BB96; }
   html.scuro table.mese td.fuori { background: #222B35; }
   html.scuro table.mese td.festivo { background: #312A22; }
   html.scuro table.mese td.chiuso-di-solito:not(.festivo) { background: #141A21; }

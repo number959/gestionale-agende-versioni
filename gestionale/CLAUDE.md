@@ -192,6 +192,13 @@ temporanea.
   percento) le calcola `live.py`, non la pagina. Nei rettangoli delle visite solo orario e stato,
   mai nomi. La classe `adesso` è già di un'altra pagina: nel riepilogo si usano `quando-adesso`,
   `adesso-live` e `ora-di-adesso`.
+- Riepilogo del periodo (dalla 1.12.2): `ambulatori.riepilogo_periodo`, `/ambulatori/riepilogo` (`.xlsx`,
+  `.json`). Ore di turno = turni effettivi della stanza uniti (`unisci_intervalli`); ore occupate = la
+  parte dei turni coperta dagli appuntamenti in `STATI_OCCUPANO` (il non presentato tiene il posto, il
+  disdetto no), il resto è «fuori turno». I cinque gruppi (`gruppo_periodo`) sommano al totale per stanza,
+  per giorno e per medico; totali = somma delle stanze = somma dei giorni: `prove_112.py` lo confronta con
+  insiemi di minuti contati a parte. Al massimo `MASSIMO_GIORNI_RIEPILOGO` giorni. Gli articoli davanti ai
+  numeri passano da `_dal`, `_al` e `il_percento` (l'8, l'11, l'80%).
 - Stampe (dalla 1.12): il foglio del giorno è una `table.impaginazione` con testata in `thead` e
   piede in `tfoot` (il browser li ripete su ogni pagina); il numero di pagina viene dai margin box di
   `@page` in `stile.css`. Le colonne di partenza del foglio sono `viste.COLONNE_DI_PARTENZA`: una

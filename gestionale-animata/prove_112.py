@@ -1382,6 +1382,134 @@ def l_chiaro():
 
 prova('riepilogo live: numeri di oggi, stanze adesso (libera fino alle, in corso, senza medico), ore, mezze giornate libere', l_riepilogo)
 prova('riepilogo live (1.12.2): quattro gruppi che sommano, frasi, linea del tempo, ore, mezze giornate per giorno', l_chiaro)
+
+
+def p_periodo():
+    """1.12.2: il riepilogo del periodo contro un calcolo fatto a parte, minuto per minuto con gli insiemi."""
+    import ambulatori as AM
+    import servizi
+    from modelli import Appuntamento, Paziente, Risorsa
+    S, I, C, live = _mondo_live()
+    s = S()
+    st = s.get(Struttura, 1)
+    p = s.scalars(select(Paziente)).first()
+    # in piu': un non presentato e una visita fuori turno (Ambulatorio 2 il lunedi non ha turni), una a cavallo
+    # della fine del turno, una della settimana dopo e una di mercoledi con due ore
+    def app(rid, oid, giorno, h, m, durata, stato='PRENOTATO'):
+        inizio = datetime.combine(giorno, time(h, m))
+        s.add(Appuntamento(risorsa_id=rid, operatore_id=oid, paziente_id=p.id, inizio=inizio,
+                           fine=inizio + timedelta(minutes=durata), stato=stato))
+    app(I['Ambulatorio 1'], I['Lippiello'], LUN, 18, 0, 30, 'NON_PRESENTATO')
+    app(I['Ambulatorio 1'], I['Lippiello'], LUN, 19, 45, 30, 'ARRIVATO')           # 15 minuti dopo la fine del turno
+    app(I['Ambulatorio 2'], I['Fintini'], LUN, 11, 0, 60, 'ARRIVATO')              # fuori turno
+    app(I['Ambulatorio 1'], I['Lippiello'], LUN + timedelta(days=2), 9, 0, 120, 'CONFERMATO')
+    app(I['Ambulatorio 1'], I['Lippiello'], LUN + timedelta(days=7), 15, 0, 30)
+    s.commit()
+    adesso = datetime.combine(LUN, time(23, 0))
+    stanze = AM.stanze_della(st)
+
+    def oracolo(da, a):
+        """Ore di turno e occupate di ogni stanza, contate con gli insiemi di minuti; gruppi con regole scritte qui."""
+        regole = servizi.Regole(s, da, a)
+        per = {r.nome: {'turno': 0, 'occupati': 0, 'fuori': 0, 'totale': 0, 'fatti': 0, 'non_presentati': 0,
+                        'disdetti': 0, 'da_segnare': 0, 'da_fare': 0} for r in stanze}
+        g = da
+        while g <= a:
+            info = regole.giorno(g, st)
+            for r in stanze:
+                turno = set()
+                for t in regole.turni_effettivi(g, st, r.id, info):
+                    turno |= set(range(t.ora_inizio.hour * 60 + t.ora_inizio.minute, t.ora_fine.hour * 60 + t.ora_fine.minute))
+                presi = set()
+                for x in s.scalars(select(Appuntamento).where(Appuntamento.risorsa_id == r.id)):
+                    if x.inizio.date() != g:
+                        continue
+                    if x.stato != 'DISDETTO':
+                        fine = 24 * 60 if x.fine.date() > g else x.fine.hour * 60 + x.fine.minute
+                        presi |= set(range(x.inizio.hour * 60 + x.inizio.minute, fine))
+                    gruppo = {'ARRIVATO': 'fatti', 'NON_PRESENTATO': 'non_presentati', 'DISDETTO': 'disdetti'}.get(
+                        x.stato, 'da_segnare' if x.fine <= adesso else 'da_fare')
+                    per[r.nome]['totale'] += 1
+                    per[r.nome][gruppo] += 1
+                per[r.nome]['turno'] += len(turno)
+                per[r.nome]['occupati'] += len(turno & presi)
+                per[r.nome]['fuori'] += len(presi - turno)
+            g += timedelta(days=1)
+        return per
+
+    for da, a in ((LUN, LUN), (LUN, LUN + timedelta(days=6)), (LUN - timedelta(days=7), LUN + timedelta(days=13))):
+        r = AM.riepilogo_periodo(s, st, da, a, adesso=adesso)
+        atteso = oracolo(da, a)
+        for x in r['stanze']:
+            o = atteso[x['stanza']]
+            assert (x['minuti_turno'], x['minuti_occupati'], x['minuti_fuori_turno']) == (o['turno'], o['occupati'], o['fuori']), \
+                (da, a, x['stanza'], x, o)
+            for k in ('totale', 'fatti', 'non_presentati', 'disdetti', 'da_segnare', 'da_fare'):
+                assert x[k] == o[k], (da, a, x['stanza'], k, x[k], o[k])
+            assert sum(x[k] for k, _ in AM.GRUPPI_PERIODO) == x['totale']
+        t = r['totale']
+        for k in ('totale', 'minuti_turno', 'minuti_occupati', 'minuti_fuori_turno', 'fatti', 'non_presentati', 'disdetti',
+                  'da_segnare', 'da_fare', 'mezze', 'libere'):
+            assert t[k] == sum(x[k] for x in r['stanze']), (k, t[k])
+        for k in ('totale', 'minuti_turno', 'minuti_occupati', 'fatti', 'non_presentati', 'disdetti', 'da_segnare', 'da_fare'):
+            assert t[k] == sum(x[k] for x in r['giorni']), ('giorni', k)
+        assert t['totale'] == sum(m['totale'] for m in r['medici']), 'appuntamenti dei medici'
+        assert len(r['giorni']) == (a - da).days + 1 and r['giorni_periodo'] == len(r['giorni'])
+    # il lunedi 7/12 a mano: Ambulatorio 1 turno 15-20 (5 ore); occupati 15:00-15:30, 16:00-16:30, 18:00-18:30
+    # (il non presentato teneva il posto), 19:45-20:00 dentro e 20:00-20:15 fuori; la disdetta delle 17 no
+    r = AM.riepilogo_periodo(s, st, LUN, LUN, adesso=adesso)
+    a1 = {x['stanza']: x for x in r['stanze']}['Ambulatorio 1']
+    assert (a1['minuti_turno'], a1['minuti_occupati'], a1['minuti_fuori_turno']) == (300, 105, 15), a1
+    assert (a1['fatti'], a1['non_presentati'], a1['disdetti'], a1['da_segnare'], a1['totale']) == (2, 1, 1, 1, 5), a1
+    assert a1['occupazione'] == 35.0 and a1['ore_turno'] == '5 h' and a1['ore_occupate'] == '1 h 45', a1
+    a2 = {x['stanza']: x for x in r['stanze']}['Ambulatorio 2']
+    # Ambulatorio 2 non ha turni il lunedi: fuori turno Provolo delle 10 (30 minuti) e la visita delle 11 (60)
+    assert a2['minuti_turno'] == 0 and a2['minuti_fuori_turno'] == 90 and a2['occupazione'] is None, a2
+    assert r['titolo'] == 'lunedì 7 dicembre 2026' and r['frase'].startswith('Lunedì 7 dicembre 2026: 7 appuntamenti'), r['frase']
+    lip = next(m for m in r['medici'] if m['medico'] == 'Lippiello Anna')
+    assert lip['n_giorni'] == 1 and lip['non_presentati_su'] == round(100 / 3, 1), lip
+    # i testi
+    assert AM.titolo_periodo(LUN, LUN + timedelta(days=6)) == 'dal 7 al 13 dicembre 2026'
+    assert AM.titolo_periodo(date(2026, 10, 26), date(2026, 11, 1)) == 'dal 26 ottobre all\'1 novembre 2026'
+    assert AM.titolo_periodo(date(2026, 12, 28), date(2027, 1, 3)) == 'dal 28 dicembre 2026 al 3 gennaio 2027'
+    assert (AM.il_percento(11.6), AM.il_percento(54), AM.il_percento(8), AM.il_percento(80.5), AM.il_percento(18)) == \
+        ("l'11,6%", 'il 54%', "l'8%", "l'80,5%", 'il 18%')
+    assert (AM.ore_in_parole(450), AM.ore_in_parole(60), AM.ore_in_parole(61), AM.ore_in_parole(0)) == \
+        ('7 ore e 30 minuti', '1 ora', '1 ora e 1 minuto', '0 ore')
+    assert AM.periodo_da('settimana-scorsa', LUN + timedelta(days=2)) == (LUN - timedelta(days=7), LUN - timedelta(days=1))
+    assert AM.periodo_da('mese-scorso', date(2026, 1, 15)) == (date(2025, 12, 1), date(2025, 12, 31))
+    assert AM.periodo_da('mese', date(2026, 2, 10)) == (date(2026, 2, 1), date(2026, 2, 28)) and AM.periodo_da('boh', LUN) is None
+    s.close()
+    # le pagine: i periodi pronti, l'intervallo al contrario, quello troppo lungo, l'Excel e il JSON
+    for q in ('', '&periodo=oggi', '&periodo=ieri', '&periodo=settimana', '&periodo=settimana-scorsa', '&periodo=mese',
+              '&periodo=mese-scorso', '&da=%s&a=%s' % (LUN + timedelta(days=6), LUN), '&da=2026-01-01&a=2026-12-31',
+              '&da=non-una-data'):
+        rr = C.get('/ambulatori/riepilogo?struttura=1' + q)
+        assert rr.status_code == 200 and 'class="frase-live' in testo(rr) and 'Le stanze' in testo(rr), (q, rr.status_code)
+    t = testo(C.get('/ambulatori/riepilogo?struttura=1&da=%s&a=%s' % (LUN + timedelta(days=6), LUN)))
+    assert 'dal 7 al 13 dicembre 2026' in t and 'Giorno per giorno' in t, 'intervallo girato'
+    d = json.loads(C.get('/ambulatori/riepilogo.json?struttura=1&da=2026-01-01&a=2026-12-31').data)
+    assert d['giorni_periodo'] == AM.MASSIMO_GIORNI_RIEPILOGO and d['da'] == '2026-01-01', (d['da'], d['a'])
+    grezzo = C.get('/ambulatori/riepilogo.json?struttura=1&da=%s&a=%s' % (LUN, LUN + timedelta(days=6))).data.decode('utf-8')
+    for vietato in ('Testabianca', 'Rita', 'Provolo', 'Gino', '3339990001', 'example.com'):
+        assert vietato not in grezzo, vietato
+    rr = C.get('/ambulatori/riepilogo.xlsx?struttura=1&da=%s&a=%s' % (LUN, LUN + timedelta(days=6)))
+    assert rr.status_code == 200 and 'riepilogo-ambulatori-%s-%s.xlsx' % (LUN, LUN + timedelta(days=6)) in rr.headers['Content-Disposition']
+    import openpyxl
+    from io import BytesIO
+    wb = openpyxl.load_workbook(BytesIO(rr.data))
+    assert wb.sheetnames == ['Riepilogo', 'Stanze', 'Medici', 'Giorni'], wb.sheetnames
+    ws = wb['Stanze']
+    righe = [r_ for r_ in ws.iter_rows(values_only=True) if r_[0] in {x.nome for x in S().scalars(select(Risorsa))} | {'Totale'}]
+    assert righe[-1][0] == 'Totale' and righe[-1][5] == sum(x[5] for x in righe[:-1]), righe[-1]
+    wb1 = openpyxl.load_workbook(BytesIO(C.get('/ambulatori/riepilogo.xlsx?struttura=1&periodo=oggi').data))
+    assert wb1.sheetnames == ['Riepilogo', 'Stanze', 'Medici'], wb1.sheetnames
+    # il menu: quattro voci nel gruppo Ambulatori, l'ultima attiva su questa pagina
+    t = testo(C.get('/ambulatori/riepilogo?struttura=1'))
+    assert 'Riepilogo del periodo</b>' in t and 'class="gruppo attivo" data-guida="menu-ambulatori"' in t
+
+
+prova('riepilogo del periodo (1.12.2): stanze, medici e giorni contro gli insiemi di minuti, testi, pagine, Excel, JSON', p_periodo)
 prova('riepilogo live: pagina, modo schermo, JSON senza dati dei pazienti, struttura mancante', l_pagina_e_json)
 
 

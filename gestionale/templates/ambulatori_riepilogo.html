@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block corpo %}
+{% set t = r.totale %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">Riepilogo del periodo <small class="sotto-titolo">{{ r.titolo }}</small></h1>
+  <span class="conteggio">{{ t.totale }} appuntament{{ 'o' if t.totale == 1 else 'i' }} in {{ r.stanze|length }} stanz{{ 'a' if r.stanze|length == 1 else 'e' }}</span>
+  <div class="comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('ambulatori.riepilogo', struttura=sid, **prima) }}" title="Periodo precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('ambulatori.riepilogo', struttura=sid, **dopo) }}" title="Periodo successivo">&rsaquo;</a>
+    <span class="separa"></span>
+    {% if strutture|length > 1 %}
+    <form method="get" style="display:inline">
+      <select name="struttura" onchange="this.form.submit()">
+        {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+      </select><input type="hidden" name="da" value="{{ r.da }}"><input type="hidden" name="a" value="{{ r.a }}">
+    </form>
+    <span class="separa"></span>
+    {% endif %}
+    <a class="bottone primario" href="{{ url_for('ambulatori.riepilogo_excel', struttura=sid, da=r.da, a=r.a) }}" data-guida="periodo-excel">Scarica in Excel</a>
+    <button class="bottone" type="button" onclick="window.print()">Stampa</button>
+    <a class="bottone" href="{{ url_for('live.pagina', struttura=sid) }}">Riepilogo live</a>
+  </div>
+</div>
+
+<div class="contenuto pagina-periodo">
+  <form method="get" class="scelta-periodo solo-schermo" data-guida="periodo-scelta">
+    <input type="hidden" name="struttura" value="{{ sid }}">
+    <span class="periodi-pronti">{% for chiave, nome in periodi %}<a class="bottone{% if chiave == periodo %} attivo{% endif %}" href="{{ url_for('ambulatori.riepilogo', struttura=sid, periodo=chiave) }}">{{ nome }}</a>{% endfor %}</span>
+    <label>dal <input type="date" name="da" value="{{ r.da }}" required></label>
+    <label>al <input type="date" name="a" value="{{ r.a }}" required></label>
+    <button class="bottone" type="submit">Mostra</button>
+    <small class="nota-riga">al massimo {{ massimo }} giorni</small>
+  </form>
+
+  <section class="riassunto-live" data-guida="periodo-numeri">
+    <p class="frase-live">{{ r.frase }}</p>
+    {% if t.totale %}
+    <div class="avanzamento-live periodo" role="img" aria-label="{% for chiave, nome in gruppi %}{{ t[chiave] }} {{ nome }}{% if not loop.last %}, {% endif %}{% endfor %}, su {{ t.totale }}">
+      {% for chiave, nome in gruppi %}{% if t[chiave] %}<span class="{{ chiave|replace('_', '-') }}" style="width: {{ (100 * t[chiave] / t.totale)|round(2) }}%" title="{{ t[chiave] }} {{ nome }}"></span>{% endif %}{% endfor %}
+    </div>
+    {% endif %}
+    <ul class="conti-oggi-live periodo">
+      <li class="totale"><b>{{ t.totale }}</b> appuntament{{ 'o' if t.totale == 1 else 'i' }}</li>
+      {% for chiave, nome in gruppi %}<li class="{{ chiave|replace('_', '-') }}{% if chiave in ('non_presentati', 'da_segnare') and t[chiave] %} acceso{% endif %}"><i aria-hidden="true"></i><b>{{ t[chiave] }}</b> {{ singolari[chiave] if t[chiave] == 1 else nome }}{% if chiave == 'non_presentati' and t.non_presentati_su is not none %} <small>{{ ('%g' % t.non_presentati_su)|replace('.', ',') }}% di chi doveva venire</small>{% endif %}</li>{% endfor %}
+    </ul>
+    <ul class="fatti-live">
+      <li><b>{{ t.ore_turno }}</b> di turno nelle stanze</li>
+      <li><b>{{ t.ore_occupate }}</b> occupate{% if t.occupazione is not none %} (<b>{{ ('%g' % t.occupazione)|replace('.', ',') }}%</b>){% endif %}</li>
+      {% if t.minuti_fuori_turno %}<li class="attenzione"><b>{{ t.ore_fuori_turno }}</b> prenotate fuori dai turni</li>{% endif %}
+      {% if t.mezze %}<li><b>{{ t.libere }}</b> mezze giornate su {{ t.mezze }} senza nessun medico</li>{% endif %}
+    </ul>
+  </section>
+
+  <h2 class="sezione">Le stanze <small class="sotto-titolo">ore di turno, quanto sono state occupate e com'è andata</small></h2>
+  <div class="scorri-live">
+  <table class="elenco tabella-periodo" data-guida="periodo-stanze">
+    <thead><tr><th>Stanza</th><th>Medici</th><th class="n">Ore di turno</th><th class="n">Occupate</th><th>Occupazione</th><th class="n">Appunt.</th><th class="n">Fatti</th><th class="n">Non pres.</th><th class="n">Disdetti</th><th class="n">Da segnare</th><th class="n">Da fare</th><th class="n">Mezze giornate senza medico</th></tr></thead>
+    <tbody>
+    {% for x in r.stanze %}
+    <tr>
+      <td><b>{{ x.stanza }}</b></td>
+      <td class="medici-periodo">{{ x.medici|join(', ') if x.medici else '—' }}</td>
+      <td class="n">{{ x.ore_turno }}</td><td class="n">{{ x.ore_occupate }}</td>
+      <td>{% if x.occupazione is not none %}<span class="occupazione"><span style="width: {{ [x.occupazione, 100]|min }}%"></span></span> {{ ('%g' % x.occupazione)|replace('.', ',') }}%{% else %}—{% endif %}{% if x.minuti_fuori_turno %}<small class="fuori-turno" title="Appuntamenti fuori dai turni della stanza">+{{ x.ore_fuori_turno }} fuori turno</small>{% endif %}</td>
+      <td class="n">{{ x.totale }}</td><td class="n">{{ x.fatti }}</td><td class="n{% if x.non_presentati %} acceso-rosso{% endif %}">{{ x.non_presentati }}</td><td class="n">{{ x.disdetti }}</td><td class="n{% if x.da_segnare %} acceso{% endif %}">{{ x.da_segnare }}</td><td class="n">{{ x.da_fare }}</td>
+      <td class="n">{{ x.libere }} su {{ x.mezze }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><th>Totale</th><th></th><th class="n">{{ t.ore_turno }}</th><th class="n">{{ t.ore_occupate }}</th><th>{% if t.occupazione is not none %}{{ ('%g' % t.occupazione)|replace('.', ',') }}%{% endif %}</th><th class="n">{{ t.totale }}</th><th class="n">{{ t.fatti }}</th><th class="n">{{ t.non_presentati }}</th><th class="n">{{ t.disdetti }}</th><th class="n">{{ t.da_segnare }}</th><th class="n">{{ t.da_fare }}</th><th class="n">{{ t.libere }} su {{ t.mezze }}</th></tr></tfoot>
+  </table>
+  </div>
+
+  <h2 class="sezione">I medici <small class="sotto-titolo">dai turni nelle stanze e dai loro appuntamenti</small></h2>
+  {% if r.medici %}
+  <div class="scorri-live">
+  <table class="elenco tabella-periodo" data-guida="periodo-medici">
+    <thead><tr><th>Medico</th><th>Stanze</th><th class="n">Giorni di turno</th><th class="n">Ore di turno</th><th>Occupazione</th><th class="n">Appunt.</th><th class="n">Fatti</th><th class="n">Non presentati</th><th class="n">Disdetti</th><th class="n">Da segnare</th><th class="n">Da fare</th></tr></thead>
+    <tbody>
+    {% for x in r.medici %}
+    <tr>
+      <td><b>{{ x.medico }}</b></td><td class="medici-periodo">{{ x.stanze|join(', ') if x.stanze else 'nessun turno nel periodo' }}</td>
+      <td class="n">{{ x.n_giorni }}</td><td class="n">{{ x.ore_turno }}</td>
+      <td>{% if x.occupazione is not none %}<span class="occupazione"><span style="width: {{ [x.occupazione, 100]|min }}%"></span></span> {{ ('%g' % x.occupazione)|replace('.', ',') }}%{% else %}—{% endif %}</td>
+      <td class="n">{{ x.totale }}</td><td class="n">{{ x.fatti }}</td><td class="n{% if x.non_presentati %} acceso-rosso{% endif %}">{{ x.non_presentati }}{% if x.non_presentati_su %} <small>({{ ('%g' % x.non_presentati_su)|replace('.', ',') }}%)</small>{% endif %}</td><td class="n">{{ x.disdetti }}</td><td class="n{% if x.da_segnare %} acceso{% endif %}">{{ x.da_segnare }}</td><td class="n">{{ x.da_fare }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}<p class="vuoto">Nessun medico con turni o appuntamenti nel periodo.</p>{% endif %}
+
+  {% if r.giorni_periodo > 1 %}
+  <h2 class="sezione">Giorno per giorno</h2>
+  <div class="scorri-live">
+  <table class="elenco tabella-periodo giorni-periodo" data-guida="periodo-giorni">
+    <thead><tr><th>Giorno</th><th class="n">Ore di turno</th><th>Occupazione</th><th class="n">Appunt.</th><th class="n">Fatti</th><th class="n">Non pres.</th><th class="n">Disdetti</th><th class="n">Da segnare</th><th class="n">Da fare</th></tr></thead>
+    <tbody>
+    {% for x in r.giorni %}
+    <tr class="{% if x.chiusa or not x.aperto %}chiuso{% endif %}">
+      <td><a href="{{ url_for('giorno', iso=x.data, struttura=sid) }}" title="Apri la giornata">{{ x.etichetta }}</a>{% if x.chiusa %} <small class="nota-riga">chiusa: {{ x.chiusa }}</small>{% elif not x.aperto %} <small class="nota-riga">giorno di chiusura</small>{% endif %}</td>
+      <td class="n">{{ x.ore_turno }}</td>
+      <td>{% if x.occupazione is not none %}<span class="occupazione"><span style="width: {{ [x.occupazione, 100]|min }}%"></span></span> {{ ('%g' % x.occupazione)|replace('.', ',') }}%{% else %}—{% endif %}</td>
+      <td class="n">{{ x.totale }}</td><td class="n">{{ x.fatti }}</td><td class="n{% if x.non_presentati %} acceso-rosso{% endif %}">{{ x.non_presentati }}</td><td class="n">{{ x.disdetti }}</td><td class="n{% if x.da_segnare %} acceso{% endif %}">{{ x.da_segnare }}</td><td class="n">{{ x.da_fare }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+  <p class="nota">Ore di turno: i turni dei medici nelle stanze, tolte assenze e chiusure. Occupate: le ore dentro i turni con un appuntamento (anche dei non presentati, che tenevano il posto; i disdetti no). Da segnare: orario passato senza «arrivato», «non presentato» o «disdetto»: si sistemano dalla giornata. Calcolato il {{ r.aggiornato }}.</p>
+</div>
+{% endblock %}

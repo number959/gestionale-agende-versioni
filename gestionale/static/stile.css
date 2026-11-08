@@ -668,6 +668,26 @@ body.pagina-live .notifiche { display: none; }
 .mezza.passata, .mezza.chiusa { background: #FFFFFF; border-style: dashed; }
 .nota .mezza { width: 18px; height: 16px; line-height: 14px; font-size: 10px; margin-left: 8px; }
 .nota .mezza:first-child { margin-left: 0; }
+/* il riepilogo del periodo (1.12.2): gli stessi pezzi, piu' cinque gruppi e le tabelle */
+.scelta-periodo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 4px 0 10px; }
+.scelta-periodo .periodi-pronti { display: flex; flex-wrap: wrap; gap: 6px; margin-right: 6px; }
+.scelta-periodo .bottone.attivo { background: #154381; border-color: #154381; color: #FFFFFF; }
+.scelta-periodo label { font-size: 13px; color: #46596A; }
+.avanzamento-live .non-presentati, .conti-oggi-live .non-presentati i { background: #B3261E; }
+.avanzamento-live .disdetti, .conti-oggi-live .disdetti i { background: #9AA5AB; }
+.conti-oggi-live .non-presentati.acceso b { color: #B3261E; }
+.conti-oggi-live.periodo small { padding-left: 19px; }
+.tabella-periodo { min-width: 900px; }
+.tabella-periodo th.n, .tabella-periodo td.n { text-align: right; white-space: nowrap; }
+.tabella-periodo td { vertical-align: middle; }
+.tabella-periodo td.medici-periodo { font-size: 12.5px; color: #46596A; max-width: 260px; }
+.tabella-periodo td.acceso { color: #B35F16; font-weight: 700; } .tabella-periodo td.acceso-rosso { color: #B3261E; font-weight: 700; }
+.tabella-periodo tfoot th { border-top: 2px solid #154381; background: #E8EEF7; color: #16263F; font-weight: 700; }
+.tabella-periodo tr.chiuso td { color: #9AA5AB; background: #F4F5F3; }
+.occupazione { display: inline-block; width: 70px; height: 9px; background: #E4E8EA; border-radius: 999px; overflow: hidden; vertical-align: middle; margin-right: 6px; }
+.occupazione span { display: block; height: 100%; background: #154381; border-radius: 999px; }
+.fuori-turno { display: block; font-size: 11px; color: #B35F16; }
+@media print { .occupazione, .occupazione span, .tabella-periodo tfoot th { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .tabella-periodo { min-width: 0; } }
 /* modo schermo: caratteri grandi, niente menu */
 body.schermo .barra h1 { font-size: 30px; }
 body.schermo .frase-live { font-size: 22px; }

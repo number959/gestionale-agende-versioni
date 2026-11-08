@@ -8,4 +8,6 @@ Gestionale Agende 1.12.2
 - le mezze giornate libere dei prossimi sette giorni stanno in una tabellina per giorno e per stanza;
 - su questa pagina le notifiche non coprono più le stanze.
 
+**Il riepilogo del periodo.** Nuovo in *Ambulatori → Riepilogo del periodo*: non in diretta, ma com'è andato un giorno, una settimana o un mese (o due date a scelta, fino a tre mesi). Le ore di turno delle stanze e quanto sono state occupate, le visite fatte, i non presentati, i disdetti e quelli ancora da segnare, le mezze giornate senza nessun medico; per stanza, per medico e giorno per giorno. Si scarica in Excel (un foglio per riepilogo, stanze, medici e giorni) e si stampa.
+
 Il database non cambia rispetto alla 1.12.1. Appuntamenti, pazienti e impostazioni restano dove sono.

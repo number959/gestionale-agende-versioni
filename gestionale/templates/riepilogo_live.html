@@ -20,6 +20,7 @@
     <a class="bottone" href="{{ url_for('live.pagina', struttura=sid, schermo=1) }}" data-guida="live-schermo">Modo schermo</a>
     <a class="bottone" href="{{ url_for('ambulatori.settimana', iso=r.data, struttura=sid) }}">Pianificazione</a>
     <a class="bottone" href="{{ url_for('cruscotto.oggi', struttura=sid) }}">Oggi</a>
+    <a class="bottone" href="{{ url_for('ambulatori.riepilogo', struttura=sid) }}">Riepilogo del periodo</a>
     {% endif %}
   </div>
 </div>

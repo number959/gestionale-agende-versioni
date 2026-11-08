@@ -96,7 +96,7 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 ## Stato alla consegna
 
 - **Versione 1.12.2** (8 novembre 2026, sera): il riepilogo live rifatto perché si legga a colpo
-  d'occhio (vedi *La 1.12.2*). Il database non cambia.
+  d'occhio e il nuovo riepilogo del periodo, non in diretta (vedi *La 1.12.2*). Il database non cambia.
 - **Versione 1.12.1, pubblicata l'8 novembre 2026**: la release `v1.12.1`, segnata come ultima, con
   i due Setup, i due file delle versioni e, per la prima volta, il PDF della guida (53 pagine),
   costruiti dall'automazione di GitHub. Porta le ore vere nelle notti del cambio dell'ora, i codici
@@ -846,6 +846,15 @@ pagina. Le stesse scelte nel riepilogo del prototipo del cruscotto. Decisione: l
 le calcola `live.py` (sono anche nel JSON per il futuro cruscotto), la pagina non ha JavaScript per
 disegnare; nei rettangoli delle visite solo orario e stato, mai nomi, perché la pagina può stare su
 uno schermo che vedono anche i pazienti.
+
+Subito dopo Giovanni ha chiesto anche un riepilogo «non live ma riassuntivo»: è *Ambulatori → Riepilogo
+del periodo* (vedi il `LEGGIMI.md`), per un giorno, una settimana, un mese o due date: ore di turno
+delle stanze e quanto sono state occupate, visite fatte, non presentati, disdetti, da segnare, mezze
+giornate senza nessun medico, per stanza, per medico e giorno per giorno, in Excel e da stampare.
+Decisione: le ore occupate contano anche i non presentati (il posto era preso) e non i disdetti; le
+visite fuori dai turni si dicono a parte invece di gonfiare l'occupazione. Non sostituisce
+*Statistiche* (prestazioni, provenienza, incassi) né il *Riepilogo del mese per medico* (la cassa):
+guarda le stanze e i turni.
 
 Per vedere la pagina come in un giorno di lavoro di domenica o la sera, un gestionale di prova con
 l'ora del riepilogo ferma: `strumenti/demo.py` lanciato con `live.datetime` sostituito da una classe
