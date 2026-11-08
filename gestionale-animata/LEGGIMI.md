@@ -671,8 +671,18 @@ ultime tre ore e chi era arrivato stamattina senza essere segnato non stava da n
   in cui tutto è chiuso) e una colonna per stanza; M e P in verde sono mattina e pomeriggio senza
   nessun medico, dalla matrice degli ambulatori (`libere_tabella`; restano anche la lista `libere` e
   `libere_giorni` nel JSON).
-- Su questa pagina le notifiche a comparsa non si vedono (`body.pagina-live .notifiche`): coprivano
-  le stanze; restano nelle altre pagine.
+- Su questa pagina le notifiche a comparsa non si chiedono nemmeno (`gestionale.js`): coprivano le
+  stanze, e nascoste sarebbero risultate già viste nelle altre pagine; restano nelle altre pagine.
+- Dopo una revisione indipendente (quattro revisori e due verificatori per segnalazione, 19 cose vere
+  trovate e corrette prima di pubblicare): i conti sono solo delle stanze della pagina (gli interventi
+  in sala operatoria si vedono in *Oggi* e in *Sala*), in un festivo con un turno di un giorno la sua
+  stanza è aperta e la frase lo dice («chiusa, ma ci sono turni o appuntamenti»), una chiusura senza
+  motivo dice solo «chiusa», con turni più tardi non dice «nessun turno», due turni attaccati sono uno
+  solo per «libera fino a…», le visite fuori orario entrano nelle ore, dopo la mezzanotte la pagina si
+  ricarica tutta, l'etichetta dell'ora non copre le tacche, l'ora di adesso resta bordata anche piena,
+  in stampa le stanze non si spezzano e la legenda ha i suoi colori, nel tema scuro «in corso» e «da
+  fare» si distinguono. Le prove ora guardano la pagina e il JSON a un'ora con turni e visite (prima la
+  prova della riservatezza chiedeva il JSON di un giorno vuoto e non poteva fallire).
 
 La pagina si rinnova da sola ogni minuto (ricarica il proprio contenuto con `fetch`, senza
 sfarfallio); con `?schermo=1` («Modo schermo») niente menu e caratteri grandi, per il secondo

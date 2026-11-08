@@ -616,7 +616,9 @@
     el.addEventListener('mouseleave', function () { timer = setTimeout(function () { togli(el); }, 6000); });
   };
   var chiediNotifiche = function () {
-    if (!scatola) { return; }
+    // nel riepilogo live le notifiche non si chiedono nemmeno: non coprono le stanze e, non viste, non si
+    // segnano come viste (ricompaiono nelle altre pagine)
+    if (!scatola || document.body.classList.contains('pagina-live')) { return; }
     fetch(scatola.getAttribute('data-indirizzo'))
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (lista) {

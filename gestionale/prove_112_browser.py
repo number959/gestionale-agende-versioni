@@ -146,8 +146,9 @@ with sync_playwright() as p:
     ok('riepilogo live: fatti, in corso, da segnare e da fare sommano agli appuntamenti di oggi',
        len(conti) == 5 and sum(int(x) for x in conti[1:]) == int(conti[0]) == dati['oggi']['totale'], conti)
     righe = pg.locator('.linea-live .riga-live:not(.asse-live)')
-    ok('riepilogo live: una riga per stanza, ognuna con la sua frase', righe.count() == len(dati['stanze']) and
-       all(x.strip() for x in pg.locator('.linea-live .riga-live .stato-live').all_inner_texts()), righe.count())
+    frasi = [x.strip() for x in pg.locator('.linea-live .riga-live .stato-live').all_inner_texts()]
+    ok('riepilogo live: una riga per stanza, ognuna con la frase del JSON', righe.count() == len(dati['stanze']) and
+       frasi == [x['frase'] for x in dati['stanze']], (frasi, [x['frase'] for x in dati['stanze']]))
     ok('riepilogo live: i turni sulla linea del tempo come nel JSON',
        pg.locator('.pista-live .turno-live').count() == sum(len(x['linea']['turni']) for x in dati['stanze']) and
        pg.locator('.pista-live .visita-live').count() == sum(len(x['linea']['visite']) for x in dati['stanze']))
@@ -155,6 +156,12 @@ with sync_playwright() as p:
     ok('riepilogo live: la linea di adesso in ogni stanza, o in nessuna fuori orario',
        linee == (len(dati['stanze']) if dati['asse']['adesso'] is not None else 0), linee)
     ok('riepilogo live: le notifiche non coprono la pagina', pg.evaluate("getComputedStyle(document.getElementById('notifiche')).display") == 'none')
+    pg.wait_for_timeout(1500)
+    ok('riepilogo live: le notifiche non si chiedono nemmeno (non risultano viste nelle altre pagine)',
+       pg.evaluate("sessionStorage.getItem('notifiche-viste')") in (None, '{}') and pg.locator('#notifiche .notifica').count() == 0,
+       pg.evaluate("sessionStorage.getItem('notifiche-viste')"))
+    misura = pg.evaluate("(() => { const r = document.querySelector('.legenda-live .gr-turno').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })()")
+    ok('riepilogo live: i quadratini della legenda sono tutti piccoli (nessuna classe di altre pagine)', misura[0] <= 16, misura)
     pg.set_viewport_size({'width': 390, 'height': 844})
     pg.wait_for_timeout(300)
     ok('riepilogo live: sul telefono la pagina non scorre di lato',

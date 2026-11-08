@@ -137,15 +137,15 @@
   html.scuro .frase-live { color: #E1E7ED; }
   html.scuro .frase-live.chiusa { color: #EAD5AD; }
   html.scuro .avanzamento-live { background: #10151B; }
-  html.scuro .avanzamento-live .fatto, html.scuro .conti-oggi-live .fatto i { background: #29702D; }
-  html.scuro .avanzamento-live .in-corso, html.scuro .conti-oggi-live .in-corso i { background: #133C74; }
-  html.scuro .avanzamento-live .da-segnare, html.scuro .conti-oggi-live .da-segnare i { background: #C67524; }
-  html.scuro .avanzamento-live .da-fare, html.scuro .conti-oggi-live .da-fare i { background: #1E324F; }
+  html.scuro .avanzamento-live .gr-fatto, html.scuro .conti-oggi-live .gr-fatto i, html.scuro .avanzamento-live .gr-fatti, html.scuro .conti-oggi-live .gr-fatti i { background: #29702D; }
+  html.scuro .avanzamento-live .gr-in-corso, html.scuro .conti-oggi-live .gr-in-corso i { background: #133C74; }
+  html.scuro .avanzamento-live .gr-da-segnare, html.scuro .conti-oggi-live .gr-da-segnare i { background: #C67524; }
+  html.scuro .avanzamento-live .gr-da-fare, html.scuro .conti-oggi-live .gr-da-fare i { background: #1E324F; }
   html.scuro .conti-oggi-live { color: #A9B7C4; }
   html.scuro .conti-oggi-live b { color: #E1E7ED; }
   html.scuro .conti-oggi-live .totale { border-right: 1px solid #2E3843; }
   html.scuro .conti-oggi-live small { color: #9AA8B4; }
-  html.scuro .conti-oggi-live .da-segnare.acceso b { color: #E5BB96; }
+  html.scuro .conti-oggi-live .gr-da-segnare.acceso b { color: #E5BB96; }
   html.scuro .fatti-live { border-top: 1px solid #34414A; color: #A9B7C4; }
   html.scuro .fatti-live b { color: #E1E7ED; }
   html.scuro .fatti-live .attenzione b { color: #E5BB96; }
@@ -156,7 +156,7 @@
   html.scuro .stato-live { color: #9AA8B4; }
   html.scuro .medico-live { color: #E1E7ED; }
   html.scuro .conti-live { color: #9AA8B4; }
-  html.scuro .conti-live .da-segnare { color: #E5BB96; }
+  html.scuro .conti-live .gr-da-segnare { color: #E5BB96; }
   html.scuro .riga-live.stato-occupata .nome-live { border-left-color: #377EDE; }
   html.scuro .riga-live.stato-occupata .stato-live { color: #A8C4E9; }
   html.scuro .riga-live.stato-libera .nome-live { border-left-color: #64C669; }
@@ -167,25 +167,25 @@
   html.scuro .turno-live { background: #262D37; border: 1px solid #38485E; }
   html.scuro .turno-live span { color: #A8C4E9; }
   html.scuro .visita-live { box-shadow: 0 0 0 1px #FFFFFF; }
-  html.scuro .visita-live.fatto { background: #29702D; }
-  html.scuro .visita-live.in-corso { background: #133C74; }
-  html.scuro .visita-live.da-segnare { background: #C67524; }
-  html.scuro .visita-live.da-fare { background: #1C242D; border: 2px solid #465874; }
+  html.scuro .visita-live.gr-fatto { background: #29702D; }
+  html.scuro .visita-live.gr-in-corso { background: #133C74; }
+  html.scuro .visita-live.gr-da-segnare { background: #C67524; }
+  html.scuro .visita-live.gr-da-fare { background: #1C242D; border: 2px solid #465874; }
   html.scuro .adesso-live { background: #B22424; }
   html.scuro .adesso-etichetta { background: #B22424; color: #FFFFFF; }
   html.scuro .legenda-live { border-top: 1px solid #34414A; color: #9AA8B4; }
-  html.scuro .legenda-live .turno { background: #262D37; border: 1px solid #38485E; }
-  html.scuro .legenda-live .fatto { background: #29702D; }
-  html.scuro .legenda-live .in-corso { background: #133C74; }
-  html.scuro .legenda-live .da-segnare { background: #C67524; }
-  html.scuro .legenda-live .da-fare { background: #1C242D; border: 2px solid #465874; }
+  html.scuro .legenda-live .gr-turno { background: #262D37; border: 1px solid #38485E; }
+  html.scuro .legenda-live .gr-fatto { background: #29702D; }
+  html.scuro .legenda-live .gr-in-corso { background: #133C74; }
+  html.scuro .legenda-live .gr-da-segnare { background: #C67524; }
+  html.scuro .legenda-live .gr-da-fare { background: #1C242D; border: 2px solid #465874; }
   html.scuro .legenda-live .ora-di-adesso { background: #B22424; }
   html.scuro .numero-ora { color: #A9B7C4; }
   html.scuro .ora-live .colonna { background: #222B35; }
   html.scuro .barra-ora { background: #1E324F; }
   html.scuro .barra-arrivati { background: #133C74; }
   html.scuro .ora-live small { color: #9AA8B4; }
-  html.scuro .ora-live.quando-adesso .colonna { box-shadow: inset 0 0 0 2px #E58080; }
+  html.scuro .ora-live.quando-adesso .colonna { outline: 2px solid #E58080; }
   html.scuro .ora-live.quando-adesso small { color: #E28D8D; }
   html.scuro .chiave-arrivati { background: #133C74; }
   html.scuro .chiave-totale { background: #1E324F; }
@@ -197,9 +197,9 @@
   html.scuro .mezza.passata, html.scuro .mezza.chiusa { background: #1C242D; }
   html.scuro .scelta-periodo .bottone.attivo { background: #133C74; border-color: #377EDE; color: #FFFFFF; }
   html.scuro .scelta-periodo label { color: #A9B7C4; }
-  html.scuro .avanzamento-live .non-presentati, html.scuro .conti-oggi-live .non-presentati i { background: #A1221B; }
-  html.scuro .avanzamento-live .disdetti, html.scuro .conti-oggi-live .disdetti i { background: #3A4246; }
-  html.scuro .conti-oggi-live .non-presentati.acceso b { color: #E49793; }
+  html.scuro .avanzamento-live .gr-non-presentati, html.scuro .conti-oggi-live .gr-non-presentati i { background: #A1221B; }
+  html.scuro .avanzamento-live .gr-disdetti, html.scuro .conti-oggi-live .gr-disdetti i { background: #3A4246; }
+  html.scuro .conti-oggi-live .gr-non-presentati.acceso b { color: #E49793; }
   html.scuro .tabella-periodo td.medici-periodo { color: #A9B7C4; }
   html.scuro .tabella-periodo td.acceso { color: #E5BB96; }
   html.scuro .tabella-periodo td.acceso-rosso { color: #E49793; }
@@ -624,19 +624,26 @@
   html.scuro .recapiti-scheda li > .icona, html.scuro .con-icona-testo .icona { color: var(--primario-scuro); }
   html.scuro .scheda-dove { box-shadow: -14px 0 34px rgba(0, 0, 0, .55); }
   html.scuro a.sede.scelta { box-shadow: 0 0 0 1px var(--primario-scuro); border-color: var(--primario-scuro); }
-  /* 1.12.2: riepilogo live. I quattro gruppi e la linea del tempo restano distinguibili sul fondo scuro */
-  html.scuro .avanzamento-live .da-fare, html.scuro .conti-oggi-live .da-fare i { background: #6E8FBF; }
-  html.scuro .avanzamento-live .in-corso, html.scuro .conti-oggi-live .in-corso i, html.scuro .visita-live.in-corso,
-  html.scuro .legenda-live .in-corso { background: #5E8FD1; }
-  html.scuro .turno-live, html.scuro .legenda-live .turno { background: #22324A; border-color: #3A5378; }
+  /* 1.12.2: riepilogo live e del periodo. I gruppi e la linea del tempo restano distinguibili sul fondo scuro
+     (in corso blu pieno, da fare quasi bianco); le eccezioni della pagina chiara valgono anche qui */
+  html.scuro .avanzamento-live .gr-in-corso, html.scuro .conti-oggi-live .gr-in-corso i, html.scuro .visita-live.gr-in-corso,
+  html.scuro .legenda-live .gr-in-corso { background: #4F86D6; }
+  html.scuro .avanzamento-live .gr-da-fare, html.scuro .conti-oggi-live .gr-da-fare i { background: #D6E2F3; }
+  html.scuro .turno-live, html.scuro .legenda-live .gr-turno { background: #22324A; border-color: #3A5378; }
   html.scuro .visita-live { box-shadow: 0 0 0 1px #1C242D; }
-  html.scuro .visita-live.da-fare, html.scuro .legenda-live .da-fare { background: #1C242D; border-color: #8DB3E6; }
+  html.scuro .visita-live.gr-da-fare, html.scuro .legenda-live .gr-da-fare { background: #1C242D; border-color: #D6E2F3; }
   html.scuro .adesso-live, html.scuro .legenda-live .ora-di-adesso { background: #F28B82; }
   html.scuro .adesso-etichetta { background: #F28B82; color: #1C242D; }
+  html.scuro .ora-live.quando-adesso .colonna { outline-color: #F28B82; box-shadow: none; }
   html.scuro .barra-ora, html.scuro .chiave-totale { background: #3A5378; }
   html.scuro .barra-arrivati, html.scuro .chiave-arrivati { background: #A9C8F5; }
+  html.scuro .riga-live.asse-live { border-top: 0; }
+  html.scuro .asse-live .pista-live { background: transparent; }
   html.scuro .mezza.libera { background: #2F6B34; color: #E8F5E9; border-color: #64C669; }
-  html.scuro .mezza.occupata { background: #222B35; border-color: #2E3843; }
-  html.scuro .mezza.passata, html.scuro .mezza.chiusa { background: #141A21; border-color: #222B35; }
+  html.scuro .mezza.occupata { background: #3A4654; border: 1px solid #56636F; }
+  html.scuro .mezza.passata, html.scuro .mezza.chiusa { background: transparent; border: 1px dashed #6B7886; }
+  html.scuro .avanzamento-live .gr-disdetti, html.scuro .conti-oggi-live .gr-disdetti i { background: #6B7886; }
+  html.scuro .tabella-periodo tfoot th { background: #22303F; color: #E1E7ED; }
+  @media (max-width: 700px) { html.scuro .conti-oggi-live .totale { border-right: 0; } }
 }
 

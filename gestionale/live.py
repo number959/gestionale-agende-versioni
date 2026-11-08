@@ -19,7 +19,7 @@ orari e nomi di stanze e medici, mai un paziente. E' il formato con cui un
 giorno il programma potra' alimentare il cruscotto su internet (vedi le
 proposte in PASSAGGIO_DI_CONSEGNE.md): la prova controlla che nessun nome,
 telefono o email dei pazienti finisca nel JSON."""
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 from flask import Blueprint, render_template, request
 
@@ -102,7 +102,10 @@ def riepilogo(s, st, adesso=None):
     testo). Nessun dato di pazienti: solo conteggi, orari, stanze e medici."""
     adesso = adesso or datetime.now()
     oggi = adesso.date()
-    del_giorno = servizi.elenco_giorno(s, oggi, st.id)
+    stanze_mostrate = ambulatori.stanze_della(st)
+    # i conti sono quelli delle stanze della pagina (non le sale operatorie): cosi' le stanze sommano al totale
+    ids_mostrate = {r.id for r in stanze_mostrate}
+    del_giorno = [a for a in servizi.elenco_giorno(s, oggi, st.id) if a.risorsa_id in ids_mostrate]
     attivi = [a for a in del_giorno if a.stato in STATI_ATTIVI]
     regole = servizi.Regole(s, oggi, oggi)
     info = regole.giorno(oggi, st)
@@ -112,7 +115,7 @@ def riepilogo(s, st, adesso=None):
     stanze = []
     # la linea del tempo: dall'apertura alla chiusura, allargata se un turno o una visita escono
     inizio_asse, fine_asse = _min(st.apertura), _min(st.chiusura)
-    for r in ambulatori.stanze_della(st):
+    for r in stanze_mostrate:
         for t in regole.turni_effettivi(oggi, st, r.id, info):
             inizio_asse, fine_asse = min(inizio_asse, _min(t.ora_inizio)), max(fine_asse, _min(t.ora_fine))
     for a in attivi:
@@ -126,7 +129,7 @@ def riepilogo(s, st, adesso=None):
         da, a = max(da, inizio_asse), min(a, fine_asse)
         return round(100.0 * (da - inizio_asse) / durata_asse, 2), round(100.0 * max(0, a - da) / durata_asse, 2)
 
-    for r in ambulatori.stanze_della(st):
+    for r in stanze_mostrate:
         turni = sorted(regole.turni_effettivi(oggi, st, r.id, info), key=lambda t: t.ora_inizio)
         di_turno = [t for t in turni if t.ora_inizio <= ora_adesso < t.ora_fine]
         prossimo_turno = next((t for t in turni if t.ora_inizio > ora_adesso), None)
@@ -134,14 +137,18 @@ def riepilogo(s, st, adesso=None):
         in_corso = [a for a in qui if a.inizio <= adesso < a.fine]
         prossimo = next((a for a in qui if a.inizio > adesso), None)
         motivo = None
-        if chiusa:
+        if chiusa and not turni and not qui:
             stato, fino = 'chiusa', None
         elif in_corso:
             stato, fino = 'occupata', max(a.fine for a in in_corso).time()
         elif di_turno:
             stato = 'libera'
             # libera fino al prossimo appuntamento o alla fine del turno
-            fine_turno = max(t.ora_fine for t in di_turno)
+            adesso_m = _min(ora_adesso)
+            pezzo = next((x for x in _unisci((_min(t.ora_inizio), _min(t.ora_fine)) for t in turni)
+                          if x[0] <= adesso_m < x[1]), None)
+            fine_turno = (time(*divmod(pezzo[1], 60)) if pezzo and pezzo[1] < 24 * 60
+                          else max(t.ora_fine for t in di_turno))
             if prossimo and prossimo.inizio.time() < fine_turno:
                 fino, motivo = prossimo.inizio.time(), 'appuntamento'
             else:
@@ -198,7 +205,9 @@ def riepilogo(s, st, adesso=None):
     in_ritardo = [a for a in attivi if a.stato != 'ARRIVATO' and adesso - cruscotto.IN_RITARDO <= a.inizio <= adesso]
     tra_poco = [a for a in attivi if a.stato != 'ARRIVATO' and adesso < a.inizio <= adesso + cruscotto.TRA_POCO]
     per_ora = []
-    for h in range(st.apertura.hour, st.chiusura.hour + (1 if st.chiusura.minute else 0)):
+    prima_ora = min([st.apertura.hour] + [a.inizio.hour for a in attivi])
+    ultima_ora = max([st.chiusura.hour + (1 if st.chiusura.minute else 0)] + [a.inizio.hour + 1 for a in attivi])
+    for h in range(prima_ora, ultima_ora):
         nell_ora = [a for a in attivi if a.inizio.hour == h]
         per_ora.append({'ora': '%02d:00' % h, 'totale': len(nell_ora),
                         'arrivati': sum(1 for a in nell_ora if a.stato == 'ARRIVATO'),
@@ -275,14 +284,19 @@ def riepilogo(s, st, adesso=None):
     }
     # la frase in cima, in parole semplici
     con_medico = sum(1 for x in stanze if x['medico'])
-    if chiusa:
-        riassunto = 'Oggi la struttura è chiusa: %s.' % chiusa
-    elif not attivi and not con_medico:
-        riassunto = 'Oggi non ci sono appuntamenti né medici di turno.'
+    turni_oggi = any(x['turni'] for x in stanze)
+    motivo_chiusa = chiusa if chiusa and chiusa.strip().lower() not in ('', 'chiusura') else None
+    if chiusa and not attivi and not turni_oggi:
+        riassunto = 'Oggi la struttura è chiusa%s.' % (': %s' % motivo_chiusa if motivo_chiusa else '')
+    elif not attivi and not turni_oggi:
+        riassunto = 'Oggi non ci sono né appuntamenti né turni nelle stanze.'
     else:
         pezzi = ['%s in corso' % _uno_o_tanti(oggi_conti['in_corso'], 'visita', 'visite'),
                  '%d stanz%s su %d con un medico adesso' % (con_medico, 'a' if con_medico == 1 else 'e', len(stanze))]
         riassunto = 'Alle %s: %s.' % (adesso.strftime('%H:%M'), ', '.join(pezzi))
+        if chiusa:
+            riassunto = 'Oggi la struttura è chiusa%s, ma ci sono turni o appuntamenti. ' % (
+                ' (%s)' % motivo_chiusa if motivo_chiusa else '') + riassunto
         if oggi_conti['da_segnare']:
             riassunto += ' %s con l\'orario passato %s segnat%s arrivat%s: da controllare in Oggi.' % (
                 _uno_o_tanti(oggi_conti['da_segnare'], 'paziente', 'pazienti'),
@@ -290,17 +304,26 @@ def riepilogo(s, st, adesso=None):
                 'o' if oggi_conti['da_segnare'] == 1 else 'i', 'o' if oggi_conti['da_segnare'] == 1 else 'i')
         dopo = sorted((a for a in attivi if a.inizio > adesso), key=lambda a: a.inizio)
         if dopo:
-            stanza = next((r.nome for r in ambulatori.stanze_della(st) if r.id == dopo[0].risorsa_id), None)
+            stanza = next((r.nome for r in stanze_mostrate if r.id == dopo[0].risorsa_id), None)
             riassunto += ' Prossimo appuntamento alle %s%s.' % (_ora(dopo[0].inizio.time()),
                                                                  ' in %s' % stanza if stanza else '')
         elif attivi:
             riassunto += ' Nessun altro appuntamento oggi.'
-    ore_asse = [{'ora': '%02d' % (m // 60), 'sx': round(100.0 * (m - inizio_asse) / durata_asse, 2)}
-                for m in range(inizio_asse, fine_asse + 1, 60)]
+        else:
+            riassunto += ' Oggi non ci sono appuntamenti nelle stanze.'
     adesso_min = _min(adesso)
+    posto_adesso = (round(100.0 * (adesso_min - inizio_asse) / durata_asse, 2)
+                    if inizio_asse <= adesso_min <= fine_asse else None)
+    # le tacche vicine all'etichetta rossa di adesso non si scrivono (si sovrapporrebbero); sul telefono
+    # restano solo quelle pari
+    ore_asse = [{'ora': '%02d' % (m // 60), 'sx': round(100.0 * (m - inizio_asse) / durata_asse, 2),
+                 'vicina': posto_adesso is not None and abs(100.0 * (m - inizio_asse) / durata_asse - posto_adesso) < 4,
+                 'dispari': (m - inizio_asse) // 60 % 2 == 1}
+                for m in range(inizio_asse, fine_asse + 1, 60)]
     asse = {'da': _hhmm(inizio_asse), 'a': _hhmm(fine_asse) if fine_asse < 24 * 60 else '24:00', 'ore': ore_asse,
-            'adesso': (round(100.0 * (adesso_min - inizio_asse) / durata_asse, 2)
-                       if inizio_asse <= adesso_min <= fine_asse else None)}
+            'adesso': posto_adesso,
+            'bordo': ('sinistra' if posto_adesso is not None and posto_adesso < 5 else
+                      'destra' if posto_adesso is not None and posto_adesso > 95 else '')}
 
     return {
         'aggiornato': adesso.strftime('%H:%M'), 'data': oggi.isoformat(), 'giorno': servizi.etichetta_giorno(oggi),

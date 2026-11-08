@@ -856,6 +856,13 @@ visite fuori dai turni si dicono a parte invece di gonfiare l'occupazione. Non s
 *Statistiche* (prestazioni, provenienza, incassi) né il *Riepilogo del mese per medico* (la cassa):
 guarda le stanze e i turni.
 
+Prima di pubblicare, una revisione indipendente con un'automazione di revisori (quattro dimensioni,
+due verificatori per segnalazione, solo letture e foto sui gestionali di prova) ha confermato 19 cose,
+nessuna che perdesse dati: sono tutte corrette e provate (elenco nel `LEGGIMI.md`, *Riepilogo live*).
+La più seria era nelle prove: quella della riservatezza del JSON chiedeva il riepilogo di un giorno
+senza appuntamenti e non avrebbe mai visto un nome di paziente; ora usa l'orologio fermo
+(`_OraFerma` in `prove_112.py`) su un'ora con turni e visite.
+
 Per vedere la pagina come in un giorno di lavoro di domenica o la sera, un gestionale di prova con
 l'ora del riepilogo ferma: `strumenti/demo.py` lanciato con `live.datetime` sostituito da una classe
 con `now()` fisso (lo script usato è nella cartella provvisoria della sessione, poche righe: importa

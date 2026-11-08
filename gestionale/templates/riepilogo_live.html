@@ -24,21 +24,21 @@
     {% endif %}
   </div>
 </div>
-<div class="contenuto pagina-live-contenuto" id="riepilogo-live" data-indirizzo="{{ url_for('live.pagina', struttura=sid, schermo=1 if schermo else none) }}">
+<div class="contenuto pagina-live-contenuto" id="riepilogo-live" data-giorno="{{ r.data }}" data-indirizzo="{{ url_for('live.pagina', struttura=sid, schermo=1 if schermo else none) }}">
   {% set o = r.oggi %}
   <section class="riassunto-live" data-guida="live-numeri">
     <p class="frase-live{% if r.chiusa %} chiusa{% endif %}">{{ r.riassunto }}</p>
     {% if o.totale %}
     <div class="avanzamento-live" role="img" aria-label="{{ o.fatte }} fatti, {{ o.in_corso }} in corso, {{ o.da_segnare }} da segnare, {{ o.restanti }} da fare, su {{ o.totale }}">
-      {% for chiave, valore, nome in (('fatto', o.fatte, 'fatti'), ('in-corso', o.in_corso, 'in corso'), ('da-segnare', o.da_segnare, 'da segnare'), ('da-fare', o.restanti, 'da fare')) %}{% if valore %}<span class="{{ chiave }}" style="width: {{ (100 * valore / o.totale)|round(2) }}%" title="{{ valore }} {{ nome }}"></span>{% endif %}{% endfor %}
+      {% for chiave, valore, nome in (('fatto', o.fatte, 'fatti'), ('in-corso', o.in_corso, 'in corso'), ('da-segnare', o.da_segnare, 'da segnare'), ('da-fare', o.restanti, 'da fare')) %}{% if valore %}<span class="gr-{{ chiave }}" style="width: {{ (100 * valore / o.totale)|round(2) }}%" title="{{ valore }} {{ nome }}"></span>{% endif %}{% endfor %}
     </div>
     {% endif %}
     <ul class="conti-oggi-live">
       <li class="totale"><b>{{ o.totale }}</b> appuntament{{ 'o' if o.totale == 1 else 'i' }} oggi</li>
-      <li class="fatto"><i aria-hidden="true"></i><b>{{ o.fatte }}</b> fatt{{ 'o' if o.fatte == 1 else 'i' }}</li>
-      <li class="in-corso"><i aria-hidden="true"></i><b>{{ o.in_corso }}</b> in corso</li>
-      <li class="da-segnare{% if o.da_segnare %} acceso{% endif %}"><i aria-hidden="true"></i><b>{{ o.da_segnare }}</b> da segnare <small>orario passato, arrivo non segnato{% if o.da_segnare and not schermo %} · <a href="{{ url_for('cruscotto.oggi', struttura=sid) }}">segnali in Oggi</a>{% endif %}</small></li>
-      <li class="da-fare"><i aria-hidden="true"></i><b>{{ o.restanti }}</b> da fare</li>
+      <li class="gr-fatto"><i aria-hidden="true"></i><b>{{ o.fatte }}</b> fatt{{ 'o' if o.fatte == 1 else 'i' }}</li>
+      <li class="gr-in-corso"><i aria-hidden="true"></i><b>{{ o.in_corso }}</b> in corso</li>
+      <li class="gr-da-segnare{% if o.da_segnare %} acceso{% endif %}"><i aria-hidden="true"></i><b>{{ o.da_segnare }}</b> da segnare <small>orario passato, arrivo non segnato{% if o.da_segnare and not schermo %} · <a href="{{ url_for('cruscotto.oggi', struttura=sid) }}">segnali in Oggi</a>{% endif %}</small></li>
+      <li class="gr-da-fare"><i aria-hidden="true"></i><b>{{ o.restanti }}</b> da fare</li>
     </ul>
     <ul class="fatti-live">
       <li><b>{{ r.stanze_con_medico }}</b> di {{ r.stanze|length }} stanze con un medico adesso</li>
@@ -52,7 +52,7 @@
   <div class="linea-live" data-guida="live-stanze">
     <div class="riga-live asse-live" aria-hidden="true">
       <div class="nome-live"></div>
-      <div class="pista-live">{% for h in r.asse.ore %}<span class="tacca-live{% if loop.first %} prima{% elif loop.last %} ultima{% endif %}" style="left: {{ h.sx }}%">{{ h.ora }}</span>{% endfor %}{% if r.asse.adesso is not none %}<span class="adesso-etichetta" style="left: {{ r.asse.adesso }}%">{{ r.aggiornato }}</span>{% endif %}</div>
+      <div class="pista-live">{% for h in r.asse.ore %}<span class="tacca-live{% if loop.first %} prima{% elif loop.last %} ultima{% endif %}{% if h.vicina %} vicina{% endif %}{% if h.dispari %} dispari{% endif %}" style="left: {{ h.sx }}%">{{ h.ora }}</span>{% endfor %}{% if r.asse.adesso is not none %}<span class="adesso-etichetta{% if r.asse.bordo %} bordo-{{ r.asse.bordo }}{% endif %}" style="left: {{ r.asse.adesso }}%">{{ r.aggiornato }}</span>{% endif %}</div>
     </div>
     {% for x in r.stanze %}
     <div class="riga-live stato-{{ x.stato|replace(' ', '-') }}">
@@ -60,12 +60,12 @@
         <b>{{ x.stanza }}</b>
         <span class="stato-live">{{ x.frase }}</span>
         {% if x.medico %}<span class="medico-live">{{ x.medico }}</span>{% endif %}
-        <small class="conti-live">{% if x.totale %}{{ x.fatte }} fatt{{ 'o' if x.fatte == 1 else 'i' }}{% if x.in_corso %} · {{ x.in_corso }} in corso{% endif %}{% if x.da_segnare %} · <span class="da-segnare">{{ x.da_segnare }} da segnare</span>{% endif %} · {{ x.restanti }} da fare{% else %}nessun appuntamento oggi{% endif %}</small>
+        <small class="conti-live">{% if x.totale %}{{ x.fatte }} fatt{{ 'o' if x.fatte == 1 else 'i' }}{% if x.in_corso %} · {{ x.in_corso }} in corso{% endif %}{% if x.da_segnare %} · <span class="gr-da-segnare">{{ x.da_segnare }} da segnare</span>{% endif %} · {{ x.restanti }} da fare{% else %}nessun appuntamento oggi{% endif %}</small>
       </div>
       <div class="pista-live" title="{% if x.turni %}Turni: {{ x.turni|join(', ') }}{% else %}Nessun turno oggi{% endif %}">
         {% for h in r.asse.ore %}<span class="ora-griglia" style="left: {{ h.sx }}%"></span>{% endfor %}
         {% for t in x.linea.turni %}<span class="turno-live" style="left: {{ t.sx }}%; width: {{ t.larg }}%"><span>{{ t.medico }} {{ t.da }}–{{ t.a }}</span></span>{% endfor %}
-        {% for v in x.linea.visite %}<span class="visita-live {{ v.stato }}" style="left: {{ v.sx }}%; width: {{ v.larg }}%" title="{{ v.da }}–{{ v.a }}: {{ nomi_stato[v.stato] }}"></span>{% endfor %}
+        {% for v in x.linea.visite %}<span class="visita-live gr-{{ v.stato }}" style="left: {{ v.sx }}%; width: {{ v.larg }}%" title="{{ v.da }}–{{ v.a }}: {{ nomi_stato[v.stato] }}"></span>{% endfor %}
         {% if r.asse.adesso is not none %}<span class="adesso-live" style="left: {{ r.asse.adesso }}%"></span>{% endif %}
       </div>
     </div>
@@ -73,11 +73,11 @@
     <p class="vuoto">Nessuna stanza attiva.</p>
     {% endfor %}
     <ul class="legenda-live">
-      <li><i class="turno"></i>turno del medico</li>
-      <li><i class="fatto"></i>visita fatta</li>
-      <li><i class="in-corso"></i>in corso</li>
-      <li><i class="da-segnare"></i>orario passato, arrivo non segnato</li>
-      <li><i class="da-fare"></i>da fare</li>
+      <li><i class="gr-turno"></i>turno del medico</li>
+      <li><i class="gr-fatto"></i>visita fatta</li>
+      <li><i class="gr-in-corso"></i>in corso</li>
+      <li><i class="gr-da-segnare"></i>orario passato, arrivo non segnato</li>
+      <li><i class="gr-da-fare"></i>da fare</li>
       <li><i class="ora-di-adesso"></i>adesso</li>
     </ul>
   </div>
@@ -130,6 +130,8 @@
       .then(function (t) {
         var doc = new DOMParser().parseFromString(t, 'text/html');
         var nuovo = doc.getElementById('riepilogo-live'), ora = doc.getElementById('live-ora');
+        // dopo la mezzanotte cambia il giorno: si ricarica tutta la pagina (titolo, data, collegamenti)
+        if (nuovo && nuovo.getAttribute('data-giorno') !== box.getAttribute('data-giorno')) { window.location.reload(); return; }
         if (nuovo) { box.innerHTML = nuovo.innerHTML; }
         if (ora && document.getElementById('live-ora')) { document.getElementById('live-ora').textContent = ora.textContent; }
       })

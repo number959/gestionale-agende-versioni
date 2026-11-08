@@ -38,12 +38,12 @@
     <p class="frase-live">{{ r.frase }}</p>
     {% if t.totale %}
     <div class="avanzamento-live periodo" role="img" aria-label="{% for chiave, nome in gruppi %}{{ t[chiave] }} {{ nome }}{% if not loop.last %}, {% endif %}{% endfor %}, su {{ t.totale }}">
-      {% for chiave, nome in gruppi %}{% if t[chiave] %}<span class="{{ chiave|replace('_', '-') }}" style="width: {{ (100 * t[chiave] / t.totale)|round(2) }}%" title="{{ t[chiave] }} {{ nome }}"></span>{% endif %}{% endfor %}
+      {% for chiave, nome in gruppi %}{% if t[chiave] %}<span class="gr-{{ chiave|replace('_', '-') }}" style="width: {{ (100 * t[chiave] / t.totale)|round(2) }}%" title="{{ t[chiave] }} {{ nome }}"></span>{% endif %}{% endfor %}
     </div>
     {% endif %}
     <ul class="conti-oggi-live periodo">
       <li class="totale"><b>{{ t.totale }}</b> appuntament{{ 'o' if t.totale == 1 else 'i' }}</li>
-      {% for chiave, nome in gruppi %}<li class="{{ chiave|replace('_', '-') }}{% if chiave in ('non_presentati', 'da_segnare') and t[chiave] %} acceso{% endif %}"><i aria-hidden="true"></i><b>{{ t[chiave] }}</b> {{ singolari[chiave] if t[chiave] == 1 else nome }}{% if chiave == 'non_presentati' and t.non_presentati_su is not none %} <small>{{ ('%g' % t.non_presentati_su)|replace('.', ',') }}% di chi doveva venire</small>{% endif %}</li>{% endfor %}
+      {% for chiave, nome in gruppi %}<li class="gr-{{ chiave|replace('_', '-') }}{% if chiave in ('non_presentati', 'da_segnare') and t[chiave] %} acceso{% endif %}"><i aria-hidden="true"></i><b>{{ t[chiave] }}</b> {{ singolari[chiave] if t[chiave] == 1 else nome }}{% if chiave == 'non_presentati' and t.non_presentati_su is not none %} <small>{{ ('%g' % t.non_presentati_su)|replace('.', ',') }}% di chi doveva venire</small>{% endif %}</li>{% endfor %}
     </ul>
     <ul class="fatti-live">
       <li><b>{{ t.ore_turno }}</b> di turno nelle stanze</li>

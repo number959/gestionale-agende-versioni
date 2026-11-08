@@ -190,8 +190,15 @@ temporanea.
   nuovo si aggiunge lì e in `prove_112.py`, che controlla le somme a dieci ore diverse. Le frasi
   (`riassunto` e `frase` di ogni stanza) e le posizioni della linea del tempo (`linea`, `asse`, in
   percento) le calcola `live.py`, non la pagina. Nei rettangoli delle visite solo orario e stato,
-  mai nomi. La classe `adesso` è già di un'altra pagina: nel riepilogo si usano `quando-adesso`,
-  `adesso-live` e `ora-di-adesso`.
+  mai nomi. I conti sono solo delle stanze della pagina (`stanze_della`, senza sale operatorie), così
+  le stanze sommano al totale; una stanza è «chiusa» solo se la struttura chiude e lei non ha turni
+  né appuntamenti (un turno di un giorno nel festivo la apre). Le classi di questa pagina e del
+  riepilogo del periodo hanno il prefisso `gr-` (`gr-fatto`, `gr-in-corso`, `gr-turno`…) e `quando-`,
+  perché `turno`, `in-corso` e `adesso` esistono già in altre pagine con un altro aspetto; nel tema
+  scuro le eccezioni (asse, mezze giornate tratteggiate) sono ripetute in `tema-scuro-correzioni.css`,
+  perché le regole generate con `html.scuro` vincerebbero. Sulla pagina le notifiche non si chiedono
+  (`gestionale.js`, `body.pagina-live`): non viste, risulterebbero viste anche nelle altre pagine.
+  Dopo la mezzanotte il rinnovo vede un altro `data-giorno` e ricarica tutta la pagina.
 - Riepilogo del periodo (dalla 1.12.2): `ambulatori.riepilogo_periodo`, `/ambulatori/riepilogo` (`.xlsx`,
   `.json`). Ore di turno = turni effettivi della stanza uniti (`unisci_intervalli`); ore occupate = la
   parte dei turni coperta dagli appuntamenti in `STATI_OCCUPANO` (il non presentato tiene il posto, il
