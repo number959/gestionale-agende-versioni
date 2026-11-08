@@ -812,6 +812,21 @@ aperte. Niente di nuovo nel database (schema 11). Cosa porta:
   passo non riesce la release si fa lo stesso, senza PDF.
 - `tutte_le_prove.py --solo-browser` (solo le prove nel browser, per chi ha già fatto le altre).
 
+**La 1.12.1 è stata pubblicata così**, l'8 novembre 2026: prima tutte le prove verdi qui (26
+raccolte senza browser in ciascuna cartella, 2550 casi di `campagna.py`, 11 raccolte nel browser
+nella normale e 13 nell'animata) e su GitHub, nel quinto giro di «Prove su Windows» (tutte e due le
+cartelle verdi, anche nel browser); i due Setup costruiti in Wine, installati uno sopra l'altro e
+provati (`prove_installato.py`, 50 controlli su 50 ciascuno). Poi l'automazione «Pubblica una
+versione» (esecuzione n. 3, tre minuti): release `v1.12.1` segnata come ultima con cinque file, il
+PDF della guida compreso. Dalla sessione il controllo dall'indirizzo pubblico (`latest` dice 1.12.1,
+le impronte dei due Setup scaricati coincidono con i file delle versioni) e **la simulazione
+dell'aggiornamento della clinica dall'indirizzo vero**: nel Windows finto installata la 1.12
+pubblicata su GitHub, poi «Aggiorna adesso» ha trovato la 1.12.1 sull'ultima release, l'ha scaricata,
+ha fatto la copia di sicurezza, ha avviato il Setup in silenzio e si è riaperto alla 1.12.1 con le
+novità (`prova_aggiorna_adesso.py` con l'indirizzo `…/releases/latest/download/`, 14 controlli su 14,
+dati intatti), quindi indirizzo predefinito rimesso e di nuovo `prove_installato.py` (50 su 50). Il
+certificato del proxy della sessione era in `certificati.pem`, come documentato in *La 1.12*.
+
 ## Cose aperte
 
 - **Ore del cambio dell'ora**: dalla 1.12.1 contano le ore vere (vedi *La 1.12.1*). Se per le
