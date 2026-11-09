@@ -944,6 +944,28 @@ sala sotto un logo largo, la tendina «Altre esportazioni» tagliata sul telefon
 resta dentro lo schermo, `gestionale.js`), e testi da sistemare. Tutto corretto, con la prova
 `b_sala_casi_limite`; ogni difetto, rimesso apposta, fa fallire una prova.
 
+**La 1.12.3 è stata pubblicata così**, il 9 novembre 2026 in serata: prima tutte le prove verdi qui (26
+raccolte senza browser in ciascuna cartella, 11 nel browser nella normale e 13 nell'animata) e su GitHub
+(«Prove su Windows» n. 22: l'animata verde, nella normale due prove nel browser fallite per
+`net::ERR_NO_BUFFER_SPACE`, vedi *Cose aperte*, e verdi rifacendo il lavoro fallito; n. 23, sul commit da cui
+è partita la pubblicazione, verdi tutte e due); i due Setup costruiti in Wine, installati uno sopra l'altro e
+provati (`prove_installato.py`, ora 57 controlli: dalla 1.12.3 anche la pagina delle esportazioni con i suoi
+nove indirizzi e tre file scaricati). Poi «Pubblica una versione»: l'esecuzione n. 5 (dal commit `d9d1646`)
+ha costruito tutto, ma GitHub ha rifiutato la release (HTTP 403) perché intanto era arrivata sul ramo la
+modifica a `prove.yml` (vedi *Pubblicare senza un PC*); la n. 6, dal commit `6a6f902` (lo stesso programma,
+più quella modifica e i documenti), ha creato la release `v1.12.3` segnata come ultima con cinque file.
+Dall'indirizzo pubblico `latest` dice 1.12.3 e le impronte dei Setup scaricati coincidono con i file delle
+versioni (normale `89e3025c…68f1`, animata `2b4d574b…c5cb`); il PDF della guida ha 58 pagine. Simulazione
+dell'aggiornamento dall'indirizzo vero: installata nel Windows finto la 1.12.2 pubblicata, «Aggiorna adesso»
+ha trovato la 1.12.3, l'ha scaricata e installata e si è riaperto alla 1.12.3 (14 controlli su 14, dati
+intatti), poi `prove_installato.py` 57 su 57. Il passaggio della clinica: la 1.9 animata (ricostruita dal tag
+`v1.9`) su un database fatto dalla 1.9 stessa, e sopra il Setup animata 1.12.3 scaricato da GitHub: dati
+intatti (46 appuntamenti, 30 pazienti, 27 turni), schema da 10 a 11 dopo la copia «prima-della-versione-11»,
+`prove_installato.py` 57 su 57 (per l'animata va lanciato dalla cartella `gestionale-animata`: il nome del file
+delle versioni che controlla è quello della cartella). Alla prima prova il secondo Setup non era partito:
+`strumenti/wine/installa.sh` tornava appena il programma rispondeva, con il Setup di prima (stesso nome di
+file) ancora aperto; ora aspetta che il Setup chiuda il suo registro, e rifatta così la prova è andata.
+
 ## Cose aperte
 
 - **Ore del cambio dell'ora**: dalla 1.12.1 contano le ore vere (vedi *La 1.12.1*). Se per le
