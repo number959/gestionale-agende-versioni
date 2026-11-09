@@ -709,16 +709,20 @@
 (function () {
   'use strict';
   var gruppi = document.querySelectorAll('.menu .gruppo, .gruppo-comandi');
-  // 1.12.3: una tendina aperta con il clic resta dentro lo schermo (sul telefono usciva a sinistra)
+  // 1.12.3: una tendina aperta con il clic resta dentro lo schermo (sul telefono usciva a sinistra). Si sposta con
+  // left e right, non con transform: nell'animata l'animazione di apertura usa transform e lo cancellerebbe
   var dentro = function (g) {
     var t = g.querySelector('.tendina');
     if (!t) { return; }
-    t.style.transform = '';
+    t.style.left = ''; t.style.right = '';
     var largo = document.documentElement.clientWidth;
     t.style.maxWidth = (largo - 16) + 'px';
     var r = t.getBoundingClientRect();
     var sposta = r.left < 8 ? 8 - r.left : (r.right > largo - 8 ? largo - 8 - r.right : 0);
-    if (sposta) { t.style.transform = 'translateX(' + Math.round(sposta) + 'px)'; }
+    if (!sposta) { return; }
+    // la nuova posizione si misura dal bordo sinistro del gruppo, che fa da riferimento alla tendina
+    t.style.left = Math.round(r.left + sposta - g.getBoundingClientRect().left) + 'px';
+    t.style.right = 'auto';
   };
   var chiudiTutti = function (tranne) {
     gruppi.forEach(function (g) {
