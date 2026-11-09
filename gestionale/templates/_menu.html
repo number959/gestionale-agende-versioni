@@ -26,7 +26,7 @@
       <a href="{{ url_for('ambulatori.mese', aaaamm=_data[:7], struttura=_sid) }}"{% if _sez == 'programmazione' %} class="attivo"{% endif %}><b>Programmazione del mese</b><small>per specialità e medico, con le date in cui viene</small></a>
       <a href="{{ url_for('live.pagina', struttura=_sid) }}"{% if _sez == 'live' %} class="attivo"{% endif %}><b>Riepilogo live</b><small>adesso: come va la giornata, stanza per stanza; si aggiorna da solo</small></a>
       <a href="{{ url_for('ambulatori.riepilogo', struttura=_sid) }}"{% if _sez == 'riepilogo-periodo' %} class="attivo"{% endif %}><b>Riepilogo del periodo</b><small>com'è andata: un giorno, una settimana, un mese, per stanza e per medico</small></a>
-      <a href="{{ url_for('esportazioni.pagina', data=_data, struttura=_sid) }}"{% if _sez == 'esportazioni' %} class="attivo"{% endif %}><b>Esportazioni in Excel</b><small>giorno, settimana e mese: ambulatori, sala operatoria o tutto insieme</small></a>
+      <a href="{{ url_for('esportazioni.pagina', data=_data, struttura=_sid) }}"{% if _sez == 'esportazioni' %} class="attivo"{% endif %}><b>Esportazioni in Excel</b><small>giorno, settimana e mese{% if ci_sono_sale is defined and ci_sono_sale() %}: ambulatori, sala operatoria o tutto insieme{% else %} degli ambulatori{% endif %}</small></a>
     </div>
   </div>
   <a data-tasto="d" href="{{ url_for('dovesifa.pagina', struttura=_sid) }}"{% if _sez == 'dove' %} class="attivo"{% endif %} data-guida="menu-dove">Dove si fa</a>
