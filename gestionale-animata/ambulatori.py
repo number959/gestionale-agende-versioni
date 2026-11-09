@@ -33,7 +33,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.properties import PageSetupProperties
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select
 
 import calendario
 import servizi
@@ -760,8 +760,9 @@ def titolo_periodo(da, a):
 
 def il_percento(valore):
     """'il 54%', ma 'l'11,6%', 'l'8%', 'l'80%' (davanti a una vocale l'articolo si apostrofa)."""
+    valore = round(valore, 1)                   # l'articolo segue il numero scritto: 0,96 -> «l'1%»
     intero_ = int(valore)
-    testo = ('%g' % round(valore, 1)).replace('.', ',')
+    testo = ('%g' % valore).replace('.', ',')
     if intero_ == 0:
         return 'lo %s%%' % testo
     return ("l'%s%%" if str(intero_).startswith('8') or intero_ in (1, 11) else 'il %s%%') % testo
@@ -772,24 +773,36 @@ def _percento(parte, tutto):
 
 
 def stanze_del_periodo(ses, st, da, a):
-    """Le stanze del riepilogo: quelle attive (senza sale operatorie) e anche quelle disattivate dopo, se nel
-    periodo avevano appuntamenti: in un mese passato il lavoro fatto in una stanza chiusa poi conta ancora."""
+    """(stanze, fino) del riepilogo: le stanze attive (senza sale operatorie) e anche quelle disattivate dopo, se
+    nel periodo avevano appuntamenti (anche solo la coda dopo la mezzanotte di una visita della sera prima): in un
+    mese passato il lavoro fatto in una stanza chiusa poi conta ancora. Disattivando una stanza i suoi turni non si
+    chiudono e la data non resta scritta: per una stanza disattivata i turni contano solo fino al giorno del suo
+    ultimo appuntamento non disdetto ('fino', per id), che viene per forza prima dello spegnimento (la scheda non
+    lascia disattivare una stanza con appuntamenti da oggi in poi)."""
     stanze = list(stanze_della(st))
     spente = ses.scalars(select(Risorsa).where(Risorsa.struttura_id == st.id, Risorsa.attiva == False,
                                                Risorsa.tipo != 'SALA_OPERATORIA').order_by(Risorsa.ordine)).all()
     inizio, fine = datetime.combine(da, time(0)), datetime.combine(a + timedelta(days=1), time(0))
+    fino = {}
     for r in spente:
-        if ses.scalar(select(Appuntamento.id).where(Appuntamento.risorsa_id == r.id, Appuntamento.inizio >= inizio,
-                                                    Appuntamento.inizio < fine).limit(1)):
+        tocca = ses.scalar(select(Appuntamento.id).where(
+            Appuntamento.risorsa_id == r.id,
+            or_(and_(Appuntamento.inizio >= inizio, Appuntamento.inizio < fine),
+                and_(Appuntamento.inizio < inizio, Appuntamento.fine > inizio,
+                     Appuntamento.stato.in_(STATI_OCCUPANO)))).limit(1))
+        if tocca:
             stanze.append(r)
-    return stanze
+            ultimo = ses.scalar(select(func.max(Appuntamento.inizio)).where(
+                Appuntamento.risorsa_id == r.id, Appuntamento.stato != 'DISDETTO'))
+            fino[r.id] = ultimo.date() if ultimo else None
+    return stanze, fino
 
 
 def riepilogo_periodo(ses, st, da, a, adesso=None):
     """Tutti i numeri del riepilogo fra 'da' e 'a' (compresi), gia' pronti per la pagina, l'Excel e il JSON."""
     adesso = adesso or datetime.now()
     regole = servizi.Regole(ses, da, a)
-    stanze = stanze_del_periodo(ses, st, da, a)
+    stanze, fino = stanze_del_periodo(ses, st, da, a)
     per_id = {r.id: r for r in stanze}
     attive = {r.id for r in stanze_della(st)}
     # anche il giorno prima: la coda dopo la mezzanotte di una visita cominciata la sera prima conta nel giorno dopo
@@ -812,7 +825,8 @@ def riepilogo_periodo(ses, st, da, a, adesso=None):
     per_giorno, code = {}, {}
     for x in appuntamenti:
         per_giorno.setdefault(x.inizio.date(), []).append(x)
-        if x.fine.date() > x.inizio.date():
+        # solo le visite che vanno davvero oltre la mezzanotte (una che finisce alle 24:00 non ha coda)
+        if x.fine > datetime.combine(x.inizio.date() + timedelta(days=1), time(0)):
             code.setdefault(x.inizio.date() + timedelta(days=1), []).append(x)
 
     def intervallo(x, g):
@@ -827,8 +841,11 @@ def riepilogo_periodo(ses, st, da, a, adesso=None):
         chiusa = info['chiusura'] or (info['festivo'] if info['chiude_festivo'] else None)
         del_giorno = [x for x in per_giorno.get(g, []) if x.risorsa_id in per_id]
         nel_giorno = del_giorno + [x for x in code.get(g, []) if x.risorsa_id in per_id]
-        turni_giorno = {r.id: regole.turni_effettivi(g, st, r.id, info) for r in stanze}
-        attivo = any(turni_giorno.values()) or bool(del_giorno)
+        # una stanza disattivata conta i suoi turni solo fino al suo ultimo appuntamento (vedi stanze_del_periodo)
+        turni_giorno = {r.id: regole.turni_effettivi(g, st, r.id, info)
+                        if r.id in attive or (fino.get(r.id) and g <= fino[r.id]) else [] for r in stanze}
+        # un giorno chiuso con soli appuntamenti disdetti (si disdice proprio per chiudere) resta chiuso
+        attivo = any(turni_giorno.values()) or any(x.stato != 'DISDETTO' for x in del_giorno)
         riga_g = dict(conti(), data=g.isoformat(), giorno=servizi.GIORNI[g.weekday()],
                       etichetta='%s %d/%d' % (servizi.GIORNI[g.weekday()], g.day, g.month),
                       # chiusa solo se quel giorno non c'e' niente: un turno di un giorno nel festivo lo apre
@@ -911,11 +928,16 @@ def riepilogo_periodo(ses, st, da, a, adesso=None):
     medici.sort(key=lambda m: (-m['minuti_turno'], -m['totale'], m['medico']))
     rifinisci(totale)
     # la frase in cima
-    if not totale['totale'] and not totale['minuti_turno']:
+    code_minuti = totale['minuti_occupati'] + totale['minuti_fuori_turno']   # senza appuntamenti: solo code
+    if not totale['totale'] and not totale['minuti_turno'] and not code_minuti:
         frase = 'Nel periodo non ci sono appuntamenti né turni nelle stanze.'
     elif not totale['totale']:
         frase = '%s: nessun appuntamento nelle stanze.' % (titolo_periodo(da, a)[:1].upper() + titolo_periodo(da, a)[1:])
-        frase += ' %s di turno, senza visite.' % ore_in_parole(totale['minuti_turno']).capitalize()
+        if totale['minuti_turno']:
+            frase += ' %s di turno%s.' % (ore_in_parole(totale['minuti_turno']).capitalize(),
+                                          '' if totale['minuti_occupati'] else ', senza visite')
+        if code_minuti:
+            frase += ' Dopo la mezzanotte ci sono %s di visite cominciate il giorno prima.' % ore_in_parole(code_minuti)
         if totale['mezze']:
             frase += ' %d mezz%s giornat%s su %d senza nessun medico.' % (
                 totale['libere'], 'a' if totale['libere'] == 1 else 'e', 'a' if totale['libere'] == 1 else 'e', totale['mezze'])
@@ -999,10 +1021,12 @@ def excel_riepilogo(st, r, adesso=None):
     if r['giorni_periodo'] > 1:
         foglio('Giorni', ['Giorno', 'Chiusa', 'Ore di turno', 'Ore occupate', 'Occupazione'] + numeri,
                [16, 22, 11, 11, 12, 13, 9, 13, 10, 11, 9],
-               [[x['etichetta'], x['chiusa'] or ('' if x['aperto'] else 'giorno di chiusura'), x['minuti_turno'] / 60,
+               [[x['etichetta'], x['chiusa'] or ('%s, ma con turni o appuntamenti' % x['chiusa_ma_aperta']
+                                                 if x['chiusa_ma_aperta'] else ('' if x['aperto'] else 'giorno di chiusura')),
+                 x['minuti_turno'] / 60,
                  x['minuti_occupati'] / 60,
                  x['occupazione']] + [x[k] for k in chiavi] for x in r['giorni']],
-               {3: FORMATO_ORE, 4: FORMATO_ORE, 5: FORMATO_PERCENTO}, orizzontale=False)
+               {3: FORMATO_ORE, 4: FORMATO_ORE, 5: FORMATO_PERCENTO}, orizzontale=False, a_capo=(2,))
     return wb
 
 

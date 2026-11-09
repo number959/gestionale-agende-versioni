@@ -872,6 +872,16 @@ andavano di un mese solo. Decisione: le ore di un medico sono l'unione dei suoi 
 le stanze, quindi due medici nella stessa stanza possono sommare più ore della stanza (giusto: erano in
 due). La prova nuova (`p_periodo_revisione` in `prove_112.py`) è una settimana con i numeri contati a mano.
 
+Una verifica indipendente di queste correzioni (45 agenti, due scettici per segnalazione) ha confermato
+altri quattro casi, tutti rari e senza dati persi, più tre su cui i verificatori erano divisi e che ho
+corretto lo stesso: i turni di una stanza disattivata contavano anche dopo lo spegnimento (la scheda non
+chiude i turni e la data non resta scritta: ora contano fino all'ultimo appuntamento non disdetto della
+stanza), la sola coda dopo la mezzanotte non faceva comparire una stanza spenta, una visita fino alle
+24:00 lasciava una riga del medico a zero, un giorno chiuso con soli disdetti sembrava aperto, e le prove
+dell'Excel avevano solo ore intere (ora un terzo d'ora, ogni foglio cella per cella). Ogni difetto,
+rimesso apposta nel codice, fa fallire almeno una prova (`p_periodo_seconda_revisione`). Se un giorno
+servisse la data vera dello spegnimento, la scheda della stanza potrebbe scriverla nel registro.
+
 Per vedere la pagina come in un giorno di lavoro di domenica o la sera, un gestionale di prova con
 l'ora del riepilogo ferma: `strumenti/demo.py` lanciato con `live.datetime` sostituito da una classe
 con `now()` fisso (lo script usato è nella cartella provvisoria della sessione, poche righe: importa

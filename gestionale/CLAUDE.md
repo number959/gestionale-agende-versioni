@@ -208,8 +208,10 @@ temporanea.
   numeri passano da `_dal`, `_al` e `il_percento` (lo 0, l'8, l'11, l'80%). Le ore di un medico sono
   l'unione dei suoi turni del giorno su tutte le stanze, mai la somma stanza per stanza; i minuti dopo la
   mezzanotte vanno nel giorno dopo (si leggono anche gli appuntamenti del giorno prima del periodo), ma
-  l'appuntamento conta nel giorno in cui comincia; un giorno con turni o appuntamenti non è chiuso; le
-  stanze disattivate entrano (`stanze_del_periodo`) se nel periodo avevano appuntamenti.
+  l'appuntamento conta nel giorno in cui comincia; un giorno con turni o appuntamenti non disdetti non è
+  chiuso; le stanze disattivate entrano (`stanze_del_periodo`) se nel periodo avevano appuntamenti (anche
+  solo la coda), e i loro turni contano solo fino al loro ultimo appuntamento non disdetto (la data dello
+  spegnimento non è scritta da nessuna parte e i turni restano validi).
 - Stampe (dalla 1.12): il foglio del giorno è una `table.impaginazione` con testata in `thead` e
   piede in `tfoot` (il browser li ripete su ogni pagina); il numero di pagina viene dai margin box di
   `@page` in `stile.css`. Le colonne di partenza del foglio sono `viste.COLONNE_DI_PARTENZA`: una

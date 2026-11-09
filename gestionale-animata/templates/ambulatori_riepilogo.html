@@ -69,7 +69,7 @@
     </tr>
     {% endfor %}
     </tbody>
-    <tfoot><tr><th>Totale</th><th></th><th class="n">{{ t.ore_turno }}</th><th class="n">{{ t.ore_occupate }}</th><th>{% if t.occupazione is not none %}{{ ('%g' % t.occupazione)|replace('.', ',') }}%{% endif %}</th><th class="n">{{ t.totale }}</th><th class="n">{{ t.fatti }}</th><th class="n">{{ t.non_presentati }}</th><th class="n">{{ t.disdetti }}</th><th class="n">{{ t.da_segnare }}</th><th class="n">{{ t.da_fare }}</th><th class="n">{{ t.libere }} su {{ t.mezze }}</th></tr></tfoot>
+    <tfoot><tr><th>Totale</th><th></th><th class="n">{{ t.ore_turno }}</th><th class="n">{{ t.ore_occupate }}</th><th>{% if t.occupazione is not none %}{{ ('%g' % t.occupazione)|replace('.', ',') }}%{% endif %}</th><th class="n">{{ t.totale }}</th><th class="n">{{ t.fatti }}</th><th class="n">{{ t.non_presentati }}</th><th class="n">{{ t.disdetti }}</th><th class="n">{{ t.da_segnare }}</th><th class="n">{{ t.da_fare }}</th><th class="n">{% if t.mezze %}{{ t.libere }} su {{ t.mezze }}{% else %}—{% endif %}</th></tr></tfoot>
   </table>
   </div>
 

@@ -713,11 +713,17 @@ possono sommare più ore della stanza. **Mezzanotte**: una visita che passa la m
 appuntamento nel giorno in cui comincia, ma i minuti dopo la mezzanotte vanno nel giorno dopo (anche se
 il periodo comincia proprio quel giorno). **Festivi e domeniche**: un giorno con turni o appuntamenti
 non è «chiuso» anche se la struttura chiude (la riga dice «Immacolata Concezione, ma con turni o
-appuntamenti»); nei giorni che non sono di apertura contano solo le mezze giornate con un medico, non
-tutte le stanze libere. **Stanze disattivate**: compaiono, con «(non più attiva)», nei periodi in cui
-avevano appuntamenti. **Frecce**: uno o più mesi interi vanno allo stesso numero di mesi prima e dopo.
+appuntamenti»), ma un giorno chiuso con soli appuntamenti disdetti resta chiuso; nei giorni che non sono
+di apertura contano solo le mezze giornate con un medico, non tutte le stanze libere; una visita che
+finisce alle 24:00 in punto non ha coda. **Stanze disattivate**: compaiono, con «(non più attiva)», nei
+periodi in cui avevano appuntamenti (anche solo la coda dopo la mezzanotte di una visita della sera
+prima). Disattivando una stanza i suoi turni non si chiudono e la data non resta scritta: per questo i
+turni di una stanza disattivata contano solo fino al giorno del suo ultimo appuntamento non disdetto,
+che viene per forza prima dello spegnimento (la scheda non lascia disattivare una stanza con
+appuntamenti da oggi in poi). **Frecce**: uno o più mesi interi vanno allo stesso numero di mesi prima e dopo.
 **Excel**: le ore non arrotondate (i totali tornano con il foglio Riepilogo), i «Giorni di turno» dei
-medici senza totale, «giorno di chiusura» nei giorni in cui la struttura non apre. **Parole**: «lo 0%»,
+medici senza totale, «giorno di chiusura» nei giorni in cui la struttura non apre, e nella colonna
+«Chiusa» la stessa nota della pagina («Immacolata Concezione, ma con turni o appuntamenti»). **Parole**: «lo 0%»,
 «45 minuti», «nessun appuntamento» invece di «0 appuntamenti, 0 fatti», «1 mezza giornata».
 
 Le prove sono `prove_112.py` (le celle della matrice contro un calcolo minuto per minuto fatto a
@@ -725,7 +731,11 @@ parte, la programmazione, i due Excel riaperti, mettere e togliere, le protezion
 giorno, il riepilogo del periodo contro gli insiemi di minuti di Python su tre periodi, con un non
 presentato, una visita fuori turno e una a cavallo della fine del turno, e una settimana contata a mano
 con i casi della revisione (stesso medico in due stanze, sovrapposizioni, mezzanotte, festivo e domenica
-con un turno, stanza disattivata, frasi parola per parola, l'Excel uguale alla pagina), il riepilogo live: dalla 1.12.2 i quattro gruppi che sommano al totale a dieci ore diverse,
+con un turno, stanza disattivata, frasi parola per parola, l'Excel uguale alla pagina) e due settimane
+della seconda revisione (stanza spenta con i turni fino all'ultimo appuntamento e con la sola coda,
+visita fino alle 24:00, chiusura con soli disdetti, ogni foglio dell'Excel confrontato cella per cella,
+con ore non intere); ognuno dei difetti trovati, rimesso apposta nel codice, fa fallire almeno una
+prova, il riepilogo live: dalla 1.12.2 i quattro gruppi che sommano al totale a dieci ore diverse,
 anche stanza per stanza, le frasi, la linea del tempo, le ore e la tabella delle mezze giornate) e
 `prove_112_browser.py` (anche la pagina del riepilogo, a qualsiasi ora giri: conti, righe, turni e
 visite come nel JSON, linea di adesso, notifiche nascoste, telefono senza scorrimento laterale).
@@ -2667,6 +2677,7 @@ falliscono, cioè il difetto c'era davvero.
 | Riepilogo live poco chiaro (segnalato da Giovanni l'8 novembre 2026) | Otto numeri che non sommavano al totale, «in ritardo» solo per tre ore, il medico scritto due volte, «libera fino alle» senza dire perché, sessanta mezze giornate in una lista, le notifiche sopra le stanze | Dalla 1.12.2: quattro gruppi che sommano, una frase in cima, la linea del tempo con turni e visite, le mezze giornate in una tabellina, niente notifiche su quella pagina |
 | Nessun riepilogo «non live» (richiesta di Giovanni dell'8 novembre 2026) | Per sapere com'era andata una settimana o un mese bisognava mettere insieme statistiche, pianificazione e agende | Dalla 1.12.2 *Ambulatori → Riepilogo del periodo*: ore di turno e occupate, conti e mezze giornate libere per stanza, medico e giorno, in Excel e da stampare |
 | Riepilogo del periodo, prima della pubblicazione (revisione della 1.12.2) | Un medico in due stanze nello stesso momento contava le ore doppie; le visite dopo la mezzanotte e le stanze disattivate sparivano; un festivo con un turno sembrava chiuso; due mesi interi con le frecce diventavano uno; «il 0%» | Ore del medico unite su tutte le stanze, la coda dopo la mezzanotte nel giorno dopo, le stanze disattivate con i loro appuntamenti, il festivo aperto se ha turni, le frecce sullo stesso numero di mesi, «lo 0%»; una prova contata a mano |
+| Riepilogo del periodo, seconda revisione (1.12.2) | I turni di una stanza disattivata contavano anche dopo lo spegnimento; la sola coda dopo la mezzanotte non la faceva comparire; una visita fino alle 24:00 lasciava una riga del medico a zero; un giorno chiuso con soli disdetti sembrava aperto; le prove dell'Excel avevano solo ore intere | Turni della stanza spenta fino al suo ultimo appuntamento; la coda la fa comparire; niente coda alle 24:00; i disdetti non aprono il giorno; Excel provato cella per cella con un terzo d'ora |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo
