@@ -15,8 +15,8 @@ Giovanni ha chiesto di continuare il lavoro con **Claude Code** sul suo PC (vedi
 Claude Code*), il 1° novembre 2026 alla versione **1.11** (l'autoriparazione e un giro di
 correzioni: vedi *La 1.11*), l'8 novembre 2026 alla **1.12** (ambulatori, riepilogo live, stampe ed
 Excel, certificati: vedi *La 1.12*), lo stesso giorno alla **1.12.1** (le cose aperte chiuse e le
-prove su un Windows vero: vedi *La 1.12.1*) e la sera alla **1.12.2** (il riepilogo live più
-chiaro: vedi *La 1.12.2*).
+prove su un Windows vero: vedi *La 1.12.1*) e il 9 novembre alla **1.12.2** (il riepilogo live più
+chiaro e il riepilogo del periodo: vedi *La 1.12.2*).
 
 ## In breve
 
@@ -95,8 +95,10 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
-- **Versione 1.12.2** (8 novembre 2026, sera): il riepilogo live rifatto perché si legga a colpo
-  d'occhio e il nuovo riepilogo del periodo, non in diretta (vedi *La 1.12.2*). Il database non cambia.
+- **Versione 1.12.2, pubblicata il 9 novembre 2026**: la release `v1.12.2`, segnata come ultima, con
+  i due Setup, i due file delle versioni e il PDF della guida (55 pagine). Il riepilogo live rifatto
+  perché si legga a colpo d'occhio e il nuovo riepilogo del periodo, non in diretta (vedi *La
+  1.12.2*). Il database non cambia. Alla clinica va messa una volta a mano (vedi *Cose aperte*).
 - **Versione 1.12.1, pubblicata l'8 novembre 2026**: la release `v1.12.1`, segnata come ultima, con
   i due Setup, i due file delle versioni e, per la prima volta, il PDF della guida (53 pagine),
   costruiti dall'automazione di GitHub. Porta le ore vere nelle notti del cambio dell'ora, i codici
@@ -106,7 +108,6 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   pianificazione della settimana, la matrice e la programmazione del mese in Excel, il *Riepilogo
   live*, il foglio del giorno rifatto, tutti gli Excel con lo stesso aspetto, e i certificati dei
   siti portati dentro il programma (la causa dell'errore degli aggiornamenti della 1.9 alla clinica).
-  Alla clinica c'è ancora la 1.9 animata: la 1.12.1 va messa una volta a mano (vedi *Cose aperte*).
 - **Versione 1.11, pubblicata il 1° novembre 2026**: la release `v1.11` nel progetto delle versioni,
   segnata come ultima, con i quattro file costruiti dall'automazione di GitHub (vedi *La 1.11*).
   L'indirizzo pubblico risponde «1.11» e i Setup pubblicati sono stati provati sopra la 1.10 con i
@@ -400,7 +401,7 @@ Tutte e due devono finire senza "non trovati". Si fa in tutte e due le versioni:
 dell'animata hanno le sue icone. `prove_guida.py` controlla che ogni guida abbia immagine e
 video. Il PDF della guida (`/aiuto/stampa` in A4, circa 43 pagine):
 `python strumenti/genera_pdf_guida.py http://127.0.0.1:5001`, che scrive
-«Guida Gestionale Agende <versione>.pdf» (alla 1.10, 48 pagine; alla 1.12.1, 53). Dalla 1.12.1
+«Guida Gestionale Agende <versione>.pdf» (alla 1.10, 48 pagine; alla 1.12.1, 53; alla 1.12.2, 55). Dalla 1.12.1
 lo genera anche il workflow «Pubblica una versione» e lo mette nella release come quinto file
 (`Guida-Gestionale-Agende-<versione>.pdf`): non va più rifatto a mano a ogni versione.
 
@@ -882,6 +883,18 @@ dell'Excel avevano solo ore intere (ora un terzo d'ora, ogni foglio cella per ce
 rimesso apposta nel codice, fa fallire almeno una prova (`p_periodo_seconda_revisione`). Se un giorno
 servisse la data vera dello spegnimento, la scheda della stanza potrebbe scriverla nel registro.
 
+**La 1.12.2 è stata pubblicata così**, il 9 novembre 2026: prima tutte le prove verdi qui sul codice
+finale (26 raccolte senza browser in ciascuna cartella, 11 nel browser nella normale e 13
+nell'animata) e su GitHub («Prove su Windows» n. 14, tutte e due le cartelle verdi); i due Setup
+costruiti in Wine, installati uno sopra l'altro e provati (`prove_installato.py`, ora 53 controlli:
+dalla 1.12.2 anche pagina, Excel e JSON del riepilogo del periodo). Poi «Pubblica una versione»
+(esecuzione n. 4, dal commit `b7e0320`): release `v1.12.2` segnata come ultima con cinque file.
+Dall'indirizzo pubblico `latest` dice 1.12.2 e le impronte dei Setup scaricati coincidono con i file
+delle versioni (normale `817e1621…c759`, animata `284b51c7…0cef`). Simulazione dell'aggiornamento
+della clinica dall'indirizzo vero, come per la 1.12.1: installata nel Windows finto la 1.12.1
+pubblicata, «Aggiorna adesso» ha trovato la 1.12.2, l'ha scaricata e installata e si è riaperto alla
+1.12.2 (14 controlli su 14, dati intatti), poi di nuovo `prove_installato.py` (53 su 53).
+
 Per vedere la pagina come in un giorno di lavoro di domenica o la sera, un gestionale di prova con
 l'ora del riepilogo ferma: `strumenti/demo.py` lanciato con `live.datetime` sostituito da una classe
 con `now()` fisso (lo script usato è nella cartella provvisoria della sessione, poche righe: importa
@@ -893,7 +906,7 @@ guida *Il riepilogo live* sono fatti così, alle 10:40 di martedì 3 novembre.
 - **Ore del cambio dell'ora**: dalla 1.12.1 contano le ore vere (vedi *La 1.12.1*). Se per le
   buste paga Giovanni e Federica vogliono quelle dell'orologio, è un punto solo da cambiare.
 - Alla clinica c'è la 1.9 animata e il suo controllo degli aggiornamenti non riesce (il certificato,
-  vedi *La 1.12*): la 1.12.1 va messa una volta a mano, dal Setup scaricato nel browser dalla pagina
+  vedi *La 1.12*): la 1.12.2 va messa una volta a mano, dal Setup scaricato nel browser dalla pagina
   delle versioni (dove c'è anche il PDF della guida), oppure dopo aver aperto github.com con Edge.
   Da lì in poi «Aggiorna adesso» torna a funzionare da solo.
 - In Claude Code sul PC di Giovanni le prove si lanciano come qui; su un Windows vero le ha già
