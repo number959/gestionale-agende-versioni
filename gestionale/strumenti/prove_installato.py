@@ -86,6 +86,13 @@ controlla('Riepilogo live (1.12): la pagina', s == 200 and 'id="riepilogo-live"'
 s, b, _ = get('/riepilogo-live.json?struttura=1')
 d = json.loads(b) if s == 200 else {}
 controlla('Riepilogo live (1.12): il JSON con stanze e numeri di oggi', s == 200 and 'stanze' in d and 'oggi' in d, (s, list(d)[:6]))
+s, b, _ = get('/ambulatori/riepilogo?struttura=1&periodo=mese')
+controlla('Riepilogo del periodo (1.12.2): la pagina', s == 200 and 'Le stanze' in testo(b) and 'class="frase-live' in b.decode('utf-8', 'replace'), s)
+s, b, h = get('/ambulatori/riepilogo.xlsx?struttura=1&periodo=mese')
+controlla('Riepilogo del periodo (1.12.2): l\'Excel', s == 200 and b[:2] == b'PK' and 'spreadsheet' in h.get('Content-Type', ''), (s, h.get('Content-Type')))
+s, b, _ = get('/ambulatori/riepilogo.json?struttura=1&periodo=settimana')
+d = json.loads(b) if s == 200 else {}
+controlla('Riepilogo del periodo (1.12.2): il JSON con stanze, medici e giorni', s == 200 and all(k in d for k in ('stanze', 'medici', 'giorni', 'totale')), (s, list(d)[:8]))
 s, b, _ = get('/ambulatori/settimana/%s?struttura=1' % date.today().isoformat())
 controlla('Ambulatori (1.12): la pianificazione della settimana', s == 200 and 'id="matrice-ambulatori"' in b.decode('utf-8', 'replace'), s)
 s, b, h = get('/ambulatori/settimana/%s.xlsx?struttura=1' % date.today().isoformat())
