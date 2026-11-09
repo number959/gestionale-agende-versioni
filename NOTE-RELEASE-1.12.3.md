@@ -1,10 +1,13 @@
 Gestionale Agende 1.12.3
 
-**Ambulatori e sala operatoria nello stesso foglio.** La pianificazione della settimana e la programmazione del mese, sia nella pagina sia nell'Excel, hanno ora anche la sala operatoria, in fondo e a parte:
+**Esportazioni in Excel: ambulatori, sala operatoria o tutto insieme.** Nuova pagina *Ambulatori → Esportazioni in Excel*: per il giorno, la settimana e il mese della data scelta ci sono tre file, uno solo degli ambulatori, uno solo della sala operatoria e uno con tutto insieme, dove ambulatori e sala stanno in fogli separati. Nove pulsanti, un clic per ciascun file:
 
-- nella **settimana**, per ogni sala e per ogni mattina e pomeriggio: i chirurghi in turno, quanti interventi ci sono (prenotati, confermati o fatti) e chi opera senza un turno; «sala libera» quando non c'è né un turno né un intervento. Dagli interventi si apre la pagina Sala del giorno;
-- nel **mese**, dopo le specialità: i turni dei chirurghi in sala con le date e gli interventi di ciascuno, una riga per chi ha operato fuori dai suoi turni e, sotto, quanti interventi nel mese. Nel calendario giorno per giorno c'è la colonna degli interventi.
+- **giorno**: il planning delle stanze, oppure quello delle sale, con l'elenco degli appuntamenti;
+- **settimana**: la matrice per la direzione sanitaria (solo ambulatori, come prima), oppure la sala con i chirurghi e gli interventi di ogni mattina e pomeriggio e l'elenco degli interventi;
+- **mese**: la programmazione e il calendario degli ambulatori, oppure la sala operatoria del mese, cioè la sala giorno per giorno, i turni dei chirurghi con le date e gli interventi (anche chi ha operato fuori dai turni) e l'elenco degli interventi.
 
-Le mezze giornate libere degli ambulatori si contano come prima: la sala non le cambia. Un sabato o una domenica in cui lavora solo la sala compare nella settimana, con le stanze segnate «solo sala operatoria».
+Ci si arriva anche da «Altre esportazioni» nella pagina del giorno, nella pianificazione della settimana e nella programmazione del mese. Gli elenchi degli interventi non hanno i dati dei pazienti: per quelli c'è la lista operatoria del giorno.
+
+**La sala nelle pagine della settimana e del mese.** La pianificazione della settimana e la programmazione del mese mostrano in fondo la sala operatoria: chi opera, quanti interventi e chi opera senza un turno. Le mezze giornate libere degli ambulatori si contano come prima. Un sabato o una domenica in cui lavora solo la sala compare, con le stanze segnate «solo sala operatoria».
 
 Il database non cambia rispetto alla 1.12.2. Appuntamenti, pazienti e impostazioni restano dove sono.

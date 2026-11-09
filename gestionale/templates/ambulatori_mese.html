@@ -21,6 +21,14 @@
     <span class="separa"></span>
     <a class="bottone" href="{{ url_for('ambulatori.settimana', iso=data_menu, struttura=sid) }}">Pianificazione della settimana</a>
     <a class="bottone primario" href="{{ url_for('ambulatori.mese_excel', aaaamm=aaaamm, struttura=sid) }}" data-guida="programmazione-excel">Scarica in Excel</a>
+    <div class="gruppo-comandi" data-guida="programmazione-altre">
+      <button type="button" class="bottone apri-gruppo" aria-haspopup="true" aria-expanded="false">Altre esportazioni<span class="freccia" aria-hidden="true"></span></button>
+      <div class="tendina" role="menu">
+        {% if vista.sala.sale %}<a href="{{ url_for('esportazioni.scarica', periodo='mese', parte='sala', iso=primo.isoformat(), struttura=sid) }}"><b>La sala operatoria del mese</b><small>giorno per giorno, i turni dei chirurghi e gli interventi</small></a>
+        <a href="{{ url_for('esportazioni.scarica', periodo='mese', parte='tutto', iso=primo.isoformat(), struttura=sid) }}"><b>Ambulatori e sala del mese</b><small>tutto insieme, in fogli separati</small></a>{% endif %}
+        <a href="{{ url_for('esportazioni.pagina', data=primo.isoformat(), struttura=sid) }}"><b>Tutte le esportazioni</b><small>giorno, settimana e mese: ambulatori, sala o tutto insieme</small></a>
+      </div>
+    </div>
     <button class="bottone" type="button" onclick="window.print()">Stampa</button>
   </div>
 </div>

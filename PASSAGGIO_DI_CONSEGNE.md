@@ -15,8 +15,9 @@ Giovanni ha chiesto di continuare il lavoro con **Claude Code** sul suo PC (vedi
 Claude Code*), il 1° novembre 2026 alla versione **1.11** (l'autoriparazione e un giro di
 correzioni: vedi *La 1.11*), l'8 novembre 2026 alla **1.12** (ambulatori, riepilogo live, stampe ed
 Excel, certificati: vedi *La 1.12*), lo stesso giorno alla **1.12.1** (le cose aperte chiuse e le
-prove su un Windows vero: vedi *La 1.12.1*) e il 9 novembre alla **1.12.2** (il riepilogo live più
-chiaro e il riepilogo del periodo: vedi *La 1.12.2*).
+prove su un Windows vero: vedi *La 1.12.1*), il 9 novembre alla **1.12.2** (il riepilogo live più
+chiaro e il riepilogo del periodo: vedi *La 1.12.2*) e lo stesso giorno alla **1.12.3** (le esportazioni di
+ambulatori e sala operatoria per giorno, settimana e mese: vedi *La 1.12.3*).
 
 ## In breve
 
@@ -905,12 +906,30 @@ con `now()` fisso (lo script usato è nella cartella provvisoria della sessione,
 `live`, cambia `live.datetime`, poi `runpy.run_path('strumenti/demo.py')`). Immagini e video della
 guida *Il riepilogo live* sono fatti così, alle 10:40 di martedì 3 novembre.
 
+## La 1.12.3
+
+Il 9 novembre 2026 Giovanni ha chiesto di «accorpare le esportazioni della sala e quelle degli
+ambulatori», per settimana e per mese, e subito dopo, alla domanda su cosa intendesse: «esportazioni singole
+giornaliere, settimanali e mensili rispettivamente di ambulatori e sale operatorie, e un'esportazione unica che
+accorpi tutto per giorno, settimana e mese»; per la sala del mese ha scelto l'Excel con la sala giorno per
+giorno, i turni dei chirurghi e l'elenco degli interventi. Fatto così (vedi *Ambulatori* nel `LEGGIMI.md`):
+la pagina *Ambulatori → Esportazioni in Excel* con nove file (giorno, settimana e mese × ambulatori, sala
+operatoria, tutto insieme), e la sala in fondo alla pianificazione della settimana e alla programmazione del
+mese, in pagina. Decisioni: gli Excel classici restano dov'erano e uguali, solo ambulatori (molte prove e
+l'abitudine della clinica li usano; la matrice è il modulo della direzione sanitaria); in «tutto insieme»
+ambulatori e sala stanno in fogli separati («occorre distinguere sala e ambulatori»); i conti degli
+ambulatori non contano la sala; negli elenchi degli interventi niente dati dei pazienti (c'è la lista
+operatoria del giorno). La sala in questa clinica si organizza anche senza turni (i «giorni di sala» dei
+chirurghi e gli interventi prenotati): per questo chi opera senza un turno è detto per nome nella settimana e
+ha una riga sua nel mese, e un giorno con soli interventi in sala compare. Il menu *Settimana* (l'agenda di
+tutte le stanze) non è cambiato: si stampa come prima.
+
 ## Cose aperte
 
 - **Ore del cambio dell'ora**: dalla 1.12.1 contano le ore vere (vedi *La 1.12.1*). Se per le
   buste paga Giovanni e Federica vogliono quelle dell'orologio, è un punto solo da cambiare.
 - Alla clinica c'è la 1.9 animata e il suo controllo degli aggiornamenti non riesce (il certificato,
-  vedi *La 1.12*): la 1.12.2 va messa una volta a mano, dal Setup scaricato nel browser dalla pagina
+  vedi *La 1.12*): l'ultima versione va messa una volta a mano, dal Setup scaricato nel browser dalla pagina
   delle versioni (dove c'è anche il PDF della guida), oppure dopo aver aperto github.com con Edge.
   Da lì in poi «Aggiorna adesso» torna a funzionare da solo.
 - In Claude Code sul PC di Giovanni le prove si lanciano come qui; su un Windows vero le ha già

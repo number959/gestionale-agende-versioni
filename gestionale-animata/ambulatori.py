@@ -38,7 +38,7 @@ from sqlalchemy import and_, func, or_, select
 import calendario
 import servizi
 from anagrafiche import Modulo, stanza_gia_assegnata
-from comune import (FORMATO_ORE, FORMATO_PERCENTO, apri_foglio_excel, data_da, destinazione_sicura,
+from comune import (FORMATO_ORA, FORMATO_ORE, FORMATO_PERCENTO, apri_foglio_excel, data_da, destinazione_sicura,
                     imposta_stampa_excel, intero, json_sicuro, mese_da, scarica_excel, stile_intestazione_excel,
                     struttura_scelta, tabella_excel, testo_excel)
 from modelli import STATI_ATTIVI, Appuntamento, Operatore, Risorsa, Turno
@@ -445,32 +445,17 @@ def testo_cella_sala(cella):
     return '\n'.join(testi)
 
 
-def excel_matrice(st, vista, adesso=None):
-    """Il foglio della matrice: intestazione con struttura, titolo, settimana,
-    destinatario e chi lo compila; la tabella stanze x mezze giornate; la
-    legenda e le righe per le firme."""
-    adesso = adesso or datetime.now()
-    wb = Workbook()
-    ws = wb.active
-    ws.title = 'Matrice'
-    giorni, meta = vista['giorni'], vista['meta']
-    colonne = 1 + len(giorni) * len(meta)
+def _settimana_testo(vista):
     lunedi = vista['lunedi']
     domenica = lunedi + timedelta(days=6)
-    _titolo(ws, 1, testo_excel(st.nome), colonne, 16)
-    _titolo(ws, 2, TITOLO_MATRICE, colonne, 13)
-    settimana = 'dal %d %s al %d %s %d' % (lunedi.day, servizi.MESI[lunedi.month - 1], domenica.day,
-                                             servizi.MESI[domenica.month - 1], domenica.year)
-    periodo = ('Settimana tipo: i turni che si ripetono ogni settimana (quelli validi nella settimana %s), senza '
-               'assenze e chiusure' % settimana if vista['tipo'] else 'Settimana %s' % settimana)
-    ws.cell(3, 1, periodo).font = Font(italic=True)
-    ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=colonne)
-    ws.cell(4, 1, 'Destinatario: %s   ·   Compilato da: %s   ·   Data: %s' % (
-        DESTINATARIO, COMPILATO_DA, adesso.strftime('%d/%m/%Y')))
-    ws.merge_cells(start_row=4, start_column=1, end_row=4, end_column=colonne)
-    # intestazione della tabella: due righe, il giorno sopra le sue mezze giornate
-    r0 = 6
-    _intestazione(ws.cell(r0, 1), 'AMBULATORIO')
+    return 'dal %d %s al %d %s %d' % (lunedi.day, servizi.MESI[lunedi.month - 1], domenica.day,
+                                     servizi.MESI[domenica.month - 1], domenica.year)
+
+
+def _testa_settimana(ws, r0, vista, prima):
+    """Le due righe di intestazione della settimana: il giorno sopra le sue mezze giornate."""
+    giorni, meta = vista['giorni'], vista['meta']
+    _intestazione(ws.cell(r0, 1), prima)
     ws.merge_cells(start_row=r0, start_column=1, end_row=r0 + 1, end_column=1)
     for k, g in enumerate(giorni):
         c1 = 2 + k * len(meta)
@@ -488,6 +473,36 @@ def excel_matrice(st, vista, adesso=None):
             ws.column_dimensions[get_column_letter(c1 + j)].width = 19
     ws.column_dimensions['A'].width = 20
     ws.row_dimensions[r0].height = 30
+
+
+def excel_matrice(st, vista, adesso=None):
+    """Il file della matrice per la direzione sanitaria: solo gli ambulatori (dalla 1.12.3 la sala operatoria
+    ha i suoi file e il suo foglio, vedi esportazioni.py)."""
+    wb = Workbook()
+    foglio_matrice(wb.active, st, vista, adesso)
+    return wb
+
+
+def foglio_matrice(ws, st, vista, adesso=None):
+    """Il foglio della matrice: intestazione con struttura, titolo, settimana,
+    destinatario e chi lo compila; la tabella stanze x mezze giornate; la
+    legenda e le righe per le firme."""
+    adesso = adesso or datetime.now()
+    ws.title = 'Matrice'
+    giorni, meta = vista['giorni'], vista['meta']
+    colonne = 1 + len(giorni) * len(meta)
+    _titolo(ws, 1, testo_excel(st.nome), colonne, 16)
+    _titolo(ws, 2, TITOLO_MATRICE, colonne, 13)
+    settimana = _settimana_testo(vista)
+    periodo = ('Settimana tipo: i turni che si ripetono ogni settimana (quelli validi nella settimana %s), senza '
+               'assenze e chiusure' % settimana if vista['tipo'] else 'Settimana %s' % settimana)
+    ws.cell(3, 1, periodo).font = Font(italic=True)
+    ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=colonne)
+    ws.cell(4, 1, 'Destinatario: %s   ·   Compilato da: %s   ·   Data: %s' % (
+        DESTINATARIO, COMPILATO_DA, adesso.strftime('%d/%m/%Y')))
+    ws.merge_cells(start_row=4, start_column=1, end_row=4, end_column=colonne)
+    r0 = 6
+    _testa_settimana(ws, r0, vista, 'AMBULATORIO')
     verde, verde_chiaro, grigio = (PatternFill('solid', fgColor=x) for x in (VERDE_PIENO, VERDE_CHIARO, GRIGIO))
     riga = r0 + 2
     for r in vista['righe']:
@@ -520,39 +535,9 @@ def excel_matrice(st, vista, adesso=None):
     if not vista['righe']:
         ws.cell(riga, 1, 'Nessuna stanza attiva in questa struttura.')
         riga += 1
-    # 1.12.3: la sala operatoria, in una parte sua sotto gli ambulatori (chi opera e quanti interventi)
-    if vista.get('sale'):
-        c = ws.cell(riga, 1, 'SALA OPERATORIA · i chirurghi in turno%s; si programma dalla pagina Sala e non conta '
-                             'nelle disponibilità degli ambulatori' % ('' if vista['tipo'] else ' e gli interventi prenotati'))
-        c.font = Font(bold=True, color=BLU)
-        c.fill = PatternFill('solid', fgColor=AZZURRO_SALA)
-        c.alignment = Alignment(vertical='center', wrap_text=True)
-        for k in range(1, colonne + 1):
-            ws.cell(riga, k).border = BORDO
-        ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
-        ws.row_dimensions[riga].height = 22
-        riga += 1
-        for r in vista['sale']:
-            c = ws.cell(riga, 1, testo_excel(r['risorsa'].nome))
-            c.font, c.border = Font(bold=True), BORDO
-            c.alignment = Alignment(vertical='center', wrap_text=True)
-            for k, cella in enumerate(r['celle']):
-                c = ws.cell(riga, 2 + k)
-                c.border = BORDO
-                c.alignment = Alignment(vertical='top', wrap_text=True)
-                c.value = testo_excel(testo_cella_sala(cella))
-                if cella['chiuso']:
-                    c.fill = grigio
-                    c.font = Font(color='5B6B75', italic=True)
-                elif cella['tutta_libera'] and not cella.get('interventi'):
-                    c.font = Font(color='5B6B75', italic=True)
-            _altezza_riga(ws, riga, len(r['celle']))
-            riga += 1
     riga += 1
     ws.cell(riga, 1, 'In verde le fasce libere, disponibili per nuovi ambulatori (disponibilità integrative): '
-                     '«DISPONIBILE» è una mezza giornata tutta libera, «libero» le ore avanzate in una occupata.'
-                     + (' La sala operatoria è a parte: «sala libera» vuol dire nessun chirurgo in turno.'
-                        if vista.get('sale') else ''))
+                     '«DISPONIBILE» è una mezza giornata tutta libera, «libero» le ore avanzate in una occupata.')
     ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
     ws.cell(riga, 1).alignment = Alignment(wrap_text=True)
     ws.row_dimensions[riga].height = 30
@@ -568,7 +553,7 @@ def excel_matrice(st, vista, adesso=None):
     ws.cell(riga, 1 + colonne // 2, '_' * 30)
     ws.freeze_panes = ws.cell(r0 + 2, 2)
     _stampa(ws, '%d:%d' % (r0, r0 + 1), True, st, 'matrice ambulatori · ' + periodo.lower().split(':')[0])
-    return wb
+    return ws
 
 
 def frase_sala_mese(sala):
@@ -581,20 +566,29 @@ def frase_sala_mese(sala):
 
 
 def excel_programmazione(st, vista, adesso=None):
+    """Il file della programmazione degli ambulatori: due fogli, la programmazione per specialita' e il calendario
+    del mese, senza la sala operatoria (dalla 1.12.3 ha i suoi file, vedi esportazioni.py)."""
+    wb = Workbook()
+    fogli_programmazione(wb, st, vista, adesso)
+    return wb
+
+
+def fogli_programmazione(wb, st, vista, adesso=None, con_sala=False):
     """Due fogli: la programmazione per specialita' (il foglio che si
-    compilava a mano, con le date calcolate) e il calendario del mese."""
+    compilava a mano, con le date calcolate) e il calendario del mese; con
+    con_sala il calendario ha anche le righe della sala e la colonna degli
+    interventi (l'esportazione di tutto insieme)."""
     adesso = adesso or datetime.now()
     primo = vista['primo']
     nome_mese = '%s %d' % (servizi.MESI[primo.month - 1], primo.year)
-    wb = Workbook()
-    ws = wb.active
+    ws = wb.active if wb.active is not None and wb.active.max_row == 1 and wb.active['A1'].value is None \
+        and len(wb.worksheets) == 1 else wb.create_sheet()
     ws.title = 'Programmazione'
     intestazioni = ['Specialità', 'Medico', 'Giorno', 'Date di %s' % servizi.MESI[primo.month - 1], 'Orario',
                     'Stanza', 'Note']
     larghezze = [22, 26, 11, 24, 13, 18, 48]
     sala = vista.get('sala') or {'righe': [], 'interventi': 0, 'fuori_turno': 0}
-    titolo = TITOLO_PROGRAMMAZIONE + (' E SALA OPERATORIA' if sala['righe'] or sala['interventi'] else '')
-    _titolo(ws, 1, '%s — %s' % (testo_excel(st.nome), titolo), len(intestazioni), 15)
+    _titolo(ws, 1, '%s — %s' % (testo_excel(st.nome), TITOLO_PROGRAMMAZIONE), len(intestazioni), 15)
     ws.cell(2, 1, nome_mese.capitalize()).font = Font(size=12, bold=True)
     ws.cell(3, 1, 'Calcolata dai turni, dalle assenze e dalle chiusure scritte nel Gestionale Agende il %s alle %s: '
                   'le date sono quelle in cui il medico c\'è davvero.' % (adesso.strftime('%d/%m/%Y'),
@@ -606,10 +600,7 @@ def excel_programmazione(st, vista, adesso=None):
         _intestazione(ws.cell(r0, c), testo)
         ws.column_dimensions[get_column_letter(c)].width = l
     riga = r0 + 1
-    gruppi = list(vista['gruppi'])
-    if sala['righe']:
-        gruppi.append({'specialita': SALA_OPERATORIA, 'righe': sala['righe']})
-    for gruppo in gruppi:
+    for gruppo in vista['gruppi']:
         for n, r in enumerate(gruppo['righe']):
             valori = [testo_excel(gruppo['specialita']), testo_excel(r['operatore'].etichetta if r['operatore'] else '?'),
                       servizi.GIORNI[r['giorno']].capitalize() if r['giorno'] is not None else '—',
@@ -626,22 +617,16 @@ def excel_programmazione(st, vista, adesso=None):
             if not r['date']:
                 ws.cell(riga, 4).font = Font(color=ARANCIO)
             riga += 1
-    if not vista['righe'] and not sala['righe']:
+    if not vista['righe']:
         ws.cell(riga, 1, 'Nessun turno nelle stanze attive di questa struttura in %s.' % nome_mese)
         riga += 1
-    ultima_tabella = riga - 1
-    if sala['interventi'] or sala['righe']:
-        riga += 1
-        ws.cell(riga, 1, testo_excel(frase_sala_mese(sala))).font = Font(italic=True, color='5B6B75')
-        ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=len(intestazioni))
-        riga += 1
     ws.freeze_panes = ws.cell(r0 + 1, 1)
-    if vista['righe'] or sala['righe']:
-        ws.auto_filter.ref = 'A%d:%s%d' % (r0, get_column_letter(len(intestazioni)), ultima_tabella)
+    if vista['righe']:
+        ws.auto_filter.ref = 'A%d:%s%d' % (r0, get_column_letter(len(intestazioni)), riga - 1)
     _stampa(ws, '%d:%d' % (r0, r0), True, st, 'programmazione ambulatori · ' + nome_mese)
     # il calendario: giorno per giorno
     wc = wb.create_sheet('Calendario')
-    con_sala = bool(sala['righe'] or sala['interventi'])
+    con_sala = bool(con_sala and (sala['righe'] or sala['interventi']))
     colonne_cal = ['Data', 'Giorno', 'Stanza', 'Medico', 'Orario'] + (['Interventi'] if con_sala else [])
     _titolo(wc, 1, 'Calendario di %s — %s' % (nome_mese, testo_excel(st.nome)), len(colonne_cal), 14)
     for c, (testo, l) in enumerate(zip(colonne_cal, [12, 11, 18, 26, 13, 11]), start=1):
@@ -651,7 +636,7 @@ def excel_programmazione(st, vista, adesso=None):
     grigio = PatternFill('solid', fgColor=GRIGIO)
     for giorno in vista['calendario']:
         g, i = giorno['data'], giorno['info']
-        in_sala = giorno.get('sala') or []
+        in_sala = (giorno.get('sala') or []) if con_sala else []
         if g.weekday() not in st.giorni_aperti and not giorno['presenze'] and not in_sala:
             continue
         motivo = i['chiusura'] or (i['festivo'] if i['chiude_festivo'] else None)
@@ -682,6 +667,243 @@ def excel_programmazione(st, vista, adesso=None):
     wc.freeze_panes = 'A4'
     _stampa(wc, '3:3', False, st, 'calendario · ' + nome_mese)
     return wb
+
+
+# ======================================================== la sala operatoria in Excel (1.12.3)
+TITOLO_SALA = 'SALA OPERATORIA · CHIRURGHI E INTERVENTI'
+LEGENDA_SALA = ('Per ogni sala, mattina e pomeriggio: i chirurghi in turno, chi opera senza un turno e quanti '
+                'interventi (prenotati, confermati o fatti; i disdetti e i non presentati no). «sala libera»: nessun '
+                'turno e nessun intervento. La sala si programma dalla pagina Sala.')
+
+
+def _cella_sala_excel(c, cella, grigio):
+    c.border = BORDO
+    c.alignment = Alignment(vertical='top', wrap_text=True)
+    c.value = testo_excel(testo_cella_sala(cella))
+    if cella['chiuso']:
+        c.fill = grigio
+        c.font = Font(color='5B6B75', italic=True)
+    elif cella['tutta_libera']:
+        c.font = Font(color='5B6B75', italic=True)
+    elif cella['senza_turno']:
+        c.font = Font(color=ARANCIO)
+
+
+def foglio_sala_settimana(ws, st, vista, adesso=None):
+    """La sala operatoria della settimana, in un foglio suo: una riga per sala, una colonna per ogni mattina e
+    pomeriggio, come la matrice degli ambulatori."""
+    adesso = adesso or datetime.now()
+    ws.title = 'Sala operatoria'
+    giorni, meta = vista['giorni'], vista['meta']
+    colonne = 1 + len(giorni) * len(meta)
+    _titolo(ws, 1, testo_excel(st.nome), colonne, 16)
+    _titolo(ws, 2, TITOLO_SALA, colonne, 13)
+    settimana = _settimana_testo(vista)
+    periodo = ('Settimana tipo: i turni che si ripetono ogni settimana (quelli validi nella settimana %s)' % settimana
+               if vista['tipo'] else 'Settimana %s' % settimana)
+    ws.cell(3, 1, periodo).font = Font(italic=True)
+    ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=colonne)
+    r0 = 5
+    _testa_settimana(ws, r0, vista, 'SALA')
+    grigio = PatternFill('solid', fgColor=GRIGIO)
+    riga = r0 + 2
+    for r in vista['sale']:
+        c = ws.cell(riga, 1, testo_excel(r['risorsa'].nome))
+        c.font, c.border = Font(bold=True), BORDO
+        c.alignment = Alignment(vertical='center', wrap_text=True)
+        for k, cella in enumerate(r['celle']):
+            _cella_sala_excel(ws.cell(riga, 2 + k), cella, grigio)
+        _altezza_riga(ws, riga, len(r['celle']))
+        riga += 1
+    if not vista['sale']:
+        ws.cell(riga, 1, 'Nessuna sala operatoria attiva in questa struttura.')
+        riga += 1
+    riga += 1
+    ws.cell(riga, 1, LEGENDA_SALA if not vista['tipo'] else
+            'I turni dei chirurghi che si ripetono ogni settimana; gli interventi sono nella settimana vera.')
+    ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
+    ws.cell(riga, 1).alignment = Alignment(wrap_text=True)
+    ws.row_dimensions[riga].height = 30
+    riga += 1
+    ws.cell(riga, 1, 'Calcolata dai turni e dagli interventi scritti nel Gestionale Agende il %s alle %s.'
+            % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = Font(italic=True, color='5B6B75')
+    ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
+    ws.freeze_panes = ws.cell(r0 + 2, 2)
+    _stampa(ws, '%d:%d' % (r0, r0 + 1), True, st, 'sala operatoria · ' + periodo.lower().split(':')[0])
+    return ws
+
+
+def sala_del_mese(ses, st, primo, ultimo):
+    """La sala operatoria giorno per giorno: i giorni del mese che le matrici delle settimane mostrano (di
+    apertura, o con turni o interventi), con le celle di ogni sala. Le celle sono quelle della matrice, cosi'
+    la settimana e il mese non possono dire cose diverse."""
+    giorni = []
+    lunedi = calendario.lunedi_di(primo)
+    while lunedi <= ultimo:
+        v = matrice(ses, lunedi, st)
+        for g in v['giorni']:
+            if primo <= g <= ultimo:
+                giorni.append({'data': g, 'info': v['info'][g],
+                               'celle': {r['risorsa'].id: [c for c in r['celle'] if c['data'] == g] for r in v['sale']}})
+        lunedi += timedelta(days=7)
+    return {'giorni': giorni, 'sale': sale_della(st), 'meta': mezze_giornate(st), 'primo': primo, 'ultimo': ultimo}
+
+
+def foglio_sala_mese(ws, st, mese, adesso=None):
+    """La sala operatoria del mese, giorno per giorno: una riga per giorno, per ogni sala la mattina e il
+    pomeriggio (chi opera e quanti interventi)."""
+    adesso = adesso or datetime.now()
+    ws.title = 'Sala operatoria'
+    sale, meta, primo = mese['sale'], mese['meta'], mese['primo']
+    nome_mese = '%s %d' % (servizi.MESI[primo.month - 1], primo.year)
+    colonne = 1 + max(1, len(sale)) * len(meta)
+    _titolo(ws, 1, testo_excel(st.nome), colonne, 16)
+    _titolo(ws, 2, TITOLO_SALA, colonne, 13)
+    ws.cell(3, 1, nome_mese.capitalize()).font = Font(size=12, bold=True)
+    r0 = 5
+    _intestazione(ws.cell(r0, 1), 'GIORNO')
+    ws.merge_cells(start_row=r0, start_column=1, end_row=r0 + 1, end_column=1)
+    ws.column_dimensions['A'].width = 18
+    for k, sala in enumerate(sale):
+        c1 = 2 + k * len(meta)
+        _intestazione(ws.cell(r0, c1), testo_excel(sala.nome))
+        if len(meta) > 1:
+            ws.merge_cells(start_row=r0, start_column=c1, end_row=r0, end_column=c1 + len(meta) - 1)
+        for j, m in enumerate(meta):
+            _intestazione(ws.cell(r0 + 1, c1 + j), fascia(m['da'], m['a']).replace('–', '-'))
+            ws.column_dimensions[get_column_letter(c1 + j)].width = 24
+    grigio = PatternFill('solid', fgColor=GRIGIO)
+    riga = r0 + 2
+    for giorno in mese['giorni']:
+        g, i = giorno['data'], giorno['info']
+        testo = '%s %d/%d' % (servizi.GIORNI[g.weekday()].capitalize(), g.day, g.month)
+        if i['chiusura'] or i['festivo']:
+            testo += '\n%s' % testo_excel(i['chiusura'] or i['festivo'])
+        c = ws.cell(riga, 1, testo)
+        c.font, c.border = Font(bold=True), BORDO
+        c.alignment = Alignment(vertical='top', wrap_text=True)
+        for k, sala in enumerate(sale):
+            for j, cella in enumerate(giorno['celle'].get(sala.id, [])):
+                _cella_sala_excel(ws.cell(riga, 2 + k * len(meta) + j), cella, grigio)
+        righe_testo = 2 if '\n' in testo else 1
+        for k in range(len(sale) * len(meta)):
+            v = ws.cell(riga, 2 + k).value or ''
+            righe_testo = max(righe_testo, sum(max(1, -(-len(pezzo) // 28)) for pezzo in str(v).split('\n')))
+        ws.row_dimensions[riga].height = max(30, 15 * righe_testo)
+        riga += 1
+    if not sale:
+        ws.cell(riga, 1, 'Nessuna sala operatoria attiva in questa struttura.')
+        riga += 1
+    riga += 1
+    ws.cell(riga, 1, LEGENDA_SALA)
+    ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
+    ws.cell(riga, 1).alignment = Alignment(wrap_text=True)
+    ws.row_dimensions[riga].height = 30
+    riga += 1
+    ws.cell(riga, 1, 'Calcolata dai turni e dagli interventi scritti nel Gestionale Agende il %s alle %s.'
+            % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = Font(italic=True, color='5B6B75')
+    ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
+    ws.freeze_panes = ws.cell(r0 + 2, 2)
+    _stampa(ws, '%d:%d' % (r0, r0 + 1), len(sale) * len(meta) > 4, st, 'sala operatoria · ' + nome_mese)
+    return ws
+
+
+def foglio_turni_sala(ws, st, vista, adesso=None):
+    """I turni dei chirurghi in sala nel mese, come la programmazione degli ambulatori: le date in cui operano
+    davvero, gli interventi di ogni turno, una riga per chi ha operato fuori dai suoi turni e la frase in fondo."""
+    adesso = adesso or datetime.now()
+    ws.title = 'Turni di sala'
+    primo = vista['primo']
+    nome_mese = '%s %d' % (servizi.MESI[primo.month - 1], primo.year)
+    sala = vista['sala']
+    intestazioni = ['Sala', 'Chirurgo', 'Giorno', 'Date di %s' % servizi.MESI[primo.month - 1], 'Orario', 'Note']
+    larghezze = [20, 26, 11, 24, 13, 44]
+    _titolo(ws, 1, '%s — SALA OPERATORIA: I TURNI DEI CHIRURGHI' % testo_excel(st.nome), len(intestazioni), 15)
+    ws.cell(2, 1, nome_mese.capitalize()).font = Font(size=12, bold=True)
+    ws.cell(3, 1, 'Calcolata dai turni, dalle assenze, dalle chiusure e dagli interventi scritti nel Gestionale Agende '
+                  'il %s alle %s.' % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = Font(italic=True, color='5B6B75')
+    ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=len(intestazioni))
+    r0 = 5
+    for c, (testo, l) in enumerate(zip(intestazioni, larghezze), start=1):
+        _intestazione(ws.cell(r0, c), testo)
+        ws.column_dimensions[get_column_letter(c)].width = l
+    riga = r0 + 1
+    prima_sala = None
+    for r in sala['righe']:
+        valori = [testo_excel(r['risorsa'].nome), testo_excel(r['operatore'].etichetta if r['operatore'] else '?'),
+                  servizi.GIORNI[r['giorno']].capitalize() if r['giorno'] is not None else '—',
+                  (r['date'][0].day if len(r['date']) == 1 else ', '.join(str(g.day) for g in r['date'])) or '—',
+                  fascia(r['ora_inizio'], r['ora_fine']).replace('–', '-') if r['ora_inizio'] else '—',
+                  testo_excel('; '.join(r['note']))]
+        nuova = r['risorsa'].id != prima_sala
+        prima_sala = r['risorsa'].id
+        for c, v in enumerate(valori, start=1):
+            cella = ws.cell(riga, c, v)
+            cella.border = Border(left=_sottile, right=_sottile, top=_spesso, bottom=_sottile) if nuova else BORDO
+            cella.alignment = Alignment(vertical='top', wrap_text=True)
+        ws.cell(riga, 1).font = Font(bold=True, color=BLU) if nuova else Font(color='5B6B75')
+        if r.get('senza_turno'):
+            ws.cell(riga, 6).font = Font(color=ARANCIO)
+        elif not r['date']:
+            ws.cell(riga, 4).font = Font(color=ARANCIO)
+        riga += 1
+    if not sala['righe']:
+        ws.cell(riga, 1, 'Nessun turno e nessun intervento in sala operatoria in %s.' % nome_mese)
+        riga += 1
+    ultima = riga - 1
+    riga += 1
+    ws.cell(riga, 1, testo_excel(frase_sala_mese(sala))).font = Font(italic=True, color='5B6B75')
+    ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=len(intestazioni))
+    ws.freeze_panes = ws.cell(r0 + 1, 1)
+    if sala['righe']:
+        ws.auto_filter.ref = 'A%d:%s%d' % (r0, get_column_letter(len(intestazioni)), ultima)
+    _stampa(ws, '%d:%d' % (r0, r0), True, st, 'turni di sala · ' + nome_mese)
+    return ws
+
+
+def interventi_periodo(ses, st, dal, al):
+    """Tutti gli interventi nelle sale operatorie della struttura (anche in quelle spente dopo), in ogni stato,
+    dal giorno 'dal' al giorno 'al' compresi, in ordine di ora."""
+    ids = [r.id for r in st.risorse if r.tipo == TIPO_SALA]
+    if not ids:
+        return []
+    return ses.scalars(select(Appuntamento).where(
+        Appuntamento.risorsa_id.in_(ids), Appuntamento.inizio >= datetime.combine(dal, time(0)),
+        Appuntamento.inizio < datetime.combine(al + timedelta(days=1), time(0)))
+        .order_by(Appuntamento.inizio, Appuntamento.risorsa_id)).all()
+
+
+def foglio_interventi(ws, st, lista, periodo):
+    """L'elenco degli interventi del periodo: data, ora, sala, chirurgo, prestazione e stato. Senza i dati dei
+    pazienti (per quelli c'e' la lista operatoria del giorno); i disdetti barrati, i non presentati in grigio, i
+    totali contano solo gli attivi."""
+    ws.title = 'Interventi'
+    intestazioni = ['DATA', 'ORA', 'FINE', 'SALA', 'CHIRURGO', 'PRESTAZIONE', 'STATO']
+    larghezze = [12, 8, 8, 18, 24, 30, 15]
+    attivi = [x for x in lista if x.stato in STATI_ATTIVI]
+    disdetti = sum(1 for x in lista if x.stato == 'DISDETTO')
+    non_pres = sum(1 for x in lista if x.stato == 'NON_PRESENTATO')
+    sotto = '%d intervent%s attiv%s' % (len(attivi), 'o' if len(attivi) == 1 else 'i', 'o' if len(attivi) == 1 else 'i')
+    altri = [x for x in ('%d disdett%s' % (disdetti, 'o' if disdetti == 1 else 'i') if disdetti else '',
+                         '%d non presentat%s' % (non_pres, 'o' if non_pres == 1 else 'i') if non_pres else '') if x]
+    if altri:
+        sotto += ' (più %s)' % ' e '.join(altri)
+    riga = apri_foglio_excel(ws, 'Interventi in sala operatoria · %s' % periodo, sotto, st, colonne=len(intestazioni))
+    righe = [[x.inizio.date(), x.inizio.time(), x.fine.time(), x.risorsa.nome if x.risorsa else '',
+              x.operatore.etichetta if x.operatore else '', x.prestazione.nome if x.prestazione else '',
+              x.etichetta_stato] for x in lista]
+    barrato = Font(name='Calibri', size=10, italic=True, color='5B6B75', strike=True)
+    grigio_f = Font(name='Calibri', size=10, italic=True, color='5B6B75')
+    stati = {servizi.ETICHETTA_STATO.get('DISDETTO', 'Disdetto'): barrato,
+             servizi.ETICHETTA_STATO.get('NON_PRESENTATO', 'Non presentato'): grigio_f}
+    tabella_excel(ws, riga, intestazioni, larghezze, righe,
+                  formati={1: 'dd/mm/yyyy', 2: FORMATO_ORA, 3: FORMATO_ORA},
+                  totali={1: 'Totale (solo attivi)', 5: '%d intervent%s' % (len(attivi), 'o' if len(attivi) == 1 else 'i')} if lista else None,
+                  a_capo=(6,), stile_riga=lambda v: {'font': stati[v[6]]} if v[6] in stati else None)
+    if not lista:
+        ws.cell(riga + 1, 1, 'Nessun intervento in questo periodo.')
+    imposta_stampa_excel(ws, True, '%d:%d' % (riga, riga), None, st, 'interventi · ' + periodo)
+    return ws
 
 
 # =============================================================== pagine

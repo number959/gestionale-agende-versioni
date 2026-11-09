@@ -24,7 +24,10 @@
       <div class="tendina" role="menu">
         <a href="{{ url_for('ambulatori.settimana_excel', iso=lunedi.isoformat(), struttura=sid) }}"><b>La matrice in Excel</b><small>questa settimana, con assenze e chiusure: per la direzione sanitaria</small></a>
         <a href="{{ url_for('ambulatori.settimana_excel', iso=lunedi.isoformat(), struttura=sid, tipo=1) }}"><b>La settimana tipo in Excel</b><small>solo i turni che si ripetono, senza assenze</small></a>
+        {% if vista.sale %}<a href="{{ url_for('esportazioni.scarica', periodo='settimana', parte='sala', iso=lunedi.isoformat(), struttura=sid) }}"><b>La sala operatoria in Excel</b><small>chirurghi e interventi della settimana, sala per sala</small></a>
+        <a href="{{ url_for('esportazioni.scarica', periodo='settimana', parte='tutto', iso=lunedi.isoformat(), struttura=sid) }}"><b>Ambulatori e sala in Excel</b><small>tutto insieme, in fogli separati</small></a>{% endif %}
         <a href="{{ url_for('ambulatori.mese', aaaamm=aaaamm, struttura=sid) }}"><b>Programmazione del mese</b><small>per specialità e medico, con le date in cui viene</small></a>
+        <a href="{{ url_for('esportazioni.pagina', data=lunedi.isoformat(), struttura=sid) }}"><b>Tutte le esportazioni</b><small>giorno, settimana e mese: ambulatori, sala o tutto insieme</small></a>
         <a href="#" onclick="window.print(); return false"><b>Stampa</b><small>questa pagina</small></a>
       </div>
     </div>

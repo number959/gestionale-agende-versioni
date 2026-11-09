@@ -68,9 +68,9 @@ with sync_playwright() as p:
     attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
     ok('il menu: il gruppo Ambulatori è segnato attivo', attivo.count() and 'Ambulatori' in attivo.inner_text(), attivo.inner_text() if attivo.count() else 'nessun gruppo attivo')
     voci = pg.locator('nav.menu .gruppo.attivo .tendina a').all_inner_texts()
-    ok('nel gruppo: Pianificazione della settimana, Programmazione del mese, Riepilogo live e Riepilogo del periodo',
-       len(voci) == 4 and 'Pianificazione' in voci[0] and 'Programmazione' in voci[1] and 'Riepilogo live' in voci[2] and
-       'Riepilogo del periodo' in voci[3], voci)
+    ok('nel gruppo: Pianificazione della settimana, Programmazione del mese, Riepilogo live, Riepilogo del periodo, Esportazioni',
+       len(voci) == 5 and 'Pianificazione' in voci[0] and 'Programmazione' in voci[1] and 'Riepilogo live' in voci[2] and
+       'Riepilogo del periodo' in voci[3] and 'Esportazioni in Excel' in voci[4], voci)
 
     # Metti: una cella libera, il «+», Galasso, Metti
     cella = pg.locator('#matrice-ambulatori td.libera:has(details.metti)').first
@@ -106,8 +106,15 @@ with sync_playwright() as p:
 
     # Stampa e scarica
     voci = pg.locator('.gruppo-comandi .tendina a').all_inner_texts()
-    ok('«Stampa e scarica»: matrice, settimana tipo, programmazione del mese, stampa',
-       len(voci) == 4 and 'La matrice in Excel' in voci[0] and 'settimana tipo' in voci[1] and 'Programmazione del mese' in voci[2] and 'Stampa' in voci[3], voci)
+    ok('«Stampa e scarica»: matrice, settimana tipo, sala, ambulatori e sala, programmazione, tutte le esportazioni, stampa',
+       len(voci) == 7 and 'La matrice in Excel' in voci[0] and 'settimana tipo' in voci[1] and 'sala operatoria in Excel' in voci[2]
+       and 'Ambulatori e sala' in voci[3] and 'Programmazione del mese' in voci[4] and 'Tutte le esportazioni' in voci[5]
+       and 'Stampa' in voci[6], voci)
+    pg.locator('.gruppo-comandi .apri-gruppo').click()
+    with pg.expect_download() as scaricato:
+        pg.locator('.gruppo-comandi .tendina a', has_text='Ambulatori e sala in Excel').click()
+    ok('ambulatori e sala della settimana in un file solo',
+       scaricato.value.suggested_filename == 'ambulatori-e-sala-settimana-%s.xlsx' % LUN.isoformat(), scaricato.value.suggested_filename)
     pg.locator('.gruppo-comandi .apri-gruppo').click()
     with pg.expect_download() as scaricato:
         pg.locator('.gruppo-comandi .tendina a', has_text='La matrice in Excel').click()
@@ -159,6 +166,37 @@ with sync_playwright() as p:
     ok('il calendario ha la colonna degli interventi e le righe della sala',
        'Interventi' in pg.locator('details.calendario-mese table tr').first.inner_text()
        and pg.locator('details.calendario-mese tr.riga-sala').count() >= 1)
+    pg.locator('[data-guida="programmazione-altre"] .apri-gruppo').click()
+    altre = pg.locator('[data-guida="programmazione-altre"] .tendina a').all_inner_texts()
+    ok('«Altre esportazioni» del mese: la sala, tutto insieme, la pagina delle esportazioni',
+       len(altre) == 3 and 'sala operatoria del mese' in altre[0] and 'Ambulatori e sala' in altre[1] and 'Tutte le esportazioni' in altre[2], altre)
+    with pg.expect_download() as scaricato:
+        pg.locator('[data-guida="programmazione-altre"] .tendina a', has_text='La sala operatoria del mese').click()
+    ok('la sala del mese in Excel', scaricato.value.suggested_filename == 'sala-operatoria-mese-%s.xlsx' % LUN.strftime('%Y-%m'),
+       scaricato.value.suggested_filename)
+
+    # 1.12.3: la pagina delle esportazioni: nove pulsanti, la data scelta, un file vero
+    pg.goto(B + '/esportazioni?struttura=1&data=%s' % OGGI.isoformat())
+    pg.wait_for_selector('#esportazioni')
+    pulsanti = pg.locator('#esportazioni a.bottone')
+    ok('esportazioni: nove pulsanti, giorno, settimana e mese per ambulatori, sala e tutto', pulsanti.count() == 9, pulsanti.count())
+    righe_esp = pg.locator('#esportazioni tr[data-periodo]').evaluate_all("trs => trs.map(t => t.dataset.periodo)")
+    ok('esportazioni: le righe sono giorno, settimana e mese', righe_esp == ['giorno', 'settimana', 'mese'], righe_esp)
+    with pg.expect_download() as scaricato:
+        pg.locator('#esportazioni tr[data-periodo="giorno"] a.bottone').nth(1).click()
+    ok('esportazioni: la sala del giorno si scarica con il suo nome',
+       scaricato.value.suggested_filename == 'sala-operatoria-giorno-%s.xlsx' % OGGI.isoformat(), scaricato.value.suggested_filename)
+    pg.fill('form.scelta-data input[name="data"]', (OGGI + timedelta(days=40)).isoformat())
+    pg.locator('form.scelta-data button').click()
+    pg.wait_for_selector('#esportazioni')
+    ok('esportazioni: cambiando la data cambiano i pulsanti',
+       ((OGGI + timedelta(days=40)).isoformat() + '.xlsx') in (pulsanti.first.get_attribute('href') or ''), pulsanti.first.get_attribute('href'))
+    attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
+    ok('esportazioni: il gruppo Ambulatori è attivo', attivo.count() and 'Ambulatori' in attivo.inner_text())
+    pg.set_viewport_size({'width': 390, 'height': 800})
+    largo = pg.evaluate('document.documentElement.scrollWidth')
+    ok('esportazioni: sul telefono niente scorrimento laterale', largo <= 392, largo)
+    pg.set_viewport_size({'width': 1366, 'height': 820})
 
     # 1.12.2: il riepilogo live piu' chiaro, a qualsiasi ora la prova giri
     import json as _json

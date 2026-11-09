@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block titolo %}Esportazioni in Excel{% endblock %}
+{% block corpo %}
+<div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">Esportazioni in Excel</h1>
+  <div class="comandi">
+    <form method="get" class="scelta-data" data-guida="esportazioni-data">
+      <label>Data <input type="date" name="data" value="{{ g.isoformat() }}" required></label>
+      {% if strutture|length > 1 %}
+      <select name="struttura">
+        {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+      </select>
+      {% else %}<input type="hidden" name="struttura" value="{{ sid }}">{% endif %}
+      <button class="bottone" type="submit">Mostra</button>
+    </form>
+    {% if g != oggi %}<a class="bottone" href="{{ url_for('esportazioni.pagina', data=oggi.isoformat(), struttura=sid) }}">Oggi</a>{% endif %}
+  </div>
+</div>
+
+<div class="contenuto">
+  <p class="nota" data-guida="esportazioni-spiegazione">Il giorno, la settimana o il mese della data scelta, in tre versioni: solo gli <b>ambulatori</b>, solo la <b>sala operatoria</b>, oppure <b>tutto insieme</b> in un file solo, con ambulatori e sala in fogli separati. Tutto è calcolato dai turni e dagli appuntamenti del programma, come nelle pagine.</p>
+  <table class="elenco esportazioni" id="esportazioni" data-guida="esportazioni-tabella">
+    <tr><th></th>{% for v in voci[0].parti %}<th>{{ v.nome }}</th>{% endfor %}</tr>
+    {% for voce in voci %}
+    <tr data-periodo="{{ voce.periodo }}">
+      <th class="periodo-esp">{{ voce.nome }}<small>{{ voce.quando }}</small></th>
+      {% for p in voce.parti %}
+      <td class="parte-esp" data-nome="{{ p.nome }}">
+        {% if p.parte == 'sala' and not ha_sale %}
+        <span class="senza">Nessuna sala operatoria in questa struttura</span>
+        {% else %}
+        <a class="bottone{% if p.parte == 'tutto' %} primario{% endif %} piccolo" href="{{ url_for('esportazioni.scarica', periodo=voce.periodo, parte=p.parte, iso=g.isoformat(), struttura=sid) }}" download="{{ p.file }}">Scarica</a>
+        <small>{{ p.contenuto }}</small>
+        {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="nota legenda-esportazioni">Gli elenchi degli interventi non hanno i dati dei pazienti: per quelli c'è la <a href="{{ url_for('sala.lista_operatoria', iso=g.isoformat(), struttura=sid) }}">lista operatoria</a> del giorno. Il planning del giorno, come sempre, ha l'elenco degli appuntamenti con i recapiti. La matrice della settimana e la programmazione del mese degli ambulatori sono anche nelle loro pagine, dal menu Ambulatori.</p>
+</div>
+{% endblock %}

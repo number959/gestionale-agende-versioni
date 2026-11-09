@@ -593,6 +593,20 @@ table.matrice .turno-sett.senza-turno small { color: #8A4B12; }
 table.programmazione tr.senza-turno td.note-prog { color: #8A4B12; }
 table.programmazione tr.riga-sala td.specialita { color: #8A4B12; }
 p.frase-sala { margin-top: 8px; }
+/* 1.12.3: le esportazioni in Excel */
+table.esportazioni { max-width: 1100px; }
+table.esportazioni th.periodo-esp { text-align: left; font-family: var(--titoli); color: var(--primario); background: #EEF3FA; width: 170px; font-size: 15px; }
+table.esportazioni th.periodo-esp small { display: block; font-family: var(--testo); font-weight: 400; color: #46596A; font-size: 12px; }
+table.esportazioni td.parte-esp { vertical-align: top; padding: 10px 12px; }
+table.esportazioni td.parte-esp small { display: block; margin-top: 6px; color: #46596A; font-size: 12px; }
+table.esportazioni td.parte-esp .senza { color: #5B6B75; font-style: italic; font-size: 13px; }
+form.scelta-data { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; max-width: 100%; }
+form.scelta-data label { display: inline-flex; gap: 6px; align-items: center; }
+@media (max-width: 700px) {
+  table.esportazioni, table.esportazioni tbody, table.esportazioni tr, table.esportazioni th, table.esportazioni td { display: block; width: auto; }
+  table.esportazioni tr:first-child { display: none; }
+  table.esportazioni td.parte-esp::before { content: attr(data-nome); display: block; font-weight: 600; margin-bottom: 4px; color: var(--primario); }
+}
 @media print {
   details.metti, form.togli-turno, p.legenda-matrice { display: none !important; }
   table.matrice tbody.parte-sala th.titolo-sala, table.matrice td.sala-vuota { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

@@ -981,15 +981,64 @@ def statistiche(ses, struttura_id, dal, al):
 
 
 # ------------------------------------------------------------------ export
-def esporta_giorno(ses, g, struttura_id, percorso):
+SALA = 'SALA_OPERATORIA'
+PARTI_ESPORTAZIONE = ('ambulatori', 'sala', 'tutto')
+
+
+def di_sala(risorsa):
+    """Se la stanza e' una sala operatoria (nelle esportazioni la sala sta a parte dagli ambulatori)."""
+    return risorsa is not None and risorsa.tipo == SALA
+
+
+def esporta_giorno(ses, g, struttura_id, percorso, parte=None):
     """Esporta la giornata nel formato dei fogli che l'accettazione usa oggi
     (una colonna doppia per stanza, una riga per fascia), piu' un secondo
     foglio con l'elenco completo, recapiti compresi. Dalla 1.12 con lo stile
     comune degli Excel (comune.tabella_excel e soci): il titolo con la
     struttura, i turni dei medici nelle intestazioni delle stanze, le fasce
     libere nel turno in azzurro e quelle fuori turno in grigio, la legenda,
-    il foglio A4 che sta in larghezza con le intestazioni ripetute."""
+    il foglio A4 che sta in larghezza con le intestazioni ripetute.
+
+    parte (1.12.3): None e' il planning di sempre, tutte le stanze in un foglio;
+    'ambulatori' solo le stanze, 'sala' solo le sale operatorie (e l'elenco dei
+    loro appuntamenti); 'tutto' due fogli, Ambulatori e Sala operatoria, piu'
+    l'elenco di tutto."""
     from openpyxl import Workbook
+    vista = griglia(ses, g, struttura_id)
+    st = ses.get(Struttura, struttura_id)
+    apps = elenco_giorno(ses, g, struttura_id)
+    stanze = [c for c in vista['colonne'] if not di_sala(c['risorsa'])]
+    sale = [c for c in vista['colonne'] if di_sala(c['risorsa'])]
+    if parte is None:
+        fogli = [(g.strftime('%d-%m-%Y'), vista['colonne'], None, apps)]
+        elenco, titolo_elenco = apps, None
+    elif parte == 'ambulatori':
+        mie = [a for a in apps if not di_sala(a.risorsa)]
+        fogli = [('Ambulatori', stanze, 'ambulatori', mie)]
+        elenco, titolo_elenco = mie, 'Elenco degli ambulatori del %s'
+    elif parte == 'sala':
+        mie = [a for a in apps if di_sala(a.risorsa)]
+        fogli = [('Sala operatoria', sale, 'sala operatoria', mie)]
+        elenco, titolo_elenco = mie, 'Interventi del %s'
+    else:
+        fogli = [('Ambulatori', stanze, 'ambulatori', [a for a in apps if not di_sala(a.risorsa)])]
+        if sale or any(di_sala(a.risorsa) for a in apps):
+            fogli.append(('Sala operatoria', sale, 'sala operatoria', [a for a in apps if di_sala(a.risorsa)]))
+        elenco, titolo_elenco = apps, None
+    wb = Workbook()
+    for n, (nome_foglio, colonne_scelte, cosa, mie) in enumerate(fogli):
+        ws = wb.active if n == 0 else wb.create_sheet()
+        ws.title = nome_foglio
+        _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, mie)
+    _foglio_elenco(wb, ses, g, struttura_id, elenco, titolo_elenco)
+    wb.active = 0
+    wb.save(percorso)
+    return percorso
+
+
+def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps):
+    """Un foglio di planning del giorno per le colonne scelte (tutte, le stanze o le sale): titolo, intestazioni
+    con i turni, una riga per fascia, legenda e nota degli appuntamenti nelle stanze disattivate."""
     from openpyxl.styles import Font, PatternFill, Alignment
     from openpyxl.utils import get_column_letter
     # qui dentro: comune importa questo modulo
@@ -1001,12 +1050,7 @@ def esporta_giorno(ses, g, struttura_id, percorso):
     azzurro = PatternFill('solid', fgColor='FFEEF3FA')       # fascia libera dentro un turno
     grigio = PatternFill('solid', fgColor='FFECEEF0')        # fuori turno, stanza chiusa
 
-    vista = griglia(ses, g, struttura_id)
-    colonne, elenco_fasce = vista['colonne'], vista['fasce']
-    st = ses.get(Struttura, struttura_id)
-    wb = Workbook()
-    ws = wb.active
-    ws.title = g.strftime('%d-%m-%Y')
+    colonne, elenco_fasce = colonne_scelte, vista['fasce']
     ultima_colonna = 1 + 2 * len(colonne)
 
     # logo della struttura, dal database; senza logo il titolo va in A1
@@ -1028,8 +1072,9 @@ def esporta_giorno(ses, g, struttura_id, percorso):
                 break
             spazio += l
     nome = st.nome if st is not None else ''
-    titolo = ('%s - planning del %s' % (nome, etichetta_giorno(g))) if nome else \
-        'Planning del %s' % etichetta_giorno(g)
+    cosa_t = ('%s, ' % cosa) if cosa else ''
+    titolo = ('%s - %splanning del %s' % (nome, cosa_t, etichetta_giorno(g))) if nome else \
+        '%splanning del %s' % (cosa_t.capitalize(), etichetta_giorno(g)) if cosa_t else 'Planning del %s' % etichetta_giorno(g)
     tit = ws.cell(1, colonna_titolo, testo_excel(titolo.upper()))
     tit.font = carattere_excel(size=14, bold=True, color=EXCEL_BLU)
     tit.alignment = Alignment(vertical='center')
@@ -1101,23 +1146,23 @@ def esporta_giorno(ses, g, struttura_id, percorso):
     legenda.font = carattere_excel(size=9, italic=True, color=EXCEL_GRIGIO)
     ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=max(2, ultima_colonna))
     # le stanze disattivate non hanno una colonna: i loro appuntamenti stanno nel foglio Elenco
-    apps = elenco_giorno(ses, g, struttura_id)
     fuori = [a for a in apps if a.risorsa is not None and not a.risorsa.attiva and a.stato in STATI_ATTIVI]
+    if not colonne:
+        riga += 1
+        vuota = ws.cell(riga, 1, 'Nessuna %s attiva in questa struttura.' % ('sala operatoria' if cosa == 'sala operatoria' else 'stanza'))
+        vuota.font = carattere_excel(size=10, italic=True, color=EXCEL_GRIGIO)
     if fuori:
-        nota = ws.cell(riga + 1, 1, '%d appuntament%s in stanze disattivate: nel foglio Elenco.'
+        riga += 1
+        nota = ws.cell(riga, 1, '%d appuntament%s in stanze disattivate: nel foglio Elenco.'
                        % (len(fuori), 'o' if len(fuori) == 1 else 'i'))
         nota.font = carattere_excel(size=9, italic=True, color=EXCEL_GRIGIO)
-        ws.merge_cells(start_row=riga + 1, start_column=1, end_row=riga + 1, end_column=max(2, ultima_colonna))
+        ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=max(2, ultima_colonna))
 
     ws.freeze_panes = 'B3'
     imposta_stampa_excel(ws, True, '1:2', 'A:A', st, etichetta_giorno(g))
-    _foglio_elenco(wb, ses, g, struttura_id, apps)
-    wb.active = 0
-    wb.save(percorso)
-    return percorso
 
 
-def _foglio_elenco(wb, ses, g, struttura_id, apps=None):
+def _foglio_elenco(wb, ses, g, struttura_id, apps=None, titolo=None):
     """Secondo foglio: una riga per appuntamento, con le colonne delle agende
     Excel dell'accettazione. Anche disdetti e non presentati (in grigio, i
     disdetti barrati), con lo stato; la riga dei totali conta e somma solo gli
@@ -1156,7 +1201,8 @@ def _foglio_elenco(wb, ses, g, struttura_id, apps=None):
     if n_disdetti or n_non:
         sotto += ' (piu' + ' %d disdett%s' % (n_disdetti, 'o' if n_disdetti == 1 else 'i') * bool(n_disdetti) + \
                  (' e' if n_disdetti and n_non else '') + ' %d non presentat%s' % (n_non, 'o' if n_non == 1 else 'i') * bool(n_non) + ')'
-    riga = apri_foglio_excel(ws, 'Elenco del %s' % etichetta_giorno(g), sotto, st, colonne=len(intestazioni))
+    titolo = (titolo or 'Elenco del %s') % etichetta_giorno(g)
+    riga = apri_foglio_excel(ws, titolo, sotto, st, colonne=len(intestazioni))
     grigio_f = Font(name='Calibri', size=10, italic=True, color=EXCEL_GRIGIO)
     barrato_f = Font(name='Calibri', size=10, italic=True, color=EXCEL_GRIGIO, strike=True)
     etichette_stati = {'DISDETTO': ETICHETTA_STATO.get('DISDETTO', 'Disdetto'),
@@ -1175,7 +1221,7 @@ def _foglio_elenco(wb, ses, g, struttura_id, apps=None):
               11: somma}
     tabella_excel(ws, riga, intestazioni, larghezze, righe, formati={1: FORMATO_ORA, 2: FORMATO_ORA, 11: FORMATO_EURO},
                   totali=totali, a_capo=(13,) + tuple(range(14, 14 + len(extra))), stile_riga=stile_riga)
-    imposta_stampa_excel(ws, True, '%d:%d' % (riga, riga), None, st, 'Elenco del %s' % etichetta_giorno(g))
+    imposta_stampa_excel(ws, True, '%d:%d' % (riga, riga), None, st, titolo)
 
 
 # ================================================== stato e spostamenti (1.4)

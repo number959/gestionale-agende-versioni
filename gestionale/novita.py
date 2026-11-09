@@ -14,16 +14,22 @@ Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
     ('1.12.3', [
-        dict(titolo='Ambulatori e sala operatoria in un solo foglio',
-             testo='La pianificazione della settimana e la programmazione del mese, in pagina e in Excel, hanno '
-                   'anche la sala operatoria, in fondo e a parte: per ogni sala i chirurghi in turno e quanti '
-                   'interventi, chi opera senza un turno, e nel mese gli interventi di ogni turno e quelli fuori dai '
-                   'turni. Le mezze giornate libere degli ambulatori restano contate come prima.',
+        dict(titolo='Esportazioni in Excel: ambulatori, sala operatoria o tutto insieme',
+             testo='Menu Ambulatori → Esportazioni in Excel: per il giorno, la settimana e il mese della data scelta, '
+                   'un file solo degli ambulatori, uno solo della sala operatoria e uno con tutto insieme, dove '
+                   'ambulatori e sala stanno in fogli separati. Nove pulsanti, un clic per ciascun file; ci si arriva '
+                   'anche da «Altre esportazioni» nel giorno, nella settimana e nel mese.',
+             guida='esportazioni'),
+        dict(titolo='La sala operatoria del mese',
+             testo='Un Excel della sala per tutto il mese: giorno per giorno, per ogni sala la mattina e il pomeriggio '
+                   'con i chirurghi e quanti interventi, i turni dei chirurghi con le date e gli interventi di ciascuno '
+                   '(e chi ha operato fuori dai turni), e l\'elenco degli interventi del mese.',
+             guida='esportazioni'),
+        dict(titolo='La sala nella settimana e nel mese, anche in pagina',
+             testo='La pianificazione della settimana e la programmazione del mese mostrano in fondo la sala '
+                   'operatoria: chi opera e quanti interventi. Le mezze giornate libere degli ambulatori si contano '
+                   'come prima.',
              guida='ambulatori'),
-        dict(titolo='La programmazione del mese con la sala',
-             testo='Nella programmazione del mese, dopo le specialità, la sala operatoria con le date e gli '
-                   'interventi; nel calendario giorno per giorno la colonna degli interventi.',
-             guida='programmazione'),
     ]),
     ('1.12.2', [
         dict(titolo='Il riepilogo live più chiaro',

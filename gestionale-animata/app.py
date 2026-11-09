@@ -50,6 +50,7 @@ import invii
 import aggiornamenti
 import personale
 import ambulatori
+import esportazioni
 import live
 import dovesifa
 import autoripara
@@ -777,6 +778,7 @@ sala.collega(app, ses, LUCCHETTO)
 cruscotto.collega(app, ses, LUCCHETTO)
 personale.collega(app, ses, LUCCHETTO)
 ambulatori.collega(app, ses, LUCCHETTO)
+esportazioni.collega(app, ses, LUCCHETTO)
 live.collega(app, ses, LUCCHETTO)
 dovesifa.collega(app, ses, LUCCHETTO)
 guida.collega(app)

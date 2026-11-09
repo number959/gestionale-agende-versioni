@@ -29,6 +29,7 @@
         <a href="{{ url_for('segreteria.agenda_medico', iso=g.isoformat(), struttura=sid) }}" target="_blank"><b>Agenda dei medici</b><small>un foglio per medico, anche per email</small></a>
         {% if sala_giorno and sala_giorno.interventi %}<a href="{{ url_for('sala.lista_operatoria', iso=g.isoformat(), struttura=sid) }}" target="_blank"><b>Lista operatoria</b><small>gli interventi, una tabella per sala</small></a>{% endif %}
         <a href="{{ url_for('esporta', iso=g.isoformat(), struttura=sid) }}"><b>Scarica in Excel</b><small>il planning del giorno</small></a>
+        <a href="{{ url_for('esportazioni.pagina', data=g.isoformat(), struttura=sid) }}"><b>Altre esportazioni</b><small>ambulatori, sala operatoria o tutto insieme: giorno, settimana e mese</small></a>
       </div>
     </div>
   </div>

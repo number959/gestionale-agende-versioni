@@ -96,5 +96,7 @@
   html.scuro table.matrice .turno-sett.senza-turno { border-left-color: #E0A060; }
   html.scuro table.matrice .turno-sett.senza-turno small, html.scuro table.programmazione tr.senza-turno td.note-prog { color: #E0A060; }
   html.scuro table.programmazione tr.riga-sala td.specialita { color: #E0A060; }
+  html.scuro table.esportazioni th.periodo-esp { background: #22303F; color: #A9C8F5; }
+  html.scuro table.esportazioni th.periodo-esp small, html.scuro table.esportazioni td.parte-esp small { color: #B8C4CF; }
   @media (max-width: 700px) { html.scuro .conti-oggi-live .totale { border-right: 0; } }
 }

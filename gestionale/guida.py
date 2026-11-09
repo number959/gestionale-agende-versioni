@@ -490,7 +490,8 @@ ARTICOLI = [
          endpoint='giorno', apri=('giorno', {'iso': 'OGGI'}), foto='/giorno/{martedi}?struttura=1',
          passi=[
              P('Stampa e scarica', 'Nella barra della griglia: il foglio del giorno, un foglio per medico (anche per email), '
-               'la lista operatoria, il planning in Excel.', '[data-guida="giorno-stampa"]'),
+               'la lista operatoria, il planning in Excel; «Altre esportazioni» porta agli Excel di ambulatori, sala '
+               'operatoria o tutto insieme, per il giorno, la settimana e il mese.', '[data-guida="giorno-stampa"]'),
              P('Le colonne', 'Quali colonne, foglio verticale o orizzontale: Configura → Impostazioni → Foglio del giorno.'),
          ]),
     # ---------------------------------------------------------- configurazione
@@ -607,8 +608,8 @@ ARTICOLI += [
                'DISPONIBILI.', '[data-guida="matrice-sala"]'),
              P('La matrice in Excel', 'Stampa e scarica → La matrice in Excel: il foglio «Matrice turni ambulatori e '
                'disponibilità integrative» già compilato, con intestazione, legenda e firme, per la direzione '
-               'sanitaria, con la sala operatoria nella sua parte. «Settimana tipo» è la stessa senza assenze e '
-               'chiusure.', '[data-guida="matrice-scarica"]'),
+               'sanitaria. «Settimana tipo» è la stessa senza assenze e chiusure. Nello stesso menu la sala '
+               'operatoria della settimana e ambulatori e sala insieme, in fogli separati.', '[data-guida="matrice-scarica"]'),
          ]),
     dict(slug='programmazione', gruppo='Ambulatori', titolo='La programmazione ambulatori del mese',
          in_breve='Menu Ambulatori → Programmazione del mese: per ogni specialità e medico, il giorno, le date del '
@@ -634,6 +635,9 @@ ARTICOLI += [
                '[data-guida="programmazione-calendario"]'),
              P('In Excel', 'Scarica in Excel: il foglio della programmazione pronto da stampare o mandare, più il '
                'calendario del mese in un secondo foglio.', '[data-guida="programmazione-excel"]'),
+             P('Altre esportazioni', 'La sala operatoria del mese (giorno per giorno, i turni dei chirurghi e gli '
+               'interventi) o ambulatori e sala in un file solo, in fogli separati; e la pagina con tutte le '
+               'esportazioni.', '[data-guida="programmazione-altre"]'),
          ]),
     dict(slug='riepilogo-live', gruppo='Ambulatori', titolo='Il riepilogo live: la giornata adesso, stanza per stanza',
          in_breve='Menu Ambulatori → Riepilogo live: una frase dice com\'è la giornata, gli appuntamenti di oggi sono '
@@ -679,6 +683,26 @@ ARTICOLI += [
                'percentuale dei non presentati.', '[data-guida="periodo-medici"]'),
              P('Excel e stampa', 'L\'Excel ha un foglio per il riepilogo, le stanze, i medici e i giorni; «Stampa» '
                'stampa la pagina com\'è.', '[data-guida="periodo-excel"]'),
+         ]),
+    dict(slug='esportazioni', gruppo='Ambulatori', titolo='Le esportazioni in Excel: ambulatori, sala operatoria o tutto insieme',
+         in_breve='Menu Ambulatori → Esportazioni in Excel: il giorno, la settimana o il mese della data scelta, '
+                  'solo gli ambulatori, solo la sala operatoria oppure tutto insieme in un file, con ambulatori e '
+                  'sala in fogli separati. Nove pulsanti, un clic per ciascun file.',
+         endpoint='esportazioni.pagina', apri=('esportazioni.pagina', {}),
+         foto='/esportazioni?struttura=1',
+         passi=[
+             P('Apri le esportazioni', 'Menu Ambulatori → Esportazioni in Excel. Ci si arriva anche da «Altre '
+               'esportazioni» nel giorno, nella pianificazione della settimana e nella programmazione del mese.',
+               'nav.menu [data-guida="menu-ambulatori"]'),
+             P('La data', 'Si sceglie un giorno e «Mostra»: la tabella propone quel giorno, la sua settimana (da lunedì '
+               'a domenica) e il suo mese.', '[data-guida="esportazioni-data"]'),
+             P('Nove file', 'Una riga per il giorno, la settimana e il mese; una colonna per gli ambulatori, la sala '
+               'operatoria e tutto insieme. Sotto ogni pulsante c\'è scritto cosa contiene il file: il planning del '
+               'giorno, la matrice per la direzione sanitaria, la programmazione del mese, la sala giorno per giorno '
+               'con i chirurghi e gli interventi.', '[data-guida="esportazioni-tabella"]'),
+             P('Ambulatori e sala separati', 'Nell\'esportazione di tutto insieme ambulatori e sala stanno in fogli '
+               'diversi, ciascuno con il suo nome. I conti degli ambulatori (le mezze giornate libere) non '
+               'contano la sala.', '[data-guida="esportazioni-spiegazione"]'),
          ]),
     # ------------------------------------------------------- email e WhatsApp
     dict(slug='email-casella', gruppo='Email e WhatsApp', titolo='Collegare l\'email della clinica',

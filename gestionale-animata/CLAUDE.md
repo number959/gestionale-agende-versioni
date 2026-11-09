@@ -179,6 +179,11 @@ temporanea.
   in turno, interventi attivi (`interventi_attivi`, mai disdetti e non presentati) e chi opera senza turno;
   il testo di una cella della sala è uno solo (`testo_cella_sala`) e i conti `libere`/`parziali` restano
   solo delle stanze. Un giorno che c'è solo per la sala ha le stanze chiuse (`GIORNO_SOLO_SALA`).
+  Esportazioni (1.12.3, `esportazioni.py`): giorno, settimana e mese × ambulatori, sala, tutto; i fogli li
+  scrivono le stesse funzioni delle pagine (`servizi.esporta_giorno(parte=)`, `foglio_matrice`,
+  `fogli_programmazione`, i fogli della sala); in «tutto» ambulatori e sala in fogli separati; gli Excel
+  classici (`/esporta/`, matrice, programmazione) restano uguali e solo ambulatori, e `prove_112.py` li
+  confronta cella per cella con le esportazioni di solo ambulatori. Negli elenchi della sala mai pazienti.
   La regola «una stanza ospita un medico alla volta» è una sola, `anagrafiche.stanza_gia_assegnata`,
   usata dalla scheda del turno e da `/ambulatori/metti`.
   «Togli» non cancella mai la storia: un turno che veniva da prima si chiude la domenica precedente.
