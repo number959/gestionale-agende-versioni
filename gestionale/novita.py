@@ -13,6 +13,18 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.12.3', [
+        dict(titolo='Ambulatori e sala operatoria in un solo foglio',
+             testo='La pianificazione della settimana e la programmazione del mese, in pagina e in Excel, hanno '
+                   'anche la sala operatoria, in fondo e a parte: per ogni sala i chirurghi in turno e quanti '
+                   'interventi, chi opera senza un turno, e nel mese gli interventi di ogni turno e quelli fuori dai '
+                   'turni. Le mezze giornate libere degli ambulatori restano contate come prima.',
+             guida='ambulatori'),
+        dict(titolo='La programmazione del mese con la sala',
+             testo='Nella programmazione del mese, dopo le specialità, la sala operatoria con le date e gli '
+                   'interventi; nel calendario giorno per giorno la colonna degli interventi.',
+             guida='programmazione'),
+    ]),
     ('1.12.2', [
         dict(titolo='Il riepilogo live più chiaro',
              testo='In cima una frase dice com\'è la giornata. Gli appuntamenti di oggi sono divisi in fatti, in corso, '

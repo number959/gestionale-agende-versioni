@@ -580,8 +580,22 @@ a.medico-prog:hover { text-decoration: underline; }
 details.calendario-mese { margin-top: 18px; }
 details.calendario-mese summary { cursor: pointer; color: var(--primario); padding: 6px 0; font-weight: 600; }
 details.calendario-mese tr.spento td { color: #5B6B75; font-style: italic; }
+/* 1.12.3: la sala operatoria sotto gli ambulatori, nella matrice e nella programmazione */
+table.matrice tbody.parte-sala th.titolo-sala { background: #E8EEF7; color: var(--primario); text-align: left; font-family: var(--titoli); font-size: 14px; padding: 7px 10px; border-top: 3px solid var(--primario); }
+table.matrice tbody.parte-sala th.titolo-sala small { display: block; font-family: var(--testo); font-weight: 400; font-size: 12px; color: #46596A; }
+table.matrice td.sala-vuota { background: #F7F8F9; }
+table.matrice .sala-libera { display: block; color: #5B6B75; font-style: italic; font-size: 12px; }
+table.matrice .interventi-sala { display: block; margin-top: 3px; color: var(--primario); font-weight: 700; font-size: 12px; text-decoration: none; }
+table.matrice .interventi-sala:hover { text-decoration: underline; }
+table.matrice td.vuoto { color: #5B6B75; font-style: italic; height: auto; padding-bottom: 5px; }
+table.matrice .turno-sett.senza-turno { border-left: 4px dashed #B35F16; }
+table.matrice .turno-sett.senza-turno small { color: #8A4B12; }
+table.programmazione tr.senza-turno td.note-prog { color: #8A4B12; }
+table.programmazione tr.riga-sala td.specialita { color: #8A4B12; }
+p.frase-sala { margin-top: 8px; }
 @media print {
   details.metti, form.togli-turno, p.legenda-matrice { display: none !important; }
+  table.matrice tbody.parte-sala th.titolo-sala, table.matrice td.sala-vuota { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   table.matrice td { padding-bottom: 5px; }
   details.calendario-mese { display: block; }
   details.calendario-mese summary { list-style: none; }

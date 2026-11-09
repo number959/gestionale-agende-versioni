@@ -118,6 +118,24 @@ with sync_playwright() as p:
         pg.locator('.gruppo-comandi .tendina a', has_text='settimana tipo').click()
     ok('la settimana tipo in Excel', scaricato.value.suggested_filename == 'matrice-ambulatori-%s-settimana-tipo.xlsx' % LUN.isoformat(), scaricato.value.suggested_filename)
 
+    # 1.12.3: la sala operatoria in fondo alla matrice, solo da guardare (la settimana di oggi ha interventi)
+    pg.goto(B + '/ambulatori/settimana/%s?struttura=1' % OGGI.isoformat())
+    pg.wait_for_selector('#matrice-ambulatori')
+    parte = pg.locator('#matrice-ambulatori tbody.parte-sala')
+    sale_viste = parte.locator('th.stanza-sett').all_inner_texts() if parte.count() else []
+    ok('la sala operatoria in fondo alla matrice, con le due sale dei dati di prova',
+       parte.count() == 1 and sale_viste == ['Sala A', 'Sala B'], sale_viste)
+    ok('nella sala niente «+» e niente «×»: si programma dalla pagina Sala',
+       parte.locator('details.metti').count() == 0 and parte.locator('form.togli-turno').count() == 0)
+    link = parte.locator('a.interventi-sala')
+    ok('gli interventi della settimana portano alla pagina Sala del giorno',
+       link.count() >= 1 and '/sala/' in (link.first.get_attribute('href') or ''), link.count())
+    ok('le sale non sono fra le stanze degli ambulatori',
+       pg.locator('#matrice-ambulatori tbody:not(.parte-sala) th.stanza-sett', has_text='Sala A').count() == 0)
+    larga = pg.evaluate("() => document.querySelector('tbody.parte-sala th.titolo-sala').colSpan")
+    ok('il titolo della sala prende tutta la riga', larga == 1 + 2 * len(pg.locator('#matrice-ambulatori thead tr').nth(0).locator('th').all()) - 2,
+       larga)
+
     # la programmazione del mese
     pg.goto(B + '/ambulatori/mese/%s?struttura=1' % LUN.strftime('%Y-%m'))
     pg.wait_for_selector('#programmazione-ambulatori')
@@ -134,6 +152,13 @@ with sync_playwright() as p:
        scaricato.value.suggested_filename == 'programmazione-ambulatori-%s.xlsx' % LUN.strftime('%Y-%m'), scaricato.value.suggested_filename)
     pg.locator('details.calendario-mese summary').click()
     ok('il calendario del mese si apre', pg.locator('details.calendario-mese[open] table tr').count() > 1)
+    # 1.12.3: la sala dopo le specialità e nel calendario, con la colonna degli interventi
+    sala_mese = pg.locator('#programmazione-ambulatori tr.riga-sala')
+    ok('la programmazione ha la sala operatoria dopo le specialità', sala_mese.count() >= 2 and
+       'Sala operatoria' in sala_mese.first.inner_text(), sala_mese.count())
+    ok('il calendario ha la colonna degli interventi e le righe della sala',
+       'Interventi' in pg.locator('details.calendario-mese table tr').first.inner_text()
+       and pg.locator('details.calendario-mese tr.riga-sala').count() >= 1)
 
     # 1.12.2: il riepilogo live piu' chiaro, a qualsiasi ora la prova giri
     import json as _json

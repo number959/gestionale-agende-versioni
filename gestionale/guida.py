@@ -585,8 +585,8 @@ ARTICOLI += [
     # ------------------------------------------------------------ ambulatori
     dict(slug='ambulatori', gruppo='Ambulatori', titolo='Chi sta in quale stanza: la pianificazione della settimana',
          in_breve='Menu Ambulatori: ogni stanza, mattina e pomeriggio, con il medico che la occupa, calcolato dai '
-                  'turni. Le stanze libere sono «DISPONIBILE»; dal «+» si mette un medico. La matrice si scarica in '
-                  'Excel per la direzione sanitaria.',
+                  'turni. Le stanze libere sono «DISPONIBILE»; dal «+» si mette un medico. In fondo la sala operatoria, '
+                  'con i chirurghi e gli interventi. La matrice si scarica in Excel per la direzione sanitaria.',
          endpoint='ambulatori.settimana', apri=('ambulatori.settimana', {'iso': 'LUNEDI_PROSSIMO'}),
          foto='/ambulatori/settimana/{lunedi_prossimo}?struttura=1',
          passi=[
@@ -601,13 +601,19 @@ ARTICOLI += [
              P('Cambiare o togliere', 'Clic sul nome apre il turno, con tutte le sue impostazioni (fasce, fino al…). '
                'La «×» accanto al nome toglie il medico da quella settimana in poi: le settimane già fatte restano '
                'com\'erano, anche nelle statistiche.', 'table.matrice .turno-sett a'),
+             P('La sala operatoria', 'In fondo alla tabella la sala operatoria: per ogni sala, mattina e pomeriggio, i '
+               'chirurghi in turno e quanti interventi (clic per aprirli nella pagina Sala); chi opera senza un turno è '
+               'segnato. Qui si guarda soltanto: la sala si programma dalla pagina Sala e non conta nelle stanze '
+               'DISPONIBILI.', '[data-guida="matrice-sala"]'),
              P('La matrice in Excel', 'Stampa e scarica → La matrice in Excel: il foglio «Matrice turni ambulatori e '
                'disponibilità integrative» già compilato, con intestazione, legenda e firme, per la direzione '
-               'sanitaria. «Settimana tipo» è la stessa senza assenze e chiusure.', '[data-guida="matrice-scarica"]'),
+               'sanitaria, con la sala operatoria nella sua parte. «Settimana tipo» è la stessa senza assenze e '
+               'chiusure.', '[data-guida="matrice-scarica"]'),
          ]),
     dict(slug='programmazione', gruppo='Ambulatori', titolo='La programmazione ambulatori del mese',
          in_breve='Menu Ambulatori → Programmazione del mese: per ogni specialità e medico, il giorno, le date del '
-                  'mese in cui viene davvero, l\'orario e la stanza. Si scarica in Excel, con il calendario.',
+                  'mese in cui viene davvero, l\'orario e la stanza; in fondo la sala operatoria con gli interventi. '
+                  'Si scarica in Excel, con il calendario.',
          endpoint='ambulatori.mese', apri=('ambulatori.mese', {'aaaamm': 'MESE'}),
          foto='/ambulatori/mese/{mese}?struttura=1',
          passi=[
@@ -620,7 +626,11 @@ ARTICOLI += [
              P('Niente da ricopiare', 'Le date nascono dai turni, dalle assenze e dalle chiusure già nel programma: il '
                'foglio non può dire una cosa diversa dall\'agenda. Clic sul medico apre il suo turno.',
                '#programmazione-ambulatori'),
-             P('Giorno per giorno', 'In fondo, il calendario del mese: per ogni giorno chi c\'è in quale stanza.',
+             P('La sala operatoria', 'Dopo le specialità, la sala operatoria: i turni dei chirurghi con le date e gli '
+               'interventi di ciascuno, e una riga per chi ha operato fuori dai suoi turni. Sotto la tabella, quanti '
+               'interventi nel mese e quanti fuori dai turni.', '[data-guida="programmazione-sala"]'),
+             P('Giorno per giorno', 'In fondo, il calendario del mese: per ogni giorno chi c\'è in quale stanza, poi la '
+               'sala con il numero di interventi.',
                '[data-guida="programmazione-calendario"]'),
              P('In Excel', 'Scarica in Excel: il foglio della programmazione pronto da stampare o mandare, più il '
                'calendario del mese in un secondo foglio.', '[data-guida="programmazione-excel"]'),

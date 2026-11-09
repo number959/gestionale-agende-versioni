@@ -603,8 +603,9 @@ piè di pagina e totali.
 
 Dalla 1.12. Menu *Ambulatori*: chi sta in quale stanza, calcolato dai turni dei medici (quelli
 di *Configura → Anagrafiche*), in due pagine nate da fogli che in due strutture del gruppo si
-compilavano a mano. Tutto in `ambulatori.py`; le sale operatorie restano fuori (si programmano in
-*Sala*).
+compilavano a mano. Tutto in `ambulatori.py`; le sale operatorie si programmano in *Sala* e restano
+fuori dai conti degli ambulatori, ma dalla 1.12.3 la settimana e il mese le mostrano in una parte loro
+(vedi *La sala operatoria nella settimana e nel mese*).
 
 - **Pianificazione della settimana** (`/ambulatori/settimana/<data>`): una riga per stanza attiva,
   una colonna per la mattina (dall'apertura alle 14) e una per il pomeriggio (dalle 14 alla
@@ -637,6 +638,26 @@ compilavano a mano. Tutto in `ambulatori.py`; le sale operatorie restano fuori (
   da 20 minuti*. In fondo alla pagina il calendario del mese; nell'Excel è un secondo foglio.
   Perché così e non ricopiato: il foglio a mano andava riscritto ogni mese e si allontanava
   dall'agenda (le date saltate le scriveva una persona); qui non può dire una cosa diversa.
+- **La sala operatoria nella settimana e nel mese** (dalla 1.12.3, richiesta di Giovanni: «accorpare
+  le esportazioni della sala e quelle degli ambulatori», per settimana e per mese). Le sale
+  operatorie attive (`ambulatori.sale_della`) stanno in fondo, in una parte loro: nella pagina e
+  nell'Excel della settimana una riga per sala con, per ogni mattina e pomeriggio, i chirurghi in
+  turno, quanti interventi attivi (prenotati, confermati, arrivati: `interventi_attivi`; i disdetti e
+  i non presentati no) e, per nome, chi ha interventi senza un turno in quella mezza giornata; «sala
+  libera» solo senza turni e senza interventi. Un intervento prima dell'apertura sta nella mattina,
+  uno dopo la chiusura nel pomeriggio (`intervento_nella_meta`). Nella pagina solo da guardare
+  (niente + e ×: la sala si programma da *Sala*); gli interventi portano alla pagina *Sala* del
+  giorno. Nella programmazione del mese, dopo le specialità, il gruppo *Sala operatoria*: i turni
+  dei chirurghi con le date e gli interventi nelle ore di ciascun turno, una riga per chi ha operato
+  fuori dai suoi turni (date e quanti), e sotto la frase con gli interventi del mese e quanti fuori
+  dai turni; nel calendario, giorno per giorno, le righe della sala con la colonna *Interventi*
+  (anche «senza turno»). Le scelte: **i conti degli ambulatori non cambiano** (le mezze giornate
+  libere e con ore libere restano solo delle stanze); un giorno che c'è solo per la sala (un sabato
+  o una domenica con turni o interventi in sala, quando la struttura non apre) compare, ma le
+  stanze quel giorno dicono *chiusa: solo sala operatoria* e non *DISPONIBILE*. Il titolo
+  dell'Excel del mese diventa *Programmazione ambulatori e sala operatoria* quando la sala c'è; la
+  matrice della settimana tiene il suo titolo (è il modulo della direzione sanitaria) con la riga
+  *SALA OPERATORIA* che apre la parte della sala.
 
 
 **Riepilogo live** (`live.py`, menu *Ambulatori → Riepilogo live*, `/riepilogo-live` e
@@ -728,7 +749,10 @@ medici senza totale, «giorno di chiusura» nei giorni in cui la struttura non a
 
 Le prove sono `prove_112.py` (le celle della matrice contro un calcolo minuto per minuto fatto a
 parte, la programmazione, i due Excel riaperti, mettere e togliere, le protezioni, il foglio del
-giorno, il riepilogo del periodo contro gli insiemi di minuti di Python su tre periodi, con un non
+giorno, dalla 1.12.3 la sala operatoria nella settimana e nel mese contro un calcolo a parte (due sale e
+una spenta, interventi prima dell'apertura e dopo la chiusura, nel festivo, disdetti e non presentati,
+una domenica di sola sala e una di soli interventi, chi opera fuori dai turni, gli ambulatori con gli
+stessi conti di prima), il riepilogo del periodo contro gli insiemi di minuti di Python su tre periodi, con un non
 presentato, una visita fuori turno e una a cavallo della fine del turno, e una settimana contata a mano
 con i casi della revisione (stesso medico in due stanze, sovrapposizioni, mezzanotte, festivo e domenica
 con un turno, stanza disattivata, frasi parola per parola, l'Excel uguale alla pagina) e due settimane
@@ -2677,6 +2701,7 @@ falliscono, cioè il difetto c'era davvero.
 | Riepilogo live poco chiaro (segnalato da Giovanni l'8 novembre 2026) | Otto numeri che non sommavano al totale, «in ritardo» solo per tre ore, il medico scritto due volte, «libera fino alle» senza dire perché, sessanta mezze giornate in una lista, le notifiche sopra le stanze | Dalla 1.12.2: quattro gruppi che sommano, una frase in cima, la linea del tempo con turni e visite, le mezze giornate in una tabellina, niente notifiche su quella pagina |
 | Nessun riepilogo «non live» (richiesta di Giovanni dell'8 novembre 2026) | Per sapere com'era andata una settimana o un mese bisognava mettere insieme statistiche, pianificazione e agende | Dalla 1.12.2 *Ambulatori → Riepilogo del periodo*: ore di turno e occupate, conti e mezze giornate libere per stanza, medico e giorno, in Excel e da stampare |
 | Riepilogo del periodo, prima della pubblicazione (revisione della 1.12.2) | Un medico in due stanze nello stesso momento contava le ore doppie; le visite dopo la mezzanotte e le stanze disattivate sparivano; un festivo con un turno sembrava chiuso; due mesi interi con le frecce diventavano uno; «il 0%» | Ore del medico unite su tutte le stanze, la coda dopo la mezzanotte nel giorno dopo, le stanze disattivate con i loro appuntamenti, il festivo aperto se ha turni, le frecce sullo stesso numero di mesi, «lo 0%»; una prova contata a mano |
+| Esportazioni della sala separate da quelle degli ambulatori (richiesta di Giovanni, 9 novembre 2026) | La matrice della settimana e la programmazione del mese lasciavano fuori la sala operatoria: per sapere chi operava bisognava aprire la pagina Sala giorno per giorno | Dalla 1.12.3 una parte *Sala operatoria* nella settimana e nel mese, in pagina e in Excel, con chirurghi, interventi e chi opera fuori dai turni; i conti degli ambulatori uguali a prima |
 | Riepilogo del periodo, seconda revisione (1.12.2) | I turni di una stanza disattivata contavano anche dopo lo spegnimento; la sola coda dopo la mezzanotte non la faceva comparire; una visita fino alle 24:00 lasciava una riga del medico a zero; un giorno chiuso con soli disdetti sembrava aperto; le prove dell'Excel avevano solo ore intere | Turni della stanza spenta fino al suo ultimo appuntamento; la coda la fa comparire; niente coda alle 24:00; i disdetti non aprono il giorno; Excel provato cella per cella con un terzo d'ora |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già

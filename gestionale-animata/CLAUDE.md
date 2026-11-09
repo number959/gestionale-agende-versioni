@@ -174,8 +174,13 @@ temporanea.
   struttura; un'ora libera (`MINIMO_LIBERO`) dentro una mezza giornata occupata si segnala, una
   mezza giornata senza nessuno dice solo DISPONIBILE (`libere == []`); in un festivo in cui la
   struttura chiude resta aperta solo la mezza giornata di un turno di un giorno; le sale operatorie
-  restano fuori (`stanze_della`). La regola «una stanza ospita un medico alla volta» è una sola,
-  `anagrafiche.stanza_gia_assegnata`, usata dalla scheda del turno e da `/ambulatori/metti`.
+  restano fuori dai conti degli ambulatori (`stanze_della`), ma dalla 1.12.3 la matrice e la
+  programmazione le mostrano in una parte loro (`sale_della`, `vista['sale']`, `vista['sala']`): chirurghi
+  in turno, interventi attivi (`interventi_attivi`, mai disdetti e non presentati) e chi opera senza turno;
+  il testo di una cella della sala è uno solo (`testo_cella_sala`) e i conti `libere`/`parziali` restano
+  solo delle stanze. Un giorno che c'è solo per la sala ha le stanze chiuse (`GIORNO_SOLO_SALA`).
+  La regola «una stanza ospita un medico alla volta» è una sola, `anagrafiche.stanza_gia_assegnata`,
+  usata dalla scheda del turno e da `/ambulatori/metti`.
   «Togli» non cancella mai la storia: un turno che veniva da prima si chiude la domenica precedente.
   La scheda del turno torna alla pagina di partenza con `torna` (solo indirizzi interni,
   `destinazione_sicura`). Destinatario e chi compila la matrice sono testi fissi

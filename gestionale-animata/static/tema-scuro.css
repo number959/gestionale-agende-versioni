@@ -132,6 +132,15 @@
   html.scuro table.programmazione td.note-prog { color: #A9B7C4; }
   html.scuro a.medico-prog { color: #E1E7ED; }
   html.scuro details.calendario-mese tr.spento td { color: #9AA8B4; }
+  html.scuro table.matrice tbody.parte-sala th.titolo-sala { background: #252B35; }
+  html.scuro table.matrice tbody.parte-sala th.titolo-sala small { color: #A9B7C4; }
+  html.scuro table.matrice td.sala-vuota { background: #20252A; }
+  html.scuro table.matrice .sala-libera { color: #9AA8B4; }
+  html.scuro table.matrice td.vuoto { color: #9AA8B4; }
+  html.scuro table.matrice .turno-sett.senza-turno { border-left: 4px dashed #EB9F5D; }
+  html.scuro table.matrice .turno-sett.senza-turno small { color: #E9C6A6; }
+  html.scuro table.programmazione tr.senza-turno td.note-prog { color: #E9C6A6; }
+  html.scuro table.programmazione tr.riga-sala td.specialita { color: #E9C6A6; }
   html.scuro .punto-live { background: #29702D; }
   html.scuro .riassunto-live { background: #1C242D; border: 1px solid #2E3843; }
   html.scuro .frase-live { color: #E1E7ED; }
@@ -646,6 +655,16 @@
   html.scuro .tabella-periodo tfoot th { background: #22303F; color: #E1E7ED; }
   html.scuro .occupazione { background: #2E3843; }
   html.scuro .occupazione span { background: #4F86D6; }
+  /* 1.12.3: la sala operatoria nella matrice e nella programmazione */
+  html.scuro table.matrice tbody.parte-sala th.titolo-sala { background: #22303F; color: #A9C8F5; border-top-color: #4F86D6; }
+  html.scuro table.matrice tbody.parte-sala th.titolo-sala small { color: #B8C4CF; }
+  html.scuro table.matrice tbody.parte-sala th.titolo-sala a { color: #A9C8F5; }
+  html.scuro table.matrice td.sala-vuota { background: #1F262E; }
+  html.scuro table.matrice .interventi-sala { color: #A9C8F5; }
+  html.scuro table.matrice .sala-libera { color: #9AA8B5; }
+  html.scuro table.matrice .turno-sett.senza-turno { border-left-color: #E0A060; }
+  html.scuro table.matrice .turno-sett.senza-turno small, html.scuro table.programmazione tr.senza-turno td.note-prog { color: #E0A060; }
+  html.scuro table.programmazione tr.riga-sala td.specialita { color: #E0A060; }
   @media (max-width: 700px) { html.scuro .conti-oggi-live .totale { border-right: 0; } }
 }
 

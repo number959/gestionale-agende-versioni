@@ -86,5 +86,15 @@
   html.scuro .tabella-periodo tfoot th { background: #22303F; color: #E1E7ED; }
   html.scuro .occupazione { background: #2E3843; }
   html.scuro .occupazione span { background: #4F86D6; }
+  /* 1.12.3: la sala operatoria nella matrice e nella programmazione */
+  html.scuro table.matrice tbody.parte-sala th.titolo-sala { background: #22303F; color: #A9C8F5; border-top-color: #4F86D6; }
+  html.scuro table.matrice tbody.parte-sala th.titolo-sala small { color: #B8C4CF; }
+  html.scuro table.matrice tbody.parte-sala th.titolo-sala a { color: #A9C8F5; }
+  html.scuro table.matrice td.sala-vuota { background: #1F262E; }
+  html.scuro table.matrice .interventi-sala { color: #A9C8F5; }
+  html.scuro table.matrice .sala-libera { color: #9AA8B5; }
+  html.scuro table.matrice .turno-sett.senza-turno { border-left-color: #E0A060; }
+  html.scuro table.matrice .turno-sett.senza-turno small, html.scuro table.programmazione tr.senza-turno td.note-prog { color: #E0A060; }
+  html.scuro table.programmazione tr.riga-sala td.specialita { color: #E0A060; }
   @media (max-width: 700px) { html.scuro .conti-oggi-live .totale { border-right: 0; } }
 }

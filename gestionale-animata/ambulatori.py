@@ -41,7 +41,7 @@ from anagrafiche import Modulo, stanza_gia_assegnata
 from comune import (FORMATO_ORE, FORMATO_PERCENTO, apri_foglio_excel, data_da, destinazione_sicura,
                     imposta_stampa_excel, intero, json_sicuro, mese_da, scarica_excel, stile_intestazione_excel,
                     struttura_scelta, tabella_excel, testo_excel)
-from modelli import Appuntamento, Operatore, Risorsa, Turno
+from modelli import STATI_ATTIVI, Appuntamento, Operatore, Risorsa, Turno
 
 bp = Blueprint('ambulatori', __name__, url_prefix='/ambulatori')
 _fornitore = None
@@ -53,6 +53,9 @@ DESTINATARIO = 'Direttore Sanitario'
 COMPILATO_DA = 'Segreteria'
 TITOLO_MATRICE = 'MATRICE TURNI AMBULATORI E DISPONIBILITÀ INTEGRATIVE'
 TITOLO_PROGRAMMAZIONE = 'PROGRAMMAZIONE AMBULATORI'
+TIPO_SALA = 'SALA_OPERATORIA'
+SALA_OPERATORIA = 'Sala operatoria'            # il nome della parte della sala nella matrice e nella programmazione
+GIORNO_SOLO_SALA = 'solo sala operatoria'      # gli ambulatori in un giorno aperto solo per la sala
 SENZA_SPECIALITA = 'Senza specialità'
 
 
@@ -111,7 +114,33 @@ def stanze_della(st):
     """Le stanze attive della struttura, nel loro ordine, senza le sale
     operatorie: quelle si programmano nella pagina Sala, e nella matrice
     degli ambulatori una sala sempre «disponibile» confonderebbe."""
-    return [r for r in st.risorse if r.attiva and r.tipo != 'SALA_OPERATORIA']
+    return [r for r in st.risorse if r.attiva and r.tipo != TIPO_SALA]
+
+
+def sale_della(st):
+    """Le sale operatorie attive della struttura, nel loro ordine. Dalla 1.12.3 la matrice della settimana e
+    la programmazione del mese le mostrano in una parte loro, sotto gli ambulatori: chi opera e quanti
+    interventi, mai nei conti delle mezze giornate libere degli ambulatori."""
+    return [r for r in st.risorse if r.attiva and r.tipo == TIPO_SALA]
+
+
+def interventi_attivi(ses, sale_ids, dal, al):
+    """Gli interventi attivi (prenotati, confermati, arrivati) nelle sale indicate, dal giorno 'dal' al giorno
+    'al' compresi: quelli che occupano la sala. I disdetti e i non presentati non contano."""
+    if not sale_ids:
+        return []
+    return ses.scalars(select(Appuntamento).where(
+        Appuntamento.risorsa_id.in_(list(sale_ids)), Appuntamento.stato.in_(STATI_ATTIVI),
+        Appuntamento.inizio >= datetime.combine(dal, time(0)),
+        Appuntamento.inizio < datetime.combine(al + timedelta(days=1), time(0)))
+        .order_by(Appuntamento.inizio)).all()
+
+
+def intervento_nella_meta(x, meta, k):
+    """Se l'intervento x comincia nella mezza giornata k: la prima comincia a mezzanotte e l'ultima finisce a
+    mezzanotte, cosi' anche un intervento prima dell'apertura o dopo la chiusura sta in una delle due."""
+    ora = x.inizio.time()
+    return (k == 0 or ora >= meta[k]['da']) and (k == len(meta) - 1 or ora < meta[k]['a'])
 
 
 def matrice(ses, lunedi, st, tipo=False):
@@ -124,16 +153,26 @@ def matrice(ses, lunedi, st, tipo=False):
     giorni_tutti = [lunedi + timedelta(days=i) for i in range(7)]
     regole = servizi.Regole(ses, giorni_tutti[0], giorni_tutti[-1])
     stanze = stanze_della(st)
+    sale = sale_della(st)
     ids = {r.id for r in stanze}
+    ids_sale = {r.id for r in sale}
 
-    def con_turni(g):
-        return any(t.risorsa_id in ids and not (tipo and servizi.e_di_un_giorno(t)) for t in regole.turni_validi(g, st))
+    def con_turni(g, quali):
+        return any(t.risorsa_id in quali and not (tipo and servizi.e_di_un_giorno(t)) for t in regole.turni_validi(g, st))
 
-    giorni = [g for g in giorni_tutti if g.weekday() in st.giorni_aperti or con_turni(g)]
+    # i giorni di apertura, quelli con un turno in una stanza e quelli con un turno o un intervento in sala
+    # (1.12.3); in un giorno che c'e' solo per la sala (un sabato di interventi) gli ambulatori sono chiusi, non
+    # DISPONIBILI
+    interventi = [] if tipo else interventi_attivi(ses, ids_sale, giorni_tutti[0], giorni_tutti[-1])
+    con_interventi = {x.inizio.date() for x in interventi}
+    giorni = [g for g in giorni_tutti if g.weekday() in st.giorni_aperti or con_turni(g, ids) or con_turni(g, ids_sale)
+              or g in con_interventi]
+    solo_sala = {g for g in giorni if g.weekday() not in st.giorni_aperti and not con_turni(g, ids)}
     meta = mezze_giornate(st)
     info = {g: regole.giorno(g, st) for g in giorni}
-    righe, libere, parziali = [], 0, 0
-    for r in stanze:
+    righe, righe_sale, libere, parziali = [], [], 0, 0
+    for r in stanze + sale:
+        di_sala = r.id in ids_sale
         celle = []
         for g in giorni:
             i = info[g]
@@ -145,7 +184,9 @@ def matrice(ses, lunedi, st, tipo=False):
                 assenti = [(t.operatore, i['assenze'][t.operatore_id], t)
                            for t in regole.turni_validi(g, st, r.id) if t.operatore_id in i['assenze']]
                 chiuso = i['chiusura'] or (i['festivo'] if i['chiude_festivo'] else None)
-            for m in meta:
+            if g in solo_sala and not di_sala:
+                chiuso = chiuso or GIORNO_SOLO_SALA
+            for k, m in enumerate(meta):
                 presenze = sorted(({'turno': t, 'operatore': t.operatore,
                                     'da': max(t.ora_inizio, m['da']), 'a': min(t.ora_fine, m['a'])}
                                    for t in turni if t.ora_inizio < m['a'] and m['da'] < t.ora_fine),
@@ -154,20 +195,32 @@ def matrice(ses, lunedi, st, tipo=False):
                 # giorno: la sua mezza giornata e' occupata, l'altra resta chiusa
                 chiuso_qui = chiuso if not presenze else None
                 # le ore libere si elencano solo in una mezza giornata occupata: una tutta
-                # libera dice DISPONIBILE e basta
-                vuoti = [] if chiuso_qui or not presenze else buchi(presenze, m['da'], m['a'])
+                # libera dice DISPONIBILE e basta (in sala niente ore libere: si guardano gli interventi)
+                vuoti = [] if chiuso_qui or not presenze or di_sala else buchi(presenze, m['da'], m['a'])
                 cella = {'data': g, 'meta': m, 'presenze': presenze, 'libere': vuoti, 'chiuso': chiuso_qui,
                          'assenti': [x for x in assenti if x[2].ora_inizio < m['a'] and m['da'] < x[2].ora_fine],
                          'tutta_libera': not presenze and not chiuso_qui,
                          'proposta': (vuoti[0] if vuoti else (m['da'], m['a']))}
-                if cella['tutta_libera']:
+                if di_sala:
+                    # gli interventi della mezza giornata; chi opera senza un turno in quella mezza giornata si dice
+                    # per nome, e la sala e' «libera» solo senza turni e senza interventi
+                    qui = [x for x in interventi if x.risorsa_id == r.id and x.inizio.date() == g
+                           and intervento_nella_meta(x, meta, k)]
+                    in_turno = {p['operatore'].id for p in presenze}
+                    cella['interventi'] = len(qui)
+                    cella['senza_turno'] = sorted({x.operatore for x in qui
+                                                   if x.operatore is not None and x.operatore_id not in in_turno},
+                                                  key=lambda o: o.etichetta)
+                    cella['tutta_libera'] = cella['tutta_libera'] and not qui
+                elif cella['tutta_libera']:
                     libere += 1
                 elif vuoti:
                     parziali += 1
                 celle.append(cella)
-        righe.append({'risorsa': r, 'celle': celle})
-    return {'lunedi': lunedi, 'giorni': giorni, 'meta': meta, 'righe': righe, 'info': info, 'tipo': tipo,
-            'libere': libere, 'parziali': parziali}
+        (righe_sale if di_sala else righe).append({'risorsa': r, 'celle': celle})
+    return {'lunedi': lunedi, 'giorni': giorni, 'meta': meta, 'righe': righe, 'sale': righe_sale, 'info': info,
+            'tipo': tipo, 'libere': libere, 'parziali': parziali, 'solo_sala': solo_sala,
+            'interventi': sum(c['interventi'] for x in righe_sale for c in x['celle'])}
 
 
 # ======================================================= programmazione
@@ -218,10 +271,15 @@ def programmazione(ses, anno, mese, st):
     regole = servizi.Regole(ses, primo, ultimo)
     info = {g: regole.giorno(g, st) for g in giorni}
     stanze = {r.id: r for r in stanze_della(st)}
-    righe = []
+    # 1.12.3: anche la sala operatoria, in una parte sua; gli interventi attivi del mese per contarli
+    sale = {r.id: r for r in sale_della(st)}
+    interventi = interventi_attivi(ses, sale, primo, ultimo)
+    contati = set()
+    righe, righe_sala = [], []
     for t in regole.turni:
-        if t.risorsa_id not in stanze:
+        if t.risorsa_id not in stanze and t.risorsa_id not in sale:
             continue
+        di_sala = t.risorsa_id in sale
         date_valide = [g for g in giorni if t.vale_il(g)]
         if not date_valide:
             continue
@@ -254,26 +312,80 @@ def programmazione(ses, anno, mese, st):
             note.append('nessuna seduta nel mese')
         if t.passo_proprio:
             note.append('fasce da %d minuti' % t.passo_proprio)
-        righe.append({'turno': t, 'operatore': t.operatore, 'specialita': _gruppo(t.operatore.specialita),
-                      'giorno': t.giorno_settimana, 'date': presenti, 'saltate': saltate, 'singolo': singolo,
-                      'ora_inizio': t.ora_inizio, 'ora_fine': t.ora_fine, 'risorsa': stanze[t.risorsa_id],
-                      'note': note})
+        riga = {'turno': t, 'operatore': t.operatore, 'specialita': _gruppo(t.operatore.specialita),
+                'giorno': t.giorno_settimana, 'date': presenti, 'saltate': saltate, 'singolo': singolo,
+                'ora_inizio': t.ora_inizio, 'ora_fine': t.ora_fine,
+                'risorsa': sale[t.risorsa_id] if di_sala else stanze[t.risorsa_id], 'note': note}
+        if di_sala:
+            # gli interventi del chirurgo in quella sala, nelle date e nelle ore di questo turno
+            date_turno = set(presenti)
+            suoi = [x for x in interventi if x.risorsa_id == t.risorsa_id and x.operatore_id == t.operatore_id
+                    and x.inizio.date() in date_turno and t.ora_inizio <= x.inizio.time() < t.ora_fine]
+            contati.update(x.id for x in suoi)
+            riga['interventi'] = len(suoi)
+            if suoi:
+                note.append('%d intervent%s' % (len(suoi), 'o' if len(suoi) == 1 else 'i'))
+            righe_sala.append(riga)
+        else:
+            righe.append(riga)
     righe.sort(key=lambda r: (r['specialita'] == SENZA_SPECIALITA, r['specialita'].lower(),
                               r['operatore'].cognome.lower(), (r['operatore'].nome or '').lower(),
                               r['giorno'], r['ora_inizio'], r['risorsa'].ordine, r['risorsa'].nome))
+    righe_sala.sort(key=lambda r: (r['risorsa'].ordine, r['risorsa'].nome, r['operatore'].cognome.lower(),
+                                   (r['operatore'].nome or '').lower(), r['giorno'], r['ora_inizio']))
     gruppi = []
     for r in righe:
         if not gruppi or gruppi[-1]['specialita'].casefold() != r['specialita'].casefold():
             gruppi.append({'specialita': r['specialita'], 'righe': []})
         gruppi[-1]['righe'].append(r)
-    # il calendario: giorno per giorno, chi c'e' in quale stanza
+    # il calendario: giorno per giorno, chi c'e' in quale stanza, poi la sala con i suoi interventi
     calendario_mese = []
     for g in giorni:
-        presenze = sorted(regole.turni_effettivi(g, st, None, info[g]),
-                          key=lambda t: (stanze[t.risorsa_id].ordine if t.risorsa_id in stanze else 0, t.ora_inizio))
-        calendario_mese.append({'data': g, 'info': info[g], 'presenze': [t for t in presenze if t.risorsa_id in stanze]})
+        effettivi = regole.turni_effettivi(g, st, None, info[g])
+        presenze = sorted((t for t in effettivi if t.risorsa_id in stanze),
+                          key=lambda t: (stanze[t.risorsa_id].ordine, t.ora_inizio))
+        in_sala = sorted((t for t in effettivi if t.risorsa_id in sale),
+                         key=lambda t: (sale[t.risorsa_id].ordine, sale[t.risorsa_id].nome, t.ora_inizio))
+        del_giorno = [x for x in interventi if x.inizio.date() == g]
+        voci_sala, presi = [], set()
+        for t in in_sala:
+            suoi = [x for x in del_giorno if x.risorsa_id == t.risorsa_id and x.operatore_id == t.operatore_id
+                    and t.ora_inizio <= x.inizio.time() < t.ora_fine]
+            presi.update(x.id for x in suoi)
+            voci_sala.append({'turno': t, 'risorsa': t.risorsa, 'operatore': t.operatore, 'interventi': len(suoi)})
+        # gli interventi del giorno fuori dai turni: una riga per sala e chirurgo, senza orario
+        resto = {}
+        for x in del_giorno:
+            if x.id not in presi:
+                resto.setdefault((x.risorsa_id, x.operatore_id), []).append(x)
+        for (rid, oid), lista in sorted(resto.items(), key=lambda kv: (sale[kv[0][0]].ordine, sale[kv[0][0]].nome,
+                                                                         kv[1][0].inizio)):
+            voci_sala.append({'turno': None, 'risorsa': sale[rid], 'operatore': lista[0].operatore,
+                              'interventi': len(lista)})
+        calendario_mese.append({'data': g, 'info': info[g], 'presenze': presenze, 'sala': voci_sala,
+                                'interventi_sala': len(del_giorno)})
+    fuori = [x for x in interventi if x.id not in contati]
+    # chi ha operato fuori dai suoi turni (o senza turni): una riga per chirurgo e sala, con le date
+    n_turni = len(righe_sala)
+    senza = {}
+    for x in fuori:
+        senza.setdefault((x.risorsa_id, x.operatore_id), []).append(x)
+    for (rid, oid), lista in senza.items():
+        o = lista[0].operatore
+        date_f = sorted({x.inizio.date() for x in lista})
+        righe_sala.append({'turno': None, 'operatore': o, 'specialita': _gruppo(o.specialita if o else ''),
+                           'giorno': None, 'date': date_f, 'saltate': [], 'singolo': False, 'ora_inizio': None,
+                           'ora_fine': None, 'risorsa': sale[rid], 'interventi': len(lista), 'senza_turno': True,
+                           'note': ['%d intervent%s fuori dai turni' % (len(lista), 'o' if len(lista) == 1 else 'i')]})
+    righe_sala.sort(key=lambda r: (r['risorsa'].ordine, r['risorsa'].nome,
+                                   (r['operatore'].cognome if r['operatore'] else '').lower(),
+                                   ((r['operatore'].nome if r['operatore'] else '') or '').lower(),
+                                   r['giorno'] if r['giorno'] is not None else 9, r['ora_inizio'] or time(0)))
     return {'primo': primo, 'ultimo': ultimo, 'righe': righe, 'gruppi': gruppi, 'calendario': calendario_mese,
-            'medici': len({r['operatore'].id for r in righe})}
+            'medici': len({r['operatore'].id for r in righe}),
+            'sala': {'righe': righe_sala, 'turni': n_turni,
+                     'chirurghi': len({r['operatore'].id for r in righe_sala if r['operatore'] is not None}),
+                     'interventi': len(interventi), 'fuori_turno': len(fuori), 'sale': list(sale.values())}}
 
 
 # ================================================================ Excel
@@ -282,6 +394,7 @@ VERDE_PIENO = 'C6EFCE'      # DISPONIBILE
 VERDE_CHIARO = 'EAF5E3'     # ore libere dentro una mezza giornata occupata
 GRIGIO = 'E7E9E6'
 ARANCIO = 'B35F16'
+AZZURRO_SALA = 'E8EEF7'     # la riga che apre la parte della sala operatoria
 _sottile = Side(style='thin', color='9AA5AD')
 BORDO = Border(left=_sottile, right=_sottile, top=_sottile, bottom=_sottile)
 _spesso = Side(style='medium', color=BLU)
@@ -303,6 +416,33 @@ def _titolo(ws, riga, testo, colonne, dimensione=14):
     c.font = Font(name='Calibri', size=dimensione, bold=True, color=BLU)
     ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
     c.alignment = Alignment(horizontal='left', vertical='center')
+
+
+def _altezza_riga(ws, riga, celle):
+    """L'altezza di una riga della matrice: una riga di testo ogni 22 caratteri circa, in una colonna larga 19."""
+    righe_testo = 1
+    for k in range(celle):
+        v = ws.cell(riga, 2 + k).value or ''
+        righe_testo = max(righe_testo, sum(max(1, -(-len(pezzo) // 22)) for pezzo in str(v).split('\n')))
+    ws.row_dimensions[riga].height = max(30, 15 * righe_testo)
+
+
+def testo_cella_sala(cella):
+    """Il testo di una mezza giornata della sala operatoria, uguale nella pagina e nell'Excel: i chirurghi in
+    turno, chi opera senza un turno, quanti interventi, gli assenti; «sala libera» senza turni e senza interventi."""
+    if cella['chiuso']:
+        testi = ['CHIUSO: %s' % cella['chiuso']]
+    else:
+        testi = ['%s %s' % (p['operatore'].etichetta, fascia(p['da'], p['a']).replace('–', '-')) for p in cella['presenze']]
+        if cella['tutta_libera']:
+            testi.append('sala libera')
+    testi += ['%s, senza turno' % o.etichetta for o in cella.get('senza_turno') or []]
+    n = cella.get('interventi') or 0
+    if n:
+        testi.append('%d intervent%s' % (n, 'o' if n == 1 else 'i'))
+    if not cella['chiuso']:
+        testi += ['(%s %s)' % (o.etichetta, motivo_assenza(motivo)) for o, motivo, _ in cella['assenti']]
+    return '\n'.join(testi)
 
 
 def excel_matrice(st, vista, adesso=None):
@@ -375,19 +515,44 @@ def excel_matrice(st, vista, adesso=None):
                 c.value = testo_excel('\n'.join(testi))
                 if cella['libere']:
                     c.fill = verde_chiaro
-        # l'altezza: una riga di testo ogni 22 caratteri circa, in una colonna larga 19
-        righe_testo = 1
-        for k in range(len(r['celle'])):
-            v = ws.cell(riga, 2 + k).value or ''
-            righe_testo = max(righe_testo, sum(max(1, -(-len(pezzo) // 22)) for pezzo in str(v).split('\n')))
-        ws.row_dimensions[riga].height = max(30, 15 * righe_testo)
+        _altezza_riga(ws, riga, len(r['celle']))
         riga += 1
     if not vista['righe']:
         ws.cell(riga, 1, 'Nessuna stanza attiva in questa struttura.')
         riga += 1
+    # 1.12.3: la sala operatoria, in una parte sua sotto gli ambulatori (chi opera e quanti interventi)
+    if vista.get('sale'):
+        c = ws.cell(riga, 1, 'SALA OPERATORIA · i chirurghi in turno%s; si programma dalla pagina Sala e non conta '
+                             'nelle disponibilità degli ambulatori' % ('' if vista['tipo'] else ' e gli interventi prenotati'))
+        c.font = Font(bold=True, color=BLU)
+        c.fill = PatternFill('solid', fgColor=AZZURRO_SALA)
+        c.alignment = Alignment(vertical='center', wrap_text=True)
+        for k in range(1, colonne + 1):
+            ws.cell(riga, k).border = BORDO
+        ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
+        ws.row_dimensions[riga].height = 22
+        riga += 1
+        for r in vista['sale']:
+            c = ws.cell(riga, 1, testo_excel(r['risorsa'].nome))
+            c.font, c.border = Font(bold=True), BORDO
+            c.alignment = Alignment(vertical='center', wrap_text=True)
+            for k, cella in enumerate(r['celle']):
+                c = ws.cell(riga, 2 + k)
+                c.border = BORDO
+                c.alignment = Alignment(vertical='top', wrap_text=True)
+                c.value = testo_excel(testo_cella_sala(cella))
+                if cella['chiuso']:
+                    c.fill = grigio
+                    c.font = Font(color='5B6B75', italic=True)
+                elif cella['tutta_libera'] and not cella.get('interventi'):
+                    c.font = Font(color='5B6B75', italic=True)
+            _altezza_riga(ws, riga, len(r['celle']))
+            riga += 1
     riga += 1
     ws.cell(riga, 1, 'In verde le fasce libere, disponibili per nuovi ambulatori (disponibilità integrative): '
-                     '«DISPONIBILE» è una mezza giornata tutta libera, «libero» le ore avanzate in una occupata.')
+                     '«DISPONIBILE» è una mezza giornata tutta libera, «libero» le ore avanzate in una occupata.'
+                     + (' La sala operatoria è a parte: «sala libera» vuol dire nessun chirurgo in turno.'
+                        if vista.get('sale') else ''))
     ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
     ws.cell(riga, 1).alignment = Alignment(wrap_text=True)
     ws.row_dimensions[riga].height = 30
@@ -406,6 +571,15 @@ def excel_matrice(st, vista, adesso=None):
     return wb
 
 
+def frase_sala_mese(sala):
+    """La riga sotto la programmazione: quanti interventi nel mese e quanti fuori dai turni dei chirurghi."""
+    n, f = sala['interventi'], sala['fuori_turno']
+    testo = 'Sala operatoria: %s nel mese' % ('nessun intervento' if not n else '%d intervent%s' % (n, 'o' if n == 1 else 'i'))
+    if f:
+        testo += ', di cui %d fuori dai turni dei chirurghi' % f
+    return testo + '.'
+
+
 def excel_programmazione(st, vista, adesso=None):
     """Due fogli: la programmazione per specialita' (il foglio che si
     compilava a mano, con le date calcolate) e il calendario del mese."""
@@ -418,7 +592,9 @@ def excel_programmazione(st, vista, adesso=None):
     intestazioni = ['Specialità', 'Medico', 'Giorno', 'Date di %s' % servizi.MESI[primo.month - 1], 'Orario',
                     'Stanza', 'Note']
     larghezze = [22, 26, 11, 24, 13, 18, 48]
-    _titolo(ws, 1, '%s — %s' % (testo_excel(st.nome), TITOLO_PROGRAMMAZIONE), len(intestazioni), 15)
+    sala = vista.get('sala') or {'righe': [], 'interventi': 0, 'fuori_turno': 0}
+    titolo = TITOLO_PROGRAMMAZIONE + (' E SALA OPERATORIA' if sala['righe'] or sala['interventi'] else '')
+    _titolo(ws, 1, '%s — %s' % (testo_excel(st.nome), titolo), len(intestazioni), 15)
     ws.cell(2, 1, nome_mese.capitalize()).font = Font(size=12, bold=True)
     ws.cell(3, 1, 'Calcolata dai turni, dalle assenze e dalle chiusure scritte nel Gestionale Agende il %s alle %s: '
                   'le date sono quelle in cui il medico c\'è davvero.' % (adesso.strftime('%d/%m/%Y'),
@@ -430,13 +606,16 @@ def excel_programmazione(st, vista, adesso=None):
         _intestazione(ws.cell(r0, c), testo)
         ws.column_dimensions[get_column_letter(c)].width = l
     riga = r0 + 1
-    for gruppo in vista['gruppi']:
+    gruppi = list(vista['gruppi'])
+    if sala['righe']:
+        gruppi.append({'specialita': SALA_OPERATORIA, 'righe': sala['righe']})
+    for gruppo in gruppi:
         for n, r in enumerate(gruppo['righe']):
-            valori = [testo_excel(gruppo['specialita']), testo_excel(r['operatore'].etichetta),
-                      servizi.GIORNI[r['giorno']].capitalize(),
+            valori = [testo_excel(gruppo['specialita']), testo_excel(r['operatore'].etichetta if r['operatore'] else '?'),
+                      servizi.GIORNI[r['giorno']].capitalize() if r['giorno'] is not None else '—',
                       (r['date'][0].day if len(r['date']) == 1 else ', '.join(str(g.day) for g in r['date'])) or '—',
-                      fascia(r['ora_inizio'], r['ora_fine']).replace('–', '-'), testo_excel(r['risorsa'].nome),
-                      testo_excel('; '.join(r['note']))]
+                      fascia(r['ora_inizio'], r['ora_fine']).replace('–', '-') if r['ora_inizio'] else '—',
+                      testo_excel(r['risorsa'].nome), testo_excel('; '.join(r['note']))]
             for c, v in enumerate(valori, start=1):
                 cella = ws.cell(riga, c, v)
                 cella.border = BORDO
@@ -447,38 +626,52 @@ def excel_programmazione(st, vista, adesso=None):
             if not r['date']:
                 ws.cell(riga, 4).font = Font(color=ARANCIO)
             riga += 1
-    if not vista['righe']:
+    if not vista['righe'] and not sala['righe']:
         ws.cell(riga, 1, 'Nessun turno nelle stanze attive di questa struttura in %s.' % nome_mese)
         riga += 1
+    ultima_tabella = riga - 1
+    if sala['interventi'] or sala['righe']:
+        riga += 1
+        ws.cell(riga, 1, testo_excel(frase_sala_mese(sala))).font = Font(italic=True, color='5B6B75')
+        ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=len(intestazioni))
+        riga += 1
     ws.freeze_panes = ws.cell(r0 + 1, 1)
-    if vista['righe']:
-        ws.auto_filter.ref = 'A%d:%s%d' % (r0, get_column_letter(len(intestazioni)), riga - 1)
+    if vista['righe'] or sala['righe']:
+        ws.auto_filter.ref = 'A%d:%s%d' % (r0, get_column_letter(len(intestazioni)), ultima_tabella)
     _stampa(ws, '%d:%d' % (r0, r0), True, st, 'programmazione ambulatori · ' + nome_mese)
     # il calendario: giorno per giorno
     wc = wb.create_sheet('Calendario')
-    _titolo(wc, 1, 'Calendario di %s — %s' % (nome_mese, testo_excel(st.nome)), 5, 14)
-    for c, (testo, l) in enumerate(zip(['Data', 'Giorno', 'Stanza', 'Medico', 'Orario'], [12, 11, 18, 26, 13]), start=1):
+    con_sala = bool(sala['righe'] or sala['interventi'])
+    colonne_cal = ['Data', 'Giorno', 'Stanza', 'Medico', 'Orario'] + (['Interventi'] if con_sala else [])
+    _titolo(wc, 1, 'Calendario di %s — %s' % (nome_mese, testo_excel(st.nome)), len(colonne_cal), 14)
+    for c, (testo, l) in enumerate(zip(colonne_cal, [12, 11, 18, 26, 13, 11]), start=1):
         _intestazione(wc.cell(3, c), testo)
         wc.column_dimensions[get_column_letter(c)].width = l
     riga = 4
     grigio = PatternFill('solid', fgColor=GRIGIO)
     for giorno in vista['calendario']:
         g, i = giorno['data'], giorno['info']
-        if g.weekday() not in st.giorni_aperti and not giorno['presenze']:
+        in_sala = giorno.get('sala') or []
+        if g.weekday() not in st.giorni_aperti and not giorno['presenze'] and not in_sala:
             continue
         motivo = i['chiusura'] or (i['festivo'] if i['chiude_festivo'] else None)
         if not giorno['presenze']:
+            # nessun medico negli ambulatori: la riga grigia resta anche se sotto c'e' la sala
             for c, v in enumerate([g, servizi.GIORNI[g.weekday()].capitalize(),
-                                   testo_excel(motivo_chiusura(motivo)) if motivo else 'nessun medico in turno', '', ''], start=1):
+                                   testo_excel(motivo_chiusura(motivo)) if motivo else
+                                   GIORNO_SOLO_SALA if g.weekday() not in st.giorni_aperti else 'nessun medico in turno', '', '']
+                                  + ([None] if con_sala else []), start=1):
                 cella = wc.cell(riga, c, v)
                 cella.border, cella.fill = BORDO, grigio
             wc.cell(riga, 1).number_format = 'dd/mm/yyyy'
             riga += 1
-            continue
-        for n, t in enumerate(giorno['presenze']):
+        voci = [(t.risorsa, t.operatore, t, None) for t in giorno['presenze']] + \
+            [(x['risorsa'], x['operatore'], x['turno'], x['interventi']) for x in in_sala]
+        for n, (stanza, medico, t, n_int) in enumerate(voci, start=0 if giorno['presenze'] else 1):
             valori = [g if n == 0 else None, servizi.GIORNI[g.weekday()].capitalize() if n == 0 else None,
-                      testo_excel(t.risorsa.nome), testo_excel(t.operatore.etichetta),
-                      fascia(t.ora_inizio, t.ora_fine).replace('–', '-')]
+                      testo_excel(stanza.nome), testo_excel(medico.etichetta if medico else '?'),
+                      fascia(t.ora_inizio, t.ora_fine).replace('–', '-') if t else 'senza turno'] + \
+                ([n_int] if con_sala else [])
             for c, v in enumerate(valori, start=1):
                 cella = wc.cell(riga, c, v)
                 cella.border = BORDO
@@ -554,7 +747,8 @@ def mese(aaaamm):
                            mese_nome=servizi.MESI[primo.month - 1],
                            prima=prima.strftime('%Y-%m'), dopo=dopo.strftime('%Y-%m'), aaaamm=primo.strftime('%Y-%m'),
                            oggi=date.today(), giorni_nomi=servizi.GIORNI, fascia=fascia, sezione='programmazione',
-                           data_menu=max(primo, min(date.today(), ultimo)).isoformat(), motivo_chiusura=motivo_chiusura)
+                           data_menu=max(primo, min(date.today(), ultimo)).isoformat(), motivo_chiusura=motivo_chiusura,
+                           frase_sala=frase_sala_mese(vista['sala']))
 
 
 @bp.route('/mese/<aaaamm>.xlsx')

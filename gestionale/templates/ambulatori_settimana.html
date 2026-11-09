@@ -32,8 +32,8 @@
 </div>
 
 <div class="telaio">
-<p class="nota" data-guida="matrice-spiegazione">Chi occupa ogni stanza, mattina e pomeriggio, calcolato dai turni dei medici: una cella senza nessuno è <b class="verde">DISPONIBILE</b>, le ore avanzate sono segnate come <b class="verde">libere</b>. Dal <b>+</b> si mette un medico in una stanza, dal nome si apre il turno, dalla <b>×</b> si toglie da quella settimana in poi.</p>
-{% if vista.righe %}
+<p class="nota" data-guida="matrice-spiegazione">Chi occupa ogni stanza, mattina e pomeriggio, calcolato dai turni dei medici: una cella senza nessuno è <b class="verde">DISPONIBILE</b>, le ore avanzate sono segnate come <b class="verde">libere</b>. Dal <b>+</b> si mette un medico in una stanza, dal nome si apre il turno, dalla <b>×</b> si toglie da quella settimana in poi.{% if vista.sale %} In fondo la <b>sala operatoria</b>: chi opera e quanti interventi; si programma dalla pagina Sala e non conta nelle disponibilità.{% endif %}</p>
+{% if vista.righe or vista.sale %}
 <table class="settimana matrice" id="matrice-ambulatori" data-lunedi="{{ lunedi.isoformat() }}">
   <thead>
     <tr><th class="stanza-sett" rowspan="2">Ambulatorio</th>
@@ -97,8 +97,39 @@
       </td>
       {% endfor %}
     </tr>
+    {% else %}
+    <tr><td class="vuoto" colspan="{{ 1 + vista.giorni|length * vista.meta|length }}">Nessuna stanza attiva in questa struttura: si aggiungono in Configura → Anagrafiche → Stanze.</td></tr>
     {% endfor %}
   </tbody>
+  {% if vista.sale %}
+  <tbody class="parte-sala" data-guida="matrice-sala">
+    <tr><th class="titolo-sala" colspan="{{ 1 + vista.giorni|length * vista.meta|length }}">Sala operatoria
+      <small>i chirurghi in turno e gli interventi prenotati: si programma dalla pagina <a href="{{ url_for('sala.giornata', iso=lunedi.isoformat(), struttura=sid) }}">Sala</a>, non conta nelle disponibilità degli ambulatori</small></th></tr>
+    {% for riga in vista.sale %}
+    <tr>
+      <th class="stanza-sett">{{ riga.risorsa.nome }}</th>
+      {% for c in riga.celle %}
+      <td class="{% if c.chiuso %}chiusa{% elif c.tutta_libera %}sala-vuota{% else %}occupata{% endif %}"
+          data-sala="{{ riga.risorsa.id }}_{{ c.data.isoformat() }}_{{ c.meta.nome }}">
+        {% if c.chiuso %}
+          <span class="chiuso">{{ motivo_chiusura(c.chiuso) }}</span>
+        {% else %}
+          {% for p in c.presenze %}
+          <span class="turno-sett" style="border-left-color: {{ p.operatore.colore_sicuro }}">
+            <a href="{{ url_for('anagrafiche.turno', tid=p.turno.id, torna=request.full_path.rstrip('?')) }}" title="Apri il turno di {{ p.operatore.etichetta }}">{{ p.operatore.cognome }}</a> <small>{{ fascia(p.da, p.a) }}</small>
+          </span>
+          {% endfor %}
+          {% for o, motivo, t in c.assenti %}<span class="turno-sett assente">{{ o.cognome }} <small>{{ motivo_assenza(motivo) }}</small></span>{% endfor %}
+          {% if c.tutta_libera %}<span class="sala-libera">sala libera</span>{% endif %}
+        {% endif %}
+        {% for o in c.senza_turno %}<span class="turno-sett senza-turno" title="{{ o.etichetta }}: interventi senza un turno in sala">{{ o.cognome }} <small>senza turno</small></span>{% endfor %}
+        {% if c.interventi %}<a class="interventi-sala" href="{{ url_for('sala.giornata', iso=c.data.isoformat(), struttura=sid) }}" title="Apri gli interventi del giorno">{{ c.interventi }} intervent{{ 'o' if c.interventi == 1 else 'i' }}</a>{% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+  {% endif %}
 </table>
 <p class="nota legenda-matrice">Mattina dall'apertura ({{ st.apertura.strftime('%H:%M') }}) alle {{ vista.meta[0].a.strftime('%H:%M') if vista.meta|length > 1 else st.chiusura.strftime('%H:%M') }}, pomeriggio fino alla chiusura ({{ st.chiusura.strftime('%H:%M') }}): si cambiano in Configura → Anagrafiche → Strutture. Un medico assente lascia la stanza libera solo in quella settimana; per i turni, le assenze e le chiusure c'è Anagrafiche.</p>
 {% else %}
