@@ -899,6 +899,10 @@ guida *Il riepilogo live* sono fatti così, alle 10:40 di martedì 3 novembre.
 - In Claude Code sul PC di Giovanni le prove si lanciano come qui; su un Windows vero le ha già
   fatte GitHub (`prove.yml`): se una prova non va sul suo PC e va su GitHub, è il PC (antivirus,
   `openssl` non sul PATH: c'è nella riga di comando di Git for Windows, non in PowerShell).
+  Una volta sola (8 novembre 2026, esecuzione 11) `prove_icone_animate.py` ha dato 13 su 14 sul
+  Windows di GitHub per `net::ERR_NO_BUFFER_SPACE` nella console del browser: Windows senza memoria
+  per una connessione in quel momento, non il programma (lo stesso codice è passato nelle esecuzioni
+  dopo). La prova non lo ignora apposta: se si ripete, va guardato lì.
 - **Fasce dei turni**: con Federica, scegliere la durata delle fasce dei turni che ne hanno
   bisogno (per esempio le sedute di endoscopia e gli ambulatori con le visite ogni 20 minuti),
   da *Configura → Anagrafiche*, il turno, *Durata delle fasce*. Salvando ogni turno il programma
