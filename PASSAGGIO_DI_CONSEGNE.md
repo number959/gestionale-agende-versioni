@@ -944,10 +944,15 @@ resta dentro lo schermo, `gestionale.js`), e testi da sistemare. Tutto corretto,
 - In Claude Code sul PC di Giovanni le prove si lanciano come qui; su un Windows vero le ha già
   fatte GitHub (`prove.yml`): se una prova non va sul suo PC e va su GitHub, è il PC (antivirus,
   `openssl` non sul PATH: c'è nella riga di comando di Git for Windows, non in PowerShell).
-  Una volta sola (8 novembre 2026, esecuzione 11) `prove_icone_animate.py` ha dato 13 su 14 sul
-  Windows di GitHub per `net::ERR_NO_BUFFER_SPACE` nella console del browser: Windows senza memoria
-  per una connessione in quel momento, non il programma (lo stesso codice è passato nelle esecuzioni
-  dopo). La prova non lo ignora apposta: se si ripete, va guardato lì.
+  Due volte una prova nel browser è fallita sul Windows di GitHub per `net::ERR_NO_BUFFER_SPACE` nella
+  console del browser (Windows senza risorse per una connessione in quel momento): l'8 novembre 2026,
+  esecuzione 11, `prove_icone_animate.py` 13 su 14 nell'animata; il 9 novembre, esecuzione 22, nella
+  normale `prove_guida_browser.py` 57 su 59 (una pagina non caricata: «codice-fiscale: giro completo (0
+  passi)») e `prove_15_browser.py` 13 su 14. Tutte e due le volte lo stesso codice è passato rifacendo la
+  prova (nella 22, «Re-run failed jobs»: tutto verde), e su Linux e in Wine non è mai successo. La prova
+  non lo ignora apposta. Da allora `prove.yml`, quando qualcosa fallisce, scrive nel suo registro le
+  connessioni TCP per stato, le porte dinamiche e la memoria libera: se succede ancora, lì si vede se
+  erano finite le porte (molte connessioni `TIME_WAIT`) o la memoria, e si corregge la causa.
 - **Fasce dei turni**: con Federica, scegliere la durata delle fasce dei turni che ne hanno
   bisogno (per esempio le sedute di endoscopia e gli ambulatori con le visite ogni 20 minuti),
   da *Configura → Anagrafiche*, il turno, *Durata delle fasce*. Salvando ogni turno il programma

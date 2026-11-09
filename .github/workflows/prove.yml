@@ -65,6 +65,25 @@ jobs:
           set "TEMP=%RUNNER_TEMP%" & set "TMP=%RUNNER_TEMP%"
           python strumenti\tutte_le_prove.py --browser http://127.0.0.1:5001 --solo-browser
 
+      # Due volte (esecuzioni 11 e 22) una prova nel browser e' fallita per net::ERR_NO_BUFFER_SPACE
+      # (Windows senza risorse per una connessione) e poi e' passata rifacendola: se succede ancora,
+      # qui si vede se erano finite le porte (molte connessioni TIME_WAIT) o la memoria.
+      - name: Stato delle connessioni e della memoria (solo se qualcosa e' fallito)
+        if: failure()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          "Connessioni TCP per stato:"
+          Get-NetTCPConnection -ErrorAction SilentlyContinue | Group-Object State | Sort-Object Count -Descending | Format-Table Count, Name -AutoSize | Out-String
+          "Connessioni TCP con il gestionale di prova (porta 5001) per stato:"
+          Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -eq 5001 -or $_.RemotePort -eq 5001 } | Group-Object State | Format-Table Count, Name -AutoSize | Out-String
+          "Porte dinamiche:"
+          netsh int ipv4 show dynamicport tcp
+          $os = Get-CimInstance Win32_OperatingSystem
+          "Memoria libera: {0:N0} MB su {1:N0} MB" -f ($os.FreePhysicalMemory / 1KB), ($os.TotalVisibleMemorySize / 1KB)
+          "Processi con piu' memoria:"
+          Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 8 Name, Id, @{n='MB';e={[int]($_.WorkingSet64 / 1MB)}}, HandleCount | Format-Table -AutoSize | Out-String
+
       - name: Chiudi il gestionale di prova
         if: always()
         shell: pwsh
