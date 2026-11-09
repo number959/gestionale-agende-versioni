@@ -96,6 +96,11 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
+- **Versione 1.12.3, pubblicata il 9 novembre 2026, la sera**: la release `v1.12.3`, segnata come
+  ultima, con i due Setup, i due file delle versioni e il PDF della guida (58 pagine). Le esportazioni
+  in Excel di giorno, settimana e mese per ambulatori, sala operatoria o tutto insieme, e la sala
+  operatoria in fondo alla pianificazione della settimana e alla programmazione del mese (vedi *La
+  1.12.3*). Il database non cambia. Alla clinica va messa una volta a mano (vedi *Cose aperte*).
 - **Versione 1.12.2, pubblicata il 9 novembre 2026**: la release `v1.12.2`, segnata come ultima, con
   i due Setup, i due file delle versioni e il PDF della guida (55 pagine). Il riepilogo live rifatto
   perché si legga a colpo d'occhio e il nuovo riepilogo del periodo, non in diretta (vedi *La
@@ -673,6 +678,12 @@ ultima, con le note prese da `NOTE-RELEASE-X.Y.md` se c'è, e alla fine scarica 
 pubblico come fa il programma e controlla che dica la versione nuova. Si avvia a mano dalla pagina
 *Actions* del progetto: «Pubblica una versione» → *Run workflow* → scegliere il ramo → *Run
 workflow*. Dura una decina di minuti. Se la release esiste già, i quattro file vengono sostituiti.
+Mentre gira, sul ramo non si carica nessuna modifica ai file di `.github/workflows/`: il ramo di
+lavoro è anche il ramo principale del progetto, la release si crea sul commit da cui l'automazione è
+partita, e GitHub rifiuta di crearla («HTTP 403: Resource not accessible by integration») se quel
+commit ha i file delle automazioni diversi dal ramo principale (al permesso dell'automazione manca
+quello di cambiare le automazioni). È successo alla 1.12.3 (esecuzione 5, rifatta: stesso rifiuto);
+la cura è avviarla di nuovo dal commit più recente (esecuzione 6, riuscita).
 I Setup costruiti così sono diversi byte per byte da quelli costruiti in Wine o sul PC (li fa un
 altro Python), ed è normale: vale la coppia Setup + file delle versioni.
 

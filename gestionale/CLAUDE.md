@@ -374,6 +374,9 @@ serve disinstallare.
    della clinica la trova da solo (ogni sei ore, o con «Controlla adesso») all'indirizzo
    predefinito, che legge sempre l'ultima release:
    `https://github.com/number959/gestionale-agende-versioni/releases/latest/download/`.
+   Mentre `pubblica.yml` gira, niente push di modifiche a `.github/workflows/`: il ramo di lavoro
+   è il ramo principale, e GitHub rifiuta la release (HTTP 403) se il commit di partenza ha le
+   automazioni diverse dal ramo (vedi `../PASSAGGIO_DI_CONSEGNE.md`, *Pubblicare senza un PC*).
 5. Controllo: `curl -sL` di quell'indirizzo + `aggiornamento.json` deve dare la versione
    nuova, e l'impronta del Setup scaricato da lì deve essere quella scritta nel file.
 
