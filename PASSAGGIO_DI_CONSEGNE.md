@@ -894,6 +894,10 @@ delle versioni (normale `817e1621…c759`, animata `284b51c7…0cef`). Simulazio
 della clinica dall'indirizzo vero, come per la 1.12.1: installata nel Windows finto la 1.12.1
 pubblicata, «Aggiorna adesso» ha trovato la 1.12.2, l'ha scaricata e installata e si è riaperto alla
 1.12.2 (14 controlli su 14, dati intatti), poi di nuovo `prove_installato.py` (53 su 53).
+Provato anche il passaggio della clinica: la 1.9 animata ricostruita dal tag `v1.9`, installata su un
+database fatto dalla 1.9 stessa (dati di prova, schema 10), e sopra il Setup animata 1.12.2 scaricato da
+GitHub: dati intatti (46 appuntamenti, 30 pazienti, 27 turni), schema portato da 10 a 11 dopo la copia
+«prima-della-versione-11», `prove_installato.py` 53 su 53.
 
 Per vedere la pagina come in un giorno di lavoro di domenica o la sera, un gestionale di prova con
 l'ora del riepilogo ferma: `strumenti/demo.py` lanciato con `live.datetime` sostituito da una classe
