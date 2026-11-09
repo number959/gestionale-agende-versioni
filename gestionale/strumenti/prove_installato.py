@@ -94,7 +94,8 @@ s, b, _ = get('/ambulatori/riepilogo.json?struttura=1&periodo=settimana')
 d = json.loads(b) if s == 200 else {}
 controlla('Riepilogo del periodo (1.12.2): il JSON con stanze, medici e giorni', s == 200 and all(k in d for k in ('stanze', 'medici', 'giorni', 'totale')), (s, list(d)[:8]))
 s, b, _ = get('/esportazioni?struttura=1')
-controlla('Esportazioni (1.12.3): la pagina con i nove pulsanti', s == 200 and testo(b).count('/esportazioni/') >= 9, s)
+controlla('Esportazioni (1.12.3): la pagina con i nove pulsanti', s == 200 and b.decode('utf-8', 'replace').count('href="/esportazioni/') == 9,
+          b.decode('utf-8', 'replace').count('href="/esportazioni/'))
 for periodo, parte in (('giorno', 'tutto'), ('settimana', 'sala'), ('mese', 'tutto')):
     s, b, h = get('/esportazioni/%s/%s/%s.xlsx?struttura=1' % (periodo, parte, date.today().isoformat()))
     controlla('Esportazioni (1.12.3): %s, %s' % (periodo, parte),

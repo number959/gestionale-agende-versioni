@@ -98,5 +98,6 @@
   html.scuro table.programmazione tr.riga-sala td.specialita { color: #E0A060; }
   html.scuro table.esportazioni th.periodo-esp { background: #22303F; color: #A9C8F5; }
   html.scuro table.esportazioni th.periodo-esp small, html.scuro table.esportazioni td.parte-esp small { color: #B8C4CF; }
+  html.scuro table.esportazioni td.parte-esp::before { color: #A9C8F5; }
   @media (max-width: 700px) { html.scuro .conti-oggi-live .totale { border-right: 0; } }
 }

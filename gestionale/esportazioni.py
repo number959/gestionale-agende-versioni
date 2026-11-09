@@ -106,13 +106,15 @@ def libro(s, st, periodo, parte, g, adesso=None):
         servizi.esporta_giorno(s, g, st.id, dati, parte=parte)
         return dati
     wb = Workbook()
+    # in «tutto insieme» i fogli della sala ci sono se la struttura ha sale, o interventi nel periodo (in sale spente)
+    con_sala = parte == 'sala' or bool(ambulatori.sale_della(st)) or bool(ambulatori.interventi_periodo(s, st, primo, ultimo))
     if periodo == 'settimana':
         vista = ambulatori.matrice(s, primo, st)
         if parte in ('ambulatori', 'tutto'):
             ws = ambulatori.foglio_matrice(_nuovo_foglio(wb), st, vista, adesso)
             if parte == 'tutto':
                 ws.title = 'Ambulatori'
-        if parte in ('sala', 'tutto'):
+        if parte in ('sala', 'tutto') and con_sala:
             ambulatori.foglio_sala_settimana(_nuovo_foglio(wb), st, vista, adesso)
             ambulatori.foglio_interventi(_nuovo_foglio(wb), st, ambulatori.interventi_periodo(s, st, primo, ultimo),
                                          titolo_periodo(periodo, g))
@@ -120,7 +122,7 @@ def libro(s, st, periodo, parte, g, adesso=None):
         vista = ambulatori.programmazione(s, primo.year, primo.month, st)
         if parte in ('ambulatori', 'tutto'):
             ambulatori.fogli_programmazione(wb, st, vista, adesso, con_sala=(parte == 'tutto'))
-        if parte in ('sala', 'tutto'):
+        if parte in ('sala', 'tutto') and con_sala:
             ambulatori.foglio_sala_mese(_nuovo_foglio(wb), st, ambulatori.sala_del_mese(s, st, primo, ultimo), adesso)
             ambulatori.foglio_turni_sala(_nuovo_foglio(wb), st, vista, adesso)
             ambulatori.foglio_interventi(_nuovo_foglio(wb), st, ambulatori.interventi_periodo(s, st, primo, ultimo),

@@ -692,7 +692,8 @@ ARTICOLI += [
          foto='/esportazioni?struttura=1',
          passi=[
              P('Apri le esportazioni', 'Menu Ambulatori → Esportazioni in Excel. Ci si arriva anche da «Altre '
-               'esportazioni» nel giorno, nella pianificazione della settimana e nella programmazione del mese.',
+               'esportazioni» nel giorno e nella programmazione del mese, e da «Stampa e scarica» nella '
+               'pianificazione della settimana.',
                'nav.menu [data-guida="menu-ambulatori"]'),
              P('La data', 'Si sceglie un giorno e «Mostra»: la tabella propone quel giorno, la sua settimana (da lunedì '
                'a domenica) e il suo mese.', '[data-guida="esportazioni-data"]'),

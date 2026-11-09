@@ -543,7 +543,10 @@ def b_sala_settimana_e_mese():
     a1 = next(i for i in range(1, wa.max_row + 1) if wa.cell(i, 1).value == 'Ambulatorio 1')
     assert all('Sala operatoria' not in str(c.value or '') and 'Esempietti' not in str(c.value or '')
                for row in wa.iter_rows() for c in row), 'la matrice per la direzione: solo ambulatori'
-    assert wa.cell(a1, 14).value == 'CHIUSO: solo sala operatoria', wa.cell(a1, 14).value
+    # la domenica che c'e' solo per la sala non e' nella matrice della direzione (resta quella di prima)
+    giorni_a = [str(wa.cell(6, c).value or '').split('\n')[0] for c in range(2, wa.max_column + 1, 2) if wa.cell(6, c).value]
+    assert giorni_a == ['Lunedì 7/12', 'Martedì 8/12', 'Mercoledì 9/12', 'Giovedì 10/12', 'Venerdì 11/12', 'Sabato 12/12'], giorni_a
+    assert all('solo sala operatoria' not in str(c.value or '') for row in wa.iter_rows() for c in row)
     attese = {(o, 'Lunedì 7/12 mattina'): 'Esempietti Rita 08:00-14:00\n2 interventi',
               (o, 'Lunedì 7/12 pomeriggio'): 'Esempietti Rita, senza turno\n1 intervento',
               (o, 'Martedì 8/12 mattina'): 'CHIUSO: Immacolata Concezione\nEsempietti Rita, senza turno\n1 intervento',
@@ -610,9 +613,9 @@ def b_sala_settimana_e_mese():
     i_lun = next(k for k, x in enumerate(righe) if x[0] == datetime(2026, 12, 7))
     blocco = righe[i_lun:i_lun + 4]      # Galasso e' assente il 7: Lippiello, la sala nel turno, quella fuori, il martedi
     assert blocco[0][2] == 'Ambulatorio 1' and blocco[1][2:] == ['Sala operatoria', 'Esempietti Rita', '08:00-14:00', 1] \
-        and blocco[2][2:] == ['Sala operatoria', 'Esempietti Rita', 'senza turno', 2] and blocco[3][0] == datetime(2026, 12, 8), blocco
+        and blocco[2][2:] == ['Sala operatoria', 'Esempietti Rita', 'fuori turno', 2] and blocco[3][0] == datetime(2026, 12, 8), blocco
     i20 = next(k for k, x in enumerate(righe) if x[0] == datetime(2026, 12, 20))
-    assert righe[i20][2] == 'solo sala operatoria' and righe[i20 + 1][2:] == ['Sala operatoria', 'Esempietti Rita', 'senza turno', 1], righe[i20:i20 + 2]
+    assert righe[i20][2] == 'solo sala operatoria' and righe[i20 + 1][2:] == ['Sala operatoria', 'Esempietti Rita', 'fuori turno', 1], righe[i20:i20 + 2]
     t = testo(C.get('/ambulatori/mese/2026-12?struttura=1'))
     assert 'in sala 8 turni, 7 interventi' in t and 'di cui 5 fuori dai turni' in t and 'solo sala operatoria' in t, t[:300]
     assert 'Fittizi' not in t
@@ -744,6 +747,144 @@ def b_esportazioni():
 
 prova('1.12.3: le nove esportazioni (giorno, settimana e mese × ambulatori, sala, tutto), uguali ai file classici e alle '
       'settimane, senza pazienti fuori dal giorno; la pagina, anche senza sale', b_esportazioni)
+
+
+def b_sala_casi_limite():
+    """1.12.3, dalla verifica indipendente: turni di sala prima dell'apertura e dopo la chiusura, l'intervento alle 14
+    in punto, quello di un chirurgo nel turno di un collega, due turni sovrapposti dello stesso chirurgo (un intervento
+    conta una volta sola), un giorno di sola sala con il solo turno (oracolo della matrice e riepilogo live come prima),
+    chiusura e festivo con un intervento (pagina ed Excel dicono il motivo), la sala del mese con tutte le sale e un
+    mese di 30 giorni, il giorno «tutto» con le stanze senza sale, il logo largo, il planning classico senza stanze."""
+    import io as _io
+    import live
+    from PIL import Image
+    from modelli import Appuntamento, Paziente
+    S, I, C = mondo_pieno()
+    s = S()
+    st = s.get(Struttura, 1)
+    s.add(Risorsa(nome='Sala operatoria 2', tipo='SALA_OPERATORIA', struttura_id=1, ordine=51))
+    pz = Paziente(cognome='Esempio', nome='Ugo', telefono='3339990005')
+    s.add(pz)
+    s.commit()
+    I.update({r.nome: r.id for r in s.scalars(select(Risorsa))})
+    L2 = LUN + timedelta(days=7)                                                    # lunedi 14/12
+    singolo(S, I['Lippiello'], I['Sala operatoria 2'], L2 + timedelta(days=4), time(6), time(7, 30))     # venerdi, prima delle 8
+    singolo(S, I['Galasso'], I['Sala operatoria 2'], L2 + timedelta(days=5), time(20, 30), time(22))     # sabato, dopo le 20
+    singolo(S, I['Esempietti'], I['Sala operatoria'], L2, time(10), time(12))       # sopra il turno di ogni lunedi 8-14
+    singolo(S, I['Fintini'], I['Sala operatoria 2'], L2 + timedelta(days=6), time(9), time(12))          # domenica: solo il turno
+
+    def app(sala, medico, giorno, h, m=0):
+        inizio = datetime.combine(giorno, time(h, m))
+        s.add(Appuntamento(risorsa_id=I[sala], operatore_id=I[medico], paziente_id=pz.id, inizio=inizio,
+                           fine=inizio + timedelta(minutes=30), stato='PRENOTATO'))
+    app('Sala operatoria 2', 'Lippiello', L2 + timedelta(days=4), 6, 30)
+    app('Sala operatoria 2', 'Galasso', L2 + timedelta(days=5), 21)
+    app('Sala operatoria', 'Esempietti', L2, 14)                                    # alle 14 in punto: fuori dal turno 8-14
+    app('Sala operatoria', 'Galasso', L2, 9)                                        # nel turno di Esempietti
+    app('Sala operatoria', 'Esempietti', L2, 10, 30)                                # dentro tutti e due i turni di Esempietti
+    app('Sala operatoria', 'Esempietti', LUN + timedelta(days=1), 10)               # martedi 8, festivo
+    app('Sala operatoria', 'Esempietti', LUN + timedelta(days=3), 10)               # giovedi 10, chiuso per manutenzione
+    s.commit()
+    v = AM.matrice(s, L2, st)
+    celle = {(r['risorsa'].nome, c['data'].weekday(), c['meta']['nome']): c for r in v['sale'] for c in r['celle']}
+    T = AM.testo_cella_sala
+    assert T(celle[('Sala operatoria 2', 4, 'mattina')]) == 'Lippiello Anna 06:00-07:30\n1 intervento', T(celle[('Sala operatoria 2', 4, 'mattina')])
+    assert T(celle[('Sala operatoria 2', 5, 'pomeriggio')]) == 'Galasso 20:30-22:00\n1 intervento', T(celle[('Sala operatoria 2', 5, 'pomeriggio')])
+    assert T(celle[('Sala operatoria', 0, 'mattina')]) == \
+        'Esempietti Rita 08:00-14:00\nEsempietti Rita 10:00-12:00\nGalasso, senza turno\n2 interventi', T(celle[('Sala operatoria', 0, 'mattina')])
+    assert T(celle[('Sala operatoria', 0, 'pomeriggio')]) == 'Esempietti Rita, senza turno\n1 intervento'
+    assert T(celle[('Sala operatoria 2', 6, 'mattina')]) == 'Fintini Ugo 09:00-12:00' and v['solo_sala'] == {L2 + timedelta(days=6)}
+    # l'oracolo della matrice (minuto per minuto, senza ambulatori.py) anche con il giorno di sola sala
+    giorni, atteso = oracolo_matrice(s, st, L2)
+    assert giorni == v['giorni'], (giorni, v['giorni'])
+    confronta(v, giorni, atteso)
+    # il riepilogo live di quella domenica: la tabella delle mezze giornate come prima (niente riga della domenica)
+    r = live.riepilogo(s, st, adesso=datetime.combine(L2 + timedelta(days=6), time(15)))
+    assert all(x['data'] != (L2 + timedelta(days=6)).isoformat() for x in r['libere_tabella']['giorni']), r['libere_tabella']['giorni'][:1]
+    # il mese: ogni intervento conta in un turno solo; quello di Galasso e quello delle 14 sono fuori dai turni
+    pr = AM.programmazione(s, 2026, 12, st)
+    righe = pr['sala']['righe']
+    lun = [x for x in righe if x['operatore'].cognome == 'Esempietti' and x['giorno'] == 0]
+    assert sorted((x['ora_inizio'], x['interventi']) for x in lun) == [(time(8), 1), (time(10), 0)], [(x['ora_inizio'], x['interventi']) for x in lun]
+    fuori = {(x['risorsa'].nome, x['operatore'].cognome): x['interventi'] for x in righe if x.get('senza_turno')}
+    assert fuori == {('Sala operatoria', 'Esempietti'): 3, ('Sala operatoria', 'Galasso'): 1}, fuori
+    assert sum(x['interventi'] for x in righe) == pr['sala']['interventi'] == 7, (sum(x['interventi'] for x in righe), pr['sala']['interventi'])
+    cal = {g['data']: g for g in pr['calendario']}
+    voci = [(x['operatore'].cognome, x['turno'].ora_inizio if x['turno'] else None, x['interventi']) for x in cal[L2]['sala']]
+    # prima i turni, poi chi opera fuori turno in ordine di ora (Galasso alle 9, Esempietti alle 14)
+    assert voci == [('Esempietti', time(8), 1), ('Esempietti', time(10), 0), ('Galasso', None, 1), ('Esempietti', None, 1)], voci
+    # chiusura e festivo con un intervento: la pagina e l'Excel dicono il motivo
+    s.close()
+    t = testo(C.get('/ambulatori/mese/2026-12?struttura=1'))
+    assert 'martedì 8</td>\n            <td colspan="4">chiusa: immacolata concezione' in t, t[t.find('martedì 8'):][:160]
+    assert 'giovedì 10</td>\n            <td colspan="4">chiusa: manutenzione' in t, t[t.find('giovedì 10'):][:160]
+    assert 'fuori turno' in t and 'senza turno' not in t.split('details class="calendario-mese"')[1]
+    _, wb = excel(C, '/esportazioni/mese/tutto/2026-12-01.xlsx?struttura=1')
+    wc = wb['Calendario']
+    per_data = {wc.cell(i, 1).value: wc.cell(i, 3).value for i in range(4, wc.max_row + 1) if isinstance(wc.cell(i, 1).value, datetime)}
+    assert per_data[datetime(2026, 12, 8)] == 'chiusa: immacolata concezione' and per_data[datetime(2026, 12, 10)] == 'chiusa: manutenzione'
+    # la sala del mese: tutte le sale, giorno per giorno, uguali alle settimane (anche la domenica di sola sala)
+    ws = wb['Sala operatoria']
+    righe_x = {str(ws.cell(i, 1).value).split('\n')[0]: i for i in range(7, ws.max_row + 1)
+               if ws.cell(i, 1).value and '/12' in str(ws.cell(i, 1).value).split('\n')[0]}
+    s = S()
+    visti = 0
+    lunedi = calendario.lunedi_di(date(2026, 12, 1))
+    while lunedi <= date(2026, 12, 31):
+        vv = AM.matrice(s, lunedi, st)
+        for k, rr in enumerate(vv['sale']):
+            for c in rr['celle']:
+                if c['data'].month == 12:
+                    nome = '%s %d/%d' % (servizi.GIORNI[c['data'].weekday()].capitalize(), c['data'].day, c['data'].month)
+                    col = 2 + 2 * k + (0 if c['meta']['nome'] == 'mattina' else 1)
+                    assert ws.cell(righe_x[nome], col).value == T(c), (nome, rr['risorsa'].nome, ws.cell(righe_x[nome], col).value, T(c))
+                    visti += 1
+        lunedi += timedelta(days=7)
+    assert visti == 4 * len(righe_x) and 'Domenica 20/12' in righe_x, (visti, len(righe_x))
+    # un mese di 30 giorni: novembre, dal lunedi al sabato (25 giorni)
+    _, wn = excel(C, '/esportazioni/mese/sala/2026-11-15.xlsx?struttura=1')
+    import re as _re
+    giorni_nov = [i for i in range(7, wn['Sala operatoria'].max_row + 1)
+                  if _re.match(r'^\w+ \d+/11$', str(wn['Sala operatoria'].cell(i, 1).value or '').split('\n')[0])]
+    assert len(giorni_nov) == 25, len(giorni_nov)
+    # il giorno «tutto»: il foglio Ambulatori senza sale, il foglio Sala con le due sale
+    _, wg = excel(C, '/esportazioni/giorno/tutto/%s.xlsx?struttura=1' % L2.isoformat())
+    def colonne(ws_):
+        return [str(ws_.cell(2, c).value).split('\n')[0] for c in range(2, ws_.max_column + 1, 2) if ws_.cell(2, c).value]
+    assert not any(x.startswith('Sala operatoria') for x in colonne(wg['Ambulatori'])), colonne(wg['Ambulatori'])
+    assert colonne(wg['Sala operatoria']) == ['Sala operatoria', 'Sala operatoria 2'], colonne(wg['Sala operatoria'])
+    wi = wg['Elenco']
+    assert wi.cell(2, 1).value.startswith('7 appuntament') or 'appuntament' in str(wi.cell(2, 1).value), wi.cell(2, 1).value
+    _, wsa = excel(C, '/esportazioni/giorno/sala/%s.xlsx?struttura=1' % L2.isoformat())
+    assert wsa['Elenco'].cell(2, 1).value == '3 interventi attivi', wsa['Elenco'].cell(2, 1).value
+    # il logo largo: il titolo del planning della sala (una colonna sola) va dopo il logo, non sotto
+    buf = _io.BytesIO()
+    Image.new('RGB', (600, 100), (21, 67, 129)).save(buf, 'PNG')
+    st = s.get(Struttura, 1)
+    st.logo, st.logo_aggiornato = buf.getvalue(), datetime.now()
+    s.get(Risorsa, I['Sala operatoria 2']).attiva = False
+    s.commit()
+    _, wl = excel(C, '/esportazioni/giorno/sala/%s.xlsx?struttura=1' % L2.isoformat())
+    titolo = [c for c in wl['Sala operatoria'][1] if c.value]
+    assert titolo and titolo[0].column > 1 and 'SALA OPERATORIA' in titolo[0].value, [(c.column, c.value) for c in titolo]
+    # senza sale: la sala del mese dice solo che non ci sono, senza un mese di righe vuote
+    s.get(Risorsa, I['Sala operatoria']).attiva = False
+    for r_ in s.scalars(select(Risorsa)):
+        if r_.tipo != 'SALA_OPERATORIA':
+            r_.attiva = False
+    s.commit()
+    s.close()
+    _, wv = excel(C, '/esportazioni/mese/sala/2027-01-01.xlsx?struttura=1')
+    colonna_a = [wv['Sala operatoria'].cell(i, 1).value for i in range(1, wv['Sala operatoria'].max_row + 1)]
+    assert 'Nessuna sala operatoria attiva in questa struttura.' in colonna_a and \
+        not any(_re.match(r'^\w+ \d+/1$', str(x or '').split('\n')[0]) for x in colonna_a), colonna_a
+    # il planning classico senza nessuna stanza resta com'era: nessuna riga in piu'
+    _, wp = excel(C, '/esporta/2027-01-04?struttura=1')
+    assert not any('Nessuna stanza attiva' in str(c.value or '') for row in wp.worksheets[0].iter_rows() for c in row)
+
+
+prova('1.12.3, dalla verifica: turni di sala fuori orario, le 14 in punto, il collega, turni sovrapposti, giorno di sola '
+      'sala (oracolo e live), chiusure nel calendario, sala del mese completa, 30 giorni, logo largo, classico vuoto', b_sala_casi_limite)
 
 
 # ========================================================= programmazione

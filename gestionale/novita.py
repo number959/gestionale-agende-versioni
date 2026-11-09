@@ -18,7 +18,7 @@ NOVITA = [
              testo='Menu Ambulatori → Esportazioni in Excel: per il giorno, la settimana e il mese della data scelta, '
                    'un file solo degli ambulatori, uno solo della sala operatoria e uno con tutto insieme, dove '
                    'ambulatori e sala stanno in fogli separati. Nove pulsanti, un clic per ciascun file; ci si arriva '
-                   'anche da «Altre esportazioni» nel giorno, nella settimana e nel mese.',
+                   'anche da «Altre esportazioni» nel giorno e nel mese e da «Stampa e scarica» nella settimana.',
              guida='esportazioni'),
         dict(titolo='La sala operatoria del mese',
              testo='Un Excel della sala per tutto il mese: giorno per giorno, per ogni sala la mattina e il pomeriggio '

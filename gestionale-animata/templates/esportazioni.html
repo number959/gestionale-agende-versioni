@@ -31,13 +31,13 @@
         <span class="senza">Nessuna sala operatoria in questa struttura</span>
         {% else %}
         <a class="bottone{% if p.parte == 'tutto' %} primario{% endif %} piccolo" href="{{ url_for('esportazioni.scarica', periodo=voce.periodo, parte=p.parte, iso=g.isoformat(), struttura=sid) }}" download="{{ p.file }}">Scarica</a>
-        <small>{{ p.contenuto }}</small>
+        <small>{% if p.parte == 'tutto' and not ha_sale %}senza sala operatoria: gli stessi fogli degli ambulatori{% else %}{{ p.contenuto }}{% endif %}</small>
         {% endif %}
       </td>
       {% endfor %}
     </tr>
     {% endfor %}
   </table>
-  <p class="nota legenda-esportazioni">Gli elenchi degli interventi non hanno i dati dei pazienti: per quelli c'è la <a href="{{ url_for('sala.lista_operatoria', iso=g.isoformat(), struttura=sid) }}">lista operatoria</a> del giorno. Il planning del giorno, come sempre, ha l'elenco degli appuntamenti con i recapiti. La matrice della settimana e la programmazione del mese degli ambulatori sono anche nelle loro pagine, dal menu Ambulatori.</p>
+  <p class="nota legenda-esportazioni">Gli Excel della settimana e del mese non hanno i dati dei pazienti. Quelli del giorno sì, come il planning di sempre: l'elenco degli appuntamenti (o degli interventi) con i recapiti; per la sala c'è anche la <a href="{{ url_for('sala.lista_operatoria', iso=g.isoformat(), struttura=sid) }}">lista operatoria</a>. La matrice della settimana e la programmazione del mese degli ambulatori sono anche nelle loro pagine, dal menu Ambulatori.</p>
 </div>
 {% endblock %}

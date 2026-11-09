@@ -107,7 +107,7 @@
   {% if vista.sale %}
   <tbody class="parte-sala" data-guida="matrice-sala">
     <tr><th class="titolo-sala" colspan="{{ 1 + vista.giorni|length * vista.meta|length }}">Sala operatoria
-      <small>i chirurghi in turno e gli interventi prenotati: si programma dalla pagina <a href="{{ url_for('sala.giornata', iso=lunedi.isoformat(), struttura=sid) }}">Sala</a>, non conta nelle disponibilità degli ambulatori</small></th></tr>
+      <small>i chirurghi in turno e gli interventi (prenotati, confermati o fatti): si programma dalla pagina <a href="{{ url_for('sala.giornata', iso=lunedi.isoformat(), struttura=sid) }}">Sala</a>, non conta nelle disponibilità degli ambulatori</small></th></tr>
     {% for riga in vista.sale %}
     <tr>
       <th class="stanza-sett">{{ riga.risorsa.nome }}</th>

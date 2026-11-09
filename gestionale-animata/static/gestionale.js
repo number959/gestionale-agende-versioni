@@ -709,6 +709,17 @@
 (function () {
   'use strict';
   var gruppi = document.querySelectorAll('.menu .gruppo, .gruppo-comandi');
+  // 1.12.3: una tendina aperta con il clic resta dentro lo schermo (sul telefono usciva a sinistra)
+  var dentro = function (g) {
+    var t = g.querySelector('.tendina');
+    if (!t) { return; }
+    t.style.transform = '';
+    var largo = document.documentElement.clientWidth;
+    t.style.maxWidth = (largo - 16) + 'px';
+    var r = t.getBoundingClientRect();
+    var sposta = r.left < 8 ? 8 - r.left : (r.right > largo - 8 ? largo - 8 - r.right : 0);
+    if (sposta) { t.style.transform = 'translateX(' + Math.round(sposta) + 'px)'; }
+  };
   var chiudiTutti = function (tranne) {
     gruppi.forEach(function (g) {
       if (g === tranne) { return; }
@@ -726,6 +737,7 @@
       chiudiTutti(g);
       g.classList.remove('chiuso');
       g.classList.toggle('aperto', apri);
+      if (apri) { dentro(g); }
       b.setAttribute('aria-expanded', apri ? 'true' : 'false');
       if (!apri) { g.classList.add('chiuso'); b.blur(); }
     });

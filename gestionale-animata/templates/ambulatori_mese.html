@@ -34,7 +34,7 @@
 </div>
 
 <div class="contenuto">
-  <p class="nota" data-guida="programmazione-spiegazione">Il foglio «programmazione ambulatori» calcolato dai turni: per ogni specialità e medico, il giorno della settimana, le date del mese in cui viene davvero (tolte assenze, chiusure e festivi in cui la struttura chiude), l'orario e la stanza. Le note dicono i giorni saltati e perché.{% if vista.sala.righe or vista.sala.interventi %} In fondo la <b>sala operatoria</b>, con gli interventi di ogni turno.{% endif %} L'Excel ha anche il calendario giorno per giorno.</p>
+  <p class="nota" data-guida="programmazione-spiegazione">Il foglio «programmazione ambulatori» calcolato dai turni: per ogni specialità e medico, il giorno della settimana, le date del mese in cui viene davvero (tolte assenze, chiusure e festivi in cui la struttura chiude), l'orario e la stanza. Le note dicono i giorni saltati e perché.{% if vista.sala.righe or vista.sala.interventi %} In fondo la <b>sala operatoria</b>, con gli interventi di ogni turno: «Scarica in Excel» è il file degli ambulatori, la sala è in «Altre esportazioni».{% endif %} L'Excel ha anche il calendario giorno per giorno.</p>
   <table class="elenco programmazione" id="programmazione-ambulatori">
     <tr><th>Specialità</th><th>Medico</th><th>Giorno</th><th>Date di {{ mese_nome }}</th><th>Orario</th><th>Stanza</th><th>Note</th></tr>
     {% for gruppo in vista.gruppi %}{% for r in gruppo.righe %}
@@ -74,7 +74,7 @@
         {% if giorno.presenze or giorno.sala %}
           {% if not giorno.presenze %}
           <tr class="primo-del-gruppo spento"><td>{{ giorni_nomi[giorno.data.weekday()] }} {{ giorno.data.day }}</td>
-            <td colspan="{{ 4 if con_sala else 3 }}">{% if giorno.data.weekday() not in st.giorni_aperti %}solo sala operatoria{% else %}nessun medico in turno{% endif %}</td></tr>
+            <td colspan="{{ 4 if con_sala else 3 }}">{% if i.chiusura %}{{ motivo_chiusura(i.chiusura) }}{% elif i.festivo and i.chiude_festivo %}{{ motivo_chiusura(i.festivo) }}{% elif giorno.data.weekday() not in st.giorni_aperti %}solo sala operatoria{% else %}nessun medico in turno{% endif %}</td></tr>
           {% endif %}
           {% for t in giorno.presenze %}
           <tr{% if loop.first %} class="primo-del-gruppo"{% endif %}>
@@ -85,7 +85,7 @@
           {% for x in giorno.sala %}
           <tr class="riga-sala">
             <td></td>
-            <td>{{ x.risorsa.nome }}</td><td>{{ x.operatore.etichetta if x.operatore else '?' }}</td><td>{% if x.turno %}{{ fascia(x.turno.ora_inizio, x.turno.ora_fine) }}{% else %}senza turno{% endif %}</td>
+            <td>{{ x.risorsa.nome }}</td><td>{{ x.operatore.etichetta if x.operatore else '?' }}</td><td>{% if x.turno %}{{ fascia(x.turno.ora_inizio, x.turno.ora_fine) }}{% else %}fuori turno{% endif %}</td>
             <td>{{ x.interventi or '' }}</td>
           </tr>
           {% endfor %}

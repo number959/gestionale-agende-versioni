@@ -172,6 +172,14 @@ with sync_playwright() as p:
        len(altre) == 3 and 'sala operatoria del mese' in altre[0] and 'Ambulatori e sala' in altre[1] and 'Tutte le esportazioni' in altre[2], altre)
     with pg.expect_download() as scaricato:
         pg.locator('[data-guida="programmazione-altre"] .tendina a', has_text='La sala operatoria del mese').click()
+    # sul telefono la tendina aperta resta dentro lo schermo (prima usciva a sinistra)
+    pg.set_viewport_size({'width': 390, 'height': 844})
+    pg.reload()
+    pg.locator('[data-guida="programmazione-altre"] .apri-gruppo').click()
+    box = pg.locator('[data-guida="programmazione-altre"] .tendina').bounding_box()
+    ok('sul telefono la tendina «Altre esportazioni» resta dentro lo schermo',
+       box and box['x'] >= 0 and box['x'] + box['width'] <= 390, box)
+    pg.set_viewport_size({'width': 1366, 'height': 820})
     ok('la sala del mese in Excel', scaricato.value.suggested_filename == 'sala-operatoria-mese-%s.xlsx' % LUN.strftime('%Y-%m'),
        scaricato.value.suggested_filename)
 

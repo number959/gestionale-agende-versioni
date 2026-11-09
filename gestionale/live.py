@@ -230,6 +230,8 @@ def riepilogo(s, st, adesso=None):
             for c in riga['celle']:
                 if c['data'] < oggi or c['data'] > oggi + timedelta(days=GIORNI_AVANTI):
                     continue
+                if c['data'] in vista.get('solo_sala', ()):
+                    continue            # 1.12.3: un giorno che c'e' solo per la sala non e' degli ambulatori
                 passata = c['data'] == oggi and c['meta']['a'] <= ora_adesso
                 celle_tab.setdefault((c['data'], riga['risorsa'].nome), {})[c['meta']['nome']] = (
                     'passata' if passata else 'chiusa' if c['chiuso'] else 'libera' if c['tutta_libera'] else 'occupata')

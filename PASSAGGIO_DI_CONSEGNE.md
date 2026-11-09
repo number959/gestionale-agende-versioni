@@ -924,6 +924,15 @@ chirurghi e gli interventi prenotati): per questo chi opera senza un turno è de
 ha una riga sua nel mese, e un giorno con soli interventi in sala compare. Il menu *Settimana* (l'agenda di
 tutte le stanze) non è cambiato: si stampa come prima.
 
+Prima di pubblicare, una verifica indipendente (quattro revisori, due verificatori per segnalazione; metà
+dei verificatori si è fermata per il limite d'uso e quelle segnalazioni le ho guardate io) ha trovato: un
+turno di sala fuori dall'orario della struttura che spariva dalla settimana, un intervento contato due
+volte con due turni sovrapposti, la matrice della direzione e il riepilogo live cambiati dai giorni di sola
+sala, la chiusura persa nel calendario della pagina del mese con un intervento, il titolo dell'Excel della
+sala sotto un logo largo, la tendina «Altre esportazioni» tagliata sul telefono (ora ogni tendina aperta
+resta dentro lo schermo, `gestionale.js`), e testi da sistemare. Tutto corretto, con la prova
+`b_sala_casi_limite`; ogni difetto, rimesso apposta, fa fallire una prova.
+
 ## Cose aperte
 
 - **Ore del cambio dell'ora**: dalla 1.12.1 contano le ore vere (vedi *La 1.12.1*). Se per le

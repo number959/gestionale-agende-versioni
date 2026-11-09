@@ -1030,7 +1030,7 @@ def esporta_giorno(ses, g, struttura_id, percorso, parte=None):
         ws = wb.active if n == 0 else wb.create_sheet()
         ws.title = nome_foglio
         _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, mie)
-    _foglio_elenco(wb, ses, g, struttura_id, elenco, titolo_elenco)
+    _foglio_elenco(wb, ses, g, struttura_id, elenco, titolo_elenco, 'intervent' if parte == 'sala' else 'appuntament')
     wb.active = 0
     wb.save(percorso)
     return percorso
@@ -1066,7 +1066,9 @@ def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps):
         ws.row_dimensions[1].height = 30
         # il titolo parte dopo il logo: colonna A larga 8, le altre 16 e 24
         spazio, colonna_titolo = 0, 1
-        for n, l in enumerate(larghezze, start=1):
+        # oltre l'ultima colonna della tabella le colonne hanno la larghezza di partenza di Excel (circa 9):
+        # con una tabella stretta (una sala sola) il titolo va dopo il logo anche li', mai sotto il logo
+        for n, l in enumerate(larghezze + [9] * 40, start=1):
             if spazio * 7 >= im.width + 10:
                 colonna_titolo = n
                 break
@@ -1147,7 +1149,7 @@ def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps):
     ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=max(2, ultima_colonna))
     # le stanze disattivate non hanno una colonna: i loro appuntamenti stanno nel foglio Elenco
     fuori = [a for a in apps if a.risorsa is not None and not a.risorsa.attiva and a.stato in STATI_ATTIVI]
-    if not colonne:
+    if not colonne and cosa:
         riga += 1
         vuota = ws.cell(riga, 1, 'Nessuna %s attiva in questa struttura.' % ('sala operatoria' if cosa == 'sala operatoria' else 'stanza'))
         vuota.font = carattere_excel(size=10, italic=True, color=EXCEL_GRIGIO)
@@ -1162,7 +1164,7 @@ def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps):
     imposta_stampa_excel(ws, True, '1:2', 'A:A', st, etichetta_giorno(g))
 
 
-def _foglio_elenco(wb, ses, g, struttura_id, apps=None, titolo=None):
+def _foglio_elenco(wb, ses, g, struttura_id, apps=None, titolo=None, parola='appuntament'):
     """Secondo foglio: una riga per appuntamento, con le colonne delle agende
     Excel dell'accettazione. Anche disdetti e non presentati (in grigio, i
     disdetti barrati), con lo stato; la riga dei totali conta e somma solo gli
@@ -1197,9 +1199,9 @@ def _foglio_elenco(wb, ses, g, struttura_id, apps=None, titolo=None):
     attivi = [a for a in apps if a.stato in STATI_ATTIVI]
     n_disdetti = sum(1 for a in apps if a.stato == 'DISDETTO')
     n_non = sum(1 for a in apps if a.stato == 'NON_PRESENTATO')
-    sotto = '%d appuntament%s attiv%s' % (len(attivi), 'o' if len(attivi) == 1 else 'i', 'o' if len(attivi) == 1 else 'i')
+    sotto = '%d %s%s attiv%s' % (len(attivi), parola, 'o' if len(attivi) == 1 else 'i', 'o' if len(attivi) == 1 else 'i')
     if n_disdetti or n_non:
-        sotto += ' (piu' + ' %d disdett%s' % (n_disdetti, 'o' if n_disdetti == 1 else 'i') * bool(n_disdetti) + \
+        sotto += ' (più' + ' %d disdett%s' % (n_disdetti, 'o' if n_disdetti == 1 else 'i') * bool(n_disdetti) + \
                  (' e' if n_disdetti and n_non else '') + ' %d non presentat%s' % (n_non, 'o' if n_non == 1 else 'i') * bool(n_non) + ')'
     titolo = (titolo or 'Elenco del %s') % etichetta_giorno(g)
     riga = apri_foglio_excel(ws, titolo, sotto, st, colonne=len(intestazioni))
@@ -1217,7 +1219,7 @@ def _foglio_elenco(wb, ses, g, struttura_id, apps=None, titolo=None):
         return None
 
     somma = sum(a.importo_cent for a in attivi if a.importo_cent is not None) / 100.0
-    totali = {1: 'Totale (solo attivi)', 5: '%d appuntament%s' % (len(attivi), 'o' if len(attivi) == 1 else 'i'),
+    totali = {1: 'Totale (solo attivi)', 5: '%d %s%s' % (len(attivi), parola, 'o' if len(attivi) == 1 else 'i'),
               11: somma}
     tabella_excel(ws, riga, intestazioni, larghezze, righe, formati={1: FORMATO_ORA, 2: FORMATO_ORA, 11: FORMATO_EURO},
                   totali=totali, a_capo=(13,) + tuple(range(14, 14 + len(extra))), stile_riga=stile_riga)
