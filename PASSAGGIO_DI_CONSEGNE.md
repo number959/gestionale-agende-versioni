@@ -97,6 +97,13 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
+- **Versione 1.12.4, pronta e non pubblicata** (10 novembre 2026): le esportazioni stampate meglio (vedi *La 1.12.4*).
+  Provata tutta: 26 raccolte senza browser in ciascuna cartella, 11 nel browser nella normale e 13 nell'animata,
+  «Prove su Windows» n. 25 e 26 verdi in tutte e due le cartelle, i due Setup costruiti in Wine e installati sopra la
+  1.12.3 pubblicata (`prove_installato.py` 57 su 57, normale e animata). La pubblicazione (esecuzione n. 7 di
+  «Pubblica una versione», dal commit `bbd9dcf`) è stata fermata subito, prima che creasse la release: Giovanni non
+  l'aveva chiesta in quella richiesta, e serve il suo via. Per pubblicare: *Actions → Pubblica una versione → Run
+  workflow* sul ramo, oppure dirlo a Claude.
 - **Versione 1.12.3, pubblicata il 9 novembre 2026, la sera**: la release `v1.12.3`, segnata come
   ultima, con i due Setup, i due file delle versioni e il PDF della guida (58 pagine). Le esportazioni
   in Excel di giorno, settimana e mese per ambulatori, sala operatoria o tutto insieme, e la sala
