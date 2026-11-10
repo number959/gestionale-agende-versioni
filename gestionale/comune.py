@@ -32,7 +32,7 @@ ULTIMA = date(2100, 12, 31)
 # colori proposti ai medici nuovi, uno diverso per ciascuno finche' bastano:
 # la versione del programma: la stessa di installer.iss (una prova controlla
 # che coincidano), mostrata in Aiuto per sapere cosa e' installato
-VERSIONE = '1.12.3'
+VERSIONE = '1.12.4'
 
 # nella griglia il colore e' il modo piu' rapido per distinguerli
 PALETTE = ['#154381', '#5B7F3E', '#A8582B', '#6B4E9B', '#B3261E',
@@ -451,4 +451,7 @@ def imposta_stampa_excel(ws, orizzontale=True, righe_titolo=None, colonne_titolo
     ws.oddFooter.right.text = 'Pagina &P di &N'
     ws.page_margins.left = ws.page_margins.right = margine
     ws.page_margins.top = ws.page_margins.bottom = 0.6
+    # testata e piede a 0,25 pollici dal bordo: con quelli di partenza di openpyxl (0,5) restava un decimo di
+    # pollice fra la riga della testata e il foglio, e la testata finiva sopra il titolo (1.12.4)
+    ws.page_margins.header = ws.page_margins.footer = 0.25
     return ws

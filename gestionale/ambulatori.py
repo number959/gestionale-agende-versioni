@@ -617,7 +617,7 @@ def fogli_programmazione(wb, st, vista, adesso=None, con_sala=False):
         for n, r in enumerate(gruppo['righe']):
             valori = [testo_excel(gruppo['specialita']), testo_excel(r['operatore'].etichetta if r['operatore'] else '?'),
                       servizi.GIORNI[r['giorno']].capitalize() if r['giorno'] is not None else '—',
-                      (r['date'][0].day if len(r['date']) == 1 else ', '.join(str(g.day) for g in r['date'])) or '—',
+                      ', '.join(str(g.day) for g in r['date']) or '—',       # sempre testo, anche con una data sola (1.12.4)
                       fascia(r['ora_inizio'], r['ora_fine']).replace('–', '-') if r['ora_inizio'] else '—',
                       testo_excel(r['risorsa'].nome), testo_excel('; '.join(r['note']))]
             for c, v in enumerate(valori, start=1):
@@ -845,7 +845,7 @@ def foglio_turni_sala(ws, st, vista, adesso=None):
     for r in sala['righe']:
         valori = [testo_excel(r['risorsa'].nome), testo_excel(r['operatore'].etichetta if r['operatore'] else '?'),
                   servizi.GIORNI[r['giorno']].capitalize() if r['giorno'] is not None else '—',
-                  (r['date'][0].day if len(r['date']) == 1 else ', '.join(str(g.day) for g in r['date'])) or '—',
+                  ', '.join(str(g.day) for g in r['date']) or '—',       # sempre testo, anche con una data sola (1.12.4)
                   fascia(r['ora_inizio'], r['ora_fine']).replace('–', '-') if r['ora_inizio'] else '—',
                   testo_excel('; '.join(r['note']))]
         nuova = r['risorsa'].id != prima_sala

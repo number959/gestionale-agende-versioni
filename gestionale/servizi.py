@@ -440,13 +440,17 @@ class Regole:
 
 
 # ================================================================ griglia
-def griglia(ses, g, struttura_id, regole=None):
+def griglia(ses, g, struttura_id, regole=None, solo=None):
     """Restituisce le fasce del giorno e, per ogni stanza, la colonna di celle.
 
     Ogni appuntamento attivo finisce nella fascia che contiene il suo inizio,
     anche se l'orario non e' allineato (10:45) o cade fuori apertura (07:00).
     Se due appuntamenti brevi cadono nella stessa fascia vengono impilati.
     Disdetti e non presentati non occupano la stanza: sono elencati a parte.
+
+    solo (1.12.4): una funzione che sceglie le stanze (per esempio di_sala, per il
+    foglio della sala operatoria): le righe sono allora quelle delle loro fasce,
+    non quelle piu' fitte di un'altra stanza. Senza, tutto come sempre.
     """
     st = ses.get(Struttura, struttura_id) if struttura_id else None
     regole = regole or Regole(ses, g, g)
@@ -454,6 +458,8 @@ def griglia(ses, g, struttura_id, regole=None):
     risorse = ses.scalars(
         select(Risorsa).where(Risorsa.struttura_id == struttura_id,
                               Risorsa.attiva == True).order_by(Risorsa.ordine)).all()
+    if solo is not None:
+        risorse = [r for r in risorse if solo(r)]
     inizio_g = datetime.combine(g, time(0, 0))
     appuntamenti = ses.scalars(
         select(Appuntamento).where(Appuntamento.inizio >= inizio_g,
@@ -466,6 +472,8 @@ def griglia(ses, g, struttura_id, regole=None):
     apertura, ultima, passo = orario(st)
     effettivi = regole.turni_effettivi(g, st, info=info)
     validi = regole.turni_validi(g, st)
+    if solo is not None:
+        effettivi = [t for t in effettivi if t.risorsa_id in ids]
     # con un turno a fasce proprie le righe sono piu' fitte (vedi base_righe)
     base = base_righe(passo, apertura, effettivi)
     elenco = fasce(del_giorno, apertura, ultima_riga(ultima, passo, base), base)
@@ -1009,13 +1017,17 @@ def esporta_giorno(ses, g, struttura_id, percorso, parte=None):
     apps = elenco_giorno(ses, g, struttura_id)
     stanze = [c for c in vista['colonne'] if not di_sala(c['risorsa'])]
     sale = [c for c in vista['colonne'] if di_sala(c['risorsa'])]
+    # il foglio della sala ha le righe delle fasce delle sale, non quelle da 15 minuti di un ambulatorio (1.12.4)
+    vista_sala = griglia(ses, g, struttura_id, solo=di_sala) if parte in ('sala', 'tutto') else vista
+    if parte in ('sala', 'tutto'):
+        sale = vista_sala['colonne']
     if parte is None:
         fogli = [(g.strftime('%d-%m-%Y'), vista['colonne'], None, apps)]
         elenco, titolo_elenco = apps, None
     elif parte == 'ambulatori':
         mie = [a for a in apps if not di_sala(a.risorsa)]
         fogli = [('Ambulatori', stanze, 'ambulatori', mie)]
-        elenco, titolo_elenco = mie, 'Elenco degli ambulatori del %s'
+        elenco, titolo_elenco = mie, 'Appuntamenti degli ambulatori del %s'     # non «Elenco degli ambulatori»: sono appuntamenti
     elif parte == 'sala':
         mie = [a for a in apps if di_sala(a.risorsa)]
         fogli = [('Sala operatoria', sale, 'sala operatoria', mie)]
@@ -1029,7 +1041,7 @@ def esporta_giorno(ses, g, struttura_id, percorso, parte=None):
     for n, (nome_foglio, colonne_scelte, cosa, mie) in enumerate(fogli):
         ws = wb.active if n == 0 else wb.create_sheet()
         ws.title = nome_foglio
-        _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, mie)
+        _foglio_planning(ws, ses, g, st, vista_sala if cosa == 'sala operatoria' else vista, colonne_scelte, cosa, mie)
     _foglio_elenco(wb, ses, g, struttura_id, elenco, titolo_elenco, 'intervent' if parte == 'sala' else 'appuntament')
     wb.active = 0
     wb.save(percorso)
@@ -1079,10 +1091,22 @@ def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps):
         '%splanning del %s' % (cosa_t.capitalize(), etichetta_giorno(g)) if cosa_t else 'Planning del %s' % etichetta_giorno(g)
     tit = ws.cell(1, colonna_titolo, testo_excel(titolo.upper()))
     tit.font = carattere_excel(size=14, bold=True, color=EXCEL_BLU)
-    tit.alignment = Alignment(vertical='center')
-    if ultima_colonna > colonna_titolo:
-        ws.merge_cells(start_row=1, start_column=colonna_titolo, end_row=1, end_column=ultima_colonna)
-    ws.row_dimensions[1].height = max(ws.row_dimensions[1].height or 15, 24)
+    # in una cella unita Excel non fa uscire il testo, nemmeno in stampa: con una tabella stretta (le due sale
+    # della sala operatoria) il titolo va a capo e la riga cresce, invece di restare tagliato (1.12.4)
+    tit.alignment = Alignment(vertical='center', wrap_text=True)
+    if colonna_titolo < ultima_colonna:
+        fine_titolo = ultima_colonna
+    else:
+        # tabella stretta quanto il logo (una sala o una stanza sola): il titolo dopo il logo prende anche colonne
+        # vuote larghe 9, quante ne servono per stare in due righe; contano anche per la carta
+        serve = -(-len(titolo) * 16 // 20)                          # unita' di Excel per due righe (1,6 a lettera)
+        gia = sum(larghezze[colonna_titolo - 1:ultima_colonna])     # 0 se il titolo e' gia' oltre la tabella
+        fine_titolo = max(ultima_colonna, colonna_titolo - 1) + max(1, -(-(serve - gia) // 9))
+        larghezze = larghezze + [9] * (fine_titolo - len(larghezze))
+    if fine_titolo > colonna_titolo:
+        ws.merge_cells(start_row=1, start_column=colonna_titolo, end_row=1, end_column=fine_titolo)
+    righe_titolo = _righe_testo(titolo, sum(larghezze[colonna_titolo - 1:fine_titolo]), 1.6)
+    ws.row_dimensions[1].height = max(ws.row_dimensions[1].height or 15, 24, 19 * righe_titolo + 4)
 
     # intestazione: ORA e, per ogni stanza, il nome con i turni del giorno (chi c'e' e quando)
     stile_intestazione_excel(ws.cell(2, 1), 'ORA')
@@ -1136,17 +1160,27 @@ def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps):
                 ha = 15 * cella['righe']
                 if serve > ha:
                     ws.row_dimensions[r].height = max(ws.row_dimensions[r].height or 15, 15 + serve - ha)
-            elif cella['stato'] == 'aperta':
-                for x in (ws.cell(r, c), ws.cell(r, c + 1)):
-                    x.fill = azzurro
-            elif cella['stato'] == 'chiusa':
-                for x in (ws.cell(r, c), ws.cell(r, c + 1)):
-                    x.fill = grigio
+            elif cella['stato'] in ('aperta', 'chiusa'):
+                # una fascia piu' lunga di una riga (30 minuti in righe da 15) e' un blocco solo, come nella griglia
+                # del programma; fino alla 1.12.3 solo la prima riga era colorata e il foglio veniva a strisce (1.12.4)
+                fondo = azzurro if cella['stato'] == 'aperta' else grigio
+                for rr in range(r, r + cella['righe']):
+                    for x in (ws.cell(rr, c), ws.cell(rr, c + 1)):
+                        x.fill = fondo
+                if cella['righe'] > 1:
+                    ws.merge_cells(start_row=r, start_column=c, end_row=r + cella['righe'] - 1, end_column=c)
+                    ws.merge_cells(start_row=r, start_column=c + 1, end_row=r + cella['righe'] - 1, end_column=c + 1)
     riga = 3 + len(elenco_fasce) + 1
-    legenda = ws.cell(riga, 1, 'Legenda: verde = appuntamento; azzurro = fascia libera nel turno di un medico; '
-                               'grigio = fuori turno o stanza chiusa. Nelle intestazioni i turni del giorno.')
+    # nel foglio della sala operatoria le parole della sala: interventi, chirurghi, sale (1.12.4)
+    di_sala_op = cosa == 'sala operatoria'
+    legenda = ws.cell(riga, 1, 'Legenda: verde = %s; azzurro = fascia libera nel turno di un %s; '
+                               'grigio = fuori turno o %s chiusa. Nelle intestazioni i turni del giorno.'
+                      % (('intervento', 'chirurgo', 'sala') if di_sala_op else ('appuntamento', 'medico', 'stanza')))
     legenda.font = carattere_excel(size=9, italic=True, color=EXCEL_GRIGIO)
+    legenda.alignment = Alignment(vertical='top', wrap_text=True)
     ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=max(2, ultima_colonna))
+    larga = sum(larghezze[:max(2, ultima_colonna)])
+    ws.row_dimensions[riga].height = 13 * _righe_testo(legenda.value, larga, 0.9) + 3
     # le stanze disattivate non hanno una colonna: i loro appuntamenti stanno nel foglio Elenco
     fuori = [a for a in apps if a.risorsa is not None and not a.risorsa.attiva and a.stato in STATI_ATTIVI]
     if not colonne and cosa:
@@ -1155,13 +1189,40 @@ def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps):
         vuota.font = carattere_excel(size=10, italic=True, color=EXCEL_GRIGIO)
     if fuori:
         riga += 1
-        nota = ws.cell(riga, 1, '%d appuntament%s in stanze disattivate: nel foglio Elenco.'
-                       % (len(fuori), 'o' if len(fuori) == 1 else 'i'))
+        nota = ws.cell(riga, 1, '%d %s%s in %s disattivate: nel foglio Elenco.'
+                       % (len(fuori), 'intervent' if di_sala_op else 'appuntament', 'o' if len(fuori) == 1 else 'i',
+                          'sale' if di_sala_op else 'stanze'))
         nota.font = carattere_excel(size=9, italic=True, color=EXCEL_GRIGIO)
         ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=max(2, ultima_colonna))
 
     ws.freeze_panes = 'B3'
-    imposta_stampa_excel(ws, True, '1:2', 'A:A', st, etichetta_giorno(g))
+    # su carta: una tabella che sta nella larghezza di un A4 verticale (una o due sale, una stanza) va in verticale,
+    # le altre in orizzontale come sempre; e se in altezza manca poco, una pagina sola invece di due (1.12.4)
+    # conta la tabella, non le colonne vuote date al titolo (una sala sola): quelle si stringono con la pagina
+    verticale = _larghezza_pixel(larghezze[:ultima_colonna]) <= PIXEL_A4_VERTICALE
+    imposta_stampa_excel(ws, not verticale, '1:2', 'A:A', st, etichetta_giorno(g))
+    alta = sum(ws.row_dimensions[r].height or 15 for r in range(1, riga + 1))
+    utile = (PUNTI_A4_LUNGO if verticale else PUNTI_A4_CORTO) - 2 * 0.6 * 72
+    if alta <= utile * 1.25:
+        ws.page_setup.fitToHeight = 1
+
+
+# per decidere come va su carta il planning: un A4 verticale, tolti i margini di 0,4 pollici, e' largo circa 720
+# pixel; le pagine sono alte 842 punti in verticale e 595 in orizzontale
+PIXEL_A4_VERTICALE = 720
+PUNTI_A4_LUNGO, PUNTI_A4_CORTO = 842, 595
+
+
+def _larghezza_pixel(larghezze):
+    """Le colonne di Excel in pixel, come le disegna Excel con il carattere normale: 7 per unita' piu' 5."""
+    return sum(round(l * 7 + 5) for l in larghezze)
+
+
+def _righe_testo(testo, larghezza, per_carattere):
+    """Quante righe occupa un testo in una cella larga «larghezza» unita' di Excel, con caratteri larghi circa
+    «per_carattere» unita' (1 per il carattere normale, di piu' per un titolo grande e maiuscolo)."""
+    import math
+    return max(1, math.ceil(len(testo or '') * per_carattere / max(1, larghezza)))
 
 
 def _foglio_elenco(wb, ses, g, struttura_id, apps=None, titolo=None, parola='appuntament'):

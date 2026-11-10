@@ -601,7 +601,9 @@ def b_sala_settimana_e_mese():
     senza = [[ws.cell(i, c).value for c in range(1, 7)] for i in range(6, ws.max_row + 1)
              if ws.cell(i, 6).value and 'fuori dai turni' in str(ws.cell(i, 6).value)]
     assert senza == [['Sala operatoria', 'Esempietti Rita', '—', '7, 8, 20', '—', '4 interventi fuori dai turni'],
-                     ['Sala operatoria 2', 'Fintini Ugo', '—', 9, '—', '1 intervento fuori dai turni']], senza
+                     ['Sala operatoria 2', 'Fintini Ugo', '—', '9', '—', '1 intervento fuori dai turni']], senza
+    # le date sono sempre testo, anche una sola (fino alla 1.12.3 il 9 era un numero e in Excel andava a destra)
+    assert all(isinstance(ws.cell(i, 4).value, str) for i in range(6, ws.max_row + 1) if ws.cell(i, 4).value is not None)
     _, wb = excel(C, '/esportazioni/mese/tutto/2026-12-01.xlsx?struttura=1')
     assert wb.sheetnames == ['Programmazione', 'Calendario', 'Sala operatoria', 'Turni di sala', 'Interventi'], wb.sheetnames
     assert all('Esempietti' not in str(c.value or '') for row in wb['Programmazione'].iter_rows() for c in row), \
@@ -683,6 +685,8 @@ def b_esportazioni():
     assert sorted(elenco(libri[('giorno', 'tutto')])) == ['Ambulatorio 1', 'Sala operatoria']
     assert str(libri[('giorno', 'sala')]['Elenco']['A1'].value).startswith('Clinica Prova — Interventi del lunedì 7 dicembre 2026'), \
         libri[('giorno', 'sala')]['Elenco']['A1'].value
+    assert str(amb['Elenco']['A1'].value).startswith('Clinica Prova — Appuntamenti degli ambulatori del lunedì 7 dicembre 2026'), \
+        amb['Elenco']['A1'].value
     # la settimana e il mese degli ambulatori: uguali ai file classici, cella per cella
     _, classica = excel(C, '/ambulatori/settimana/%s.xlsx?struttura=1' % LUN.isoformat())
     assert valori(libri[('settimana', 'ambulatori')]['Matrice']) == valori(classica['Matrice'])
@@ -853,6 +857,21 @@ def b_sala_casi_limite():
         return [str(ws_.cell(2, c).value).split('\n')[0] for c in range(2, ws_.max_column + 1, 2) if ws_.cell(2, c).value]
     assert not any(x.startswith('Sala operatoria') for x in colonne(wg['Ambulatori'])), colonne(wg['Ambulatori'])
     assert colonne(wg['Sala operatoria']) == ['Sala operatoria', 'Sala operatoria 2'], colonne(wg['Sala operatoria'])
+    # 1.12.4, dall'anteprima: su carta il planning delle due sale (stretto) va in verticale su una pagina sola, con il
+    # titolo e la legenda a capo invece che tagliati, e con le parole della sala; fino alla 1.12.3 il titolo restava
+    # «SALA OPERATOR» e il foglio andava su due pagine orizzontali usandone meta'
+    ws_s = wg['Sala operatoria']
+    assert ws_s.page_setup.orientation == 'portrait' and ws_s.page_setup.fitToHeight == 1, \
+        (ws_s.page_setup.orientation, ws_s.page_setup.fitToHeight)
+    tit_s = next(c for c in ws_s[1] if c.value)
+    assert tit_s.alignment.wrap_text and ws_s.row_dimensions[1].height >= 40, ws_s.row_dimensions[1].height
+    def legenda_di(ws_):
+        return next(ws_.cell(i, 1) for i in range(3, ws_.max_row + 1) if str(ws_.cell(i, 1).value or '').startswith('Legenda'))
+    leg = legenda_di(ws_s)
+    assert leg.alignment.wrap_text and 'verde = intervento' in leg.value and 'turno di un chirurgo' in leg.value and \
+        'sala chiusa' in leg.value and ws_s.row_dimensions[leg.row].height >= 26, (leg.value, ws_s.row_dimensions[leg.row].height)
+    leg_a = legenda_di(wg['Ambulatori'])
+    assert 'verde = appuntamento' in leg_a.value and 'stanza chiusa' in leg_a.value, leg_a.value
     wi = wg['Elenco']
     assert wi.cell(2, 1).value.startswith('7 appuntament') or 'appuntament' in str(wi.cell(2, 1).value), wi.cell(2, 1).value
     _, wsa = excel(C, '/esportazioni/giorno/sala/%s.xlsx?struttura=1' % L2.isoformat())
@@ -867,6 +886,14 @@ def b_sala_casi_limite():
     _, wl = excel(C, '/esportazioni/giorno/sala/%s.xlsx?struttura=1' % L2.isoformat())
     titolo = [c for c in wl['Sala operatoria'][1] if c.value]
     assert titolo and titolo[0].column > 1 and 'SALA OPERATORIA' in titolo[0].value, [(c.column, c.value) for c in titolo]
+    # 1.12.4: oltre la tabella il titolo prende colonne vuote quante ne servono per due righe, va a capo, e la
+    # tabella (stretta) va in verticale; le colonne del titolo non contano per scegliere il verso della pagina
+    ws_l = wl['Sala operatoria']
+    unite = [m for m in ws_l.merged_cells.ranges if m.min_row == 1]
+    assert len(unite) == 1 and unite[0].min_col == titolo[0].column and unite[0].max_col >= titolo[0].column + 5, unite
+    assert titolo[0].alignment.wrap_text and ws_l.page_setup.orientation == 'portrait', ws_l.page_setup.orientation
+    assert 'intervento in sale disattivate' in ' '.join(str(ws_l.cell(i, 1).value or '') for i in range(3, ws_l.max_row + 1)) or \
+        not any('disattivate' in str(ws_l.cell(i, 1).value or '') for i in range(3, ws_l.max_row + 1))
     # senza sale: la sala del mese dice solo che non ci sono, senza un mese di righe vuote
     s.get(Risorsa, I['Sala operatoria']).attiva = False
     for r_ in s.scalars(select(Risorsa)):
@@ -1172,7 +1199,7 @@ def e_programmazione():
     assert righe[0] == ['Cardiologia', 'Galasso', 'Lunedì', '14, 21, 28', '08:00-13:00', 'Ambulatorio 1', 'non il 7 (assente: ferie)'], righe[0]
     assert righe[1] == ['Dermatologia', 'Lippiello Anna', 'Lunedì', '7, 14, 21, 28', '15:00-20:00', 'Ambulatorio 1', ''], righe[1]
     assert righe[2] == ['Senza specialità', 'Fintini Ugo', 'Martedì', '1, 15, 22, 29', '08:00-20:00', 'Ambulatorio 2', "non l'8 (chiusa: immacolata concezione)"], righe[2]
-    assert righe[3] == ['Senza specialità', 'Fintini Ugo', 'Mercoledì', 9, '09:00-11:00', 'Ambulatorio 3', 'un giorno solo'], righe[3]
+    assert righe[3] == ['Senza specialità', 'Fintini Ugo', 'Mercoledì', '9', '09:00-11:00', 'Ambulatorio 3', 'un giorno solo'], righe[3]
     assert ws.cell(10, 1).value is None, 'quattro righe: la sala operatoria no'
     assert ws.freeze_panes == 'A6' and ws.auto_filter.ref == 'A5:G9' and ws.print_title_rows.replace('$', '') == '5:5', (ws.freeze_panes, ws.auto_filter.ref)
     # la specialita' in grassetto solo sulla prima riga del suo gruppo

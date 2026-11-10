@@ -145,6 +145,9 @@ def controlla_foglio(ws, struttura='Clinica Prova', titolo=True):
     assert ws.print_title_rows, (ws.title, 'righe da ripetere')
     assert ws.oddFooter.right.text == 'Pagina &P di &N', (ws.title, ws.oddFooter.right.text)
     assert ws.oddFooter.left.text, (ws.title, 'pie\' senza societa\'')
+    m = ws.page_margins
+    assert m.top - m.header >= 0.3 and m.bottom - m.footer >= 0.3, \
+        (ws.title, 'spazio per testata e piede (fino alla 1.12.3 un decimo di pollice)', m.top, m.header, m.bottom, m.footer)
     if titolo and struttura:
         assert struttura.lower() in str(ws['A1'].value).lower(), (ws.title, ws['A1'].value)
     i = riga_intestazione(ws)

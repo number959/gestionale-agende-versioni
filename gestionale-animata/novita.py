@@ -13,6 +13,15 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.12.4', [
+        dict(titolo='Le esportazioni in Excel stampate meglio',
+             testo='Il planning della sala operatoria del giorno sta in una pagina, in verticale quando le sale sono '
+                   'poche, con le righe delle fasce della sala e il titolo e la legenda interi (prima uscivano tagliati). '
+                   'Nei planning del giorno ogni fascia libera o chiusa è un blocco solo, senza strisce bianche. La riga '
+                   'in testa a ogni pagina stampata non copre più il titolo. Nella programmazione del mese una data sola '
+                   'sta a sinistra come le altre.',
+             guida='esportazioni'),
+    ]),
     ('1.12.3', [
         dict(titolo='Esportazioni in Excel: ambulatori, sala operatoria o tutto insieme',
              testo='Menu Ambulatori → Esportazioni in Excel: per il giorno, la settimana e il mese della data scelta, '
