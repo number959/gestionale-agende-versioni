@@ -98,6 +98,10 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
+- **Versione 1.12.5, pronta e non ancora pubblicata** (10 novembre 2026): interventi e ambulatori per medico (vedi *La
+  1.12.5*). Provata tutta: 26 raccolte senza browser in ciascuna cartella, 11 nel browser nella normale e 13
+  nell'animata, «Prove su Windows» n. 29 verde in tutte e due le cartelle, i due Setup costruiti in Wine e installati
+  sopra la 1.12.4 pubblicata (`prove_installato.py` 57 su 57, normale e animata). Si pubblica con il via di Giovanni.
 - **Versione 1.12.4, pubblicata il 10 novembre 2026**: la release `v1.12.4`, segnata come ultima, con i due
   Setup, i due file delle versioni e il PDF della guida (58 pagine). Le esportazioni in Excel stampate meglio (vedi *La
   1.12.4*). Il database non cambia. Alla clinica va messa una volta a mano (vedi *Cose aperte*).
