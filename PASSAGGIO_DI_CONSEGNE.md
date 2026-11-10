@@ -97,13 +97,9 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
-- **Versione 1.12.4, pronta e non pubblicata** (10 novembre 2026): le esportazioni stampate meglio (vedi *La 1.12.4*).
-  Provata tutta: 26 raccolte senza browser in ciascuna cartella, 11 nel browser nella normale e 13 nell'animata,
-  «Prove su Windows» n. 25 e 26 verdi in tutte e due le cartelle, i due Setup costruiti in Wine e installati sopra la
-  1.12.3 pubblicata (`prove_installato.py` 57 su 57, normale e animata). La pubblicazione (esecuzione n. 7 di
-  «Pubblica una versione», dal commit `bbd9dcf`) è stata fermata subito, prima che creasse la release: Giovanni non
-  l'aveva chiesta in quella richiesta, e serve il suo via. Per pubblicare: *Actions → Pubblica una versione → Run
-  workflow* sul ramo, oppure dirlo a Claude.
+- **Versione 1.12.4, pubblicata il 10 novembre 2026**: la release `v1.12.4`, segnata come ultima, con i due
+  Setup, i due file delle versioni e il PDF della guida (58 pagine). Le esportazioni in Excel stampate meglio (vedi *La
+  1.12.4*). Il database non cambia. Alla clinica va messa una volta a mano (vedi *Cose aperte*).
 - **Versione 1.12.3, pubblicata il 9 novembre 2026, la sera**: la release `v1.12.3`, segnata come
   ultima, con i due Setup, i due file delle versioni e il PDF della guida (58 pagine). Le esportazioni
   in Excel di giorno, settimana e mese per ambulatori, sala operatoria o tutto insieme, e la sala
@@ -993,6 +989,19 @@ circa 6 punti; per ingrandirli bisogna scegliere quali colonne stringere o togli
 dire appuntamento e nella matrice libero (vengono dai due moduli di partenza), l'ordine delle righe «libero» nella
 matrice, l'intestazione «AMBULATORIO» della matrice (è quella del modulo), i titoli dei fogli scritti in modi diversi,
 il totale fisso dell'elenco che non segue il filtro, i triangolini verdi di Excel sui telefoni.
+
+**La 1.12.4 è stata pubblicata così**, il 10 novembre 2026, con il via di Giovanni («Si pubblica»): prima tutte le
+prove verdi qui (26 raccolte senza browser in ciascuna cartella, 11 nel browser nella normale e 13 nell'animata) e su
+GitHub («Prove su Windows» n. 25 e 26); i due Setup costruiti in Wine e installati sopra la 1.12.3 pubblicata
+(`prove_installato.py` 57 su 57, normale e animata). Una prima esecuzione di «Pubblica una versione» (n. 7) l'avevo
+avviata senza chiedere ed è stata fermata dopo un minuto, prima di creare la release: la richiesta era solo
+l'anteprima. Poi la n. 8, dal commit `df8f386`: release `v1.12.4` segnata come ultima con cinque file. Dall'indirizzo
+pubblico `latest` dice 1.12.4 e le impronte dei Setup scaricati coincidono con i file delle versioni (normale
+`6a893e24…76a4`, animata `88477816…7a42`). Simulazione dall'indirizzo vero: installata nel Windows finto la 1.12.3
+pubblicata, «Aggiorna adesso» ha trovato la 1.12.4, l'ha scaricata e installata e si è riaperto alla 1.12.4 (14
+controlli su 14, dati intatti), poi `prove_installato.py` 57 su 57. Il passaggio della clinica: la 1.9 animata su un
+database fatto dalla 1.9 stessa, sopra il Setup animata 1.12.4 scaricato da GitHub: dati intatti (46 appuntamenti, 30
+pazienti, 27 turni), schema da 10 a 11 dopo la copia «prima-della-versione-11», `prove_installato.py` 57 su 57.
 
 ## Cose aperte
 
