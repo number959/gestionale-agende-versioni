@@ -17,6 +17,8 @@ Cosa c'e' in ciascuno:
   pomeriggio, piu' l'elenco degli interventi; tutto: i tre fogli insieme;
 - mese: la programmazione e il calendario; la sala giorno per giorno, i turni dei chirurghi e l'elenco degli
   interventi; tutto: la programmazione, il calendario con la sala, e i fogli della sala.
+In ogni file, in fondo, il foglio «Per medico» (1.12.5): quanti appuntamenti e quanti interventi ha ogni medico, giorno
+per giorno, ambulatori e sala separati (ambulatori.attivita_per_medico e foglio_per_medico).
 Gli elenchi della sala non hanno i dati dei pazienti (per quelli c'e' la lista operatoria del giorno); il planning
 del giorno si', come sempre."""
 import threading
@@ -101,13 +103,19 @@ def libro(s, st, periodo, parte, g, adesso=None):
     """Il libro Excel di un'esportazione: un Workbook, oppure i byte del planning del giorno."""
     adesso = adesso or datetime.now()
     primo, ultimo = intervallo(periodo, g)
-    if periodo == 'giorno':
-        dati = BytesIO()
-        servizi.esporta_giorno(s, g, st.id, dati, parte=parte)
-        return dati
-    wb = Workbook()
     # in «tutto insieme» i fogli della sala ci sono se la struttura ha sale, o interventi nel periodo (in sale spente)
     con_sala = parte == 'sala' or bool(ambulatori.sale_della(st)) or bool(ambulatori.interventi_periodo(s, st, primo, ultimo))
+    # in ogni file anche il foglio «Per medico»: appuntamenti e interventi di ogni medico, giorno per giorno (1.12.5)
+    parti_medico = {'ambulatori': ['amb'], 'sala': ['sala'], 'tutto': ['amb'] + (['sala'] if con_sala else [])}[parte]
+
+    def per_medico(wb_):
+        ambulatori.foglio_per_medico(wb_.create_sheet(), st, ambulatori.attivita_per_medico(s, st, primo, ultimo),
+                                     parti_medico, titolo_periodo(periodo, g), adesso)
+    if periodo == 'giorno':
+        dati = BytesIO()
+        servizi.esporta_giorno(s, g, st.id, dati, parte=parte, in_piu=per_medico)
+        return dati
+    wb = Workbook()
     if periodo == 'settimana':
         vista = ambulatori.matrice(s, primo, st)
         if parte in ('ambulatori', 'tutto'):
@@ -127,6 +135,7 @@ def libro(s, st, periodo, parte, g, adesso=None):
             ambulatori.foglio_turni_sala(_nuovo_foglio(wb), st, vista, adesso)
             ambulatori.foglio_interventi(_nuovo_foglio(wb), st, ambulatori.interventi_periodo(s, st, primo, ultimo),
                                          titolo_periodo(periodo, g))
+    per_medico(wb)
     wb.active = 0
     return wb
 

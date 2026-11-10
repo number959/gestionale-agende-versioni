@@ -184,6 +184,10 @@ temporanea.
   `fogli_programmazione`, i fogli della sala); in «tutto» ambulatori e sala in fogli separati; gli Excel
   classici (`/esporta/`, matrice, programmazione) restano uguali e solo ambulatori, e `prove_112.py` li
   confronta cella per cella con le esportazioni di solo ambulatori. Negli elenchi della sala mai pazienti.
+  Dalla 1.12.5 ogni esportazione ha in fondo il foglio «Per medico» (`attivita_per_medico`, `foglio_per_medico`):
+  appuntamenti e interventi attivi per medico e giorno, separati, solo numeri; `prove_112.py` (`b_per_medico`) lo
+  confronta con un conto fatto a parte. Gli interventi di una mezza giornata della sala sono contati per chirurgo
+  (`per_chirurgo`): il numero va sotto il chirurgo che li fa, nella pagina e nell'Excel.
   La regola «una stanza ospita un medico alla volta» è una sola, `anagrafiche.stanza_gia_assegnata`,
   usata dalla scheda del turno e da `/ambulatori/metti`.
   «Togli» non cancella mai la storia: un turno che veniva da prima si chiude la domenica precedente.

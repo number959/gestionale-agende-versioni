@@ -38,6 +38,7 @@
     </tr>
     {% endfor %}
   </table>
+  <p class="nota" data-guida="esportazioni-per-medico">In ogni file c'è anche il foglio <b>Per medico</b>: quanti appuntamenti negli ambulatori e quanti interventi in sala operatoria ha ogni medico, giorno per giorno, separati e con i totali.</p>
   <p class="nota legenda-esportazioni">Gli Excel della settimana e del mese non hanno i dati dei pazienti. Quelli del giorno sì, come il planning di sempre: l'elenco degli appuntamenti (o degli interventi) con i recapiti; per la sala c'è anche la <a href="{{ url_for('sala.lista_operatoria', iso=g.isoformat(), struttura=sid) }}">lista operatoria</a>. La matrice della settimana e la programmazione del mese degli ambulatori sono anche nelle loro pagine, dal menu Ambulatori.</p>
 </div>
 {% endblock %}

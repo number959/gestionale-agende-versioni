@@ -507,7 +507,8 @@ ARTICOLI = [
                'a.voce'),
              P('Interventi', 'Negli interventi il numero arancione è la checklist (3/5) e il riquadro viola la degenza.',
                '.segni-sala'),
-             P('Sala operatoria', 'La riga in alto: quanti interventi, checklist da completare, letti della notte, chi è in sala.',
+             P('Sala operatoria', 'La riga in alto: quanti interventi, checklist da completare, letti della notte, chi è in '
+               'sala e quanti interventi fa ciascun chirurgo quel giorno.',
                '.sala-giorno'),
              P('Nota del giorno', 'Un appunto per tutta la giornata: "Lippiello arriva alle 10". Si vede anche in stampa.',
                'details.nota-giorno, .nota-giorno'),
@@ -603,8 +604,8 @@ ARTICOLI += [
                'La «×» accanto al nome toglie il medico da quella settimana in poi: le settimane già fatte restano '
                'com\'erano, anche nelle statistiche.', 'table.matrice .turno-sett a'),
              P('La sala operatoria', 'In fondo alla tabella la sala operatoria: per ogni sala, mattina e pomeriggio, i '
-               'chirurghi in turno e quanti interventi (clic per aprirli nella pagina Sala); chi opera senza un turno è '
-               'segnato. Qui si guarda soltanto: la sala si programma dalla pagina Sala e non conta nelle stanze '
+               'chirurghi in turno e, sotto ciascuno, quanti interventi fa (clic per aprirli nella pagina Sala); chi '
+               'opera senza un turno è segnato, con i suoi. Qui si guarda soltanto: la sala si programma dalla pagina Sala e non conta nelle stanze '
                'DISPONIBILI.', '[data-guida="matrice-sala"]'),
              P('La matrice in Excel', 'Stampa e scarica → La matrice in Excel: il foglio «Matrice turni ambulatori e '
                'disponibilità integrative» già compilato, con intestazione, legenda e firme, per la direzione '
@@ -704,6 +705,10 @@ ARTICOLI += [
              P('Ambulatori e sala separati', 'Nell\'esportazione di tutto insieme ambulatori e sala stanno in fogli '
                'diversi, ciascuno con il suo nome. I conti degli ambulatori (le mezze giornate libere) non '
                'contano la sala.', '[data-guida="esportazioni-spiegazione"]'),
+             P('Per medico', 'In ogni file c\'è anche il foglio «Per medico»: quanti appuntamenti negli ambulatori e '
+               'quanti interventi in sala operatoria ha ogni medico, giorno per giorno, separati, con i totali. Un '
+               'intervento conta per il chirurgo scritto nell\'intervento; i disdetti e i non presentati no.',
+               '[data-guida="esportazioni-per-medico"]'),
          ]),
     # ------------------------------------------------------- email e WhatsApp
     dict(slug='email-casella', gruppo='Email e WhatsApp', titolo='Collegare l\'email della clinica',

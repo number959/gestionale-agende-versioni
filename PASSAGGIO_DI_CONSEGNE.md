@@ -17,8 +17,9 @@ correzioni: vedi *La 1.11*), l'8 novembre 2026 alla **1.12** (ambulatori, riepil
 Excel, certificati: vedi *La 1.12*), lo stesso giorno alla **1.12.1** (le cose aperte chiuse e le
 prove su un Windows vero: vedi *La 1.12.1*), il 9 novembre alla **1.12.2** (il riepilogo live più
 chiaro e il riepilogo del periodo: vedi *La 1.12.2*), lo stesso giorno alla **1.12.3** (le esportazioni di
-ambulatori e sala operatoria per giorno, settimana e mese: vedi *La 1.12.3*) e il 10 novembre alla **1.12.4**
-(le esportazioni stampate meglio, dopo averle guardate pagina per pagina: vedi *La 1.12.4*).
+ambulatori e sala operatoria per giorno, settimana e mese: vedi *La 1.12.3*) , il 10 novembre alla **1.12.4**
+(le esportazioni stampate meglio, dopo averle guardate pagina per pagina: vedi *La 1.12.4*) e lo stesso giorno alla
+**1.12.5** (interventi e ambulatori per medico: vedi *La 1.12.5*).
 
 ## In breve
 
@@ -1002,6 +1003,19 @@ pubblicata, «Aggiorna adesso» ha trovato la 1.12.4, l'ha scaricata e installat
 controlli su 14, dati intatti), poi `prove_installato.py` 57 su 57. Il passaggio della clinica: la 1.9 animata su un
 database fatto dalla 1.9 stessa, sopra il Setup animata 1.12.4 scaricato da GitHub: dati intatti (46 appuntamenti, 30
 pazienti, 27 turni), schema da 10 a 11 dopo la copia «prima-della-versione-11», `prove_installato.py` 57 su 57.
+
+## La 1.12.5
+
+Il 10 novembre 2026 Giovanni: «Nei report di sala operatoria e ambulatorio bisogna che si distinguano gli interventi e
+gli ambulatori per medico così che si capisce», e alla domanda su come vederlo: «nella agenda quando si indicano gli
+interventi, si assegnano al medico così da capire quanti ne fa quella giornata». Il chirurgo di ogni intervento c'era
+già (è obbligatorio, come il medico di ogni appuntamento) e la pagina Sala diceva già quanti interventi ha ognuno, ma:
+la riga della sala dell'agenda del giorno diceva solo i cognomi; nella sala della settimana e del mese il numero era
+uno per sala e mezza giornata, senza dire di chi; nessun report contava per medico. Fatto (vedi *Per medico* nel
+`LEGGIMI.md`): nell'agenda accanto a ogni chirurgo quanti interventi ha; nella settimana (pagina ed Excel) e nel mese il
+numero sotto il chirurgo che li fa; in ogni esportazione il foglio *Per medico*, ambulatori e sala in due tabelle, una
+riga per medico e una colonna per giorno. Un medico che lavora in tutte e due compare in tutte e due le tabelle: le
+due parti restano distinte, come aveva chiesto per le esportazioni.
 
 ## Cose aperte
 

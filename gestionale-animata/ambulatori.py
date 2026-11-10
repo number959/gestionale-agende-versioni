@@ -213,6 +213,13 @@ def matrice(ses, lunedi, st, tipo=False):
                            and intervento_nella_meta(x, meta, k)]
                     in_turno = {p['operatore'].id for p in presenze}
                     cella['interventi'] = len(qui)
+                    # quanti ne fa ciascun chirurgo in questa mezza giornata (1.12.5, richiesta di Giovanni: «gli
+                    # interventi si assegnano al medico, cosi' si capisce quanti ne fa quella giornata»)
+                    cella['per_chirurgo'] = {}
+                    for x in qui:
+                        if x.operatore_id is not None:
+                            cella['per_chirurgo'][x.operatore_id] = cella['per_chirurgo'].get(x.operatore_id, 0) + 1
+                    cella['senza_chirurgo'] = sum(1 for x in qui if x.operatore_id is None)
                     cella['senza_turno'] = sorted({x.operatore for x in qui
                                                    if x.operatore is not None and x.operatore_id not in in_turno},
                                                   key=lambda o: o.etichetta)
@@ -435,19 +442,39 @@ def _altezza_riga(ws, riga, celle):
     ws.row_dimensions[riga].height = max(30, 15 * righe_testo)
 
 
+def conta_interventi(n):
+    return '%d intervent%s' % (n, 'o' if n == 1 else 'i')
+
+
 def testo_cella_sala(cella):
     """Il testo di una mezza giornata della sala operatoria, uguale nella pagina e nell'Excel: i chirurghi in
-    turno, chi opera senza un turno, quanti interventi, gli assenti; «sala libera» senza turni e senza interventi."""
+    turno, chi opera senza un turno, gli assenti; «sala libera» senza turni e senza interventi. Dalla 1.12.5 gli
+    interventi sono contati per chirurgo: il numero sta subito sotto il chirurgo che li fa (con un chirurgo solo,
+    come prima: il nome e poi «2 interventi»); quelli senza chirurgo in fondo."""
+    per = cella.get('per_chirurgo')
+    detti = set()
+    testi = []
+
+    def suoi(o):
+        if per is not None and o is not None and per.get(o.id) and o.id not in detti:
+            detti.add(o.id)
+            testi.append(conta_interventi(per[o.id]))
     if cella['chiuso']:
-        testi = ['CHIUSO: %s' % cella['chiuso']]
+        testi.append('CHIUSO: %s' % cella['chiuso'])
     else:
-        testi = ['%s %s' % (p['operatore'].etichetta, fascia(p['da'], p['a']).replace('–', '-')) for p in cella['presenze']]
+        for p in cella['presenze']:
+            testi.append('%s %s' % (p['operatore'].etichetta, fascia(p['da'], p['a']).replace('–', '-')))
+            suoi(p['operatore'])
         if cella['tutta_libera']:
             testi.append('sala libera')
-    testi += ['%s, senza turno' % o.etichetta for o in cella.get('senza_turno') or []]
+    for o in cella.get('senza_turno') or []:
+        testi.append('%s, senza turno' % o.etichetta)
+        suoi(o)
     n = cella.get('interventi') or 0
-    if n:
-        testi.append('%d intervent%s' % (n, 'o' if n == 1 else 'i'))
+    if per is None and n:
+        testi.append(conta_interventi(n))
+    elif cella.get('senza_chirurgo'):
+        testi.append('%s senza chirurgo' % conta_interventi(cella['senza_chirurgo']))
     if not cella['chiuso']:
         testi += ['(%s %s)' % (o.etichetta, motivo_assenza(motivo)) for o, motivo, _ in cella['assenti']]
     return '\n'.join(testi)
@@ -909,6 +936,103 @@ def interventi_periodo(ses, st, dal, al):
         Appuntamento.risorsa_id.in_(ids), Appuntamento.inizio >= datetime.combine(dal, time(0)),
         Appuntamento.inizio < datetime.combine(al + timedelta(days=1), time(0)))
         .order_by(Appuntamento.inizio, Appuntamento.risorsa_id)).all()
+
+
+def attivita_per_medico(ses, st, dal, al):
+    """Per ogni medico, giorno per giorno, quanti appuntamenti attivi ha negli ambulatori e quanti interventi attivi in
+    sala operatoria (prenotati, confermati o arrivati; i disdetti e i non presentati no), separati (1.12.5, richiesta di
+    Giovanni: «si distinguano gli interventi e gli ambulatori per medico, cosi' si capisce quanti ne fa quella
+    giornata»). Contano tutte le stanze della struttura, anche quelle spente, come gli elenchi. Solo numeri: niente dati
+    dei pazienti. 'amb' e 'sala' sono {id del medico o None: {giorno: [appuntamenti]}}."""
+    risorse = {r.id: r for r in ses.scalars(select(Risorsa).where(Risorsa.struttura_id == st.id))}
+    apps = ses.scalars(select(Appuntamento).where(
+        Appuntamento.risorsa_id.in_(list(risorse)), Appuntamento.stato.in_(STATI_ATTIVI),
+        Appuntamento.inizio >= datetime.combine(dal, time(0)),
+        Appuntamento.inizio < datetime.combine(al + timedelta(days=1), time(0)))
+        .order_by(Appuntamento.inizio)).all() if risorse else []
+    amb, sala, medici = {}, {}, {}
+    for a in apps:
+        dove = sala if risorse[a.risorsa_id].tipo == TIPO_SALA else amb
+        dove.setdefault(a.operatore_id, {}).setdefault(a.inizio.date(), []).append(a)
+        if a.operatore is not None:
+            medici[a.operatore_id] = a.operatore
+    return {'dal': dal, 'al': al, 'amb': amb, 'sala': sala, 'medici': medici}
+
+
+PAROLE_PER_MEDICO = {'amb': ('AMBULATORI · appuntamenti', 'appuntament', 'Stanze',
+                             'Nessun appuntamento negli ambulatori in questo periodo.'),
+                     'sala': ('SALA OPERATORIA · interventi', 'intervent', 'Sale',
+                              'Nessun intervento in sala operatoria in questo periodo.')}
+
+
+def foglio_per_medico(ws, st, dati, parti, periodo, adesso=None):
+    """Il foglio «Per medico» delle esportazioni: una tabella per gli ambulatori e una per la sala operatoria (in
+    «tutto insieme» tutte e due, una sotto l'altra), una riga per medico e una colonna per giorno, con il totale. Nel
+    giorno, invece delle colonne dei giorni, le stanze (o le sale) e l'orario dal primo all'ultimo."""
+    adesso = adesso or datetime.now()
+    ws.title = 'Per medico'
+    giorni = [dati['dal'] + timedelta(days=k) for k in range((dati['al'] - dati['dal']).days + 1)]
+    un_giorno = len(giorni) == 1
+    usati = set()
+    for parte in parti:
+        for per_giorno in dati[parte].values():
+            usati |= set(per_giorno)
+    # i giorni di apertura e quelli in cui c'e' stato qualcosa (anche una domenica di sola sala)
+    giorni = [g for g in giorni if un_giorno or g.weekday() in st.giorni_aperti or g in usati]
+    colonne = 1 + (3 if un_giorno else len(giorni) + 1)
+    cosa = ' e '.join({'amb': 'quanti appuntamenti negli ambulatori', 'sala': 'quanti interventi in sala operatoria'}[x]
+                      for x in parti)
+    riga = apri_foglio_excel(ws, 'Per medico · %s' % periodo,
+                             cosa[0].upper() + cosa[1:] + ' ha ogni medico'
+                             + ('' if un_giorno else ', giorno per giorno')
+                             + ' (prenotati, confermati o arrivati; i disdetti e i non presentati no)', st, adesso,
+                             colonne=colonne)
+    for parte in parti:
+        testa, parola, dove_nome, vuoto = PAROLE_PER_MEDICO[parte]
+        c = ws.cell(riga, 1, testa)
+        c.font = _carattere(bold=True, color=BLU)
+        riga += 1
+        voci = dati[parte]
+        ordine = sorted((k for k in voci if k is not None), key=lambda k: dati['medici'][k].etichetta.lower())
+        ordine += [None] if None in voci else []
+        if not ordine:
+            ws.cell(riga, 1, vuoto).font = _carattere(italic=True, color='5B6B75')
+            riga += 2
+            continue
+        def nome(k):
+            return dati['medici'][k].etichetta if k is not None else 'senza medico'
+        if un_giorno:
+            g = giorni[0]
+            intestazioni = ['Medico', parola.capitalize() + 'i', dove_nome, 'Orario']
+            righe = []
+            for k in ordine:
+                lista = voci[k].get(g, [])
+                righe.append([nome(k), len(lista), ', '.join(sorted({a.risorsa.nome for a in lista if a.risorsa})),
+                              '%s-%s' % (min(a.inizio for a in lista).strftime('%H:%M'),
+                                         max(a.fine for a in lista).strftime('%H:%M')) if lista else ''])
+            larghezze = [26, 15, 30, 13]
+            totali = {1: 'Totale', 2: 'somma'}
+        else:
+            intestazioni = ['Medico'] + ['%s\n%d/%d' % (servizi.GIORNI[g.weekday()][:3].capitalize(), g.day, g.month)
+                                         for g in giorni] + ['Totale']
+            righe = []
+            for k in ordine:
+                n = [len(voci[k].get(g, [])) for g in giorni]
+                righe.append([nome(k)] + [x or None for x in n] + [sum(n)])
+            larghezze = [26] + [7] * len(giorni) + [9]
+            totali = {1: 'Totale'}
+            totali.update({c_: 'somma' for c_ in range(2, len(intestazioni) + 1)})
+        riga = tabella_excel(ws, riga, intestazioni, larghezze, righe, totali=totali, filtro=False, blocca=False)
+        if not un_giorno:
+            for c_ in range(2, len(intestazioni)):      # nei totali dei giorni lo zero resta vuoto, come nelle righe
+                if ws.cell(riga - 2, c_).value == 0:
+                    ws.cell(riga - 2, c_).value = None
+    ws.cell(riga, 1, 'Un intervento conta per il chirurgo scritto nell\'intervento, un appuntamento per il medico '
+                     'dell\'appuntamento. Il dettaglio è negli altri fogli del file.').font = \
+        _carattere(italic=True, color='5B6B75', size=9)
+    imposta_stampa_excel(ws, not un_giorno and len(giorni) > 7, None, None, st, 'per medico · ' + periodo)
+    una_pagina_se_manca_poco(ws, riga, not (not un_giorno and len(giorni) > 7))
+    return ws
 
 
 def foglio_interventi(ws, st, lista, periodo):

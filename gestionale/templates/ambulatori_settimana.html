@@ -107,7 +107,7 @@
   {% if vista.sale %}
   <tbody class="parte-sala" data-guida="matrice-sala">
     <tr><th class="titolo-sala" colspan="{{ 1 + vista.giorni|length * vista.meta|length }}">Sala operatoria
-      <small>i chirurghi in turno e gli interventi (prenotati, confermati o fatti): si programma dalla pagina <a href="{{ url_for('sala.giornata', iso=lunedi.isoformat(), struttura=sid) }}">Sala</a>, non conta nelle disponibilità degli ambulatori</small></th></tr>
+      <small>i chirurghi in turno e quanti interventi fa ciascuno (prenotati, confermati o arrivati): si programma dalla pagina <a href="{{ url_for('sala.giornata', iso=lunedi.isoformat(), struttura=sid) }}">Sala</a>, non conta nelle disponibilità degli ambulatori</small></th></tr>
     {% for riga in vista.sale %}
     <tr>
       <th class="stanza-sett">{{ riga.risorsa.nome }}</th>
@@ -120,13 +120,17 @@
           {% for p in c.presenze %}
           <span class="turno-sett" style="border-left-color: {{ p.operatore.colore_sicuro }}">
             <a href="{{ url_for('anagrafiche.turno', tid=p.turno.id, torna=request.full_path.rstrip('?')) }}" title="Apri il turno di {{ p.operatore.etichetta }}">{{ p.operatore.cognome }}</a> <small>{{ fascia(p.da, p.a) }}</small>
+            {%- set n = (c.per_chirurgo or {}).get(p.operatore.id, 0) %}
+            {%- if n and p.operatore.id not in (c.presenze[:loop.index0]|map(attribute='operatore')|map(attribute='id')|list) %}
+            <a class="interventi-sala" href="{{ url_for('sala.giornata', iso=c.data.isoformat(), struttura=sid) }}" title="Gli interventi di {{ p.operatore.etichetta }} quel giorno">{{ n }} intervent{{ 'o' if n == 1 else 'i' }}</a>{% endif %}
           </span>
           {% endfor %}
           {% for o, motivo, t in c.assenti %}<span class="turno-sett assente">{{ o.cognome }} <small>{{ motivo_assenza(motivo) }}</small></span>{% endfor %}
           {% if c.tutta_libera %}<span class="sala-libera">sala libera</span>{% endif %}
         {% endif %}
-        {% for o in c.senza_turno %}<span class="turno-sett senza-turno" title="{{ o.etichetta }}: interventi senza un turno in sala">{{ o.cognome }} <small>senza turno</small></span>{% endfor %}
-        {% if c.interventi %}<a class="interventi-sala" href="{{ url_for('sala.giornata', iso=c.data.isoformat(), struttura=sid) }}" title="Apri gli interventi del giorno">{{ c.interventi }} intervent{{ 'o' if c.interventi == 1 else 'i' }}</a>{% endif %}
+        {% for o in c.senza_turno %}{% set n = (c.per_chirurgo or {}).get(o.id, 0) %}<span class="turno-sett senza-turno" title="{{ o.etichetta }}: interventi senza un turno in sala">{{ o.cognome }} <small>senza turno</small>
+          {%- if n %} <a class="interventi-sala" href="{{ url_for('sala.giornata', iso=c.data.isoformat(), struttura=sid) }}" title="Gli interventi di {{ o.etichetta }} quel giorno">{{ n }} intervent{{ 'o' if n == 1 else 'i' }}</a>{% endif %}</span>{% endfor %}
+        {% if c.senza_chirurgo %}<a class="interventi-sala" href="{{ url_for('sala.giornata', iso=c.data.isoformat(), struttura=sid) }}" title="Interventi senza un chirurgo scritto">{{ c.senza_chirurgo }} intervent{{ 'o' if c.senza_chirurgo == 1 else 'i' }} senza chirurgo</a>{% endif %}
       </td>
       {% endfor %}
     </tr>

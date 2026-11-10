@@ -596,7 +596,7 @@ def b_sala_settimana_e_mese():
     s.close()
     # l'Excel della sala del mese: i turni di sala con quelli fuori e la frase; il calendario di tutto insieme
     _, wb = excel(C, '/esportazioni/mese/sala/2026-12-01.xlsx?struttura=1')
-    assert wb.sheetnames == ['Sala operatoria', 'Turni di sala', 'Interventi'], wb.sheetnames
+    assert wb.sheetnames == ['Sala operatoria', 'Turni di sala', 'Interventi', 'Per medico'], wb.sheetnames
     ws = wb['Turni di sala']
     testi = [str(ws.cell(i, 1).value or '') for i in range(1, ws.max_row + 1)]
     assert 'Sala operatoria: 7 interventi nel mese, di cui 5 fuori dai turni dei chirurghi.' in testi, testi[-4:]
@@ -607,7 +607,7 @@ def b_sala_settimana_e_mese():
     # le date sono sempre testo, anche una sola (fino alla 1.12.3 il 9 era un numero e in Excel andava a destra)
     assert all(isinstance(ws.cell(i, 4).value, str) for i in range(6, ws.max_row + 1) if ws.cell(i, 4).value is not None)
     _, wb = excel(C, '/esportazioni/mese/tutto/2026-12-01.xlsx?struttura=1')
-    assert wb.sheetnames == ['Programmazione', 'Calendario', 'Sala operatoria', 'Turni di sala', 'Interventi'], wb.sheetnames
+    assert wb.sheetnames == ['Programmazione', 'Calendario', 'Sala operatoria', 'Turni di sala', 'Interventi', 'Per medico'], wb.sheetnames
     assert all('Esempietti' not in str(c.value or '') for row in wb['Programmazione'].iter_rows() for c in row), \
         'la programmazione resta degli ambulatori: la sala nei suoi fogli'
     wc = wb['Calendario']
@@ -651,15 +651,15 @@ def b_esportazioni():
         """I valori del foglio, senza l'ora del calcolo (cambia da un minuto all'altro)."""
         return [[re.sub(r'\d\d:\d\d\.$|alle \d\d:\d\d', '', str(c.value)) if isinstance(c.value, str) else c.value
                  for c in row] for row in foglio.iter_rows()]
-    attese = {('giorno', 'ambulatori'): ['Ambulatori', 'Elenco'],
-              ('giorno', 'sala'): ['Sala operatoria', 'Elenco'],
-              ('giorno', 'tutto'): ['Ambulatori', 'Sala operatoria', 'Elenco'],
-              ('settimana', 'ambulatori'): ['Matrice'],
-              ('settimana', 'sala'): ['Sala operatoria', 'Interventi'],
-              ('settimana', 'tutto'): ['Ambulatori', 'Sala operatoria', 'Interventi'],
-              ('mese', 'ambulatori'): ['Programmazione', 'Calendario'],
-              ('mese', 'sala'): ['Sala operatoria', 'Turni di sala', 'Interventi'],
-              ('mese', 'tutto'): ['Programmazione', 'Calendario', 'Sala operatoria', 'Turni di sala', 'Interventi']}
+    attese = {('giorno', 'ambulatori'): ['Ambulatori', 'Elenco', 'Per medico'],
+              ('giorno', 'sala'): ['Sala operatoria', 'Elenco', 'Per medico'],
+              ('giorno', 'tutto'): ['Ambulatori', 'Sala operatoria', 'Elenco', 'Per medico'],
+              ('settimana', 'ambulatori'): ['Matrice', 'Per medico'],
+              ('settimana', 'sala'): ['Sala operatoria', 'Interventi', 'Per medico'],
+              ('settimana', 'tutto'): ['Ambulatori', 'Sala operatoria', 'Interventi', 'Per medico'],
+              ('mese', 'ambulatori'): ['Programmazione', 'Calendario', 'Per medico'],
+              ('mese', 'sala'): ['Sala operatoria', 'Turni di sala', 'Interventi', 'Per medico'],
+              ('mese', 'tutto'): ['Programmazione', 'Calendario', 'Sala operatoria', 'Turni di sala', 'Interventi', 'Per medico']}
     libri = {}
     for (periodo, parte), fogli in attese.items():
         data = LUN if periodo == 'giorno' else LUN + timedelta(days=2)       # settimana e mese da un giorno qualsiasi
@@ -765,11 +765,122 @@ def b_esportazioni():
     _, wb = excel(C, '/esportazioni/settimana/sala/2026-12-07.xlsx?struttura=1')
     assert any(ws.cell(i, 1).value == 'Nessuna sala operatoria attiva in questa struttura.' for i in range(1, 12) for ws in [wb['Sala operatoria']])
     _, wb = excel(C, '/esportazioni/giorno/tutto/2026-12-07.xlsx?struttura=1')
-    assert wb.sheetnames == ['Ambulatori', 'Sala operatoria', 'Elenco'], 'la sala spenta ha ancora un intervento quel giorno'
+    assert wb.sheetnames == ['Ambulatori', 'Sala operatoria', 'Elenco', 'Per medico'], 'la sala spenta ha ancora un intervento quel giorno'
 
 
 prova('1.12.3: le nove esportazioni (giorno, settimana e mese × ambulatori, sala, tutto), uguali ai file classici e alle '
       'settimane, senza pazienti fuori dal giorno; la pagina, anche senza sale', b_esportazioni)
+
+
+def b_per_medico():
+    """1.12.5, richiesta di Giovanni: «si distinguano gli interventi e gli ambulatori per medico, cosi' si capisce quanti
+    ne fa quella giornata». Il foglio «Per medico» di ogni esportazione contro un conto fatto qui sul database (solo gli
+    attivi, ambulatori e sala separati, anche nelle sale spente); niente pazienti; l'agenda del giorno dice quanti
+    interventi ha ogni chirurgo; la settimana in pagina mette il numero sotto il chirurgo che li fa."""
+    from collections import Counter
+    from modelli import Appuntamento, Paziente, Risorsa as R_
+    S, I, C = mondo_pieno()
+    s = S()
+    pz = Paziente(cognome='Provolo', nome='Gino', telefono='3339990005')
+    s.add(pz)
+    s.flush()
+    sala2 = R_(nome='Sala spenta', struttura_id=1, tipo='SALA_OPERATORIA', ordine=99, attiva=False)
+    s.add(sala2)
+    s.flush()
+    def metti(stanza_id, medico, giorno, h, stato='PRENOTATO'):
+        inizio = datetime.combine(giorno, time(h))
+        s.add(Appuntamento(risorsa_id=stanza_id, operatore_id=I[medico] if medico else None, paziente_id=pz.id,
+                           inizio=inizio, fine=inizio + timedelta(minutes=30), stato=stato))
+    # lunedi: due interventi di Esempietti, uno di Galasso (senza turno), uno disdetto che non conta (il medico c'e'
+    # sempre: nel database un appuntamento senza medico non si puo' salvare)
+    metti(I['Sala operatoria'], 'Esempietti', LUN, 9)
+    metti(I['Sala operatoria'], 'Esempietti', LUN, 10)
+    metti(I['Sala operatoria'], 'Galasso', LUN, 11)
+    metti(I['Sala operatoria'], 'Esempietti', LUN, 12, 'DISDETTO')
+    # mercoledi: uno nella sala spenta (conta), uno non presentato (non conta)
+    metti(sala2.id, 'Fintini', LUN + timedelta(days=2), 9)
+    metti(I['Sala operatoria'], 'Fintini', LUN + timedelta(days=2), 11, 'NON_PRESENTATO')
+    # ambulatori: Lippiello lunedi e martedi, Galasso lunedi, uno arrivato e uno disdetto
+    metti(I['Ambulatorio 1'], 'Lippiello', LUN, 15)
+    metti(I['Ambulatorio 1'], 'Lippiello', LUN, 16, 'ARRIVATO')
+    metti(I['Ambulatorio 2'], 'Lippiello', LUN + timedelta(days=1), 9)
+    metti(I['Ambulatorio 1'], 'Galasso', LUN, 8)
+    metti(I['Ambulatorio 1'], 'Galasso', LUN, 9, 'DISDETTO')
+    s.commit()
+    # il conto fatto qui, a parte: {(cognome o None, giorno): n} per ambulatori e sala
+    sale_ids = {r.id for r in s.scalars(select(R_)) if r.tipo == 'SALA_OPERATORIA'}
+    conta = {'amb': Counter(), 'sala': Counter()}
+    for a in s.scalars(select(Appuntamento)):
+        if a.stato in ('PRENOTATO', 'CONFERMATO', 'ARRIVATO') and a.risorsa is not None and a.risorsa.struttura_id == 1:
+            conta['sala' if a.risorsa_id in sale_ids else 'amb'][(a.operatore.etichetta if a.operatore else 'senza medico',
+                                                                  a.inizio.date())] += 1
+    s.close()
+
+    def tabelle(ws):
+        """{'amb'|'sala': {medico: {colonna: valore}}} letto dal foglio."""
+        fuori, parte, testa = {}, None, None
+        for i in range(1, ws.max_row + 1):
+            a = ws.cell(i, 1).value
+            if a in ('AMBULATORI · appuntamenti', 'SALA OPERATORIA · interventi'):
+                parte, testa = ('amb' if a.startswith('AMB') else 'sala'), None
+                fuori[parte] = {}
+            elif parte and a == 'Medico':
+                testa = [ws.cell(i, c).value for c in range(1, ws.max_column + 1)]
+            elif parte and testa and a:
+                fuori[parte][a] = {testa[c - 1]: ws.cell(i, c).value for c in range(2, len(testa) + 1) if testa[c - 1]}
+                if a == 'Totale':           # la tabella finisce con il totale
+                    testa = None
+        return fuori
+    # la settimana, tutto insieme: ogni medico, ogni giorno, contro il conto fatto qui
+    _, wb = excel(C, '/esportazioni/settimana/tutto/%s.xlsx?struttura=1' % LUN.isoformat())
+    assert wb.sheetnames[-1] == 'Per medico', wb.sheetnames
+    tab = tabelle(wb['Per medico'])
+    assert set(tab) == {'amb', 'sala'}, tab.keys()
+    for parte in ('amb', 'sala'):
+        attesi = {}
+        for (medico, g), n in conta[parte].items():
+            if LUN <= g <= LUN + timedelta(days=6):
+                attesi.setdefault(medico, {})[g] = n
+        letti = {m: v for m, v in tab[parte].items() if m != 'Totale'}
+        assert set(letti) == set(attesi), (parte, sorted(letti), sorted(attesi))
+        for medico, per_giorno in attesi.items():
+            for g, n in per_giorno.items():
+                col = next(k for k in letti[medico] if k.endswith('%d/%d' % (g.day, g.month)))
+                assert letti[medico][col] == n, (parte, medico, g, letti[medico][col], n)
+            assert letti[medico]['Totale'] == sum(per_giorno.values()), (parte, medico)
+        assert tab[parte]['Totale']['Totale'] == sum(sum(x.values()) for x in attesi.values())
+    assert tab['sala']['Esempietti Rita']['Totale'] == 2 and 'senza medico' not in tab['sala']
+    assert tab['sala']['Fintini Ugo']['Totale'] == 1, 'la sala spenta conta, il non presentato no'
+    assert tab['amb']['Galasso']['Totale'] >= 1
+    for ws in wb.worksheets:
+        assert all('Provolo' not in str(c.value or '') and '3339990005' not in str(c.value or '')
+                   for row in ws.iter_rows() for c in row), ws.title
+    # le parti separate: solo ambulatori o solo sala
+    _, wa = excel(C, '/esportazioni/settimana/ambulatori/%s.xlsx?struttura=1' % LUN.isoformat())
+    assert set(tabelle(wa['Per medico'])) == {'amb'}
+    _, wsl = excel(C, '/esportazioni/mese/sala/%s.xlsx?struttura=1' % LUN.isoformat())
+    ts = tabelle(wsl['Per medico'])
+    assert set(ts) == {'sala'} and ts['sala']['Esempietti Rita']['Totale'] == sum(
+        n for (m, g), n in conta['sala'].items() if m == 'Esempietti Rita' and g.month == 12), ts['sala']['Esempietti Rita']
+    # il giorno: un rigo per medico con quanti, dove e l'orario
+    _, wg = excel(C, '/esportazioni/giorno/tutto/%s.xlsx?struttura=1' % LUN.isoformat())
+    tg = tabelle(wg['Per medico'])
+    assert tg['sala']['Esempietti Rita']['Interventi'] == 2 and tg['sala']['Esempietti Rita']['Sale'] == 'Sala operatoria'
+    assert tg['sala']['Galasso']['Interventi'] == 1 and tg['amb']['Lippiello Anna']['Appuntamenti'] == 2, tg
+    assert tg['amb']['Lippiello Anna']['Orario'] == '15:00-16:30', tg['amb']['Lippiello Anna']
+    # l'agenda del giorno: quanti interventi ha ogni chirurgo (prima solo i cognomi)
+    t = testo(C.get('/giorno/%s?struttura=1' % LUN.isoformat()))
+    assert '<b>Esempietti</b> 2 interventi' in t and '<b>Galasso</b> 1 intervento' in t, t[t.find('in sala'):][:300]
+    # la settimana in pagina: il numero sotto il chirurgo che li fa
+    t = testo(C.get('/ambulatori/settimana/%s?struttura=1' % LUN.isoformat()))
+    parte = t[t.index('<tbody class="parte-sala"'):]
+    assert 'Gli interventi di Esempietti Rita quel giorno">2 interventi</a>' in parte
+    assert 'Gli interventi di Galasso quel giorno">1 intervento</a>' in parte
+    assert 'senza chirurgo' not in parte and 'confermati o arrivati' in parte
+
+
+prova('1.12.5: il foglio «Per medico» di ogni esportazione contro un conto a parte (attivi, ambulatori e sala separati, '
+      'anche le sale spente), senza pazienti; l\'agenda e la settimana dicono quanti interventi fa ogni chirurgo', b_per_medico)
 
 
 def b_sala_casi_limite():
@@ -813,8 +924,10 @@ def b_sala_casi_limite():
     T = AM.testo_cella_sala
     assert T(celle[('Sala operatoria 2', 4, 'mattina')]) == 'Lippiello Anna 06:00-07:30\n1 intervento', T(celle[('Sala operatoria 2', 4, 'mattina')])
     assert T(celle[('Sala operatoria 2', 5, 'pomeriggio')]) == 'Galasso 20:30-22:00\n1 intervento', T(celle[('Sala operatoria 2', 5, 'pomeriggio')])
+    # 1.12.5: gli interventi contati per chirurgo, ognuno sotto il suo nome (prima «2 interventi» in fondo, senza dire
+    # di chi); il secondo turno della stessa chirurga non ripete il conto
     assert T(celle[('Sala operatoria', 0, 'mattina')]) == \
-        'Esempietti Rita 08:00-14:00\nEsempietti Rita 10:00-12:00\nGalasso, senza turno\n2 interventi', T(celle[('Sala operatoria', 0, 'mattina')])
+        'Esempietti Rita 08:00-14:00\n1 intervento\nEsempietti Rita 10:00-12:00\nGalasso, senza turno\n1 intervento', T(celle[('Sala operatoria', 0, 'mattina')])
     assert T(celle[('Sala operatoria', 0, 'pomeriggio')]) == 'Esempietti Rita, senza turno\n1 intervento'
     assert T(celle[('Sala operatoria 2', 6, 'mattina')]) == 'Fintini Ugo 09:00-12:00' and v['solo_sala'] == {L2 + timedelta(days=6)}
     # l'oracolo della matrice (minuto per minuto, senza ambulatori.py) anche con il giorno di sola sala

@@ -1008,7 +1008,7 @@ def di_sala(risorsa):
     return risorsa is not None and risorsa.tipo == SALA
 
 
-def esporta_giorno(ses, g, struttura_id, percorso, parte=None):
+def esporta_giorno(ses, g, struttura_id, percorso, parte=None, in_piu=None):
     """Esporta la giornata nel formato dei fogli che l'accettazione usa oggi
     (una colonna doppia per stanza, una riga per fascia), piu' un secondo
     foglio con l'elenco completo, recapiti compresi. Dalla 1.12 con lo stile
@@ -1053,6 +1053,8 @@ def esporta_giorno(ses, g, struttura_id, percorso, parte=None):
         ws.title = nome_foglio
         _foglio_planning(ws, ses, g, st, vista_sala if cosa == 'sala operatoria' else vista, colonne_scelte, cosa, mie)
     _foglio_elenco(wb, ses, g, struttura_id, elenco, titolo_elenco, 'intervent' if parte == 'sala' else 'appuntament')
+    if in_piu is not None:
+        in_piu(wb)          # altri fogli dopo l'elenco (le esportazioni: «Per medico», 1.12.5)
     wb.active = 0
     wb.save(percorso)
     return percorso

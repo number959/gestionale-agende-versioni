@@ -41,7 +41,7 @@
   <b>Sala operatoria:</b> <a href="{{ url_for('sala.giornata', iso=g.isoformat(), struttura=sid) }}">{{ sala_giorno.interventi }} intervent{{ 'o' if sala_giorno.interventi == 1 else 'i' }}</a>
   {%- if sala_giorno.incomplete %}, <span class="da-completare">{{ sala_giorno.incomplete }} con la checklist da completare</span>{% endif %}
   {%- if sala_giorno.letti or sala_giorno.posti %} · <a href="{{ url_for('sala.posti_letto', dal=g.isoformat(), struttura=sid) }}" class="{{ 'oltre' if sala_giorno.oltre }}">letti la notte {{ sala_giorno.letti }}{% if sala_giorno.posti %}/{{ sala_giorno.posti }}{% endif %}</a>{% endif %}
-  {%- if ch.in_sala %} · in sala {% for o, n in ch.in_sala %}{{ o.cognome }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
+  {%- if ch.in_sala %} · in sala {% for o, n in ch.in_sala %}<b>{{ o.cognome }}</b> {{ n }} intervent{{ 'o' if n == 1 else 'i' }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
   {%- if ch.disponibili %} · <span title="Operano di solito in questo giorno della settimana e non hanno ancora interventi">liberi {% for o in ch.disponibili %}{{ o.cognome }}{% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}
   {%- if sala_giorno.interventi %} · <a href="{{ url_for('sala.lista_operatoria', iso=g.isoformat(), struttura=sid) }}" target="_blank">Lista operatoria</a>{% endif %}
 </div>

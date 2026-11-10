@@ -13,6 +13,15 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.12.5', [
+        dict(titolo='Interventi e ambulatori per medico',
+             testo='In ogni Excel di Esportazioni c\'è il foglio «Per medico»: quanti appuntamenti negli ambulatori e '
+                   'quanti interventi in sala operatoria ha ogni medico, giorno per giorno, separati e con i totali. '
+                   'Nella sala della settimana e del mese il numero degli interventi sta sotto il chirurgo che li fa '
+                   '(prima era uno solo per la sala), e nella riga della sala del giorno c\'è scritto quanti interventi '
+                   'ha ogni chirurgo.',
+             guida='esportazioni'),
+    ]),
     ('1.12.4', [
         dict(titolo='Le esportazioni in Excel stampate meglio',
              testo='Il planning della sala operatoria del giorno sta in una pagina, in verticale quando le sale sono '
