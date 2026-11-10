@@ -98,10 +98,9 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
-- **Versione 1.12.5, pronta e non ancora pubblicata** (10 novembre 2026): interventi e ambulatori per medico (vedi *La
-  1.12.5*). Provata tutta: 26 raccolte senza browser in ciascuna cartella, 11 nel browser nella normale e 13
-  nell'animata, «Prove su Windows» n. 29 verde in tutte e due le cartelle, i due Setup costruiti in Wine e installati
-  sopra la 1.12.4 pubblicata (`prove_installato.py` 57 su 57, normale e animata). Si pubblica con il via di Giovanni.
+- **Versione 1.12.5, pubblicata il 10 novembre 2026**: la release `v1.12.5`, segnata come ultima, con i due
+  Setup, i due file delle versioni e il PDF della guida. Interventi e ambulatori per medico (vedi *La 1.12.5*). Il
+  database non cambia. Alla clinica va messa una volta a mano (vedi *Cose aperte*).
 - **Versione 1.12.4, pubblicata il 10 novembre 2026**: la release `v1.12.4`, segnata come ultima, con i due
   Setup, i due file delle versioni e il PDF della guida (58 pagine). Le esportazioni in Excel stampate meglio (vedi *La
   1.12.4*). Il database non cambia. Alla clinica va messa una volta a mano (vedi *Cose aperte*).
@@ -1020,6 +1019,15 @@ uno per sala e mezza giornata, senza dire di chi; nessun report contava per medi
 numero sotto il chirurgo che li fa; in ogni esportazione il foglio *Per medico*, ambulatori e sala in due tabelle, una
 riga per medico e una colonna per giorno. Un medico che lavora in tutte e due compare in tutte e due le tabelle: le
 due parti restano distinte, come aveva chiesto per le esportazioni.
+
+**La 1.12.5 è stata pubblicata così**, il 10 novembre 2026, con il via di Giovanni («Pubblicala»): prima tutte le
+prove verdi qui (26 raccolte senza browser in ciascuna cartella, 11 nel browser nella normale e 13 nell'animata) e su
+GitHub («Prove su Windows» n. 29); i due Setup costruiti in Wine e installati sopra la 1.12.4 pubblicata
+(`prove_installato.py` 57 su 57, che dalla 1.12.5 controlla anche il foglio *Per medico*). Poi «Pubblica una versione»
+n. 9: release `v1.12.5` segnata come ultima con cinque file; `latest` dice 1.12.5 e le impronte dei Setup coincidono
+con i file delle versioni (normale `7a8b98d6…6aec`, animata `e026a0b5…52a5`). Simulazione dall'indirizzo vero: dalla
+1.12.4 pubblicata «Aggiorna adesso» ha installato la 1.12.5 (14 su 14, dati intatti), poi 57 su 57; dalla 1.9 animata
+il Setup animata 1.12.5 scaricato da GitHub: dati intatti, schema da 10 a 11 dopo la copia, 57 su 57.
 
 ## Cose aperte
 
