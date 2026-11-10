@@ -98,8 +98,11 @@ controlla('Esportazioni (1.12.3): la pagina con i nove pulsanti', s == 200 and b
           b.decode('utf-8', 'replace').count('href="/esportazioni/'))
 for periodo, parte in (('giorno', 'tutto'), ('settimana', 'sala'), ('mese', 'tutto')):
     s, b, h = get('/esportazioni/%s/%s/%s.xlsx?struttura=1' % (periodo, parte, date.today().isoformat()))
-    controlla('Esportazioni (1.12.3): %s, %s' % (periodo, parte),
-              s == 200 and b[:2] == b'PK' and 'spreadsheet' in h.get('Content-Type', ''), (s, h.get('Content-Type')))
+    import io as _io, zipfile as _zip
+    per_medico = s == 200 and b[:2] == b'PK' and b'name="Per medico"' in _zip.ZipFile(_io.BytesIO(b)).read('xl/workbook.xml')
+    controlla('Esportazioni (1.12.3, dalla 1.12.5 con il foglio Per medico): %s, %s' % (periodo, parte),
+              s == 200 and b[:2] == b'PK' and 'spreadsheet' in h.get('Content-Type', '') and per_medico,
+              (s, h.get('Content-Type'), per_medico))
 s, b, _ = get('/ambulatori/settimana/%s?struttura=1' % date.today().isoformat())
 controlla('Ambulatori (1.12): la pianificazione della settimana', s == 200 and 'id="matrice-ambulatori"' in b.decode('utf-8', 'replace'), s)
 s, b, h = get('/ambulatori/settimana/%s.xlsx?struttura=1' % date.today().isoformat())
