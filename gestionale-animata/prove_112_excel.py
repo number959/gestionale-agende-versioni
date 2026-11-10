@@ -201,12 +201,15 @@ def a_planning():
     assert colore(ws.cell(ore[time(8, 0)], c_amb1)) == 'E2EFDA' and 'Galasso' in ws.cell(ore[time(8, 0)], c_amb1).value
     assert ws.cell(ore[time(8, 0)], c_amb1).alignment.vertical == 'center'
     assert colore(ws.cell(ore[time(12, 0)], c_amb1)) == 'EEF3FA', 'libera nel turno di Galasso'
-    assert colore(ws.cell(ore[time(14, 0)], c_amb1)) == 'ECEEF0', 'fra i due turni: chiusa'
+    assert colore(ws.cell(ore[time(14, 0)], c_amb1)) == 'D6DADF', 'fra i due turni: chiusa (dalla 1.12.4 piu\' scuro dell\'azzurro)'
     # due appuntamenti nella stessa fascia (9:45 e 9:50): la riga cresce
     assert ws.cell(ore[time(9, 30)], c_amb1).value.count('\n') == 1 and (ws.row_dimensions[ore[time(9, 30)]].height or 15) > 15
     assert '=Visita strana' in ws.cell(ore[time(8, 30)], c_amb1 + 1).value and ws.cell(ore[time(8, 30)], c_amb1 + 1).data_type == 's'
     legenda = [ws.cell(r_, 1).value for r_ in range(ws.max_row - 3, ws.max_row + 1) if str(ws.cell(r_, 1).value or '').startswith('Legenda')]
     assert legenda and 'azzurro' in legenda[0] and 'grigio' in legenda[0], legenda
+    # 1.12.4: i disdetti e i non presentati lasciano la fascia libera, e il foglio lo dice (come la griglia)
+    note_p = [str(ws.cell(r_, 1).value or '') for r_ in range(3, ws.max_row + 1)]
+    assert any(x.startswith('2 appuntamenti disdetti o non presentati: le fasce restano libere') for x in note_p), note_p[-4:]
     niente_formule(wb)
     return '%d righe, %d colonne' % (ws.max_row, ws.max_column)
 
@@ -231,6 +234,10 @@ def a_elenco():
     assert ws.cell(tot, 1).value == 'Totale (solo attivi)' and ws.cell(tot, 5).value == '5 appuntamenti', (ws.cell(tot, 1).value, ws.cell(tot, 5).value)
     assert abs(ws.cell(tot, 11).value - 400.0) < 0.001 and ws.cell(tot, 11).number_format == comune.FORMATO_EURO, ws.cell(tot, 11).value
     assert ws.cell(tot, 1).font.bold and ws.cell(tot, 1).border.top.style == 'medium'
+    # 1.12.4: l'etichetta dei totali prende le celle vuote che la seguono (prima ne usciva sotto i bordi), e gli
+    # orari stanno al centro (prima a destra, attaccati alla stanza)
+    assert 'A%d:D%d' % (tot, tot) in [str(m) for m in ws.merged_cells.ranges], [str(m) for m in ws.merged_cells.ranges]
+    assert righe[0][0].alignment.horizontal == 'center' and righe[0][1].alignment.horizontal == 'center'
     assert ws.freeze_panes == 'A%d' % (testa + 1) and ws.auto_filter.ref.startswith('A%d:' % testa), (ws.freeze_panes, ws.auto_filter.ref)
     note = next(c for c in range(1, ws.max_column + 1) if ws.cell(testa, c).value == 'NOTE')
     assert righe[0][note - 1].alignment.wrap_text, 'le note a capo'

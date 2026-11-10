@@ -633,10 +633,10 @@ def settimana(iso=None):
     c = contesto_comune(s, st, strutture, 'settimana', ruolo, area)
     domenica = giorni[-1]
     if lunedi.month == domenica.month:
-        titolo = 'Turni dal %d al %d %s' % (lunedi.day, domenica.day, servizi.MESI[domenica.month - 1])
+        titolo = 'Turni %s %s %s' % (servizi.dal_giorno(lunedi.day), servizi.al_giorno(domenica.day), servizi.MESI[domenica.month - 1])
     else:
-        titolo = 'Turni dal %d %s al %d %s' % (lunedi.day, servizi.MESI[lunedi.month - 1], domenica.day,
-                                               servizi.MESI[domenica.month - 1])
+        titolo = 'Turni %s %s %s %s' % (servizi.dal_giorno(lunedi.day), servizi.MESI[lunedi.month - 1],
+                                        servizi.al_giorno(domenica.day), servizi.MESI[domenica.month - 1])
     return render_template('personale_turni.html', **c, giorni=info_giorni(giorni, st),
                            gruppi=griglia(s, st, giorni, ruolo, area), titolo=titolo,
                            periodo=lunedi.isoformat(), dal=lunedi, al=domenica,

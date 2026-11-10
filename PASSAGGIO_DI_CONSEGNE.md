@@ -16,8 +16,9 @@ Claude Code*), il 1° novembre 2026 alla versione **1.11** (l'autoriparazione e 
 correzioni: vedi *La 1.11*), l'8 novembre 2026 alla **1.12** (ambulatori, riepilogo live, stampe ed
 Excel, certificati: vedi *La 1.12*), lo stesso giorno alla **1.12.1** (le cose aperte chiuse e le
 prove su un Windows vero: vedi *La 1.12.1*), il 9 novembre alla **1.12.2** (il riepilogo live più
-chiaro e il riepilogo del periodo: vedi *La 1.12.2*) e lo stesso giorno alla **1.12.3** (le esportazioni di
-ambulatori e sala operatoria per giorno, settimana e mese: vedi *La 1.12.3*).
+chiaro e il riepilogo del periodo: vedi *La 1.12.2*), lo stesso giorno alla **1.12.3** (le esportazioni di
+ambulatori e sala operatoria per giorno, settimana e mese: vedi *La 1.12.3*) e il 10 novembre alla **1.12.4**
+(le esportazioni stampate meglio, dopo averle guardate pagina per pagina: vedi *La 1.12.4*).
 
 ## In breve
 
@@ -965,6 +966,26 @@ intatti (46 appuntamenti, 30 pazienti, 27 turni), schema da 10 a 11 dopo la copi
 delle versioni che controlla è quello della cartella). Alla prima prova il secondo Setup non era partito:
 `strumenti/wine/installa.sh` tornava appena il programma rispondeva, con il Setup di prima (stesso nome di
 file) ancora aperto; ora aspetta che il Setup chiuda il suo registro, e rifatta così la prova è andata.
+
+## La 1.12.4
+
+Il 10 novembre 2026 Giovanni ha chiesto «Fammi anteprima» (l'anteprima delle esportazioni rimasta in sospeso). Ho
+scaricato i nove file della 1.12.3 dal gestionale di prova, li ho stampati in PDF con LibreOffice (`soffice --headless
+--convert-to pdf`, un foglio alla volta) e trasformati in immagini (`pdftoppm`), e li ho messi in una pagina privata
+(Artifact) con la stessa griglia della pagina *Esportazioni in Excel*, insieme ai nove file. Guardandoli sono venuti
+fuori difetti che le prove non vedevano, perché si vedono solo su carta: il planning della sala del giorno con il titolo
+tagliato a «SALA OPERATOR», metà pagina vuota e una seconda pagina, le fasce libere a strisce, la testata di ogni
+pagina sopra il titolo (openpyxl mette testata e piede a 0,5 pollici e il programma il margine a 0,6), e altri. Poi
+nove revisori (uno per file) hanno guardato le 28 pagine e i file con openpyxl: 53 segnalazioni, unite in 26 problemi.
+Dei verificatori ne hanno risposto due (per gli altri il limite d'uso delle cinque ore): due problemi scartati come
+scelte di impaginazione. Gli altri li ho verificati io sul codice e sui file. Corretti nella 1.12.4 quelli veri e
+piccoli (l'elenco è in `NOTE-RELEASE-1.12.4.md` e nel `LEGGIMI.md`, *Le esportazioni stampate*), ognuno con la sua
+prova: con il codice della 1.12.3 dieci prove falliscono. Lasciati com'erano, da decidere con Giovanni o con la
+direzione: la stampa piccola dell'elenco del giorno e delle matrici della settimana (stanno in una pagina in larghezza,
+circa 6 punti; per ingrandirli bisogna scegliere quali colonne stringere o togliere), il verde che nel planning vuol
+dire appuntamento e nella matrice libero (vengono dai due moduli di partenza), l'ordine delle righe «libero» nella
+matrice, l'intestazione «AMBULATORIO» della matrice (è quella del modulo), i titoli dei fogli scritti in modi diversi,
+il totale fisso dell'elenco che non segue il filtro, i triangolini verdi di Excel sui telefoni.
 
 ## Cose aperte
 

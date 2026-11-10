@@ -227,7 +227,15 @@ temporanea.
   `@page` in `stile.css`. Le colonne di partenza del foglio sono `viste.COLONNE_DI_PARTENZA`: una
   colonna nuova si aggiunge a `COLONNE_STAMPA` ma non a quelle di partenza (una prova conta le
   intestazioni di serie). Gli Excel passano tutti dagli aiuti di `comune.py` (titolo, intestazione,
-  stampa A4, piede): un export nuovo li usa, non si inventa uno stile suo.
+  stampa A4, piede): un export nuovo li usa, non si inventa uno stile suo. Dalla 1.12.4 (l'anteprima delle
+  esportazioni stampate): `imposta_stampa_excel` mette testata e piede a 0,25 pollici (mai i 0,5 di openpyxl,
+  coprono il titolo); `una_pagina_se_manca_poco` dopo la stampa per i fogli che altrimenti lasciano una seconda
+  pagina quasi vuota; ogni carattere ha il nome (`carattere_excel`, in `ambulatori.py` `_carattere`); in una
+  cella unita il testo non esce, quindi va a capo con la riga alta quanto serve. Il planning del giorno sceglie
+  il verso dalla larghezza della sola tabella (`PIXEL_A4_VERTICALE`), unisce le fasce di piu' righe, e il foglio
+  della sala usa `griglia(..., solo=di_sala)`. Gli articoli davanti ai giorni passano da `servizi.dal_giorno` e
+  `al_giorno` (dall'8, all'11). Per guardare le stampe senza Excel: LibreOffice (`soffice --headless
+  --convert-to pdf`) e `pdftoppm`, come per l'anteprima della 1.12.4.
 - Certificati dei siti (dalla 1.12): `comune.contesto_tls` (sistema + elenco Mozilla di `certifi`,
   dentro l'eseguibile con `collect_data_files` in `gestionale.spec`, + `certificati.pem` accanto
   al database) lo usano aggiornamenti ed email; `certifi` sta in `requirements.txt` e

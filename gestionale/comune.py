@@ -11,7 +11,7 @@ import logging
 import os
 import re
 import ssl
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from io import BytesIO
 from urllib.parse import quote
 
@@ -388,6 +388,10 @@ def tabella_excel(ws, riga, intestazioni, larghezze, righe, formati=None, totali
                 cella.number_format = formati[c]
             if c in a_capo:
                 cella.alignment = Alignment(wrap_text=True, vertical='top')
+            elif isinstance(v, (date, time)):
+                # date e orari al centro, come nei planning: a destra finivano attaccati al testo della colonna
+                # dopo («10:00Sala A», 1.12.4)
+                cella.alignment = Alignment(horizontal='center', vertical='top')
             elif _e_numero(v):
                 cella.alignment = Alignment(horizontal='right', vertical='top')
             else:
@@ -418,6 +422,12 @@ def tabella_excel(ws, riga, intestazioni, larghezze, righe, formati=None, totali
                     cella.number_format = formati[c]
         if 1 not in totali:
             ws.cell(r, 1).value = 'Totale'
+        # l'etichetta («Totale (solo attivi)») e' piu' larga della prima colonna: prende le celle vuote che la
+        # seguono, invece di uscirne passando sotto i loro bordi (1.12.4)
+        dopo = min([c for c, x in totali.items() if c > 1 and x is not None] or [len(intestazioni) + 1])
+        if dopo - 1 > 1:
+            ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=dopo - 1)
+        ws.cell(r, 1).alignment = Alignment(vertical='center')
         r += 1
     if blocca:
         ws.freeze_panes = 'A%d' % (riga + 1)
@@ -454,4 +464,15 @@ def imposta_stampa_excel(ws, orizzontale=True, righe_titolo=None, colonne_titolo
     # testata e piede a 0,25 pollici dal bordo: con quelli di partenza di openpyxl (0,5) restava un decimo di
     # pollice fra la riga della testata e il foglio, e la testata finiva sopra il titolo (1.12.4)
     ws.page_margins.header = ws.page_margins.footer = 0.25
+    return ws
+
+
+def una_pagina_se_manca_poco(ws, ultima_riga, verticale, scarto=1.25):
+    """Dopo imposta_stampa_excel: se il foglio e' alto al massimo un quarto piu' di una pagina, sta in una pagina
+    sola (stringendosi un poco) invece di lasciare una seconda pagina quasi vuota (1.12.4). Le righe senza altezza
+    scritta contano 15 punti, come in Excel."""
+    alta = sum(ws.row_dimensions[r].height or 15 for r in range(1, ultima_riga + 1))
+    utile = (842 if verticale else 595) - (ws.page_margins.top + ws.page_margins.bottom) * 72
+    if alta <= utile * scarto:
+        ws.page_setup.fitToHeight = 1
     return ws

@@ -26,6 +26,7 @@ Mattina e pomeriggio si dividono alle META (14:00): la mattina va
 dall'apertura della struttura alle 14, il pomeriggio dalle 14 alla chiusura.
 Un'ora libera (MINIMO_LIBERO) o piu' dentro una mezza giornata occupata si
 segnala come disponibilita'."""
+import re
 from datetime import date, datetime, time, timedelta
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -40,7 +41,7 @@ import servizi
 from anagrafiche import Modulo, stanza_gia_assegnata
 from comune import (FORMATO_ORA, FORMATO_ORE, FORMATO_PERCENTO, apri_foglio_excel, data_da, destinazione_sicura,
                     imposta_stampa_excel, intero, json_sicuro, mese_da, scarica_excel, stile_intestazione_excel,
-                    struttura_scelta, tabella_excel, testo_excel)
+                    struttura_scelta, tabella_excel, testo_excel, una_pagina_se_manca_poco)
 from modelli import STATI_ATTIVI, Appuntamento, Operatore, Risorsa, Turno
 
 bp = Blueprint('ambulatori', __name__, url_prefix='/ambulatori')
@@ -239,11 +240,11 @@ def _il(giorno):
 
 
 def _dal(giorno):
-    return ("dall'%d" if giorno in (1, 8, 11) else 'dal %d') % giorno
+    return servizi.dal_giorno(giorno)
 
 
 def _al(giorno):
-    return ("all'%d" if giorno in (1, 8, 11) else 'al %d') % giorno
+    return servizi.al_giorno(giorno)
 
 
 def _elenco_giorni(giorni):
@@ -452,11 +453,20 @@ def testo_cella_sala(cella):
     return '\n'.join(testi)
 
 
+def _carattere(**altro):
+    """Il carattere dei fogli degli ambulatori e della sala: Calibri 11 come le celle senza stile. Fino alla 1.12.3
+    i grassetti e i corsivi non avevano il nome del carattere: Excel metteva il suo, altri programmi un carattere con
+    le grazie (1.12.4)."""
+    altro.setdefault('name', 'Calibri')
+    altro.setdefault('size', 11)
+    return Font(**altro)
+
+
 def _settimana_testo(vista):
     lunedi = vista['lunedi']
     domenica = lunedi + timedelta(days=6)
-    return 'dal %d %s al %d %s %d' % (lunedi.day, servizi.MESI[lunedi.month - 1], domenica.day,
-                                     servizi.MESI[domenica.month - 1], domenica.year)
+    return '%s %s %s %s %d' % (servizi.dal_giorno(lunedi.day), servizi.MESI[lunedi.month - 1],
+                               servizi.al_giorno(domenica.day), servizi.MESI[domenica.month - 1], domenica.year)
 
 
 def _testa_settimana(ws, r0, vista, prima):
@@ -509,7 +519,7 @@ def foglio_matrice(ws, st, vista, adesso=None):
     settimana = _settimana_testo(vista)
     periodo = ('Settimana tipo: i turni che si ripetono ogni settimana (quelli validi nella settimana %s), senza '
                'assenze e chiusure' % settimana if vista['tipo'] else 'Settimana %s' % settimana)
-    ws.cell(3, 1, periodo).font = Font(italic=True)
+    ws.cell(3, 1, periodo).font = _carattere(italic=True)
     ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=colonne)
     ws.cell(4, 1, 'Destinatario: %s   ·   Compilato da: %s   ·   Data: %s' % (
         DESTINATARIO, COMPILATO_DA, adesso.strftime('%d/%m/%Y')))
@@ -520,7 +530,7 @@ def foglio_matrice(ws, st, vista, adesso=None):
     riga = r0 + 2
     for r in vista['righe']:
         c = ws.cell(riga, 1, testo_excel(r['risorsa'].nome))
-        c.font, c.border = Font(bold=True), BORDO
+        c.font, c.border = _carattere(bold=True), BORDO
         c.alignment = Alignment(vertical='center', wrap_text=True)
         for k, cella in enumerate(r['celle']):
             c = ws.cell(riga, 2 + k)
@@ -529,12 +539,12 @@ def foglio_matrice(ws, st, vista, adesso=None):
             if cella['chiuso']:
                 c.value = testo_excel('CHIUSO: %s' % cella['chiuso'])
                 c.fill = grigio
-                c.font = Font(color='5B6B75', italic=True)
+                c.font = _carattere(color='5B6B75', italic=True)
             elif cella['tutta_libera']:
                 c.value = testo_excel('DISPONIBILE' + ''.join('\n(%s %s)' % (o.etichetta, motivo_assenza(motivo))
                                                               for o, motivo, _ in cella['assenti']))
                 c.fill = verde
-                c.font = Font(bold=True, color='1E6B2E')
+                c.font = _carattere(bold=True, color='1E6B2E')
             else:
                 testi = ['%s %s' % (testo_excel(p['operatore'].etichetta), fascia(p['da'], p['a']).replace('–', '-'))
                          for p in cella['presenze']]
@@ -550,17 +560,18 @@ def foglio_matrice(ws, st, vista, adesso=None):
         riga += 1
     riga += 1
     ws.cell(riga, 1, 'In verde le fasce libere, disponibili per nuovi ambulatori (disponibilità integrative): '
-                     '«DISPONIBILE» è una mezza giornata tutta libera, «libero» le ore avanzate in una occupata.')
+                     '«DISPONIBILE» è una mezza giornata tutta libera, «libero» un\'ora o più rimasta libera in una mezza '
+                     'giornata occupata.')
     ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
     ws.cell(riga, 1).alignment = Alignment(wrap_text=True)
     ws.row_dimensions[riga].height = 30
     riga += 1
     ws.cell(riga, 1, 'Calcolata dai turni, dalle assenze e dalle chiusure scritte nel Gestionale Agende il %s alle %s.'
-            % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = Font(italic=True, color='5B6B75')
+            % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = _carattere(italic=True, color='5B6B75')
     ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
     riga += 2
-    ws.cell(riga, 1, 'Il %s' % DESTINATARIO).font = Font(bold=True)
-    ws.cell(riga, 1 + colonne // 2, 'La %s' % COMPILATO_DA).font = Font(bold=True)
+    ws.cell(riga, 1, 'Il %s' % DESTINATARIO).font = _carattere(bold=True)
+    ws.cell(riga, 1 + colonne // 2, 'La %s' % COMPILATO_DA).font = _carattere(bold=True)
     riga += 1
     ws.cell(riga, 1, '_' * 30)
     ws.cell(riga, 1 + colonne // 2, '_' * 30)
@@ -602,11 +613,11 @@ def fogli_programmazione(wb, st, vista, adesso=None, con_sala=False):
     larghezze = [22, 26, 11, 24, 13, 18, 48]
     sala = vista.get('sala') or {'righe': [], 'interventi': 0, 'fuori_turno': 0}
     _titolo(ws, 1, '%s — %s' % (testo_excel(st.nome), TITOLO_PROGRAMMAZIONE), len(intestazioni), 15)
-    ws.cell(2, 1, nome_mese.capitalize()).font = Font(size=12, bold=True)
+    ws.cell(2, 1, nome_mese.capitalize()).font = _carattere(size=12, bold=True)
     ws.cell(3, 1, 'Calcolata dai turni, dalle assenze e dalle chiusure scritte nel Gestionale Agende il %s alle %s: '
                   'le date sono quelle in cui il medico c\'è davvero.' % (adesso.strftime('%d/%m/%Y'),
                                                                         adesso.strftime('%H:%M'))
-            ).font = Font(italic=True, color='5B6B75')
+            ).font = _carattere(italic=True, color='5B6B75')
     ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=len(intestazioni))
     r0 = 5
     for c, (testo, l) in enumerate(zip(intestazioni, larghezze), start=1):
@@ -626,9 +637,9 @@ def fogli_programmazione(wb, st, vista, adesso=None, con_sala=False):
                 cella.alignment = Alignment(vertical='top', wrap_text=True)
                 if n == 0:
                     cella.border = Border(left=_sottile, right=_sottile, top=_spesso, bottom=_sottile)
-            ws.cell(riga, 1).font = Font(bold=True, color=BLU) if n == 0 else Font(color='5B6B75')
+            ws.cell(riga, 1).font = _carattere(bold=True, color=BLU) if n == 0 else _carattere(color='5B6B75')
             if not r['date']:
-                ws.cell(riga, 4).font = Font(color=ARANCIO)
+                ws.cell(riga, 4).font = _carattere(color=ARANCIO)
             riga += 1
     if not vista['righe']:
         ws.cell(riga, 1, 'Nessun turno nelle stanze attive di questa struttura in %s.' % nome_mese)
@@ -642,6 +653,9 @@ def fogli_programmazione(wb, st, vista, adesso=None, con_sala=False):
     con_sala = bool(con_sala and (sala['righe'] or sala['interventi']))
     colonne_cal = ['Data', 'Giorno', 'Stanza', 'Medico', 'Orario'] + (['Interventi'] if con_sala else [])
     _titolo(wc, 1, 'Calendario di %s — %s' % (nome_mese, testo_excel(st.nome)), len(colonne_cal), 14)
+    # quando e' stato calcolato, come negli altri fogli: un calendario stampato cambia con ogni assenza (1.12.4)
+    wc.cell(2, 1, 'Calcolato dai turni, dalle assenze e dalle chiusure scritte nel Gestionale Agende il %s alle %s.'
+            % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = _carattere(italic=True, color='5B6B75', size=9)
     for c, (testo, l) in enumerate(zip(colonne_cal, [12, 11, 18, 26, 13, 11]), start=1):
         _intestazione(wc.cell(3, c), testo)
         wc.column_dimensions[get_column_letter(c)].width = l
@@ -666,7 +680,9 @@ def fogli_programmazione(wb, st, vista, adesso=None, con_sala=False):
         voci = [(t.risorsa, t.operatore, t, None) for t in giorno['presenze']] + \
             [(x['risorsa'], x['operatore'], x['turno'], x['interventi']) for x in in_sala]
         for n, (stanza, medico, t, n_int) in enumerate(voci, start=0 if giorno['presenze'] else 1):
-            valori = [g if n == 0 else None, servizi.GIORNI[g.weekday()].capitalize() if n == 0 else None,
+            # la data e il giorno in ogni riga (in grigio dopo la prima del giorno): una pagina nuova, un filtro o un
+            # ordinamento non lasciano righe senza data, come fino alla 1.12.3 (1.12.4)
+            valori = [g, servizi.GIORNI[g.weekday()].capitalize(),
                       testo_excel(stanza.nome), testo_excel(medico.etichetta if medico else '?'),
                       fascia(t.ora_inizio, t.ora_fine).replace('–', '-') if t else 'fuori turno'] + \
                 ([n_int] if con_sala else [])
@@ -675,7 +691,10 @@ def fogli_programmazione(wb, st, vista, adesso=None, con_sala=False):
                 cella.border = BORDO
                 if n == 0:
                     cella.border = Border(left=_sottile, right=_sottile, top=_spesso, bottom=_sottile)
+                elif c <= 2:
+                    cella.font = _carattere(color='9AA5AD')
             wc.cell(riga, 1).number_format = 'dd/mm/yyyy'
+            wc.cell(riga, 1).alignment = Alignment(horizontal='center')
             riga += 1
     wc.freeze_panes = 'A4'
     _stampa(wc, '3:3', False, st, 'calendario · ' + nome_mese)
@@ -685,21 +704,25 @@ def fogli_programmazione(wb, st, vista, adesso=None, con_sala=False):
 # ======================================================== la sala operatoria in Excel (1.12.3)
 TITOLO_SALA = 'SALA OPERATORIA · CHIRURGHI E INTERVENTI'
 LEGENDA_SALA = ('Per ogni sala, mattina e pomeriggio: i chirurghi in turno, chi opera senza un turno e quanti '
-                'interventi (prenotati, confermati o fatti; i disdetti e i non presentati no). «sala libera»: nessun '
+                'interventi (prenotati, confermati o arrivati; i disdetti e i non presentati no). «sala libera»: nessun '
                 'turno e nessun intervento. La sala si programma dalla pagina Sala.')
 
 
-def _cella_sala_excel(c, cella, grigio):
+def _cella_sala_excel(c, cella, grigio, per_riga=99):
     c.border = BORDO
     c.alignment = Alignment(vertical='top', wrap_text=True)
-    c.value = testo_excel(testo_cella_sala(cella))
+    # in una colonna stretta «Valente Paolo 08:00-14:00» andava a capo dopo «08:00-»: l'orario va sotto il nome
+    # intero (1.12.4). Il testo resta quello della pagina (testo_cella_sala), cambia solo dove va a capo
+    righe = [re.sub(r' (\d\d:\d\d-\d\d:\d\d)$', r'\n\1', r) if len(r) > per_riga else r
+             for r in testo_cella_sala(cella).split('\n')]
+    c.value = testo_excel('\n'.join(righe))
     if cella['chiuso']:
         c.fill = grigio
-        c.font = Font(color='5B6B75', italic=True)
+        c.font = _carattere(color='5B6B75', italic=True)
     elif cella['tutta_libera']:
-        c.font = Font(color='5B6B75', italic=True)
+        c.font = _carattere(color='5B6B75', italic=True)
     elif cella['senza_turno']:
-        c.font = Font(color=ARANCIO)
+        c.font = _carattere(color=ARANCIO)
 
 
 def foglio_sala_settimana(ws, st, vista, adesso=None):
@@ -714,7 +737,7 @@ def foglio_sala_settimana(ws, st, vista, adesso=None):
     settimana = _settimana_testo(vista)
     periodo = ('Settimana tipo: i turni che si ripetono ogni settimana (quelli validi nella settimana %s)' % settimana
                if vista['tipo'] else 'Settimana %s' % settimana)
-    ws.cell(3, 1, periodo).font = Font(italic=True)
+    ws.cell(3, 1, periodo).font = _carattere(italic=True)
     ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=colonne)
     r0 = 5
     _testa_settimana(ws, r0, vista, 'SALA')
@@ -722,10 +745,10 @@ def foglio_sala_settimana(ws, st, vista, adesso=None):
     riga = r0 + 2
     for r in vista['sale']:
         c = ws.cell(riga, 1, testo_excel(r['risorsa'].nome))
-        c.font, c.border = Font(bold=True), BORDO
+        c.font, c.border = _carattere(bold=True), BORDO
         c.alignment = Alignment(vertical='center', wrap_text=True)
         for k, cella in enumerate(r['celle']):
-            _cella_sala_excel(ws.cell(riga, 2 + k), cella, grigio)
+            _cella_sala_excel(ws.cell(riga, 2 + k), cella, grigio, per_riga=22)
         _altezza_riga(ws, riga, len(r['celle']))
         riga += 1
     if not vista['sale']:
@@ -739,7 +762,7 @@ def foglio_sala_settimana(ws, st, vista, adesso=None):
     ws.row_dimensions[riga].height = 30
     riga += 1
     ws.cell(riga, 1, 'Calcolata dai turni e dagli interventi scritti nel Gestionale Agende il %s alle %s.'
-            % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = Font(italic=True, color='5B6B75')
+            % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = _carattere(italic=True, color='5B6B75')
     ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
     ws.freeze_panes = ws.cell(r0 + 2, 2)
     _stampa(ws, '%d:%d' % (r0, r0 + 1), True, st, 'sala operatoria · ' + periodo.lower().split(':')[0])
@@ -772,7 +795,7 @@ def foglio_sala_mese(ws, st, mese, adesso=None):
     colonne = 1 + max(1, len(sale)) * len(meta)
     _titolo(ws, 1, testo_excel(st.nome), colonne, 16)
     _titolo(ws, 2, TITOLO_SALA, colonne, 13)
-    ws.cell(3, 1, nome_mese.capitalize()).font = Font(size=12, bold=True)
+    ws.cell(3, 1, nome_mese.capitalize()).font = _carattere(size=12, bold=True)
     r0 = 5
     _intestazione(ws.cell(r0, 1), 'GIORNO')
     ws.merge_cells(start_row=r0, start_column=1, end_row=r0 + 1, end_column=1)
@@ -793,16 +816,17 @@ def foglio_sala_mese(ws, st, mese, adesso=None):
         if i['chiusura'] or i['festivo']:
             testo += '\n%s' % testo_excel(i['chiusura'] or i['festivo'])
         c = ws.cell(riga, 1, testo)
-        c.font, c.border = Font(bold=True), BORDO
+        c.font, c.border = _carattere(bold=True), BORDO
         c.alignment = Alignment(vertical='top', wrap_text=True)
         for k, sala in enumerate(sale):
             for j, cella in enumerate(giorno['celle'].get(sala.id, [])):
-                _cella_sala_excel(ws.cell(riga, 2 + k * len(meta) + j), cella, grigio)
+                _cella_sala_excel(ws.cell(riga, 2 + k * len(meta) + j), cella, grigio, per_riga=28)
         righe_testo = 2 if '\n' in testo else 1
         for k in range(len(sale) * len(meta)):
             v = ws.cell(riga, 2 + k).value or ''
             righe_testo = max(righe_testo, sum(max(1, -(-len(pezzo) // 28)) for pezzo in str(v).split('\n')))
-        ws.row_dimensions[riga].height = max(30, 15 * righe_testo)
+        # alta quanto il testo: con almeno 30 punti un mese andava su due pagine, la seconda quasi vuota (1.12.4)
+        ws.row_dimensions[riga].height = 15 * righe_testo + 3
         riga += 1
     if not sale:
         ws.cell(riga, 1, 'Nessuna sala operatoria attiva in questa struttura.')
@@ -814,10 +838,11 @@ def foglio_sala_mese(ws, st, mese, adesso=None):
     ws.row_dimensions[riga].height = 30
     riga += 1
     ws.cell(riga, 1, 'Calcolata dai turni e dagli interventi scritti nel Gestionale Agende il %s alle %s.'
-            % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = Font(italic=True, color='5B6B75')
+            % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = _carattere(italic=True, color='5B6B75')
     ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=colonne)
     ws.freeze_panes = ws.cell(r0 + 2, 2)
     _stampa(ws, '%d:%d' % (r0, r0 + 1), len(sale) * len(meta) > 4, st, 'sala operatoria · ' + nome_mese)
+    una_pagina_se_manca_poco(ws, riga, not (len(sale) * len(meta) > 4))
     return ws
 
 
@@ -832,9 +857,9 @@ def foglio_turni_sala(ws, st, vista, adesso=None):
     intestazioni = ['Sala', 'Chirurgo', 'Giorno', 'Date di %s' % servizi.MESI[primo.month - 1], 'Orario', 'Note']
     larghezze = [20, 26, 11, 24, 13, 44]
     _titolo(ws, 1, '%s — SALA OPERATORIA: I TURNI DEI CHIRURGHI' % testo_excel(st.nome), len(intestazioni), 15)
-    ws.cell(2, 1, nome_mese.capitalize()).font = Font(size=12, bold=True)
+    ws.cell(2, 1, nome_mese.capitalize()).font = _carattere(size=12, bold=True)
     ws.cell(3, 1, 'Calcolata dai turni, dalle assenze, dalle chiusure e dagli interventi scritti nel Gestionale Agende '
-                  'il %s alle %s.' % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = Font(italic=True, color='5B6B75')
+                  'il %s alle %s.' % (adesso.strftime('%d/%m/%Y'), adesso.strftime('%H:%M'))).font = _carattere(italic=True, color='5B6B75')
     ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=len(intestazioni))
     r0 = 5
     for c, (testo, l) in enumerate(zip(intestazioni, larghezze), start=1):
@@ -854,18 +879,18 @@ def foglio_turni_sala(ws, st, vista, adesso=None):
             cella = ws.cell(riga, c, v)
             cella.border = Border(left=_sottile, right=_sottile, top=_spesso, bottom=_sottile) if nuova else BORDO
             cella.alignment = Alignment(vertical='top', wrap_text=True)
-        ws.cell(riga, 1).font = Font(bold=True, color=BLU) if nuova else Font(color='5B6B75')
+        ws.cell(riga, 1).font = _carattere(bold=True, color=BLU) if nuova else _carattere(color='5B6B75')
         if r.get('senza_turno'):
-            ws.cell(riga, 6).font = Font(color=ARANCIO)
+            ws.cell(riga, 6).font = _carattere(color=ARANCIO)
         elif not r['date']:
-            ws.cell(riga, 4).font = Font(color=ARANCIO)
+            ws.cell(riga, 4).font = _carattere(color=ARANCIO)
         riga += 1
     if not sala['righe']:
         ws.cell(riga, 1, 'Nessun turno e nessun intervento in sala operatoria in %s.' % nome_mese)
         riga += 1
     ultima = riga - 1
     riga += 1
-    ws.cell(riga, 1, testo_excel(frase_sala_mese(sala))).font = Font(italic=True, color='5B6B75')
+    ws.cell(riga, 1, testo_excel(frase_sala_mese(sala))).font = _carattere(italic=True, color='5B6B75')
     ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=len(intestazioni))
     ws.freeze_panes = ws.cell(r0 + 1, 1)
     if sala['righe']:
@@ -911,7 +936,7 @@ def foglio_interventi(ws, st, lista, periodo):
              servizi.ETICHETTA_STATO.get('NON_PRESENTATO', 'Non presentato'): grigio_f}
     tabella_excel(ws, riga, intestazioni, larghezze, righe,
                   formati={1: 'dd/mm/yyyy', 2: FORMATO_ORA, 3: FORMATO_ORA},
-                  totali={1: 'Totale (solo attivi)', 5: '%d intervent%s' % (len(attivi), 'o' if len(attivi) == 1 else 'i')} if lista else None,
+                  totali={1: 'Totale (solo attivi): %d intervent%s' % (len(attivi), 'o' if len(attivi) == 1 else 'i')} if lista else None,
                   a_capo=(6,), stile_riga=lambda v: {'font': stati[v[6]]} if v[6] in stati else None)
     if not lista:
         ws.cell(riga + 1, 1, 'Nessun intervento in questo periodo.')
@@ -927,8 +952,8 @@ def _settimana_di(iso):
 
 def _titolo_settimana(lunedi):
     domenica = lunedi + timedelta(days=6)
-    return 'Settimana dal %d %s al %d %s %d' % (lunedi.day, servizi.MESI[lunedi.month - 1], domenica.day,
-                                               servizi.MESI[domenica.month - 1], domenica.year)
+    return 'Settimana %s %s %s %s %d' % (servizi.dal_giorno(lunedi.day), servizi.MESI[lunedi.month - 1],
+                                        servizi.al_giorno(domenica.day), servizi.MESI[domenica.month - 1], domenica.year)
 
 
 @bp.route('/')

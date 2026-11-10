@@ -688,6 +688,26 @@ fuori dai conti degli ambulatori, ma dalla 1.12.3 la settimana e il mese le most
 d'occhio (alla 1.12 era una fila di otto numeri che non tornavano, «in ritardo» contava solo le
 ultime tre ore e chi era arrivato stamattina senza essere segnato non stava da nessuna parte).
 
+- **Le esportazioni stampate** (1.12.4, dall'anteprima delle nove esportazioni stampate su A4 e guardate
+  pagina per pagina): il planning del giorno con una tabella stretta (le due sale della sala operatoria, una
+  stanza sola) va su un A4 verticale, le altre in orizzontale (`servizi._larghezza_pixel` contro
+  `PIXEL_A4_VERTICALE`, contando solo la tabella); titolo e legenda vanno a capo e la riga cresce
+  (`_righe_testo`; in una cella unita Excel non fa uscire il testo); oltre la tabella il titolo prende colonne
+  vuote larghe 9 per stare in due righe. Il foglio della sala ha le righe delle fasce delle sale
+  (`griglia(..., solo=di_sala)`; senza `solo` la griglia è quella di sempre), non quelle da 15 minuti di un
+  ambulatorio, e le parole della sala (intervento, chirurgo, sala; nell'elenco le colonne SALA e CHIRURGO).
+  Ogni fascia libera o chiusa più lunga di una riga è un blocco solo (celle unite, colorate tutte); il
+  grigio «fuori turno» è D6DADF (prima ECEEF0, uguale all'azzurro su carta); sotto la legenda quanti
+  appuntamenti sono disdetti o non presentati (la loro fascia resta libera). La testata di ogni pagina dice
+  anche cosa c'è nel foglio (ambulatori o sala operatoria). In tutti gli Excel `imposta_stampa_excel` mette
+  testata e piede a 0,25 pollici (con gli 0,5 di partenza di openpyxl restava un decimo di pollice e la testata
+  copriva il titolo), e `una_pagina_se_manca_poco` fa stare in una pagina un foglio alto al massimo un quarto
+  più di una pagina (il planning, la sala del mese). In `tabella_excel` date e orari al centro e l'etichetta
+  dei totali unita alle celle vuote che la seguono (prima ne usciva sotto i bordi). Nei fogli di `ambulatori.py`
+  ogni carattere ha il nome (`_carattere`, Calibri 11 come le celle senza stile); le settimane con gli articoli
+  giusti (`servizi.dal_giorno`, `al_giorno`: dall'8, all'11); nel calendario del mese la data e il giorno in
+  ogni riga (in grigio dalla seconda del giorno) e quando è stato calcolato; una data sola è testo; nella sala
+  della settimana l'orario va sotto il nome quando non ci sta; la legenda della sala dice «arrivati».
 - **In cima** una frase in parole semplici (`riassunto`): quante visite sono in corso, quante stanze
   hanno un medico adesso, quanti pazienti hanno l'orario passato senza l'arrivo segnato e il prossimo
   appuntamento. Sotto, una barra a quattro colori e i quattro numeri, che sommano agli appuntamenti
@@ -2728,6 +2748,7 @@ falliscono, cioè il difetto c'era davvero.
 | Riepilogo del periodo, prima della pubblicazione (revisione della 1.12.2) | Un medico in due stanze nello stesso momento contava le ore doppie; le visite dopo la mezzanotte e le stanze disattivate sparivano; un festivo con un turno sembrava chiuso; due mesi interi con le frecce diventavano uno; «il 0%» | Ore del medico unite su tutte le stanze, la coda dopo la mezzanotte nel giorno dopo, le stanze disattivate con i loro appuntamenti, il festivo aperto se ha turni, le frecce sullo stesso numero di mesi, «lo 0%»; una prova contata a mano |
 | Verifica indipendente della 1.12.3, prima della pubblicazione | Un turno di sala prima delle 8 o dopo le 20 spariva dalla settimana (il chirurgo «senza turno»); con due turni sovrapposti un intervento contava due volte; un giorno di sola sala aggiungeva una colonna alla matrice della direzione e una riga al riepilogo live; nella pagina del mese una chiusura con un intervento perdeva il motivo; altri testi e il telefono | Mezze giornate della sala da mezzanotte a mezzanotte; un intervento, un turno; la matrice e il live come prima; il motivo per primo; prova con tutti i casi limite, e ogni difetto rimesso apposta fa fallire una prova |
 | Esportazioni della sala separate da quelle degli ambulatori (richieste di Giovanni, 9 novembre 2026) | La matrice della settimana e la programmazione del mese lasciavano fuori la sala operatoria, la sala non aveva un Excel e non c'era un file unico per giorno, settimana e mese | Dalla 1.12.3 la sala nella settimana e nel mese in pagina, e *Esportazioni in Excel*: giorno, settimana e mese per ambulatori, sala operatoria o tutto insieme in fogli separati; i conti e gli Excel classici degli ambulatori uguali a prima |
+| Anteprima delle esportazioni della 1.12.3, stampate su A4 e guardate da nove revisori (10 novembre 2026) | Il planning della sala del giorno con titolo e legenda tagliati, su due pagine e con le righe da 15 minuti dell'endoscopia; fasce libere a strisce; grigio e azzurro uguali su carta; la testata di ogni pagina sopra il titolo (0,1 pollici di spazio); caratteri senza nome nei fogli di settimana e mese; «al 8» senza apostrofo; nel calendario righe senza data dopo un salto pagina; la sala del mese su due pagine; il totale tagliato dai bordi; orari attaccati al testo accanto; una data sola scritta come numero | 1.12.4: ognuna corretta con la sua prova in `prove_112.py` o `prove_112_excel.py`, che con il codice della 1.12.3 falliscono (dieci). Lasciati com'erano, da decidere: la stampa piccola dell'elenco del giorno e delle matrici (stanno in una pagina in larghezza) e il verde, che vuol dire appuntamento nel planning e libero nella matrice |
 | Riepilogo del periodo, seconda revisione (1.12.2) | I turni di una stanza disattivata contavano anche dopo lo spegnimento; la sola coda dopo la mezzanotte non la faceva comparire; una visita fino alle 24:00 lasciava una riga del medico a zero; un giorno chiuso con soli disdetti sembrava aperto; le prove dell'Excel avevano solo ore intere | Turni della stanza spenta fino al suo ultimo appuntamento; la coda la fa comparire; niente coda alle 24:00; i disdetti non aprono il giorno; Excel provato cella per cella con un terzo d'ora |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già

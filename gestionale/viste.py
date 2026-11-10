@@ -120,8 +120,8 @@ def settimana(iso):
     return render_template(
         'settimana.html', vista=vista, st=st, sid=st.id, strutture=strutture, medici=medici,
         medico=medico, lunedi=lunedi, oggi=date.today(),
-        titolo='Settimana dal %d %s al %d %s %d' % (
-            lunedi.day, servizi.MESI[lunedi.month - 1], domenica.day,
+        titolo='Settimana %s %s %s %s %d' % (
+            servizi.dal_giorno(lunedi.day), servizi.MESI[lunedi.month - 1], servizi.al_giorno(domenica.day),
             servizi.MESI[domenica.month - 1], domenica.year),
         prima=(lunedi - timedelta(days=7)).isoformat(), dopo=(lunedi + timedelta(days=7)).isoformat(),
         giorni_nomi=servizi.GIORNI, sezione='settimana', data_menu=g.isoformat())

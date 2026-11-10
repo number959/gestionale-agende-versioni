@@ -17,9 +17,15 @@ NOVITA = [
         dict(titolo='Le esportazioni in Excel stampate meglio',
              testo='Il planning della sala operatoria del giorno sta in una pagina, in verticale quando le sale sono '
                    'poche, con le righe delle fasce della sala e il titolo e la legenda interi (prima uscivano tagliati). '
-                   'Nei planning del giorno ogni fascia libera o chiusa è un blocco solo, senza strisce bianche. La riga '
-                   'in testa a ogni pagina stampata non copre più il titolo. Nella programmazione del mese una data sola '
-                   'sta a sinistra come le altre.',
+                   'Nei planning ogni fascia libera o chiusa è un blocco solo, senza strisce bianche, e il grigio «fuori '
+                   'turno» si distingue dall\'azzurro anche stampato in bianco e nero. La riga in testa a ogni pagina non '
+                   'copre più il titolo e dice se il foglio è degli ambulatori o della sala.',
+             guida='esportazioni'),
+        dict(titolo='Settimana, mese ed elenchi più ordinati',
+             testo='Nella sala della settimana il nome del chirurgo sta su una riga e l\'orario sotto. Nel calendario del '
+                   'mese ogni riga ha la sua data, anche dopo un salto pagina. La sala del mese sta in una pagina. Negli '
+                   'elenchi orari e date sono al centro e il totale non è più tagliato; nelle date «dall\'8» e '
+                   '«all\'11» hanno l\'apostrofo, e una data sola sta a sinistra come le altre.',
              guida='esportazioni'),
     ]),
     ('1.12.3', [

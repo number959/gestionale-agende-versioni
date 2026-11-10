@@ -440,6 +440,16 @@ class Regole:
 
 
 # ================================================================ griglia
+def dal_giorno(giorno):
+    """'dal 9', ma 'dall'1', 'dall'8', 'dall'11' (davanti a una vocale l'articolo si apostrofa)."""
+    return ("dall'%d" if giorno in (1, 8, 11) else 'dal %d') % giorno
+
+
+def al_giorno(giorno):
+    """'al 15', ma 'all'1', 'all'8', 'all'11'."""
+    return ("all'%d" if giorno in (1, 8, 11) else 'al %d') % giorno
+
+
 def griglia(ses, g, struttura_id, regole=None, solo=None):
     """Restituisce le fasce del giorno e, per ogni stanza, la colonna di celle.
 
@@ -1055,12 +1065,14 @@ def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps):
     from openpyxl.utils import get_column_letter
     # qui dentro: comune importa questo modulo
     from comune import (apri_foglio_excel, bordo_excel, carattere_excel, imposta_stampa_excel, stile_intestazione_excel,
-                        testo_excel, EXCEL_BLU, EXCEL_GRIGIO, FORMATO_ORA)
+                        testo_excel, una_pagina_se_manca_poco, EXCEL_BLU, EXCEL_GRIGIO, FORMATO_ORA)
 
     box = bordo_excel()
     verde = PatternFill('solid', fgColor='FFE2EFDA')         # appuntamento
     azzurro = PatternFill('solid', fgColor='FFEEF3FA')       # fascia libera dentro un turno
-    grigio = PatternFill('solid', fgColor='FFECEEF0')        # fuori turno, stanza chiusa
+    # fuori turno, stanza chiusa: piu' scuro dell'azzurro, che su carta (anche in bianco e nero) restava uguale;
+    # fino alla 1.12.3 era ECEEF0, a 5 livelli di grigio dall'azzurro (1.12.4)
+    grigio = PatternFill('solid', fgColor='FFD6DADF')
 
     colonne, elenco_fasce = colonne_scelte, vista['fasce']
     ultima_colonna = 1 + 2 * len(colonne)
@@ -1183,6 +1195,17 @@ def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps):
     ws.row_dimensions[riga].height = 13 * _righe_testo(legenda.value, larga, 0.9) + 3
     # le stanze disattivate non hanno una colonna: i loro appuntamenti stanno nel foglio Elenco
     fuori = [a for a in apps if a.risorsa is not None and not a.risorsa.attiva and a.stato in STATI_ATTIVI]
+    # disdetti e non presentati non occupano la fascia (resta azzurra): il foglio dice quanti sono e dove trovarli,
+    # come la griglia del programma, che li elenca sotto la tabella (1.12.4)
+    annullati = [a for a in apps if a.risorsa is not None and a.risorsa.attiva and a.stato not in STATI_ATTIVI]
+    if annullati:
+        riga += 1
+        nota = ws.cell(riga, 1, '%d %s%s disdett%s o non presentat%s: le fasce restano libere, sono nel foglio Elenco.'
+                       % (len(annullati), 'intervent' if di_sala_op else 'appuntament',
+                          'o' if len(annullati) == 1 else 'i', 'o' if len(annullati) == 1 else 'i',
+                          'o' if len(annullati) == 1 else 'i'))
+        nota.font = carattere_excel(size=9, italic=True, color=EXCEL_GRIGIO)
+        ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=max(2, ultima_colonna))
     if not colonne and cosa:
         riga += 1
         vuota = ws.cell(riga, 1, 'Nessuna %s attiva in questa struttura.' % ('sala operatoria' if cosa == 'sala operatoria' else 'stanza'))
@@ -1200,17 +1223,16 @@ def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps):
     # le altre in orizzontale come sempre; e se in altezza manca poco, una pagina sola invece di due (1.12.4)
     # conta la tabella, non le colonne vuote date al titolo (una sala sola): quelle si stringono con la pagina
     verticale = _larghezza_pixel(larghezze[:ultima_colonna]) <= PIXEL_A4_VERTICALE
-    imposta_stampa_excel(ws, not verticale, '1:2', 'A:A', st, etichetta_giorno(g))
-    alta = sum(ws.row_dimensions[r].height or 15 for r in range(1, riga + 1))
-    utile = (PUNTI_A4_LUNGO if verticale else PUNTI_A4_CORTO) - 2 * 0.6 * 72
-    if alta <= utile * 1.25:
-        ws.page_setup.fitToHeight = 1
+    # la testata di ogni pagina dice anche cosa c'e' nel foglio: ambulatori e sala dello stesso file avevano la
+    # stessa (1.12.4)
+    imposta_stampa_excel(ws, not verticale, '1:2', 'A:A', st,
+                         '%s · %s' % (cosa, etichetta_giorno(g)) if cosa else etichetta_giorno(g))
+    una_pagina_se_manca_poco(ws, riga, verticale)
 
 
 # per decidere come va su carta il planning: un A4 verticale, tolti i margini di 0,4 pollici, e' largo circa 720
-# pixel; le pagine sono alte 842 punti in verticale e 595 in orizzontale
+# pixel
 PIXEL_A4_VERTICALE = 720
-PUNTI_A4_LUNGO, PUNTI_A4_CORTO = 842, 595
 
 
 def _larghezza_pixel(larghezze):
@@ -1242,7 +1264,8 @@ def _foglio_elenco(wb, ses, g, struttura_id, apps=None, titolo=None, parola='app
         for k in a.valori_extra:
             if k not in extra:
                 extra.append(k)
-    intestazioni = ['ORA', 'FINE', 'STANZA', 'MEDICO', 'PAZIENTE', 'TELEFONO', 'EMAIL',
+    sala_op = parola == 'intervent'       # l'elenco della sala operatoria: sale e chirurghi (1.12.4)
+    intestazioni = ['ORA', 'FINE', 'SALA' if sala_op else 'STANZA', 'CHIRURGO' if sala_op else 'MEDICO', 'PAZIENTE', 'TELEFONO', 'EMAIL',
                     'PRESTAZIONE', 'TIPO', 'CONVENZIONE / ASSICURAZIONE', 'IMPORTO', 'STATO',
                     'NOTE'] + [e.upper() for e in extra]
     larghezze = [7, 7, 16, 18, 24, 15, 24, 22, 13, 20, 11, 14, 30] + [16] * len(extra)

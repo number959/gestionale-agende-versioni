@@ -547,13 +547,15 @@ def b_sala_settimana_e_mese():
     giorni_a = [str(wa.cell(6, c).value or '').split('\n')[0] for c in range(2, wa.max_column + 1, 2) if wa.cell(6, c).value]
     assert giorni_a == ['Lunedì 7/12', 'Martedì 8/12', 'Mercoledì 9/12', 'Giovedì 10/12', 'Venerdì 11/12', 'Sabato 12/12'], giorni_a
     assert all('solo sala operatoria' not in str(c.value or '') for row in wa.iter_rows() for c in row)
-    attese = {(o, 'Lunedì 7/12 mattina'): 'Esempietti Rita 08:00-14:00\n2 interventi',
+    # nel foglio della settimana (colonne strette) l'orario va sotto il nome intero quando la riga e' piu' lunga di
+    # 22 lettere: prima andava a capo dopo «08:00-» (1.12.4); nella pagina il testo resta su una riga
+    attese = {(o, 'Lunedì 7/12 mattina'): 'Esempietti Rita\n08:00-14:00\n2 interventi',
               (o, 'Lunedì 7/12 pomeriggio'): 'Esempietti Rita, senza turno\n1 intervento',
               (o, 'Martedì 8/12 mattina'): 'CHIUSO: Immacolata Concezione\nEsempietti Rita, senza turno\n1 intervento',
               (o, 'Martedì 8/12 pomeriggio'): 'CHIUSO: Immacolata Concezione',
               (o, 'Giovedì 10/12 mattina'): 'CHIUSO: Manutenzione',
               (o, 'Domenica 13/12 mattina'): 'sala libera',
-              (o2, 'Mercoledì 9/12 pomeriggio'): 'Fintini Ugo 14:00-18:00\n1 intervento',
+              (o2, 'Mercoledì 9/12 pomeriggio'): 'Fintini Ugo\n14:00-18:00\n1 intervento',
               (o2, 'Domenica 13/12 mattina'): 'Galasso 09:00-12:00\n1 intervento'}
     for (riga, quando), testo_atteso in attese.items():
         assert ws.cell(riga, colonna[quando]).value == testo_atteso, (riga, quando, ws.cell(riga, colonna[quando]).value)
@@ -687,6 +689,23 @@ def b_esportazioni():
         libri[('giorno', 'sala')]['Elenco']['A1'].value
     assert str(amb['Elenco']['A1'].value).startswith('Clinica Prova — Appuntamenti degli ambulatori del lunedì 7 dicembre 2026'), \
         amb['Elenco']['A1'].value
+    # 1.12.4, dall'anteprima: ogni cella scritta ha il nome del carattere (i grassetti e i corsivi della matrice e
+    # della sala non l'avevano: fuori da Excel un carattere con le grazie); la testata del planning dice cosa c'e'
+    for (periodo, parte), wb_ in libri.items():
+        for foglio in wb_.worksheets:
+            senza = [c.coordinate for row in foglio.iter_rows() for c in row if c.value is not None and not c.font.name]
+            assert not senza, (periodo, parte, foglio.title, senza[:5])
+    assert 'sala operatoria · lunedì 7 dicembre 2026' in libri[('giorno', 'sala')]['Sala operatoria'].oddHeader.center.text
+    assert 'ambulatori · lunedì 7 dicembre 2026' in libri[('giorno', 'ambulatori')]['Ambulatori'].oddHeader.center.text
+    wi_ = libri[('mese', 'sala')]['Interventi']
+    tot_ = next(i for i in range(1, wi_.max_row + 1) if str(wi_.cell(i, 1).value or '').startswith('Totale (solo attivi): '))
+    assert 'A%d:G%d' % (tot_, tot_) in [str(m) for m in wi_.merged_cells.ranges], 'il conto non sotto CHIRURGO'
+    import ambulatori as A_
+    assert A_._settimana_testo({'lunedi': date(2026, 11, 2)}) == "dal 2 novembre all'8 novembre 2026"
+    assert A_._settimana_testo({'lunedi': date(2027, 2, 8)}) == "dall'8 febbraio al 14 febbraio 2027"
+    assert 'confermati o arrivati' in A_.LEGENDA_SALA and 'fatti' not in A_.LEGENDA_SALA
+    ws_m = libri[('mese', 'sala')]['Sala operatoria']
+    assert ws_m.page_setup.fitToHeight == 1, 'la sala del mese in una pagina, se manca poco'
     # la settimana e il mese degli ambulatori: uguali ai file classici, cella per cella
     _, classica = excel(C, '/ambulatori/settimana/%s.xlsx?struttura=1' % LUN.isoformat())
     assert valori(libri[('settimana', 'ambulatori')]['Matrice']) == valori(classica['Matrice'])
@@ -825,7 +844,10 @@ def b_sala_casi_limite():
     assert 'fuori turno' in t and 'senza turno' not in t.split('details class="calendario-mese"')[1]
     _, wb = excel(C, '/esportazioni/mese/tutto/2026-12-01.xlsx?struttura=1')
     wc = wb['Calendario']
-    per_data = {wc.cell(i, 1).value: wc.cell(i, 3).value for i in range(4, wc.max_row + 1) if isinstance(wc.cell(i, 1).value, datetime)}
+    per_data = {}
+    for i in range(4, wc.max_row + 1):          # la prima riga di ogni giorno (dalla 1.12.4 la data e' in ogni riga)
+        if isinstance(wc.cell(i, 1).value, datetime):
+            per_data.setdefault(wc.cell(i, 1).value, wc.cell(i, 3).value)
     assert per_data[datetime(2026, 12, 8)] == 'chiusa: immacolata concezione' and per_data[datetime(2026, 12, 10)] == 'chiusa: manutenzione'
     # la sala del mese: tutte le sale, giorno per giorno, uguali alle settimane (anche la domenica di sola sala)
     ws = wb['Sala operatoria']
@@ -1208,15 +1230,20 @@ def e_programmazione():
     assert [wc.cell(3, c).value for c in range(1, 6)] == ['Data', 'Giorno', 'Stanza', 'Medico', 'Orario']
     righe = [[wc.cell(i, c).value for c in range(1, 6)] for i in range(4, wc.max_row + 1)]
     assert righe[0][:2] == [datetime(2026, 12, 1), 'Martedì'] and righe[0][2:] == ['Ambulatorio 2', 'Fintini Ugo', '08:00-20:00'], righe[0]
-    date_righe = {r[0].date() if isinstance(r[0], datetime) else r[0]: r for r in righe if r[0]}
+    date_righe = {}
+    for r in righe:            # la prima riga di ogni giorno (dalla 1.12.4 la data e' in ogni riga)
+        if r[0]:
+            date_righe.setdefault(r[0].date() if isinstance(r[0], datetime) else r[0], r)
     assert date_righe[date(2026, 12, 2)][2] == 'nessun medico in turno'
     assert date_righe[date(2026, 12, 8)][2] == 'chiusa: immacolata concezione' and colore(wc.cell(4 + righe.index(date_righe[date(2026, 12, 8)]), 1)) == 'E7E9E6'
     assert date_righe[date(2026, 12, 10)][2] == 'chiusa: manutenzione'
     assert date_righe[date(2026, 12, 7)][2:] == ['Ambulatorio 1', 'Lippiello Anna', '15:00-20:00']
     lun14 = righe.index(date_righe[date(2026, 12, 14)])
-    assert righe[lun14][2:] == ['Ambulatorio 1', 'Galasso', '08:00-13:00'] and righe[lun14 + 1] == [None, None, 'Ambulatorio 1', 'Lippiello Anna', '15:00-20:00']
+    assert righe[lun14][2:] == ['Ambulatorio 1', 'Galasso', '08:00-13:00'] and righe[lun14 + 1] == [datetime(2026, 12, 14), 'Lunedì', 'Ambulatorio 1', 'Lippiello Anna', '15:00-20:00']
     assert date(2026, 12, 6) not in date_righe and date(2026, 12, 13) not in date_righe, 'le domeniche chiuse non ci sono'
     assert wc.cell(4, 1).number_format == 'dd/mm/yyyy' and wc.page_setup.orientation == 'portrait'
+    assert wc.cell(lun14 + 5, 1).font.color.rgb.endswith('9AA5AD'), 'la data ripetuta in grigio'
+    assert str(wc.cell(2, 1).value).startswith('Calcolato dai turni'), wc.cell(2, 1).value
     # un mese senza turni
     _, wb = excel(C, '/ambulatori/mese/2025-12.xlsx')
     assert wb['Programmazione'].cell(6, 1).value.startswith('Nessun turno nelle stanze attive') and \
