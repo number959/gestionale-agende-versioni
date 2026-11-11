@@ -2633,11 +2633,56 @@ def p_periodo_parole_una_sala():
     for t in (testo(C.get('/ambulatori/riepilogo?%s' % q)), testo(C.get('/riepilogo-live/statistiche?%s&schermo=1' % q))):
         assert '<h2 class="sezione">La sala <small class="sotto-titolo">ore di turno, quanto è stata occupata' in t \
             and 'dai turni nella sala e dai loro interventi' in t and '2 interventi in 1 sala' in t, 'al singolare'
+        assert 'i turni dei chirurghi nella sala,' in t, 'la nota in fondo al singolare'
         assert 'Provolo' not in t and '3339990006' not in t, 'mai dati dei pazienti'
 
 
 prova('1.12.6, dalla revisione: con una sola sala le frasi al singolare, e «c\'è 1 ora» dopo la mezzanotte',
       p_periodo_parole_una_sala)
+
+
+def p_periodo_parole_una_stanza():
+    """Dalla seconda revisione della 1.12.6: anche con una sola stanza tutte le parole al singolare, compreso «di turno
+    nella stanza» sotto i numeri e la nota in fondo, nella pagina, nella dashboard e nel JSON; e il riepilogo live («1 di
+    1 stanza», «La stanza adesso», «nella stanza»). Con piu' stanze resta il plurale."""
+    import re
+    import ambulatori as AM
+    from modelli import Appuntamento, Paziente
+    S, I, C = mondo(seconda=True)
+    turno(S, I['Galasso'], I['Stanza Nord'], 0, time(9), time(14))
+    s = S()
+    pz = Paziente(cognome='Provolo', nome='Gino', telefono='3339990006')
+    s.add(pz)
+    s.flush()
+    inizio = datetime.combine(LUN, time(10))
+    s.add(Appuntamento(risorsa_id=I['Stanza Nord'], operatore_id=I['Galasso'], paziente_id=pz.id, inizio=inizio,
+                       fine=inizio + timedelta(minutes=30), stato='ARRIVATO'))
+    s.commit()
+    r = AM.riepilogo_periodo(s, s.get(Struttura, 2), LUN, LUN + timedelta(days=6), adesso=datetime.combine(LUN, time(12)))
+    assert [x['stanza'] for x in r['stanze']] == ['Stanza Nord'], r['stanze']
+    assert r['parole']['di_turno'] == 'di turno nella stanza' and r['parole']['nelle'] == 'nella stanza', r['parole']
+    assert 'La stanza è stata occupata per' in r['frase'], r['frase']
+    s.close()
+    q = 'struttura=2&da=%s&a=%s' % (LUN.isoformat(), (LUN + timedelta(days=6)).isoformat())
+    for t in (testo(C.get('/ambulatori/riepilogo?%s' % q)), testo(C.get('/riepilogo-live/statistiche?%s&schermo=1' % q))):
+        assert 'di turno nella stanza</li>' in t and 'nelle stanze' not in t and 'i turni dei medici nella stanza,' in t \
+            and '<h2 class="sezione">La stanza <small' in t, 'al singolare'
+        assert 'Provolo' not in t and '3339990006' not in t, 'mai dati dei pazienti'
+    for indirizzo in ('/ambulatori/riepilogo.json', '/riepilogo-live/statistiche.json'):
+        assert C.get('%s?%s' % (indirizzo, q)).get_json()['parole']['di_turno'] == 'di turno nella stanza', indirizzo
+    # il riepilogo live della struttura con una sola stanza
+    tl = testo(C.get('/riepilogo-live?struttura=2'))
+    frase = re.search(r'<p class="frase-live[^>]*>([^<]*)</p>', tl).group(1)
+    assert 'nelle stanze' not in frase and ('nella stanza' in frase or 'stanza su 1' in frase), frase
+    assert 'di 1 stanza con un medico adesso' in tl and '<h2 class="sezione">La stanza adesso' in tl, 'live al singolare'
+    # con piu' stanze il plurale resta
+    t1 = testo(C.get('/riepilogo-live?struttura=1'))
+    assert 'stanze con un medico adesso' in t1 and '<h2 class="sezione">Le stanze adesso' in t1
+    assert 'di turno nelle stanze</li>' in testo(C.get('/ambulatori/riepilogo?struttura=1&da=%s&a=%s' % (LUN, LUN)))
+
+
+prova('1.12.6, dalla seconda revisione: con una sola stanza tutto al singolare, anche nel riepilogo live',
+      p_periodo_parole_una_stanza)
 
 
 def l_revisione():

@@ -1369,7 +1369,7 @@ PAROLE_RIEPILOGO = {
 # con una sola stanza o una sola sala nel periodo le frasi vanno al singolare («La sala è stata occupata», «nella sala»)
 PAROLE_UNA = {
     'ambulatori': dict(nelle='nella stanza', occupate='La stanza è stata occupata', le_stanze='La stanza',
-                       quanto='quanto è stata occupata'),
+                       quanto='quanto è stata occupata', di_turno='di turno nella stanza'),
     'sala': dict(nelle='nella sala', occupate='La sala è stata occupata', le_stanze='La sala',
                  quanto='quanto è stata occupata'),
 }

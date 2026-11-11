@@ -99,6 +99,12 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
+- **Versione 1.12.6, pronta ma NON pubblicata** (11 novembre 2026): il riepilogo del periodo anche della sala
+  operatoria e lo stesso riepilogo dentro la dashboard (vedi *La 1.12.6*). Due revisioni indipendenti, difetti
+  confermati sistemati; prove verdi in tutte e due le cartelle (anche nel browser), immagini e video della guida
+  rifatti, Setup costruiti in Wine e installati sopra la 1.12.5 pubblicata (59 controlli su 59, normale e animata), prove
+  su Windows verdi. Si pubblica solo con il via di Giovanni (workflow «Pubblica una versione», `ultima: true`). Il
+  database non cambia.
 - **Versione 1.12.5, pubblicata il 10 novembre 2026**: la release `v1.12.5`, segnata come ultima, con i due
   Setup, i due file delle versioni e il PDF della guida. Interventi e ambulatori per medico (vedi *La 1.12.5*). Il
   database non cambia. Alla clinica va messa una volta a mano (vedi *Cose aperte*).
@@ -1044,9 +1050,13 @@ riepilogo del periodo anche della sala, con le stesse regole, e lo stesso riepil
 `/riepilogo-live/statistiche`, così il portiere lo lascia passare senza cambiare la sua regola. Il pulsante nella
 dashboard si chiama «Riepilogo del periodo» e non «Statistiche», come aveva chiesto Giovanni: la revisione ha trovato che
 la voce *Statistiche* del menu, accanto, è un'altra pagina e per la stessa settimana dà numeri diversi (conta in un
-altro modo). Se Giovanni preferisce un altro nome si cambia nel solo testo del pulsante e del titolo. Dalla stessa
-revisione: nel modo schermo la dashboard non ha più collegamenti fuori da `/riepilogo-live*` (c'era la nota sulla
-pianificazione), e con una sola sala le frasi sono al singolare.
+altro modo). Se Giovanni preferisce un altro nome: il testo del pulsante in `riepilogo_live.html`; il titolo, che oggi
+è lo stesso della pagina del menu (`<h1>` in `ambulatori_riepilogo.html` e `titolo` in `pagina_riepilogo`: ci vuole di
+nuovo una condizione su `cruscotto`); il passo della guida in `guida.py`, la novità, le note della versione, e i
+controlli sul nome in `p_periodo_sala`, `prove_112_browser.py` e `prove_installato.py`. URL ed endpoint restano. Dalla
+stessa revisione: nel modo schermo la dashboard non ha più collegamenti fuori da `/riepilogo-live*` (c'era la nota sulla
+pianificazione), e con una sola sala o stanza le frasi sono al singolare (una seconda revisione ha trovato ancora «di
+turno nelle stanze» e il plurale nel riepilogo live con una stanza: sistemati).
 
 ## Cose aperte
 

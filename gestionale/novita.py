@@ -23,8 +23,8 @@ NOVITA = [
         dict(titolo='Il riepilogo del periodo nella dashboard',
              testo='Nel riepilogo live il pulsante «Riepilogo del periodo» apre i numeri di un giorno, una settimana o un '
                    'mese, degli ambulatori o della sala operatoria, senza uscire dalla dashboard e senza dati dei '
-                   'pazienti, anche nel modo schermo: si può mostrare anche sugli altri PC della rete, insieme al '
-                   'riepilogo live.',
+                   'pazienti, anche nel modo schermo: quando sarà pronto il collegamento in rete, si potrà mostrare '
+                   'anche sugli altri PC, insieme al riepilogo live.',
              guida='riepilogo-live'),
     ]),
     ('1.12.5', [

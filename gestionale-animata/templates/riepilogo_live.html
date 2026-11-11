@@ -43,14 +43,14 @@
       <li class="gr-da-fare"><i aria-hidden="true"></i><b>{{ o.restanti }}</b> da fare</li>
     </ul>
     <ul class="fatti-live">
-      <li><b>{{ r.stanze_con_medico }}</b> di {{ r.stanze|length }} stanze con un medico adesso</li>
+      <li><b>{{ r.stanze_con_medico }}</b> di {{ r.stanze|length }} {{ 'stanza' if r.stanze|length == 1 else 'stanze' }} con un medico adesso</li>
       <li><b>{{ o.in_struttura }}</b> pazient{{ 'e' if o.in_struttura == 1 else 'i' }} in struttura adesso</li>
       {% if o.disdetti or o.non_presentati %}<li><b>{{ o.disdetti }}</b> disdett{{ 'o' if o.disdetti == 1 else 'i' }} e <b>{{ o.non_presentati }}</b> non presentat{{ 'o' if o.non_presentati == 1 else 'i' }} oggi</li>{% endif %}
       {% if o.prossimo_giorno %}<li class="{% if o.da_confermare %}attenzione{% endif %}"><b>{{ o.da_confermare }}</b> da confermare per {{ o.prossimo_giorno_etichetta }}</li>{% endif %}
     </ul>
   </section>
 
-  <h2 class="sezione">Le stanze adesso <small class="sotto-titolo">il turno del medico, le visite di oggi e, in rosso, l'ora di adesso</small></h2>
+  <h2 class="sezione">{{ 'La stanza' if r.stanze|length == 1 else 'Le stanze' }} adesso <small class="sotto-titolo">il turno del medico, le visite di oggi e, in rosso, l'ora di adesso</small></h2>
   <div class="linea-live" data-guida="live-stanze">
     <div class="riga-live asse-live" aria-hidden="true">
       <div class="nome-live"></div>

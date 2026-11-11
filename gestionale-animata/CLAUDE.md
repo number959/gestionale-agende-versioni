@@ -231,7 +231,8 @@ temporanea.
   (`pagina_riepilogo(cruscotto=True)`): come il riepilogo live mai dati dei pazienti, e con `?schermo=1` (la pagina e
   la dashboard stessa) nessun collegamento fuori da `/riepilogo-live*`, `/static/`, `/logo/` (è quello che lascia passare
   il portiere della rete locale). Nella dashboard non si usa il nome «Statistiche»: è la pagina del menu, che conta in
-  un altro modo. Con una sola stanza o sala le frasi vanno al singolare (`PAROLE_UNA`).
+  un altro modo. Con una sola stanza o sala le frasi vanno al singolare (`PAROLE_UNA`, anche «di turno nella stanza» e
+  la nota in fondo), e così il riepilogo live con una sola stanza.
 - Stampe (dalla 1.12): il foglio del giorno è una `table.impaginazione` con testata in `thead` e
   piede in `tfoot` (il browser li ripete su ogni pagina); il numero di pagina viene dai margin box di
   `@page` in `stile.css`. Le colonne di partenza del foglio sono `viste.COLONNE_DI_PARTENZA`: una

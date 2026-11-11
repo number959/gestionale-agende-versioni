@@ -133,9 +133,9 @@
   </div>
   {% endif %}
   {% if parte == 'sala' %}
-  <p class="nota">Ore di turno: i turni dei chirurghi nelle sale, tolte assenze e chiusure. Occupate: le ore dentro i turni con un intervento (anche dei non presentati, che tenevano la sala; i disdetti no). Arrivati: i pazienti segnati come arrivati. Da segnare: orario passato senza «arrivato», «non presentato» o «disdetto»: si sistemano dalla pagina Sala. Senza dati dei pazienti. Calcolato il {{ r.aggiornato }}.</p>
+  <p class="nota">Ore di turno: i turni dei chirurghi {{ w.nelle }}, tolte assenze e chiusure. Occupate: le ore dentro i turni con un intervento (anche dei non presentati, che tenevano la sala; i disdetti no). Arrivati: i pazienti segnati come arrivati. Da segnare: orario passato senza «arrivato», «non presentato» o «disdetto»: si sistemano dalla pagina Sala. Senza dati dei pazienti. Calcolato il {{ r.aggiornato }}.</p>
   {% else %}
-  <p class="nota">Ore di turno: i turni dei medici nelle stanze, tolte assenze e chiusure. Occupate: le ore dentro i turni con un appuntamento (anche dei non presentati, che tenevano il posto; i disdetti no). Da segnare: orario passato senza «arrivato», «non presentato» o «disdetto»: si sistemano dalla giornata. Calcolato il {{ r.aggiornato }}.</p>
+  <p class="nota">Ore di turno: i turni dei medici {{ w.nelle }}, tolte assenze e chiusure. Occupate: le ore dentro i turni con un appuntamento (anche dei non presentati, che tenevano il posto; i disdetti no). Da segnare: orario passato senza «arrivato», «non presentato» o «disdetto»: si sistemano dalla giornata. Calcolato il {{ r.aggiornato }}.</p>
   {% endif %}
 </div>
 {% endblock %}

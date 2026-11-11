@@ -288,10 +288,11 @@ def riepilogo(s, st, adesso=None):
     con_medico = sum(1 for x in stanze if x['medico'])
     turni_oggi = any(x['turni'] for x in stanze)
     motivo_chiusa = chiusa if chiusa and chiusa.strip().lower() not in ('', 'chiusura') else None
+    nelle = 'nella stanza' if len(stanze) == 1 else 'nelle stanze'     # con una sola stanza, al singolare
     if chiusa and not attivi and not turni_oggi:
         riassunto = 'Oggi la struttura è chiusa%s.' % (': %s' % motivo_chiusa if motivo_chiusa else '')
     elif not attivi and not turni_oggi:
-        riassunto = 'Oggi non ci sono né appuntamenti né turni nelle stanze.'
+        riassunto = 'Oggi non ci sono né appuntamenti né turni %s.' % nelle
     else:
         pezzi = ['%s in corso' % _uno_o_tanti(oggi_conti['in_corso'], 'visita', 'visite'),
                  '%d stanz%s su %d con un medico adesso' % (con_medico, 'a' if con_medico == 1 else 'e', len(stanze))]
@@ -312,7 +313,7 @@ def riepilogo(s, st, adesso=None):
         elif attivi:
             riassunto += ' Nessun altro appuntamento oggi.'
         else:
-            riassunto += ' Oggi non ci sono appuntamenti nelle stanze.'
+            riassunto += ' Oggi non ci sono appuntamenti %s.' % nelle
     adesso_min = _min(adesso)
     posto_adesso = (round(100.0 * (adesso_min - inizio_asse) / durata_asse, 2)
                     if inizio_asse <= adesso_min <= fine_asse else None)

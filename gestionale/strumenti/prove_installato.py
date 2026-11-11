@@ -87,11 +87,12 @@ s, b, _ = get('/riepilogo-live.json?struttura=1')
 d = json.loads(b) if s == 200 else {}
 controlla('Riepilogo live (1.12): il JSON con stanze e numeri di oggi', s == 200 and 'stanze' in d and 'oggi' in d, (s, list(d)[:6]))
 s, b, _ = get('/ambulatori/riepilogo?struttura=1&periodo=mese')
-controlla('Riepilogo del periodo (1.12.2): la pagina', s == 200 and 'Le stanze' in testo(b) and 'class="frase-live' in b.decode('utf-8', 'replace'), s)
+controlla('Riepilogo del periodo (1.12.2): la pagina', s == 200 and ('Le stanze' in testo(b) or 'La stanza' in testo(b)) and 'class="frase-live' in b.decode('utf-8', 'replace'), s)
 s, b, h = get('/ambulatori/riepilogo.xlsx?struttura=1&periodo=mese')
 controlla('Riepilogo del periodo (1.12.2): l\'Excel', s == 200 and b[:2] == b'PK' and 'spreadsheet' in h.get('Content-Type', ''), (s, h.get('Content-Type')))
 s, b, _ = get('/ambulatori/riepilogo?struttura=1&periodo=mese&parte=sala')
-controlla('Riepilogo del periodo della sala (1.12.6): la pagina', s == 200 and 'Le sale' in testo(b) and 'I chirurghi' in testo(b), s)
+controlla('Riepilogo del periodo della sala (1.12.6): la pagina',
+          s == 200 and ('Le sale' in testo(b) or 'La sala' in testo(b)) and 'I chirurghi' in testo(b), s)  # una sola sala: al singolare
 s, b, _ = get('/riepilogo-live/statistiche?struttura=1&periodo=settimana&schermo=1')
 pagina_st = b.decode('utf-8', 'replace')
 controlla('Riepilogo del periodo nella dashboard (1.12.6): la pagina senza menu e senza Excel',

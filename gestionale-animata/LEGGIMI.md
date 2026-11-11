@@ -724,24 +724,27 @@ ultime tre ore e chi era arrivato stamattina senza essere segnato non stava da n
   ({id del chirurgo: interventi}): `testo_cella_sala` e la pagina della settimana mettono il numero sotto il
   chirurgo che li fa (con un chirurgo solo il testo è quello di prima). Nella riga della sala dell'agenda del
   giorno (`griglia.html`) accanto a ogni chirurgo quanti interventi ha (`sala.chirurghi_del_giorno`).
-- **Riepilogo della sala e statistiche nella dashboard** (1.12.6, richiesta di Giovanni del 11 novembre 2026: il
+- **Riepilogo della sala e statistiche nella dashboard** (1.12.6, richiesta di Giovanni dell'11 novembre 2026: il
   riepilogo giornaliero, settimanale e mensile di ambulatori e sale operatorie, da richiamare nella dashboard):
   `ambulatori.riepilogo_periodo(..., parte=)` con `parte='sala'` fa lo stesso conto sulle sale operatorie
   (`stanze_del_periodo(..., parte)`: le sale attive e quelle spente con interventi nel periodo), con le stesse regole
   degli ambulatori: ore di turno dei chirurghi in sala, ore occupate dagli interventi in `STATI_OCCUPANO`, i cinque
   gruppi che sommano al totale, chirurghi, giorni, e le mezze giornate con la sala libera dalla parte della sala della
-  matrice. Le parole cambiano con `PAROLE_RIEPILOGO`; senza `parte` (o con `ambulatori`) tutto è identico alla 1.12.2.
+  matrice. Le parole cambiano con `PAROLE_RIEPILOGO`; senza `parte` (o con `ambulatori`) i numeri sono identici alla 1.12.2 (cambiano
+  solo le parole con una sola stanza, vedi sotto, e «c'è 1 ora» dopo la mezzanotte).
   La pagina `/ambulatori/riepilogo` ha le schede *Ambulatori* e *Sala operatoria* (`?parte=`), anche per l'Excel
   (`riepilogo-sala-operatoria-….xlsx`, fogli *Sale* e *Chirurghi*) e il JSON. Nella dashboard il pulsante
   *Riepilogo del periodo* del riepilogo live apre `/riepilogo-live/statistiche` (e `.json`): la stessa pagina
   (`pagina_riepilogo(..., cruscotto=True)`) con «Torna al riepilogo live», con la classe `pagina-live` (niente
   notifiche, che avrebbero dei nomi); con `?schermo=1` senza menu, senza Excel né stampa e con i soli collegamenti della
-  dashboard (senza schermo, sul PC della clinica, restano il menu, l'Excel e la stampa). Il pulsante si chiama come la
-  pagina del menu Ambulatori, che ha gli stessi numeri, e non «Statistiche»: quella è un'altra pagina, che conta in un
-  altro modo (dalla revisione: i due «Statistiche» uno accanto all'altro davano numeri diversi). Con una sola stanza o
-  sala nel periodo le frasi e i titoli vanno al singolare (`PAROLE_UNA`: «La sala è stata occupata», «nella sala»), così passa dal «portiere» della rete
-  locale (regola `path /riepilogo-live*`). Mai dati dei pazienti: `prove_112.py` (`p_periodo_sala`) lo controlla con un
-  paziente inventato e confronta i numeri della sala con un conto fatto a parte, minuto per minuto.
+  dashboard, così passa dal «portiere» della rete locale (regola `path /riepilogo-live*`); senza schermo, sul PC della
+  clinica, restano il menu, l'Excel e la stampa. Il pulsante si chiama come la pagina del menu Ambulatori, che ha gli
+  stessi numeri, e non «Statistiche»: quella è un'altra pagina, che conta in un altro modo (dalla revisione: i due
+  «Statistiche» uno accanto all'altro davano numeri diversi). Con una sola stanza o sala nel periodo le frasi, i titoli,
+  le ore «di turno nella stanza» e la nota in fondo vanno al singolare (`PAROLE_UNA`: «La sala è stata occupata», «nella
+  sala»); lo stesso nel riepilogo live («1 di 1 stanza», «La stanza adesso»). Mai dati dei pazienti: `prove_112.py` (`p_periodo_sala`) lo controlla con un
+  paziente inventato e confronta i numeri della sala con un conto fatto a parte, minuto per minuto; il singolare con
+  `p_periodo_parole_una_sala` e `p_periodo_parole_una_stanza`.
 - **In cima** una frase in parole semplici (`riassunto`): quante visite sono in corso, quante stanze
   hanno un medico adesso, quanti pazienti hanno l'orario passato senza l'arrivo segnato e il prossimo
   appuntamento. Sotto, una barra a quattro colori e i quattro numeri, che sommano agli appuntamenti
@@ -2847,6 +2850,7 @@ falliscono, cioè il difetto c'era davvero.
 | Due «Statistiche» diverse (revisione della 1.12.6) | Il pulsante nuovo della dashboard si chiamava come la voce del menu *Statistiche*, che conta in un altro modo: per la stessa settimana numeri diversi | Il pulsante e la pagina si chiamano *Riepilogo del periodo*, come la pagina del menu Ambulatori con gli stessi numeri; un solo pulsante con quel nome; `p_periodo_sala` |
 | Un collegamento fuori dalla dashboard nel modo schermo (revisione della 1.12.6) | La nota sotto le mezze giornate libere portava alla pianificazione anche con `?schermo=1`: dagli altri PC della rete il portiere la blocca | La nota c'è solo fuori dal modo schermo; `p_periodo_sala` e `prove_112_browser.py` controllano tutti i collegamenti della dashboard nel modo schermo |
 | Frasi al plurale con una sala sola (revisione della 1.12.6) | «2 interventi in 1 sala», ma «Le sale sono state occupate», «nelle sale», titolo «Le sale»; e «ci sono 1 ora di interventi» dopo la mezzanotte | `PAROLE_UNA` al singolare con una sola stanza o sala; «c'è 1 ora», «c'è 1 minuto»; `p_periodo_parole_una_sala` |
+| Plurale rimasto con una stanza sola (seconda revisione della 1.12.6) | «La stanza è stata occupata», ma «6 h di turno nelle stanze» e la nota «i turni dei medici nelle stanze»; nel riepilogo live «1 di 1 stanze», «Le stanze adesso», «nelle stanze» (questo già da prima) | `di_turno` in `PAROLE_UNA`, la nota con le parole della parte, il riepilogo live al singolare con una stanza; `p_periodo_parole_una_stanza`; `prove_installato.py` accetta «La sala» e «La stanza» |
 | Riepilogo del periodo, seconda revisione (1.12.2) | I turni di una stanza disattivata contavano anche dopo lo spegnimento; la sola coda dopo la mezzanotte non la faceva comparire; una visita fino alle 24:00 lasciava una riga del medico a zero; un giorno chiuso con soli disdetti sembrava aperto; le prove dell'Excel avevano solo ore intere | Turni della stanza spenta fino al suo ultimo appuntamento; la coda la fa comparire; niente coda alle 24:00; i disdetti non aprono il giorno; Excel provato cella per cella con un terzo d'ora |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
