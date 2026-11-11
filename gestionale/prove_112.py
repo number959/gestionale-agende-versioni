@@ -2441,6 +2441,145 @@ prova('riepilogo del periodo (1.12.2, dalla seconda revisione): stanza spenta co
       'e con la sola coda, visita fino alle 24:00, chiusura con soli disdetti, Excel cella per cella', p_periodo_seconda_revisione)
 
 
+def p_periodo_sala():
+    """1.12.6, richiesta di Giovanni: il riepilogo del periodo anche della sala operatoria, e le statistiche nella
+    dashboard. Le sale (anche una spenta con interventi) contro un calcolo fatto a parte, minuto per minuto con gli
+    insiemi; i totali uguali alle somme di sale, giorni e chirurghi; gli ambulatori non cambiano; pagina, Excel, JSON e
+    statistiche della dashboard, senza dati dei pazienti e con i soli collegamenti della dashboard."""
+    import ambulatori as AM
+    import servizi
+    from modelli import Appuntamento, Paziente, Risorsa as R_
+    S, I, C = mondo_pieno()
+    s = S()
+    st = s.get(Struttura, 1)
+    pz = Paziente(cognome='Provolo', nome='Gino', telefono='3339990006')
+    s.add(pz)
+    spenta = R_(nome='Sala vecchia', struttura_id=1, tipo='SALA_OPERATORIA', ordine=98, attiva=False)
+    s.add(spenta)
+    s.flush()
+    def app(rid, oid, giorno, h, m, durata, stato='PRENOTATO'):
+        inizio = datetime.combine(giorno, time(h, m))
+        s.add(Appuntamento(risorsa_id=rid, operatore_id=oid, paziente_id=pz.id, inizio=inizio,
+                           fine=inizio + timedelta(minutes=durata), stato=stato))
+    SO = I['Sala operatoria']
+    app(SO, I['Esempietti'], LUN, 9, 0, 60, 'ARRIVATO')
+    app(SO, I['Esempietti'], LUN, 13, 30, 90, 'CONFERMATO')          # 30 minuti nel turno (8-14), 60 fuori
+    app(SO, I['Galasso'], LUN + timedelta(days=1), 15, 0, 60, 'NON_PRESENTATO')   # fuori turno, teneva la sala
+    app(SO, I['Esempietti'], LUN + timedelta(days=2), 10, 0, 60, 'DISDETTO')
+    app(SO, I['Esempietti'], LUN + timedelta(days=4), 9, 0, 120)        # venerdi, ancora da fare
+    app(spenta.id, I['Fintini'], LUN + timedelta(days=1), 9, 0, 60, 'ARRIVATO')
+    app(I['Ambulatorio 1'], I['Lippiello'], LUN, 15, 0, 30, 'ARRIVATO')  # negli ambulatori: non nella sala
+    s.commit()
+    adesso = datetime.combine(LUN + timedelta(days=2), time(12, 0))
+    sale = list(AM.sale_della(st)) + [spenta]
+
+    def oracolo(da, a):
+        regole = servizi.Regole(s, da, a)
+        per = {r.id: {'turno': 0, 'occupati': 0, 'fuori': 0, 'totale': 0, 'fatti': 0, 'non_presentati': 0,
+                      'disdetti': 0, 'da_segnare': 0, 'da_fare': 0} for r in sale}
+        ultimo = {}
+        for x in s.scalars(select(Appuntamento).where(Appuntamento.risorsa_id == spenta.id, Appuntamento.stato != 'DISDETTO')):
+            ultimo[spenta.id] = max(ultimo.get(spenta.id, x.inizio.date()), x.inizio.date())
+        g = da
+        while g <= a:
+            info = regole.giorno(g, st)
+            for r in sale:
+                turno = set()
+                if r.attiva or (r.id in ultimo and g <= ultimo[r.id]):
+                    for tt in regole.turni_effettivi(g, st, r.id, info):
+                        turno |= set(range(tt.ora_inizio.hour * 60 + tt.ora_inizio.minute, tt.ora_fine.hour * 60 + tt.ora_fine.minute))
+                presi = set()
+                for x in s.scalars(select(Appuntamento).where(Appuntamento.risorsa_id == r.id)):
+                    if x.inizio.date() != g:
+                        continue
+                    if x.stato != 'DISDETTO':
+                        presi |= set(range(x.inizio.hour * 60 + x.inizio.minute, x.fine.hour * 60 + x.fine.minute))
+                    gruppo = {'ARRIVATO': 'fatti', 'NON_PRESENTATO': 'non_presentati', 'DISDETTO': 'disdetti'}.get(
+                        x.stato, 'da_segnare' if x.fine <= adesso else 'da_fare')
+                    per[r.id]['totale'] += 1
+                    per[r.id][gruppo] += 1
+                per[r.id]['turno'] += len(turno)
+                per[r.id]['occupati'] += len(turno & presi)
+                per[r.id]['fuori'] += len(presi - turno)
+            g += timedelta(days=1)
+        return per
+
+    nomi = {SO: 'Sala operatoria', spenta.id: 'Sala vecchia (spenta)'}
+    for da, a in ((LUN, LUN), (LUN, LUN + timedelta(days=6)), (LUN - timedelta(days=7), LUN + timedelta(days=13))):
+        r = AM.riepilogo_periodo(s, st, da, a, adesso=adesso, parte='sala')
+        atteso = oracolo(da, a)
+        letti = {x['stanza']: x for x in r['stanze']}
+        # la sala spenta c'e' solo nei periodi in cui ha interventi (come le stanze spente)
+        attese_qui = {rid: nome for rid, nome in nomi.items() if rid == SO or da <= LUN + timedelta(days=1) <= a}
+        assert set(letti) == set(attese_qui.values()), (da, a, sorted(letti))
+        for rid, nome in attese_qui.items():
+            x, o = letti[nome], atteso[rid]
+            assert (x['minuti_turno'], x['minuti_occupati'], x['minuti_fuori_turno']) == (o['turno'], o['occupati'], o['fuori']), (da, a, nome, x, o)
+            for k in ('totale', 'fatti', 'non_presentati', 'disdetti', 'da_segnare', 'da_fare'):
+                assert x[k] == o[k], (da, a, nome, k, x[k], o[k])
+        tot = r['totale']
+        for k in ('totale', 'minuti_turno', 'minuti_occupati', 'minuti_fuori_turno', 'fatti', 'non_presentati', 'disdetti',
+                  'da_segnare', 'da_fare', 'mezze', 'libere'):
+            assert tot[k] == sum(x[k] for x in r['stanze']), (k, tot[k])
+        for k in ('totale', 'minuti_turno', 'minuti_occupati', 'fatti', 'non_presentati', 'disdetti', 'da_segnare', 'da_fare'):
+            assert tot[k] == sum(x[k] for x in r['giorni']), ('giorni', k)
+        assert tot['totale'] == sum(m['totale'] for m in r['medici']), 'interventi dei chirurghi'
+        assert r['parte'] == 'sala' and r['parole']['medici'] == 'chirurghi'
+    # la settimana a mano: la sala attiva ha il turno 8-14 dal lunedi al sabato; martedi 8 e' l'Immacolata e giovedi la
+    # struttura e' chiusa: restano quattro giorni di turno
+    r = AM.riepilogo_periodo(s, st, LUN, LUN + timedelta(days=6), adesso=adesso, parte='sala')
+    so = next(x for x in r['stanze'] if x['stanza'] == 'Sala operatoria')
+    assert so['minuti_turno'] == 4 * 6 * 60, so['minuti_turno']
+    assert (so['minuti_occupati'], so['minuti_fuori_turno']) == (60 + 30 + 120, 60 + 60), (so['minuti_occupati'], so['minuti_fuori_turno'])
+    assert (so['totale'], so['fatti'], so['non_presentati'], so['disdetti'], so['da_segnare'], so['da_fare']) == (5, 1, 1, 1, 1, 1), so
+    # mezze giornate: le quattro mattine con il turno e i quattro pomeriggi senza turni ne' interventi attivi; martedi
+    # (festivo, con il solo non presentato) e giovedi (chiuso) non contano; la sala spenta non ha mezze giornate
+    assert (so['mezze'], so['libere']) == (8, 4), (so['mezze'], so['libere'])
+    chirurghi = {m['medico']: m for m in r['medici']}
+    assert chirurghi['Esempietti Rita']['totale'] == 4 and chirurghi['Galasso']['non_presentati'] == 1 and chirurghi['Fintini Ugo']['fatti'] == 1, chirurghi
+    assert r['frase'].startswith('Dal 7 al 13 dicembre 2026: 6 interventi, 2 arrivati, 1 non presentato'), r['frase']
+    assert 'Le sale sono state occupate per' in r['frase'] and 'con la sala libera' in r['frase'], r['frase']
+    # gli ambulatori: nessuna sala, l'appuntamento dell'Ambulatorio 1 c'e'
+    ra = AM.riepilogo_periodo(s, st, LUN, LUN + timedelta(days=6), adesso=adesso)
+    assert not ({x['stanza'] for x in ra['stanze']} & {'Sala operatoria', 'Sala vecchia', 'Sala vecchia (non più attiva)'}) \
+        and ra['parte'] == 'ambulatori', [x['stanza'] for x in ra['stanze']]
+    assert next(x for x in ra['stanze'] if x['stanza'] == 'Ambulatorio 1')['fatti'] >= 1
+    s.close()
+    # le pagine: il riepilogo con le due schede; la sala con le sue parole; l'Excel della sala
+    q = 'struttura=1&da=%s&a=%s' % (LUN.isoformat(), (LUN + timedelta(days=6)).isoformat())
+    t = testo(C.get('/ambulatori/riepilogo?%s&parte=sala' % q))
+    assert 'Le sale' in t and 'I chirurghi' in t and 'Sala vecchia (spenta)' in t and 'aria-current="page">Sala operatoria</a>' in t
+    assert '/ambulatori/riepilogo.xlsx?' in t and 'parte=sala' in t
+    ta = testo(C.get('/ambulatori/riepilogo?%s' % q))
+    assert 'Le stanze' in ta and 'aria-current="page">Ambulatori</a>' in ta
+    r_x, wb = excel(C, '/ambulatori/riepilogo.xlsx?%s&parte=sala' % q)
+    assert 'riepilogo-sala-operatoria-2026-12-07-2026-12-13.xlsx' in r_x.headers['Content-Disposition'], r_x.headers['Content-Disposition']
+    assert wb.sheetnames == ['Riepilogo', 'Sale', 'Chirurghi', 'Giorni'], wb.sheetnames
+    assert wb['Sale'].cell(5, 1).value in ('SALA', 'Sala') or any(c.value in ('SALA', 'Sala') for row in wb['Sale'].iter_rows(max_row=8) for c in row)
+    # le statistiche della dashboard: stessa pagina, senza menu con ?schermo=1, collegamenti solo della dashboard
+    ts = testo(C.get('/riepilogo-live/statistiche?%s&parte=sala&schermo=1' % q))
+    assert 'Statistiche' in ts and 'Le sale' in ts and '<nav class="menu"' not in ts and 'pagina-live' in ts
+    import re
+    fuori = [h for h in re.findall(r'href="([^"]+)"', ts) if not h.startswith('/riepilogo-live') and not h.startswith('/static/')]
+    assert not fuori, fuori
+    assert 'riepilogo.xlsx' not in ts, 'niente Excel nella dashboard'
+    tsn = testo(C.get('/riepilogo-live/statistiche?%s' % q))
+    assert '<nav class="menu"' in tsn and 'Le stanze' in tsn
+    js = C.get('/riepilogo-live/statistiche.json?%s&parte=sala' % q).get_json()
+    # (il JSON e' calcolato all'ora vera, non a quella ferma della prova: si confrontano i conti che non ne dipendono)
+    assert js['parte'] == 'sala' and js['totale']['totale'] == 6 and js['totale']['minuti_turno'] == r['totale']['minuti_turno'] \
+        and [x['stanza'] for x in js['stanze']] == [x['stanza'] for x in r['stanze']], js['totale']
+    for pagina in (ts, tsn, str(js), testo(C.get('/ambulatori/riepilogo?%s&parte=sala' % q))):
+        assert 'Provolo' not in pagina and '3339990006' not in pagina, 'mai dati dei pazienti'
+    # il riepilogo live porta alle statistiche, anche nel modo schermo
+    assert '/riepilogo-live/statistiche?struttura=1' in testo(C.get('/riepilogo-live?struttura=1'))
+    assert 'schermo=1' in testo(C.get('/riepilogo-live?struttura=1&schermo=1')).split('/riepilogo-live/statistiche')[1][:60]
+
+
+prova('1.12.6: il riepilogo del periodo della sala operatoria contro un calcolo a parte (anche una sala spenta), le '
+      'pagine, l\'Excel e le statistiche della dashboard senza pazienti e con i soli collegamenti della dashboard', p_periodo_sala)
+
+
 def l_revisione():
     """1.12.2, dalla revisione: festivo con un turno di un giorno, chiusura senza motivo, turni piu' tardi senza
     appuntamenti, la sala operatoria fuori dai conti, turni attaccati, visite fuori orario, tacche vicine."""

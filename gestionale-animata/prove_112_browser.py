@@ -275,6 +275,41 @@ with sync_playwright() as p:
     ok('riepilogo del periodo: sul telefono la pagina non scorre di lato (scorrono le tabelle)',
        pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'), pg.evaluate('document.documentElement.scrollWidth'))
     pg.set_viewport_size({'width': 1366, 'height': 820})
+    # 1.12.6: la sala operatoria nel riepilogo del periodo e le statistiche dentro la dashboard
+    pg.goto(B + '/ambulatori/riepilogo?struttura=1&periodo=settimana')
+    pg.wait_for_selector('.pagina-periodo .frase-live')
+    pg.locator('.parti-periodo a', has_text='Sala operatoria').click()
+    pg.wait_for_selector('.pagina-periodo .frase-live')
+    ok('riepilogo del periodo: la scheda Sala operatoria con sale e chirurghi',
+       'parte=sala' in pg.url and 'Le sale' in pg.inner_text('.pagina-periodo') and 'I chirurghi' in pg.inner_text('.pagina-periodo'),
+       pg.url)
+    with pg.expect_download() as scarico:
+        pg.click('[data-guida="periodo-excel"]')
+    ok('riepilogo del periodo: l\'Excel della sala si scarica con il suo nome',
+       scarico.value.suggested_filename.startswith('riepilogo-sala-operatoria-'), scarico.value.suggested_filename)
+    pg.goto(B + '/riepilogo-live?struttura=1&schermo=1')
+    pg.wait_for_selector('#riepilogo-live .frase-live')
+    pg.click('[data-guida="live-statistiche"]')
+    pg.wait_for_selector('.pagina-periodo .frase-live')
+    ok('dashboard: «Statistiche» apre il riepilogo del periodo senza menu, nel modo schermo',
+       '/riepilogo-live/statistiche' in pg.url and 'schermo=1' in pg.url and pg.locator('nav.menu').count() == 0, pg.url)
+    pg.locator('.parti-periodo a', has_text='Sala operatoria').click()
+    pg.wait_for_selector('.pagina-periodo .frase-live')
+    pg.locator('.periodi-pronti a', has_text='Questo mese').click()
+    pg.wait_for_selector('.pagina-periodo .frase-live')
+    ok('dashboard: si sceglie la sala e il mese, restando nella dashboard',
+       '/riepilogo-live/statistiche' in pg.url and 'parte=sala' in pg.url and 'periodo=mese' in pg.url and 'schermo=1' in pg.url, pg.url)
+    fuori = [h for h in pg.eval_on_selector_all('a[href]', 'els => els.map(e => e.getAttribute("href"))')
+             if not h.startswith('/riepilogo-live')]
+    ok('dashboard: nelle statistiche nessun collegamento fuori dalla dashboard e niente Excel', not fuori, fuori[:5])
+    pg.set_viewport_size({'width': 390, 'height': 844})
+    pg.wait_for_timeout(300)
+    ok('dashboard: le statistiche sul telefono non scorrono di lato',
+       pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'), pg.evaluate('document.documentElement.scrollWidth'))
+    pg.set_viewport_size({'width': 1366, 'height': 820})
+    pg.click('[data-guida="statistiche-torna"]')
+    pg.wait_for_selector('#riepilogo-live .frase-live')
+    ok('dashboard: «Torna al riepilogo live» resta nel modo schermo', '/riepilogo-live' in pg.url and 'schermo=1' in pg.url, pg.url)
     ok('nessun errore JavaScript', not err, err[:3])
     br.close()
 

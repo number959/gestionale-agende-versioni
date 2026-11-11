@@ -702,6 +702,10 @@ body.pagina-live .notifiche { display: none; }
 .scelta-periodo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 4px 0 10px; }
 .scelta-periodo .periodi-pronti { display: flex; flex-wrap: wrap; gap: 6px; margin-right: 6px; }
 .scelta-periodo .bottone.attivo { background: #154381; border-color: #154381; color: #FFFFFF; }
+/* 1.12.6: ambulatori o sala operatoria nel riepilogo del periodo e nelle statistiche della dashboard */
+.parti-periodo { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.parti-periodo .bottone { font-weight: 600; }
+.parti-periodo .bottone.attivo { background: #154381; border-color: #154381; color: #FFFFFF; }
 .scelta-periodo label { font-size: 13px; color: #46596A; }
 .avanzamento-live .gr-non-presentati, .conti-oggi-live .gr-non-presentati i { background: #B3261E; }
 .avanzamento-live .gr-disdetti, .conti-oggi-live .gr-disdetti i { background: #9AA5AB; }

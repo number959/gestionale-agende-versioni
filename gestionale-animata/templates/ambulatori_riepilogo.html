@@ -1,33 +1,50 @@
 {% extends "base.html" %}
+{#- Il riepilogo del periodo (1.12.2), degli ambulatori o della sala operatoria (parte, 1.12.6). Con cruscotto e' la
+    stessa pagina dentro la dashboard (Statistiche del riepilogo live): senza Excel e senza collegamenti alle pagine
+    fuori dalla dashboard; con la classe pagina-live gestionale.js non chiede le notifiche (avrebbero dei nomi). #}
 {% block titolo %}{{ titolo }}{% endblock %}
+{% block classe_body %}{% if cruscotto %} class="pagina-live pagina-statistiche{% if schermo %} schermo{% endif %}"{% endif %}{% endblock %}
+{% block menu %}{% if not schermo %}{% include "_menu.html" %}{% endif %}{% endblock %}
 {% block corpo %}
 {% set t = r.totale %}
+{% set sch = 1 if schermo else none %}
+{% macro app(n) %}{{ w.app }}{{ 'o' if n == 1 else 'i' }}{% endmacro %}
+{% macro nome_gruppo(chiave, nome, n) %}{% if chiave == 'fatti' and parte == 'sala' %}{{ 'arrivato' if n == 1 else 'arrivati' }}{% else %}{{ singolari[chiave] if n == 1 else nome }}{% endif %}{% endmacro %}
 <div class="barra">
   <span class="marchio">{% include "_marchio.html" %}</span>
-  <h1 class="giorno">Riepilogo del periodo <small class="sotto-titolo">{{ r.titolo }}</small></h1>
-  <span class="conteggio">{{ t.totale }} appuntament{{ 'o' if t.totale == 1 else 'i' }} in {{ r.stanze|length }} stanz{{ 'a' if r.stanze|length == 1 else 'e' }}</span>
+  <h1 class="giorno">{% if cruscotto %}Statistiche{% else %}Riepilogo del periodo{% endif %} <small class="sotto-titolo">{% if parte == 'sala' %}sala operatoria · {% endif %}{{ r.titolo }}</small></h1>
+  <span class="conteggio">{{ t.totale }} {{ app(t.totale) }} in {{ r.stanze|length }} {{ w.stanza if r.stanze|length == 1 else w.stanze }}</span>
   <div class="comandi">
-    <a class="passo" data-tasto="precedente" href="{{ url_for('ambulatori.riepilogo', struttura=sid, **prima) }}" title="Periodo precedente">&lsaquo;</a>
-    <a class="passo" data-tasto="successivo" href="{{ url_for('ambulatori.riepilogo', struttura=sid, **dopo) }}" title="Periodo successivo">&rsaquo;</a>
+    <a class="passo" data-tasto="precedente" href="{{ url_for(vista, struttura=sid, parte=parte, schermo=sch, **prima) }}" title="Periodo precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for(vista, struttura=sid, parte=parte, schermo=sch, **dopo) }}" title="Periodo successivo">&rsaquo;</a>
     <span class="separa"></span>
     {% if strutture|length > 1 %}
     <form method="get" style="display:inline">
       <select name="struttura" onchange="this.form.submit()">
         {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
-      </select><input type="hidden" name="da" value="{{ r.da }}"><input type="hidden" name="a" value="{{ r.a }}">
+      </select><input type="hidden" name="da" value="{{ r.da }}"><input type="hidden" name="a" value="{{ r.a }}"><input type="hidden" name="parte" value="{{ parte }}">{% if schermo %}<input type="hidden" name="schermo" value="1">{% endif %}
     </form>
     <span class="separa"></span>
     {% endif %}
-    <a class="bottone primario" href="{{ url_for('ambulatori.riepilogo_excel', struttura=sid, da=r.da, a=r.a) }}" data-guida="periodo-excel">Scarica in Excel</a>
+    {% if cruscotto %}
+    <a class="bottone primario" href="{{ url_for('live.pagina', struttura=sid, schermo=sch) }}" data-guida="statistiche-torna">Torna al riepilogo live</a>
+    {% else %}
+    <a class="bottone primario" href="{{ url_for('ambulatori.riepilogo_excel', struttura=sid, da=r.da, a=r.a, parte=parte) }}" data-guida="periodo-excel">Scarica in Excel</a>
     <button class="bottone" type="button" onclick="window.print()">Stampa</button>
     <a class="bottone" href="{{ url_for('live.pagina', struttura=sid) }}">Riepilogo live</a>
+    {% endif %}
   </div>
 </div>
 
 <div class="contenuto pagina-periodo">
+  {% if ha_sale or parte == 'sala' %}
+  <nav class="parti-periodo solo-schermo" data-guida="periodo-parti" aria-label="Ambulatori o sala operatoria">
+    {% for chiave, nome in parti %}<a class="bottone{% if chiave == parte %} attivo{% endif %}" href="{{ url_for(vista, struttura=sid, parte=chiave, schermo=sch, da=r.da, a=r.a) }}"{% if chiave == parte %} aria-current="page"{% endif %}>{{ nome }}</a>{% endfor %}
+  </nav>
+  {% endif %}
   <form method="get" class="scelta-periodo solo-schermo" data-guida="periodo-scelta">
-    <input type="hidden" name="struttura" value="{{ sid }}">
-    <span class="periodi-pronti">{% for chiave, nome in periodi %}<a class="bottone{% if chiave == periodo %} attivo{% endif %}" href="{{ url_for('ambulatori.riepilogo', struttura=sid, periodo=chiave) }}">{{ nome }}</a>{% endfor %}</span>
+    <input type="hidden" name="struttura" value="{{ sid }}"><input type="hidden" name="parte" value="{{ parte }}">{% if schermo %}<input type="hidden" name="schermo" value="1">{% endif %}
+    <span class="periodi-pronti">{% for chiave, nome in periodi %}<a class="bottone{% if chiave == periodo %} attivo{% endif %}" href="{{ url_for(vista, struttura=sid, periodo=chiave, parte=parte, schermo=sch) }}">{{ nome }}</a>{% endfor %}</span>
     <label>dal <input type="date" name="da" value="{{ r.da }}" required></label>
     <label>al <input type="date" name="a" value="{{ r.a }}" required></label>
     <button class="bottone" type="submit">Mostra</button>
@@ -37,47 +54,49 @@
   <section class="riassunto-live" data-guida="periodo-numeri">
     <p class="frase-live">{{ r.frase }}</p>
     {% if t.totale %}
-    <div class="avanzamento-live periodo" role="img" aria-label="{% for chiave, nome in gruppi %}{{ t[chiave] }} {{ nome }}{% if not loop.last %}, {% endif %}{% endfor %}, su {{ t.totale }}">
-      {% for chiave, nome in gruppi %}{% if t[chiave] %}<span class="gr-{{ chiave|replace('_', '-') }}" style="width: {{ (100 * t[chiave] / t.totale)|round(2) }}%" title="{{ t[chiave] }} {{ nome }}"></span>{% endif %}{% endfor %}
+    <div class="avanzamento-live periodo" role="img" aria-label="{% for chiave, nome in gruppi %}{{ t[chiave] }} {{ nome_gruppo(chiave, nome, t[chiave]) }}{% if not loop.last %}, {% endif %}{% endfor %}, su {{ t.totale }}">
+      {% for chiave, nome in gruppi %}{% if t[chiave] %}<span class="gr-{{ chiave|replace('_', '-') }}" style="width: {{ (100 * t[chiave] / t.totale)|round(2) }}%" title="{{ t[chiave] }} {{ nome_gruppo(chiave, nome, t[chiave]) }}"></span>{% endif %}{% endfor %}
     </div>
     {% endif %}
     <ul class="conti-oggi-live periodo">
-      <li class="totale"><b>{{ t.totale }}</b> appuntament{{ 'o' if t.totale == 1 else 'i' }}</li>
-      {% for chiave, nome in gruppi %}<li class="gr-{{ chiave|replace('_', '-') }}{% if chiave in ('non_presentati', 'da_segnare') and t[chiave] %} acceso{% endif %}"><i aria-hidden="true"></i><b>{{ t[chiave] }}</b> {{ singolari[chiave] if t[chiave] == 1 else nome }}{% if chiave == 'non_presentati' and t.non_presentati_su is not none %} <small>{{ ('%g' % t.non_presentati_su)|replace('.', ',') }}% di chi doveva venire</small>{% endif %}</li>{% endfor %}
+      <li class="totale"><b>{{ t.totale }}</b> {{ app(t.totale) }}</li>
+      {% for chiave, nome in gruppi %}<li class="gr-{{ chiave|replace('_', '-') }}{% if chiave in ('non_presentati', 'da_segnare') and t[chiave] %} acceso{% endif %}"><i aria-hidden="true"></i><b>{{ t[chiave] }}</b> {{ nome_gruppo(chiave, nome, t[chiave]) }}{% if chiave == 'non_presentati' and t.non_presentati_su is not none %} <small>{{ ('%g' % t.non_presentati_su)|replace('.', ',') }}% di chi doveva venire</small>{% endif %}</li>{% endfor %}
     </ul>
     <ul class="fatti-live">
-      <li><b>{{ t.ore_turno }}</b> di turno nelle stanze</li>
+      <li><b>{{ t.ore_turno }}</b> {{ w.di_turno }}</li>
       <li><b>{{ t.ore_occupate }}</b> occupate{% if t.occupazione is not none %} (<b>{{ ('%g' % t.occupazione)|replace('.', ',') }}%</b>){% endif %}</li>
       {% if t.minuti_fuori_turno %}<li class="attenzione"><b>{{ t.ore_fuori_turno }}</b> prenotate fuori dai turni</li>{% endif %}
-      {% if t.mezze %}<li><b>{{ t.libere }}</b> {{ 'mezza giornata' if t.libere == 1 else 'mezze giornate' }} su {{ t.mezze }} senza nessun medico</li>{% endif %}
+      {% if t.mezze %}<li><b>{{ t.libere }}</b> {{ 'mezza giornata' if t.libere == 1 else 'mezze giornate' }} su {{ t.mezze }} {{ w.senza }}</li>{% endif %}
     </ul>
   </section>
 
-  <h2 class="sezione">Le stanze <small class="sotto-titolo">ore di turno, quanto sono state occupate e com'è andata</small></h2>
+  <h2 class="sezione">Le {{ w.stanze }} <small class="sotto-titolo">ore di turno, quanto sono state occupate e com'è andata</small></h2>
   <div class="scorri-live">
   <table class="elenco tabella-periodo" data-guida="periodo-stanze">
-    <thead><tr><th>Stanza</th><th>Medici</th><th class="n">Ore di turno</th><th class="n">Occupate</th><th>Occupazione</th><th class="n">Appunt.</th><th class="n">Fatti</th><th class="n">Non pres.</th><th class="n">Disdetti</th><th class="n">Da segnare</th><th class="n">Da fare</th><th class="n">Mezze giornate senza medico</th></tr></thead>
+    <thead><tr><th>{{ w.Stanza }}</th><th>{{ w.Medici }}</th><th class="n">Ore di turno</th><th class="n">Occupate</th><th>Occupazione</th><th class="n">{{ 'Interv.' if parte == 'sala' else 'Appunt.' }}</th><th class="n">{{ w.fatti }}</th><th class="n">Non pres.</th><th class="n">Disdetti</th><th class="n">Da segnare</th><th class="n">Da fare</th><th class="n">Mezze giornate {{ 'con la sala libera' if parte == 'sala' else 'senza medico' }}</th></tr></thead>
     <tbody>
     {% for x in r.stanze %}
     <tr>
       <td><b>{{ x.stanza }}</b></td>
       <td class="medici-periodo">{{ x.medici|join(', ') if x.medici else '—' }}</td>
       <td class="n">{{ x.ore_turno }}</td><td class="n">{{ x.ore_occupate }}</td>
-      <td>{% if x.occupazione is not none %}<span class="occupazione"><span style="width: {{ [x.occupazione, 100]|min }}%"></span></span> {{ ('%g' % x.occupazione)|replace('.', ',') }}%{% else %}—{% endif %}{% if x.minuti_fuori_turno %}<small class="fuori-turno" title="Appuntamenti fuori dai turni della stanza">+{{ x.ore_fuori_turno }} fuori turno</small>{% endif %}</td>
+      <td>{% if x.occupazione is not none %}<span class="occupazione"><span style="width: {{ [x.occupazione, 100]|min }}%"></span></span> {{ ('%g' % x.occupazione)|replace('.', ',') }}%{% else %}—{% endif %}{% if x.minuti_fuori_turno %}<small class="fuori-turno" title="{{ w.app|capitalize }}i fuori dai turni del{{ 'la sala' if parte == 'sala' else 'la stanza' }}">+{{ x.ore_fuori_turno }} fuori turno</small>{% endif %}</td>
       <td class="n">{{ x.totale }}</td><td class="n">{{ x.fatti }}</td><td class="n{% if x.non_presentati %} acceso-rosso{% endif %}">{{ x.non_presentati }}</td><td class="n">{{ x.disdetti }}</td><td class="n{% if x.da_segnare %} acceso{% endif %}">{{ x.da_segnare }}</td><td class="n">{{ x.da_fare }}</td>
       <td class="n">{% if x.mezze %}{{ x.libere }} su {{ x.mezze }}{% else %}—{% endif %}</td>
     </tr>
+    {% else %}
+    <tr><td colspan="12" class="vuoto">{% if parte == 'sala' %}Nessuna sala operatoria in questa struttura.{% else %}Nessuna stanza in questa struttura.{% endif %}</td></tr>
     {% endfor %}
     </tbody>
     <tfoot><tr><th>Totale</th><th></th><th class="n">{{ t.ore_turno }}</th><th class="n">{{ t.ore_occupate }}</th><th>{% if t.occupazione is not none %}{{ ('%g' % t.occupazione)|replace('.', ',') }}%{% endif %}</th><th class="n">{{ t.totale }}</th><th class="n">{{ t.fatti }}</th><th class="n">{{ t.non_presentati }}</th><th class="n">{{ t.disdetti }}</th><th class="n">{{ t.da_segnare }}</th><th class="n">{{ t.da_fare }}</th><th class="n">{% if t.mezze %}{{ t.libere }} su {{ t.mezze }}{% else %}—{% endif %}</th></tr></tfoot>
   </table>
   </div>
 
-  <h2 class="sezione">I medici <small class="sotto-titolo">dai turni nelle stanze e dai loro appuntamenti</small></h2>
+  <h2 class="sezione">I {{ w.medici }} <small class="sotto-titolo">dai turni {{ w.nelle }} e dai loro {{ w.app }}i</small></h2>
   {% if r.medici %}
   <div class="scorri-live">
   <table class="elenco tabella-periodo" data-guida="periodo-medici">
-    <thead><tr><th>Medico</th><th>Stanze</th><th class="n">Giorni di turno</th><th class="n">Ore di turno</th><th>Occupazione</th><th class="n">Appunt.</th><th class="n">Fatti</th><th class="n">Non presentati</th><th class="n">Disdetti</th><th class="n">Da segnare</th><th class="n">Da fare</th></tr></thead>
+    <thead><tr><th>{{ w.Medico }}</th><th>{{ w.Stanze }}</th><th class="n">Giorni di turno</th><th class="n">Ore di turno</th><th>Occupazione</th><th class="n">{{ 'Interv.' if parte == 'sala' else 'Appunt.' }}</th><th class="n">{{ w.fatti }}</th><th class="n">Non presentati</th><th class="n">Disdetti</th><th class="n">Da segnare</th><th class="n">Da fare</th></tr></thead>
     <tbody>
     {% for x in r.medici %}
     <tr>
@@ -90,17 +109,17 @@
     </tbody>
   </table>
   </div>
-  {% else %}<p class="vuoto">Nessun medico con turni o appuntamenti nel periodo.</p>{% endif %}
+  {% else %}<p class="vuoto">Nessun {{ w.medico }} con turni o {{ w.app }}i nel periodo.</p>{% endif %}
 
   {% if r.giorni_periodo > 1 %}
   <h2 class="sezione">Giorno per giorno</h2>
   <div class="scorri-live">
   <table class="elenco tabella-periodo giorni-periodo" data-guida="periodo-giorni">
-    <thead><tr><th>Giorno</th><th class="n">Ore di turno</th><th>Occupazione</th><th class="n">Appunt.</th><th class="n">Fatti</th><th class="n">Non pres.</th><th class="n">Disdetti</th><th class="n">Da segnare</th><th class="n">Da fare</th></tr></thead>
+    <thead><tr><th>Giorno</th><th class="n">Ore di turno</th><th>Occupazione</th><th class="n">{{ 'Interv.' if parte == 'sala' else 'Appunt.' }}</th><th class="n">{{ w.fatti }}</th><th class="n">Non pres.</th><th class="n">Disdetti</th><th class="n">Da segnare</th><th class="n">Da fare</th></tr></thead>
     <tbody>
     {% for x in r.giorni %}
     <tr class="{% if x.chiusa or not x.aperto %}chiuso{% endif %}">
-      <td><a href="{{ url_for('giorno', iso=x.data, struttura=sid) }}" title="Apri la giornata">{{ x.etichetta }}</a>{% if x.chiusa %} <small class="nota-riga">chiusa: {{ x.chiusa }}</small>{% elif x.chiusa_ma_aperta %} <small class="nota-riga">{{ x.chiusa_ma_aperta }}, ma con turni o appuntamenti</small>{% elif not x.aperto %} <small class="nota-riga">giorno di chiusura</small>{% endif %}</td>
+      <td>{% if cruscotto %}{{ x.etichetta }}{% else %}<a href="{{ url_for('sala.giornata', iso=x.data, struttura=sid) if parte == 'sala' else url_for('giorno', iso=x.data, struttura=sid) }}" title="Apri la giornata">{{ x.etichetta }}</a>{% endif %}{% if x.chiusa %} <small class="nota-riga">chiusa: {{ x.chiusa }}</small>{% elif x.chiusa_ma_aperta %} <small class="nota-riga">{{ x.chiusa_ma_aperta }}, ma con turni o {{ w.app }}i</small>{% elif not x.aperto %} <small class="nota-riga">giorno di chiusura</small>{% endif %}</td>
       <td class="n">{{ x.ore_turno }}</td>
       <td>{% if x.occupazione is not none %}<span class="occupazione"><span style="width: {{ [x.occupazione, 100]|min }}%"></span></span> {{ ('%g' % x.occupazione)|replace('.', ',') }}%{% else %}—{% endif %}</td>
       <td class="n">{{ x.totale }}</td><td class="n">{{ x.fatti }}</td><td class="n{% if x.non_presentati %} acceso-rosso{% endif %}">{{ x.non_presentati }}</td><td class="n">{{ x.disdetti }}</td><td class="n{% if x.da_segnare %} acceso{% endif %}">{{ x.da_segnare }}</td><td class="n">{{ x.da_fare }}</td>
@@ -110,6 +129,10 @@
   </table>
   </div>
   {% endif %}
+  {% if parte == 'sala' %}
+  <p class="nota">Ore di turno: i turni dei chirurghi nelle sale, tolte assenze e chiusure. Occupate: le ore dentro i turni con un intervento (anche dei non presentati, che tenevano la sala; i disdetti no). Arrivati: i pazienti segnati come arrivati. Da segnare: orario passato senza «arrivato», «non presentato» o «disdetto»: si sistemano dalla pagina Sala. Senza dati dei pazienti. Calcolato il {{ r.aggiornato }}.</p>
+  {% else %}
   <p class="nota">Ore di turno: i turni dei medici nelle stanze, tolte assenze e chiusure. Occupate: le ore dentro i turni con un appuntamento (anche dei non presentati, che tenevano il posto; i disdetti no). Da segnare: orario passato senza «arrivato», «non presentato» o «disdetto»: si sistemano dalla giornata. Calcolato il {{ r.aggiornato }}.</p>
+  {% endif %}
 </div>
 {% endblock %}

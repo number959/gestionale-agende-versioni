@@ -354,6 +354,30 @@ def pagina():
                            sezione='live', data_menu=r['data'], titolo='Riepilogo live · %s' % r['giorno'])
 
 
+@bp.route('/riepilogo-live/statistiche')
+def statistiche():
+    """Le statistiche dentro la dashboard (1.12.6, richiesta di Giovanni: «voglio che poi nella dashboard si possano
+    richiamare le statistiche»): il riepilogo del periodo, giorno, settimana o mese, degli ambulatori o della sala
+    operatoria, con i soli numeri e i nomi di stanze e medici, come il resto della dashboard. Sta sotto
+    /riepilogo-live, cosi' il «portiere» della rete locale lo lascia passare con il resto del riepilogo."""
+    s = ses()
+    st, strutture = struttura_scelta(s)
+    if st is None:
+        return render_template('da_configurare.html'), 200
+    return ambulatori.pagina_riepilogo(s, st, strutture, cruscotto=True)
+
+
+@bp.route('/riepilogo-live/statistiche.json')
+def statistiche_json():
+    """Gli stessi numeri in JSON (per il futuro cruscotto su internet): mai dati dei pazienti."""
+    s = ses()
+    st, _ = struttura_scelta(s)
+    if st is None:
+        return json_sicuro({'errore': 'nessuna struttura'})
+    da, a, _ = ambulatori._periodo_chiesto()
+    return json_sicuro(ambulatori.riepilogo_periodo(s, st, da, a, parte=ambulatori.parte_riepilogo(request.args.get('parte'))))
+
+
 @bp.route('/riepilogo-live.json')
 def dati():
     s = ses()

@@ -14,6 +14,7 @@
     </select>{% if schermo %}<input type="hidden" name="schermo" value="1">{% endif %}</form>
     <span class="separa"></span>
     {% endif %}
+    <a class="bottone primario" href="{{ url_for('live.statistiche', struttura=sid, schermo=1 if schermo else none) }}" data-guida="live-statistiche">Statistiche</a>
     {% if schermo %}
     <a class="bottone" href="{{ url_for('live.pagina', struttura=sid) }}">Torna alla pagina normale</a>
     {% else %}

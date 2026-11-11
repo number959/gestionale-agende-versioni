@@ -209,6 +209,7 @@
   html.scuro .mezza.libera { background: #29702D; border-color: #64C669; }
   html.scuro .mezza.passata, html.scuro .mezza.chiusa { background: #1C242D; }
   html.scuro .scelta-periodo .bottone.attivo { background: #133C74; border-color: #377EDE; color: #FFFFFF; }
+  html.scuro .parti-periodo .bottone.attivo { background: #133C74; border-color: #377EDE; color: #FFFFFF; }
   html.scuro .scelta-periodo label { color: #A9B7C4; }
   html.scuro .avanzamento-live .gr-non-presentati, html.scuro .conti-oggi-live .gr-non-presentati i { background: #A1221B; }
   html.scuro .avanzamento-live .gr-disdetti, html.scuro .conti-oggi-live .gr-disdetti i { background: #3A4246; }

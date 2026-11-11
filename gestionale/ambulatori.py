@@ -1350,16 +1350,39 @@ def _percento(parte, tutto):
     return round(100.0 * parte / tutto, 1) if tutto else None
 
 
-def stanze_del_periodo(ses, st, da, a):
+# le parole del riepilogo del periodo: degli ambulatori o della sala operatoria (1.12.6, richiesta di Giovanni:
+# «implementare nella scheda riepilogo anche quello mensile/settimanale/giornaliero di ambulatori e sale operatorie»)
+PARTI_RIEPILOGO = (('ambulatori', 'Ambulatori'), ('sala', 'Sala operatoria'))
+PAROLE_RIEPILOGO = {
+    'ambulatori': dict(app='appuntament', stanza='stanza', stanze='stanze', Stanza='Stanza', Stanze='Stanze',
+                       la_stanza='la stanza', nelle='nelle stanze', medico='medico', medici='medici', Medico='Medico',
+                       Medici='Medici', senza='senza nessun medico', Senza='Senza medico',
+                       occupate='Le stanze sono state occupate', fatti='Fatti', titolo='Riepilogo di agende e ambulatori',
+                       file='riepilogo-ambulatori', di_turno='di turno nelle stanze'),
+    'sala': dict(app='intervent', stanza='sala', stanze='sale', Stanza='Sala', Stanze='Sale', la_stanza='la sala',
+                 nelle='nelle sale', medico='chirurgo', medici='chirurghi', Medico='Chirurgo', Medici='Chirurghi',
+                 senza='con la sala libera', Senza='Sala libera', occupate='Le sale sono state occupate',
+                 fatti='Arrivati', titolo='Riepilogo della sala operatoria', file='riepilogo-sala-operatoria',
+                 di_turno='di turno in sala'),
+}
+
+
+def parte_riepilogo(valore):
+    return valore if valore in PAROLE_RIEPILOGO else 'ambulatori'
+
+
+def stanze_del_periodo(ses, st, da, a, parte='ambulatori'):
     """(stanze, fino) del riepilogo: le stanze attive (senza sale operatorie) e anche quelle disattivate dopo, se
     nel periodo avevano appuntamenti (anche solo la coda dopo la mezzanotte di una visita della sera prima): in un
     mese passato il lavoro fatto in una stanza chiusa poi conta ancora. Disattivando una stanza i suoi turni non si
     chiudono e la data non resta scritta: per una stanza disattivata i turni contano solo fino al giorno del suo
     ultimo appuntamento non disdetto ('fino', per id), che viene per forza prima dello spegnimento (la scheda non
     lascia disattivare una stanza con appuntamenti da oggi in poi)."""
-    stanze = list(stanze_della(st))
+    # le sale operatorie hanno un riepilogo loro (parte='sala'), con le stesse regole (1.12.6)
+    stanze = list(sale_della(st) if parte == 'sala' else stanze_della(st))
     spente = ses.scalars(select(Risorsa).where(Risorsa.struttura_id == st.id, Risorsa.attiva == False,
-                                               Risorsa.tipo != 'SALA_OPERATORIA').order_by(Risorsa.ordine)).all()
+                                               (Risorsa.tipo == TIPO_SALA) if parte == 'sala' else
+                                               (Risorsa.tipo != TIPO_SALA)).order_by(Risorsa.ordine)).all()
     inizio, fine = datetime.combine(da, time(0)), datetime.combine(a + timedelta(days=1), time(0))
     fino = {}
     for r in spente:
@@ -1376,13 +1399,17 @@ def stanze_del_periodo(ses, st, da, a):
     return stanze, fino
 
 
-def riepilogo_periodo(ses, st, da, a, adesso=None):
-    """Tutti i numeri del riepilogo fra 'da' e 'a' (compresi), gia' pronti per la pagina, l'Excel e il JSON."""
+def riepilogo_periodo(ses, st, da, a, adesso=None, parte='ambulatori'):
+    """Tutti i numeri del riepilogo fra 'da' e 'a' (compresi), gia' pronti per la pagina, l'Excel e il JSON. Con
+    parte='sala' lo stesso conto per le sale operatorie (1.12.6): ore di turno dei chirurghi in sala, ore occupate dagli
+    interventi, interventi per gruppo, chirurghi, giorni e mezze giornate con la sala libera."""
     adesso = adesso or datetime.now()
+    parte = parte_riepilogo(parte)
+    w = PAROLE_RIEPILOGO[parte]
     regole = servizi.Regole(ses, da, a)
-    stanze, fino = stanze_del_periodo(ses, st, da, a)
+    stanze, fino = stanze_del_periodo(ses, st, da, a, parte)
     per_id = {r.id: r for r in stanze}
-    attive = {r.id for r in stanze_della(st)}
+    attive = {r.id for r in (sale_della(st) if parte == 'sala' else stanze_della(st))}
     # anche il giorno prima: la coda dopo la mezzanotte di una visita cominciata la sera prima conta nel giorno dopo
     appuntamenti = ses.scalars(select(Appuntamento).where(
         Appuntamento.risorsa_id.in_(list(per_id) or [0]),
@@ -1396,8 +1423,9 @@ def riepilogo_periodo(ses, st, da, a, adesso=None):
         return x
 
     totale = dict(conti(), mezze=0, libere=0)
-    righe_stanze = {r.id: dict(conti(), stanza=r.nome + ('' if r.id in attive else ' (non più attiva)'), medici=[],
-                               mezze=0, libere=0) for r in stanze}
+    righe_stanze = {r.id: dict(conti(), stanza=r.nome + ('' if r.id in attive else
+                                                         ' (non più attiva)' if parte == 'ambulatori' else ' (spenta)'),
+                               medici=[], mezze=0, libere=0) for r in stanze}
     righe_medici = {}
     giorni = []
     per_giorno, code = {}, {}
@@ -1474,11 +1502,12 @@ def riepilogo_periodo(ses, st, da, a, adesso=None):
         g += timedelta(days=1)
 
     # le mezze giornate senza nessun medico, dalla matrice degli ambulatori (come la pianificazione); in un giorno
-    # che non e' di apertura (la domenica) contano solo quelle con un turno, non tutte le stanze
+    # che non e' di apertura (la domenica) contano solo quelle con un turno, non tutte le stanze. Per la sala le mezze
+    # giornate con la sala libera (nessun turno e nessun intervento), dalla parte della sala della stessa matrice
     aperti = {x['data'] for x in giorni if x['aperto'] and x['chiusa'] is None}
     lunedi = calendario.lunedi_di(da)
     while lunedi <= a:
-        for riga in matrice(ses, lunedi, st)['righe']:
+        for riga in matrice(ses, lunedi, st)['sale' if parte == 'sala' else 'righe']:
             r = righe_stanze.get(riga['risorsa'].id)
             for c in riga['celle']:
                 if r is None or not (da <= c['data'] <= a) or c['chiuso'] or c['data'].isoformat() not in aperti:
@@ -1507,21 +1536,25 @@ def riepilogo_periodo(ses, st, da, a, adesso=None):
     rifinisci(totale)
     # la frase in cima
     code_minuti = totale['minuti_occupati'] + totale['minuti_fuori_turno']   # senza appuntamenti: solo code
+    visite = 'visite' if parte == 'ambulatori' else 'interventi'
     if not totale['totale'] and not totale['minuti_turno'] and not code_minuti:
-        frase = 'Nel periodo non ci sono appuntamenti né turni nelle stanze.'
+        frase = 'Nel periodo non ci sono %si né turni %s.' % (w['app'], w['nelle'])
     elif not totale['totale']:
-        frase = '%s: nessun appuntamento nelle stanze.' % (titolo_periodo(da, a)[:1].upper() + titolo_periodo(da, a)[1:])
+        frase = '%s: nessun %so %s.' % (titolo_periodo(da, a)[:1].upper() + titolo_periodo(da, a)[1:], w['app'], w['nelle'])
         if totale['minuti_turno']:
             frase += ' %s di turno%s.' % (ore_in_parole(totale['minuti_turno']).capitalize(),
-                                          '' if totale['minuti_occupati'] else ', senza visite')
+                                          '' if totale['minuti_occupati'] else ', senza %s' % visite)
         if code_minuti:
-            frase += ' Dopo la mezzanotte ci sono %s di visite cominciate il giorno prima.' % ore_in_parole(code_minuti)
+            frase += ' Dopo la mezzanotte ci sono %s di %s cominciat%s il giorno prima.' % (
+                ore_in_parole(code_minuti), visite, 'e' if parte == 'ambulatori' else 'i')
         if totale['mezze']:
-            frase += ' %d mezz%s giornat%s su %d senza nessun medico.' % (
-                totale['libere'], 'a' if totale['libere'] == 1 else 'e', 'a' if totale['libere'] == 1 else 'e', totale['mezze'])
+            frase += ' %d mezz%s giornat%s su %d %s.' % (
+                totale['libere'], 'a' if totale['libere'] == 1 else 'e', 'a' if totale['libere'] == 1 else 'e', totale['mezze'],
+                w['senza'])
     else:
-        pezzi = ['%d appuntament%s' % (totale['totale'], 'o' if totale['totale'] == 1 else 'i')]
-        dettagli = ['%d fatt%s' % (totale['fatti'], 'o' if totale['fatti'] == 1 else 'i')]
+        pezzi = ['%d %s%s' % (totale['totale'], w['app'], 'o' if totale['totale'] == 1 else 'i')]
+        dettagli = ['%d %s' % (totale['fatti'], ('fatt%s' % ('o' if totale['fatti'] == 1 else 'i')) if parte == 'ambulatori'
+                                else ('arrivat%s' % ('o' if totale['fatti'] == 1 else 'i')))]
         if totale['non_presentati']:
             dettagli.append('%d non presentat%s%s' % (totale['non_presentati'], 'o' if totale['non_presentati'] == 1 else 'i',
                                                       ' (%s%%)' % ('%g' % totale['non_presentati_su']).replace('.', ',')
@@ -1535,13 +1568,15 @@ def riepilogo_periodo(ses, st, da, a, adesso=None):
         frase = '%s: %s, %s.' % (titolo_periodo(da, a)[:1].upper() + titolo_periodo(da, a)[1:], pezzi[0],
                                 ', '.join(dettagli[:-1]) + (' e ' if len(dettagli) > 1 else '') + dettagli[-1])
         if totale['minuti_turno']:
-            frase += ' Le stanze sono state occupate per %s delle ore di turno (%s su %s).' % (
-                il_percento(totale['occupazione']), ore_in_parole(totale['minuti_occupati']),
+            frase += ' %s per %s delle ore di turno (%s su %s).' % (
+                w['occupate'], il_percento(totale['occupazione']), ore_in_parole(totale['minuti_occupati']),
                 ore_in_parole(totale['minuti_turno']))
         if totale['mezze']:
-            frase += ' %d mezz%s giornat%s su %d senza nessun medico.' % (
-                totale['libere'], 'a' if totale['libere'] == 1 else 'e', 'a' if totale['libere'] == 1 else 'e', totale['mezze'])
+            frase += ' %d mezz%s giornat%s su %d %s.' % (
+                totale['libere'], 'a' if totale['libere'] == 1 else 'e', 'a' if totale['libere'] == 1 else 'e', totale['mezze'],
+                w['senza'])
     return {
+        'parte': parte, 'parole': w,
         'da': da.isoformat(), 'a': a.isoformat(), 'titolo': titolo_periodo(da, a), 'struttura': st.nome,
         'giorni_periodo': (a - da).days + 1, 'frase': frase, 'totale': totale,
         'stanze': [rifinisci(righe_stanze[r.id]) for r in stanze], 'medici': medici,
@@ -1551,21 +1586,25 @@ def riepilogo_periodo(ses, st, da, a, adesso=None):
 
 
 def excel_riepilogo(st, r, adesso=None):
-    """Il riepilogo del periodo in Excel: la frase e i totali, poi le stanze, i medici e i giorni."""
+    """Il riepilogo del periodo in Excel: la frase e i totali, poi le stanze, i medici e i giorni (della sala: le sale,
+    i chirurghi e i giorni, 1.12.6)."""
+    w_ = r.get('parole') or PAROLE_RIEPILOGO['ambulatori']
+    App = w_['app'].capitalize() + 'i'
     wb = Workbook()
     ws = wb.active
     ws.title = 'Riepilogo'
-    riga = apri_foglio_excel(ws, 'Riepilogo di agende e ambulatori', r['titolo'], st, adesso, colonne=6)
+    riga = apri_foglio_excel(ws, w_['titolo'], r['titolo'], st, adesso, colonne=6)
     c = ws.cell(riga, 1, testo_excel(r['frase']))
     c.alignment = Alignment(wrap_text=True, vertical='top')
     ws.merge_cells(start_row=riga, start_column=1, end_row=riga, end_column=6)
     ws.row_dimensions[riga].height = 48
     t = r['totale']
-    righe = [['Appuntamenti', t['totale']]] + [[nome.capitalize(), t[k]] for k, nome in GRUPPI_PERIODO] + [
+    righe = [[App, t['totale']]] + [[(w_['fatti'] if k == 'fatti' else nome.capitalize()), t[k]]
+                                    for k, nome in GRUPPI_PERIODO] + [
         ['Ore di turno', t['minuti_turno'] / 60], ['Ore occupate (dentro i turni)', t['minuti_occupati'] / 60],
         ['Ore prenotate fuori turno', t['minuti_fuori_turno'] / 60],
         ['Occupazione delle ore di turno', t['occupazione']], ['Non presentati su chi doveva venire', t['non_presentati_su']],
-        ['Mezze giornate', t['mezze']], ['Mezze giornate senza nessun medico', t['libere']]]
+        ['Mezze giornate', t['mezze']], ['Mezze giornate %s' % w_['senza'], t['libere']]]
     tabella_excel(ws, riga + 2, ['Cosa', 'Quanto'], [42, 14], righe, filtro=False, blocca=False)
     for n, v in enumerate(righe, start=riga + 3):
         if v[0].startswith('Ore'):
@@ -1576,21 +1615,21 @@ def excel_riepilogo(st, r, adesso=None):
 
     def foglio(nome, intestazioni, larghezze, righe_f, formati, orizzontale=True, a_capo=(), senza_somma=()):
         w = wb.create_sheet(nome)
-        rr = apri_foglio_excel(w, 'Riepilogo di agende e ambulatori · %s' % nome.lower(), r['titolo'], st, adesso,
+        rr = apri_foglio_excel(w, '%s · %s' % (w_['titolo'], nome.lower()), r['titolo'], st, adesso,
                                colonne=len(intestazioni))
         tabella_excel(w, rr, intestazioni, larghezze, righe_f, formati=formati, zebra=True, a_capo=a_capo,
                       totali={k: 'somma' for k in range(3, len(intestazioni) + 1)
                               if formati.get(k) != FORMATO_PERCENTO and k not in senza_somma})
         imposta_stampa_excel(w, orizzontale=orizzontale, righe_titolo='%d:%d' % (rr, rr), struttura=st, periodo=r['titolo'])
 
-    numeri = ['Appuntamenti', 'Fatti', 'Non presentati', 'Disdetti', 'Da segnare', 'Da fare']
+    numeri = [App, w_['fatti'], 'Non presentati', 'Disdetti', 'Da segnare', 'Da fare']
     chiavi = ['totale'] + [k for k, _ in GRUPPI_PERIODO]
-    foglio('Stanze', ['Stanza', 'Medici', 'Ore di turno', 'Ore occupate', 'Occupazione'] + numeri +
-           ['Mezze giornate', 'Senza medico'], [20, 30, 11, 11, 12, 13, 9, 13, 10, 11, 9, 12, 12],
+    foglio(w_['Stanze'], [w_['Stanza'], w_['Medici'], 'Ore di turno', 'Ore occupate', 'Occupazione'] + numeri +
+           ['Mezze giornate', w_['Senza']], [20, 30, 11, 11, 12, 13, 9, 13, 10, 11, 9, 12, 12],
            [[x['stanza'], ', '.join(x['medici']), x['minuti_turno'] / 60, x['minuti_occupati'] / 60,
              x['occupazione']] + [x[k] for k in chiavi] + [x['mezze'], x['libere']] for x in r['stanze']],
            {3: FORMATO_ORE, 4: FORMATO_ORE, 5: FORMATO_PERCENTO}, a_capo=(2,))
-    foglio('Medici', ['Medico', 'Stanze', 'Giorni di turno', 'Ore di turno', 'Ore occupate', 'Occupazione'] + numeri +
+    foglio(w_['Medici'], [w_['Medico'], w_['Stanze'], 'Giorni di turno', 'Ore di turno', 'Ore occupate', 'Occupazione'] + numeri +
            ['Non presentati %'], [24, 30, 10, 11, 11, 12, 13, 9, 13, 10, 11, 9, 13],
            [[x['medico'], ', '.join(x['stanze']), x['n_giorni'], x['minuti_turno'] / 60,
              x['minuti_occupati'] / 60, x['occupazione']] + [x[k] for k in chiavi] + [x['non_presentati_su']]
@@ -1599,7 +1638,7 @@ def excel_riepilogo(st, r, adesso=None):
     if r['giorni_periodo'] > 1:
         foglio('Giorni', ['Giorno', 'Chiusa', 'Ore di turno', 'Ore occupate', 'Occupazione'] + numeri,
                [16, 22, 11, 11, 12, 13, 9, 13, 10, 11, 9],
-               [[x['etichetta'], x['chiusa'] or ('%s, ma con turni o appuntamenti' % x['chiusa_ma_aperta']
+               [[x['etichetta'], x['chiusa'] or ('%s, ma con turni o %si' % (x['chiusa_ma_aperta'], w_['app'])
                                                  if x['chiusa_ma_aperta'] else ('' if x['aperto'] else 'giorno di chiusura')),
                  x['minuti_turno'] / 60,
                  x['minuti_occupati'] / 60,
@@ -1653,14 +1692,26 @@ def riepilogo():
     st, strutture = struttura_scelta(s)
     if st is None:
         return render_template('da_configurare.html'), 200
+    return pagina_riepilogo(s, st, strutture)
+
+
+def pagina_riepilogo(s, st, strutture, cruscotto=False):
+    """La pagina del riepilogo del periodo; con cruscotto=True la stessa dentro la dashboard (le Statistiche del
+    riepilogo live, 1.12.6): senza menu se ?schermo=1, senza Excel e senza collegamenti alle pagine fuori dalla
+    dashboard, cosi' passa dal «portiere» della rete locale."""
     da, a, nome = _periodo_chiesto()
-    r = riepilogo_periodo(s, st, da, a)
+    parte = parte_riepilogo(request.args.get('parte'))
+    r = riepilogo_periodo(s, st, da, a, parte=parte)
     prima, dopo = _vicini(da, a, nome)
+    schermo = cruscotto and request.args.get('schermo') == '1'
     return render_template('ambulatori_riepilogo.html', r=r, st=st, sid=st.id, strutture=strutture, periodi=PERIODI,
                            periodo=nome, prima=prima, dopo=dopo, gruppi=GRUPPI_PERIODO, singolari=SINGOLARI_PERIODO,
-                           sezione='riepilogo-periodo',
+                           parte=parte, parti=PARTI_RIEPILOGO, ha_sale=bool(sale_della(st)), w=r['parole'],
+                           cruscotto=cruscotto, schermo=schermo,
+                           vista='live.statistiche' if cruscotto else 'ambulatori.riepilogo',
+                           sezione='live' if cruscotto else 'riepilogo-periodo',
                            massimo=MASSIMO_GIORNI_RIEPILOGO, data_menu=min(a, date.today()).isoformat(),
-                           titolo='Riepilogo del periodo · %s' % r['titolo'])
+                           titolo='%s · %s' % ('Statistiche' if cruscotto else 'Riepilogo del periodo', r['titolo']))
 
 
 @bp.route('/riepilogo.xlsx')
@@ -1670,8 +1721,8 @@ def riepilogo_excel():
     if st is None:
         return render_template('da_configurare.html'), 200
     da, a, _ = _periodo_chiesto()
-    r = riepilogo_periodo(s, st, da, a)
-    nome = 'riepilogo-ambulatori-%s%s.xlsx' % (da.isoformat(), '' if da == a else '-%s' % a.isoformat())
+    r = riepilogo_periodo(s, st, da, a, parte=parte_riepilogo(request.args.get('parte')))
+    nome = '%s-%s%s.xlsx' % (r['parole']['file'], da.isoformat(), '' if da == a else '-%s' % a.isoformat())
     return scarica_excel(excel_riepilogo(st, r), nome)
 
 
@@ -1682,4 +1733,4 @@ def riepilogo_json():
     if st is None:
         return json_sicuro({'errore': 'nessuna struttura'})
     da, a, _ = _periodo_chiesto()
-    return json_sicuro(riepilogo_periodo(s, st, da, a))
+    return json_sicuro(riepilogo_periodo(s, st, da, a, parte=parte_riepilogo(request.args.get('parte'))))
