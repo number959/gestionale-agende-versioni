@@ -18,8 +18,9 @@ Excel, certificati: vedi *La 1.12*), lo stesso giorno alla **1.12.1** (le cose a
 prove su un Windows vero: vedi *La 1.12.1*), il 9 novembre alla **1.12.2** (il riepilogo live più
 chiaro e il riepilogo del periodo: vedi *La 1.12.2*), lo stesso giorno alla **1.12.3** (le esportazioni di
 ambulatori e sala operatoria per giorno, settimana e mese: vedi *La 1.12.3*) , il 10 novembre alla **1.12.4**
-(le esportazioni stampate meglio, dopo averle guardate pagina per pagina: vedi *La 1.12.4*) e lo stesso giorno alla
-**1.12.5** (interventi e ambulatori per medico: vedi *La 1.12.5*).
+(le esportazioni stampate meglio, dopo averle guardate pagina per pagina: vedi *La 1.12.4*), lo stesso giorno alla
+**1.12.5** (interventi e ambulatori per medico: vedi *La 1.12.5*) e l'11 novembre alla **1.12.6** (il riepilogo del periodo
+della sala operatoria e le statistiche nella dashboard: vedi *La 1.12.6*).
 
 ## In breve
 
@@ -1029,8 +1030,49 @@ con i file delle versioni (normale `7a8b98d6…6aec`, animata `e026a0b5…52a5`)
 1.12.4 pubblicata «Aggiorna adesso» ha installato la 1.12.5 (14 su 14, dati intatti), poi 57 su 57; dalla 1.9 animata
 il Setup animata 1.12.5 scaricato da GitHub: dati intatti, schema da 10 a 11 dopo la copia, 57 su 57.
 
+## La 1.12.6
+
+L'11 novembre 2026 Giovanni ha chiesto come mostrare il programma agli altri PC della rete «senza modificare nulla», poi
+solo la dashboard, e infine: «implementare nella scheda riepilogo anche quello mensile/settimanale/giornaliero di
+ambulatori e sale operatorie, così da inserire anche quello nella dashboard, voglio che poi nella dashboard si possano
+richiamare le statistiche». Per la rete: il programma risponde solo su 127.0.0.1 e rifiuta ogni altro indirizzo (voluto,
+contro il DNS rebinding); senza toccarlo si può mettere davanti un «portiere» (Caddy) che lascia passare solo GET su
+`/riepilogo-live*`, `/static/*` e `/logo/*` con l'Host riscritto a 127.0.0.1:5000 (provato con un portiere di prova in
+Python: la dashboard si carica tutta, il resto risponde 403). Il testo del Caddyfile è nella conversazione e qui sotto
+in *Cose aperte*. Poi la 1.12.6 (vedi *Riepilogo della sala e statistiche nella dashboard* nel `LEGGIMI.md`): il
+riepilogo del periodo anche della sala, con le stesse regole, e le *Statistiche* dentro la dashboard, sotto
+`/riepilogo-live/statistiche`, così il portiere le lascia passare senza cambiare la sua regola.
+
 ## Cose aperte
 
+- **La dashboard sugli altri PC della rete** (11 novembre 2026): senza modificare il programma, con Caddy sul PC della
+  segreteria. Il Caddyfile (indirizzo e rete da adattare):
+  ```
+  :8080 {
+  	@fuori not remote_ip 192.168.1.0/24
+  	handle @fuori {
+  		respond "Non consentito" 403
+  	}
+  	@cruscotto {
+  		method GET HEAD
+  		path /riepilogo-live /riepilogo-live/* /riepilogo-live.json /static/* /logo/*
+  	}
+  	handle @cruscotto {
+  		reverse_proxy 127.0.0.1:5000 {
+  			header_up Host 127.0.0.1:5000
+  		}
+  	}
+  	@radice path /
+  	handle @radice {
+  		redir /riepilogo-live?schermo=1
+  	}
+  	handle {
+  		respond "Non consentito" 403
+  	}
+  }
+  ```
+  Più la regola del firewall di Windows per la porta 8080 (rete privata) e l'avvio di Caddy all'accensione. Provato
+  con un portiere di prova, non con Caddy vero. Il programma intero in rete invece no: non ha password.
 - **Ore del cambio dell'ora**: dalla 1.12.1 contano le ore vere (vedi *La 1.12.1*). Se per le
   buste paga Giovanni e Federica vogliono quelle dell'orologio, è un punto solo da cambiare.
 - Alla clinica c'è la 1.9 animata e il suo controllo degli aggiornamenti non riesce (il certificato,

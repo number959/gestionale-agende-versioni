@@ -719,6 +719,20 @@ ultime tre ore e chi era arrivato stamattina senza essere segnato non stava da n
   ({id del chirurgo: interventi}): `testo_cella_sala` e la pagina della settimana mettono il numero sotto il
   chirurgo che li fa (con un chirurgo solo il testo è quello di prima). Nella riga della sala dell'agenda del
   giorno (`griglia.html`) accanto a ogni chirurgo quanti interventi ha (`sala.chirurghi_del_giorno`).
+- **Riepilogo della sala e statistiche nella dashboard** (1.12.6, richiesta di Giovanni del 11 novembre 2026: il
+  riepilogo giornaliero, settimanale e mensile di ambulatori e sale operatorie, da richiamare nella dashboard):
+  `ambulatori.riepilogo_periodo(..., parte=)` con `parte='sala'` fa lo stesso conto sulle sale operatorie
+  (`stanze_del_periodo(..., parte)`: le sale attive e quelle spente con interventi nel periodo), con le stesse regole
+  degli ambulatori: ore di turno dei chirurghi in sala, ore occupate dagli interventi in `STATI_OCCUPANO`, i cinque
+  gruppi che sommano al totale, chirurghi, giorni, e le mezze giornate con la sala libera dalla parte della sala della
+  matrice. Le parole cambiano con `PAROLE_RIEPILOGO`; senza `parte` (o con `ambulatori`) tutto è identico alla 1.12.2.
+  La pagina `/ambulatori/riepilogo` ha le schede *Ambulatori* e *Sala operatoria* (`?parte=`), anche per l'Excel
+  (`riepilogo-sala-operatoria-….xlsx`, fogli *Sale* e *Chirurghi*) e il JSON. Nella dashboard il pulsante
+  *Statistiche* del riepilogo live apre `/riepilogo-live/statistiche` (e `.json`): la stessa pagina
+  (`pagina_riepilogo(..., cruscotto=True)`) senza Excel, senza menu con `?schermo=1`, con la classe `pagina-live` (niente
+  notifiche, che avrebbero dei nomi) e con i soli collegamenti della dashboard, così passa dal «portiere» della rete
+  locale (regola `path /riepilogo-live*`). Mai dati dei pazienti: `prove_112.py` (`p_periodo_sala`) lo controlla con un
+  paziente inventato e confronta i numeri della sala con un conto fatto a parte, minuto per minuto.
 - **In cima** una frase in parole semplici (`riassunto`): quante visite sono in corso, quante stanze
   hanno un medico adesso, quanti pazienti hanno l'orario passato senza l'arrivo segnato e il prossimo
   appuntamento. Sotto, una barra a quattro colori e i quattro numeri, che sommano agli appuntamenti
@@ -2761,6 +2775,7 @@ falliscono, cioè il difetto c'era davvero.
 | Esportazioni della sala separate da quelle degli ambulatori (richieste di Giovanni, 9 novembre 2026) | La matrice della settimana e la programmazione del mese lasciavano fuori la sala operatoria, la sala non aveva un Excel e non c'era un file unico per giorno, settimana e mese | Dalla 1.12.3 la sala nella settimana e nel mese in pagina, e *Esportazioni in Excel*: giorno, settimana e mese per ambulatori, sala operatoria o tutto insieme in fogli separati; i conti e gli Excel classici degli ambulatori uguali a prima |
 | Anteprima delle esportazioni della 1.12.3, stampate su A4 e guardate da nove revisori (10 novembre 2026) | Il planning della sala del giorno con titolo e legenda tagliati, su due pagine e con le righe da 15 minuti dell'endoscopia; fasce libere a strisce; grigio e azzurro uguali su carta; la testata di ogni pagina sopra il titolo (0,1 pollici di spazio); caratteri senza nome nei fogli di settimana e mese; «al 8» senza apostrofo; nel calendario righe senza data dopo un salto pagina; la sala del mese su due pagine; il totale tagliato dai bordi; orari attaccati al testo accanto; una data sola scritta come numero | 1.12.4: ognuna corretta con la sua prova in `prove_112.py` o `prove_112_excel.py`, che con il codice della 1.12.3 falliscono (dieci). Lasciati com'erano, da decidere: la stampa piccola dell'elenco del giorno e delle matrici (stanno in una pagina in larghezza) e il verde, che vuol dire appuntamento nel planning e libero nella matrice |
 | Interventi e ambulatori per medico (richiesta di Giovanni, 10 novembre 2026) | Nei report la sala aveva un numero di interventi per mezza giornata, senza dire di quale chirurgo; non c'era un conto per medico degli appuntamenti e degli interventi; nell'agenda del giorno i chirurghi in sala senza il loro numero | 1.12.5: il foglio *Per medico* in ogni esportazione, il numero sotto ogni chirurgo nella sala della settimana e del mese, e nell'agenda; `b_per_medico` confronta il foglio con un conto fatto a parte sul database |
+| Riepilogo del periodo della sala e statistiche nella dashboard (richiesta di Giovanni, 11 novembre 2026) | Il riepilogo del periodo contava solo gli ambulatori, e dalla dashboard non si arrivava alle statistiche | 1.12.6: `riepilogo_periodo(parte='sala')` con le stesse regole, la scheda *Sala operatoria* (pagina, Excel, JSON), le *Statistiche* sotto `/riepilogo-live`, senza pazienti e senza uscite dalla dashboard; `p_periodo_sala` e le prove nel browser |
 | Riepilogo del periodo, seconda revisione (1.12.2) | I turni di una stanza disattivata contavano anche dopo lo spegnimento; la sola coda dopo la mezzanotte non la faceva comparire; una visita fino alle 24:00 lasciava una riga del medico a zero; un giorno chiuso con soli disdetti sembrava aperto; le prove dell'Excel avevano solo ore intere | Turni della stanza spenta fino al suo ultimo appuntamento; la coda la fa comparire; niente coda alle 24:00; i disdetti non aprono il giorno; Excel provato cella per cella con un terzo d'ora |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già

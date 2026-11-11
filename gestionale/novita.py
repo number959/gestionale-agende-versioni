@@ -13,6 +13,19 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.12.6', [
+        dict(titolo='Il riepilogo del periodo anche della sala operatoria',
+             testo='Nel riepilogo del periodo, oltre agli ambulatori, c\'è la scheda Sala operatoria: per un giorno, una '
+                   'settimana o un mese le sale, i chirurghi e gli interventi, con le ore di turno in sala, quanto sono '
+                   'state occupate, gli arrivati, i non presentati, i disdetti e le mezze giornate con la sala libera. '
+                   'Anche in Excel.',
+             guida='riepilogo-periodo'),
+        dict(titolo='Le statistiche nella dashboard',
+             testo='Nel riepilogo live il pulsante «Statistiche» apre gli stessi numeri del riepilogo del periodo, degli '
+                   'ambulatori o della sala operatoria, senza uscire dalla dashboard e senza dati dei pazienti: si può '
+                   'mostrare anche sugli altri PC della rete, insieme al riepilogo live.',
+             guida='riepilogo-live'),
+    ]),
     ('1.12.5', [
         dict(titolo='Interventi e ambulatori per medico',
              testo='In ogni Excel di Esportazioni c\'è il foglio «Per medico»: quanti appuntamenti negli ambulatori e '

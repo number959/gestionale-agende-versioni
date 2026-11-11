@@ -32,7 +32,7 @@ ULTIMA = date(2100, 12, 31)
 # colori proposti ai medici nuovi, uno diverso per ciascuno finche' bastano:
 # la versione del programma: la stessa di installer.iss (una prova controlla
 # che coincidano), mostrata in Aiuto per sapere cosa e' installato
-VERSIONE = '1.12.5'
+VERSIONE = '1.12.6'
 
 # nella griglia il colore e' il modo piu' rapido per distinguerli
 PALETTE = ['#154381', '#5B7F3E', '#A8582B', '#6B4E9B', '#B3261E',

@@ -662,15 +662,22 @@ ARTICOLI += [
              P('Modo schermo', 'Caratteri grandi e niente menu, per il secondo monitor o lo schermo della direzione: '
                'si lascia aperta e si rinnova da sola. Su questa pagina le notifiche non compaiono sopra le stanze.',
                '[data-guida="live-schermo"]'),
+             P('Statistiche', '«Statistiche» apre i numeri di un giorno, una settimana o un mese, degli ambulatori o della '
+               'sala operatoria, senza uscire dalla dashboard: si sceglie il periodo e si torna con «Torna al riepilogo '
+               'live». Come il riepilogo live, non mostra dati dei pazienti.', '[data-guida="live-statistiche"]'),
          ]),
     dict(slug='riepilogo-periodo', gruppo='Ambulatori', titolo='Il riepilogo del periodo: com\'è andata, stanza per stanza',
          in_breve='Menu Ambulatori → Riepilogo del periodo: per un giorno, una settimana o un mese, le ore di turno '
                   'delle stanze e quanto sono state occupate, le visite fatte, i non presentati, i disdetti, quelli '
                   'ancora da segnare e le mezze giornate senza nessun medico, per stanza, per medico e giorno per '
-                  'giorno. Si scarica in Excel e si stampa.',
+                  'giorno; con la scheda Sala operatoria lo stesso per le sale, i chirurghi e gli interventi. Si scarica '
+                  'in Excel e si stampa.',
          endpoint='ambulatori.riepilogo', apri=('ambulatori.riepilogo', {}),
          foto='/ambulatori/riepilogo?struttura=1&periodo=settimana',
          passi=[
+             P('Ambulatori o sala operatoria', 'In alto si sceglie la parte: Ambulatori (le stanze, i medici, gli '
+               'appuntamenti) o Sala operatoria (le sale, i chirurghi, gli interventi, con le mezze giornate in cui la '
+               'sala è rimasta libera). Le regole dei conti sono le stesse.', '[data-guida="periodo-parti"]'),
              P('Il periodo', 'Oggi, ieri, questa settimana, la settimana scorsa, questo mese o il mese scorso; oppure '
                'due date a scelta (fino a tre mesi) e «Mostra». Le frecce in alto vanno al periodo prima e dopo.',
                '[data-guida="periodo-scelta"]'),
