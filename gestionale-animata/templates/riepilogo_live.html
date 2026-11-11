@@ -14,14 +14,15 @@
     </select>{% if schermo %}<input type="hidden" name="schermo" value="1">{% endif %}</form>
     <span class="separa"></span>
     {% endif %}
-    <a class="bottone primario" href="{{ url_for('live.statistiche', struttura=sid, schermo=1 if schermo else none) }}" data-guida="live-statistiche">Statistiche</a>
+    {#- 1.12.6: il riepilogo del periodo dentro la dashboard (anche nel modo schermo, per la rete locale); si chiama
+        come la pagina del menu Ambulatori, che ha gli stessi numeri: «Statistiche» e' un'altra pagina #}
+    <a class="bottone primario" href="{{ url_for('live.statistiche', struttura=sid, schermo=1 if schermo else none) }}" data-guida="live-statistiche">Riepilogo del periodo</a>
     {% if schermo %}
     <a class="bottone" href="{{ url_for('live.pagina', struttura=sid) }}">Torna alla pagina normale</a>
     {% else %}
     <a class="bottone" href="{{ url_for('live.pagina', struttura=sid, schermo=1) }}" data-guida="live-schermo">Modo schermo</a>
     <a class="bottone" href="{{ url_for('ambulatori.settimana', iso=r.data, struttura=sid) }}">Pianificazione</a>
     <a class="bottone" href="{{ url_for('cruscotto.oggi', struttura=sid) }}">Oggi</a>
-    <a class="bottone" href="{{ url_for('ambulatori.riepilogo', struttura=sid) }}">Riepilogo del periodo</a>
     {% endif %}
   </div>
 </div>
@@ -116,7 +117,7 @@
       </div>
       <p class="nota"><span class="mezza libera" aria-hidden="true">M</span> mattina libera <span class="mezza libera" aria-hidden="true">P</span> pomeriggio libero <span class="mezza occupata" aria-hidden="true"></span> c'è un medico <span class="mezza passata" aria-hidden="true"></span> già passata o chiusa</p>
       {% else %}<p class="vuoto" data-guida="live-libere">Nessuna mezza giornata libera nei prossimi giorni.</p>{% endif %}
-      <p class="nota">Dalla <a href="{{ url_for('ambulatori.settimana', iso=r.data, struttura=sid) }}">pianificazione degli ambulatori</a> si mette un medico in una stanza libera.</p>
+      {% if not schermo %}<p class="nota">Dalla <a href="{{ url_for('ambulatori.settimana', iso=r.data, struttura=sid) }}">pianificazione degli ambulatori</a> si mette un medico in una stanza libera.</p>{% endif %}
     </section>
   </div>
 </div>

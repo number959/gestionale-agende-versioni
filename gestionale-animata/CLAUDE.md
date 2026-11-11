@@ -227,9 +227,11 @@ temporanea.
   solo la coda), e i loro turni contano solo fino al loro ultimo appuntamento non disdetto (la data dello
   spegnimento non è scritta da nessuna parte e i turni restano validi). Dalla 1.12.6 lo stesso conto per la sala operatoria
   (`riepilogo_periodo(..., parte='sala')`, parole in `PAROLE_RIEPILOGO`; senza parte identico a prima), con le schede
-  *Ambulatori* / *Sala operatoria*, e le *Statistiche* della dashboard sotto `/riepilogo-live/statistiche`
-  (`pagina_riepilogo(cruscotto=True)`): come il riepilogo live mai dati dei pazienti e nessun collegamento fuori da
-  `/riepilogo-live*`, `/static/`, `/logo/` (è quello che lascia passare il portiere della rete locale).
+  *Ambulatori* / *Sala operatoria*, e il *Riepilogo del periodo* della dashboard sotto `/riepilogo-live/statistiche`
+  (`pagina_riepilogo(cruscotto=True)`): come il riepilogo live mai dati dei pazienti, e con `?schermo=1` (la pagina e
+  la dashboard stessa) nessun collegamento fuori da `/riepilogo-live*`, `/static/`, `/logo/` (è quello che lascia passare
+  il portiere della rete locale). Nella dashboard non si usa il nome «Statistiche»: è la pagina del menu, che conta in
+  un altro modo. Con una sola stanza o sala le frasi vanno al singolare (`PAROLE_UNA`).
 - Stampe (dalla 1.12): il foglio del giorno è una `table.impaginazione` con testata in `thead` e
   piede in `tfoot` (il browser li ripete su ogni pagina); il numero di pagina viene dai margin box di
   `@page` in `stile.css`. Le colonne di partenza del foglio sono `viste.COLONNE_DI_PARTENZA`: una

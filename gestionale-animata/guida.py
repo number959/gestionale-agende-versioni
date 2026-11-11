@@ -662,9 +662,11 @@ ARTICOLI += [
              P('Modo schermo', 'Caratteri grandi e niente menu, per il secondo monitor o lo schermo della direzione: '
                'si lascia aperta e si rinnova da sola. Su questa pagina le notifiche non compaiono sopra le stanze.',
                '[data-guida="live-schermo"]'),
-             P('Statistiche', '«Statistiche» apre i numeri di un giorno, una settimana o un mese, degli ambulatori o della '
-               'sala operatoria, senza uscire dalla dashboard: si sceglie il periodo e si torna con «Torna al riepilogo '
-               'live». Come il riepilogo live, non mostra dati dei pazienti.', '[data-guida="live-statistiche"]'),
+             P('Riepilogo del periodo', '«Riepilogo del periodo» apre i numeri di un giorno, una settimana o un mese, '
+               'degli ambulatori o della sala operatoria, senza uscire dalla dashboard (anche nel modo schermo): si '
+               'sceglie il periodo e si torna con «Torna al riepilogo live». Sono gli stessi numeri di Ambulatori → '
+               'Riepilogo del periodo; come il riepilogo live, non mostra dati dei pazienti.',
+               '[data-guida="live-statistiche"]'),
          ]),
     dict(slug='riepilogo-periodo', gruppo='Ambulatori', titolo='Il riepilogo del periodo: com\'è andata, stanza per stanza',
          in_breve='Menu Ambulatori → Riepilogo del periodo: per un giorno, una settimana o un mese, le ore di turno '

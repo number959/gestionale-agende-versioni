@@ -20,7 +20,7 @@ chiaro e il riepilogo del periodo: vedi *La 1.12.2*), lo stesso giorno alla **1.
 ambulatori e sala operatoria per giorno, settimana e mese: vedi *La 1.12.3*) , il 10 novembre alla **1.12.4**
 (le esportazioni stampate meglio, dopo averle guardate pagina per pagina: vedi *La 1.12.4*), lo stesso giorno alla
 **1.12.5** (interventi e ambulatori per medico: vedi *La 1.12.5*) e l'11 novembre alla **1.12.6** (il riepilogo del periodo
-della sala operatoria e le statistiche nella dashboard: vedi *La 1.12.6*).
+della sala operatoria e anche dentro la dashboard: vedi *La 1.12.6*).
 
 ## In breve
 
@@ -1040,8 +1040,13 @@ contro il DNS rebinding); senza toccarlo si può mettere davanti un «portiere»
 `/riepilogo-live*`, `/static/*` e `/logo/*` con l'Host riscritto a 127.0.0.1:5000 (provato con un portiere di prova in
 Python: la dashboard si carica tutta, il resto risponde 403). Il testo del Caddyfile è nella conversazione e qui sotto
 in *Cose aperte*. Poi la 1.12.6 (vedi *Riepilogo della sala e statistiche nella dashboard* nel `LEGGIMI.md`): il
-riepilogo del periodo anche della sala, con le stesse regole, e le *Statistiche* dentro la dashboard, sotto
-`/riepilogo-live/statistiche`, così il portiere le lascia passare senza cambiare la sua regola.
+riepilogo del periodo anche della sala, con le stesse regole, e lo stesso riepilogo dentro la dashboard, sotto
+`/riepilogo-live/statistiche`, così il portiere lo lascia passare senza cambiare la sua regola. Il pulsante nella
+dashboard si chiama «Riepilogo del periodo» e non «Statistiche», come aveva chiesto Giovanni: la revisione ha trovato che
+la voce *Statistiche* del menu, accanto, è un'altra pagina e per la stessa settimana dà numeri diversi (conta in un
+altro modo). Se Giovanni preferisce un altro nome si cambia nel solo testo del pulsante e del titolo. Dalla stessa
+revisione: nel modo schermo la dashboard non ha più collegamenti fuori da `/riepilogo-live*` (c'era la nota sulla
+pianificazione), e con una sola sala le frasi sono al singolare.
 
 ## Cose aperte
 

@@ -289,9 +289,14 @@ with sync_playwright() as p:
        scarico.value.suggested_filename.startswith('riepilogo-sala-operatoria-'), scarico.value.suggested_filename)
     pg.goto(B + '/riepilogo-live?struttura=1&schermo=1')
     pg.wait_for_selector('#riepilogo-live .frase-live')
+    fuori = [h for h in pg.eval_on_selector_all('a[href], form[action]', 'els => els.map(e => e.getAttribute("href") || e.getAttribute("action"))')
+             if not h.startswith(('/riepilogo-live', '/static/', '/logo/'))]
+    ok('dashboard nel modo schermo: nessun collegamento fuori dalla dashboard', not fuori, fuori[:5])
+    ok('dashboard: il pulsante si chiama «Riepilogo del periodo», non «Statistiche»',
+       pg.inner_text('[data-guida="live-statistiche"]').strip() == 'Riepilogo del periodo', pg.inner_text('[data-guida="live-statistiche"]'))
     pg.click('[data-guida="live-statistiche"]')
     pg.wait_for_selector('.pagina-periodo .frase-live')
-    ok('dashboard: «Statistiche» apre il riepilogo del periodo senza menu, nel modo schermo',
+    ok('dashboard: «Riepilogo del periodo» apre il riepilogo senza menu, nel modo schermo',
        '/riepilogo-live/statistiche' in pg.url and 'schermo=1' in pg.url and pg.locator('nav.menu').count() == 0, pg.url)
     pg.locator('.parti-periodo a', has_text='Sala operatoria').click()
     pg.wait_for_selector('.pagina-periodo .frase-live')
@@ -301,10 +306,10 @@ with sync_playwright() as p:
        '/riepilogo-live/statistiche' in pg.url and 'parte=sala' in pg.url and 'periodo=mese' in pg.url and 'schermo=1' in pg.url, pg.url)
     fuori = [h for h in pg.eval_on_selector_all('a[href]', 'els => els.map(e => e.getAttribute("href"))')
              if not h.startswith('/riepilogo-live')]
-    ok('dashboard: nelle statistiche nessun collegamento fuori dalla dashboard e niente Excel', not fuori, fuori[:5])
+    ok('dashboard: nel riepilogo del periodo nessun collegamento fuori dalla dashboard e niente Excel', not fuori, fuori[:5])
     pg.set_viewport_size({'width': 390, 'height': 844})
     pg.wait_for_timeout(300)
-    ok('dashboard: le statistiche sul telefono non scorrono di lato',
+    ok('dashboard: il riepilogo del periodo sul telefono non scorre di lato',
        pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'), pg.evaluate('document.documentElement.scrollWidth'))
     pg.set_viewport_size({'width': 1366, 'height': 820})
     pg.click('[data-guida="statistiche-torna"]')

@@ -94,8 +94,9 @@ s, b, _ = get('/ambulatori/riepilogo?struttura=1&periodo=mese&parte=sala')
 controlla('Riepilogo del periodo della sala (1.12.6): la pagina', s == 200 and 'Le sale' in testo(b) and 'I chirurghi' in testo(b), s)
 s, b, _ = get('/riepilogo-live/statistiche?struttura=1&periodo=settimana&schermo=1')
 pagina_st = b.decode('utf-8', 'replace')
-controlla('Statistiche nella dashboard (1.12.6): la pagina senza menu e senza Excel',
-          s == 200 and 'class="frase-live' in pagina_st and '<nav class="menu"' not in pagina_st and 'riepilogo.xlsx' not in pagina_st, s)
+controlla('Riepilogo del periodo nella dashboard (1.12.6): la pagina senza menu e senza Excel',
+          s == 200 and 'class="frase-live' in pagina_st and '<nav class="menu"' not in pagina_st and 'riepilogo.xlsx' not in pagina_st
+          and '<h1 class="giorno">Riepilogo del periodo' in pagina_st, s)
 s, b, _ = get('/ambulatori/riepilogo.json?struttura=1&periodo=settimana')
 d = json.loads(b) if s == 200 else {}
 controlla('Riepilogo del periodo (1.12.2): il JSON con stanze, medici e giorni', s == 200 and all(k in d for k in ('stanze', 'medici', 'giorni', 'totale')), (s, list(d)[:8]))

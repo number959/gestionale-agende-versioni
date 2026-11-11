@@ -2319,8 +2319,10 @@ def p_periodo_revisione():
     mer3 = MER + timedelta(days=14)
     pagina = testo(C.get('/ambulatori/riepilogo?struttura=1&da=%s&a=%s' % (mer3, mer3)))
     assert '<b>1</b> mezza giornata su 2 senza nessun medico' in pagina, 'singolare'
-    assert 'Mercoledì 23 dicembre 2026: nessun appuntamento nelle stanze. 4 ore di turno, senza visite. ' \
+    # (con una sola stanza attiva anche la frase va al singolare: «nella stanza», dalla revisione della 1.12.6)
+    assert 'Mercoledì 23 dicembre 2026: nessun appuntamento nella stanza. 4 ore di turno, senza visite. ' \
            '1 mezza giornata su 2 senza nessun medico.' in pagina
+    assert '<h2 class="sezione">La stanza <small class="sotto-titolo">ore di turno, quanto è stata occupata' in pagina
 
 
 prova('riepilogo del periodo (1.12.2, dalla revisione): medico in due stanze, sovrapposizioni, mezzanotte, festivo e '
@@ -2558,26 +2560,84 @@ def p_periodo_sala():
     assert wb['Sale'].cell(5, 1).value in ('SALA', 'Sala') or any(c.value in ('SALA', 'Sala') for row in wb['Sale'].iter_rows(max_row=8) for c in row)
     # le statistiche della dashboard: stessa pagina, senza menu con ?schermo=1, collegamenti solo della dashboard
     ts = testo(C.get('/riepilogo-live/statistiche?%s&parte=sala&schermo=1' % q))
-    assert 'Statistiche' in ts and 'Le sale' in ts and '<nav class="menu"' not in ts and 'pagina-live' in ts
+    # si chiama come la pagina del menu Ambulatori, con gli stessi numeri («Statistiche» e' un'altra pagina, che conta
+    # in un altro modo: dalla revisione della 1.12.6)
+    assert '<h1 class="giorno">Riepilogo del periodo' in ts and 'Statistiche' not in ts, 'il nome della pagina'
+    assert 'Le sale' in ts and '<nav class="menu"' not in ts and 'pagina-live' in ts
     import re
     fuori = [h for h in re.findall(r'href="([^"]+)"', ts) if not h.startswith('/riepilogo-live') and not h.startswith('/static/')]
     assert not fuori, fuori
     assert 'riepilogo.xlsx' not in ts, 'niente Excel nella dashboard'
     tsn = testo(C.get('/riepilogo-live/statistiche?%s' % q))
-    assert '<nav class="menu"' in tsn and 'Le stanze' in tsn
+    # senza il modo schermo (sul PC della clinica) c'e' il menu, e restano l'Excel e la stampa
+    assert '<nav class="menu"' in tsn and 'Le stanze' in tsn and '/ambulatori/riepilogo.xlsx?' in tsn and 'window.print()' in tsn
     js = C.get('/riepilogo-live/statistiche.json?%s&parte=sala' % q).get_json()
     # (il JSON e' calcolato all'ora vera, non a quella ferma della prova: si confrontano i conti che non ne dipendono)
     assert js['parte'] == 'sala' and js['totale']['totale'] == 6 and js['totale']['minuti_turno'] == r['totale']['minuti_turno'] \
         and [x['stanza'] for x in js['stanze']] == [x['stanza'] for x in r['stanze']], js['totale']
     for pagina in (ts, tsn, str(js), testo(C.get('/ambulatori/riepilogo?%s&parte=sala' % q))):
         assert 'Provolo' not in pagina and '3339990006' not in pagina, 'mai dati dei pazienti'
-    # il riepilogo live porta alle statistiche, anche nel modo schermo
-    assert '/riepilogo-live/statistiche?struttura=1' in testo(C.get('/riepilogo-live?struttura=1'))
-    assert 'schermo=1' in testo(C.get('/riepilogo-live?struttura=1&schermo=1')).split('/riepilogo-live/statistiche')[1][:60]
+    # il riepilogo live porta al riepilogo del periodo della dashboard, anche nel modo schermo; un solo pulsante con
+    # quel nome, e nessun pulsante «Statistiche» accanto alla voce del menu con lo stesso nome
+    tl = testo(C.get('/riepilogo-live?struttura=1'))
+    barra = tl.split('<div class="barra">')[1].split('</div>')[0]
+    assert '/riepilogo-live/statistiche?struttura=1' in barra and barra.count('Riepilogo del periodo') == 1 \
+        and 'Statistiche' not in barra, barra
+    tls = testo(C.get('/riepilogo-live?struttura=1&schermo=1'))
+    assert 'schermo=1' in tls.split('/riepilogo-live/statistiche')[1][:60]
+    # la dashboard nel modo schermo (quella della rete locale): nessun collegamento fuori dalla dashboard
+    fuori = [h for h in re.findall(r'(?:href|action)="([^"]+)"', tls)
+             if not h.startswith(('/riepilogo-live', '/static/', '/logo/'))]
+    assert not fuori, fuori
 
 
 prova('1.12.6: il riepilogo del periodo della sala operatoria contro un calcolo a parte (anche una sala spenta), le '
       'pagine, l\'Excel e le statistiche della dashboard senza pazienti e con i soli collegamenti della dashboard', p_periodo_sala)
+
+
+def p_periodo_parole_una_sala():
+    """Dalla revisione della 1.12.6: con una sola sala le frasi e i titoli vanno al singolare («La sala è stata
+    occupata», «nella sala», «La sala»), e la coda dopo la mezzanotte di 1 ora si dice «c'è 1 ora», non «ci sono»."""
+    import ambulatori as AM
+    from modelli import Appuntamento, Paziente
+    S, I, C = mondo()
+    s = S()
+    st = s.get(Struttura, 1)
+    turno(S, I['Esempietti'], I['Sala operatoria'], 0, time(8), time(14))
+    pz = Paziente(cognome='Provolo', nome='Gino', telefono='3339990006')
+    s.add(pz)
+    s.flush()
+    def app(giorno, h, durata, stato):
+        inizio = datetime.combine(giorno, time(h))
+        s.add(Appuntamento(risorsa_id=I['Sala operatoria'], operatore_id=I['Esempietti'], paziente_id=pz.id,
+                           inizio=inizio, fine=inizio + timedelta(minutes=durata), stato=stato))
+    app(LUN, 9, 60, 'ARRIVATO')
+    app(LUN, 13, 60, 'CONFERMATO')
+    app(LUN + timedelta(days=6), 23, 60, 'ARRIVATO')        # domenica 13, fino alla mezzanotte: nessuna coda
+    app(LUN + timedelta(days=13), 23, 120, 'ARRIVATO')      # domenica 20 alle 23: 1 ora dopo la mezzanotte
+    app(LUN + timedelta(days=20), 23, 150, 'ARRIVATO')      # domenica 27 alle 23: 1 ora e 30 minuti dopo
+    s.commit()
+    adesso = datetime.combine(LUN, time(12))
+    r = AM.riepilogo_periodo(s, st, LUN, LUN, adesso=adesso, parte='sala')
+    assert [x['stanza'] for x in r['stanze']] == ['Sala operatoria'], r['stanze']
+    assert 'La sala è stata occupata per' in r['frase'] and 'Le sale' not in r['frase'], r['frase']
+    r = AM.riepilogo_periodo(s, st, LUN + timedelta(days=14), LUN + timedelta(days=14), adesso=adesso, parte='sala')
+    assert 'nessun intervento nella sala.' in r['frase'] and \
+        'Dopo la mezzanotte c\'è 1 ora di interventi cominciati il giorno prima.' in r['frase'], r['frase']
+    r = AM.riepilogo_periodo(s, st, LUN + timedelta(days=21), LUN + timedelta(days=21), adesso=adesso, parte='sala')
+    assert 'Dopo la mezzanotte ci sono 1 ora e 30 minuti di interventi' in r['frase'], r['frase']
+    r = AM.riepilogo_periodo(s, st, LUN + timedelta(days=5), LUN + timedelta(days=5), adesso=adesso, parte='sala')
+    assert r['frase'] == 'Nel periodo non ci sono interventi né turni nella sala.', r['frase']
+    s.close()
+    q = 'struttura=1&da=%s&a=%s&parte=sala' % (LUN.isoformat(), LUN.isoformat())
+    for t in (testo(C.get('/ambulatori/riepilogo?%s' % q)), testo(C.get('/riepilogo-live/statistiche?%s&schermo=1' % q))):
+        assert '<h2 class="sezione">La sala <small class="sotto-titolo">ore di turno, quanto è stata occupata' in t \
+            and 'dai turni nella sala e dai loro interventi' in t and '2 interventi in 1 sala' in t, 'al singolare'
+        assert 'Provolo' not in t and '3339990006' not in t, 'mai dati dei pazienti'
+
+
+prova('1.12.6, dalla revisione: con una sola sala le frasi al singolare, e «c\'è 1 ora» dopo la mezzanotte',
+      p_periodo_parole_una_sala)
 
 
 def l_revisione():

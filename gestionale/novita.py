@@ -20,10 +20,11 @@ NOVITA = [
                    'state occupate, gli arrivati, i non presentati, i disdetti e le mezze giornate con la sala libera. '
                    'Anche in Excel.',
              guida='riepilogo-periodo'),
-        dict(titolo='Le statistiche nella dashboard',
-             testo='Nel riepilogo live il pulsante «Statistiche» apre gli stessi numeri del riepilogo del periodo, degli '
-                   'ambulatori o della sala operatoria, senza uscire dalla dashboard e senza dati dei pazienti: si può '
-                   'mostrare anche sugli altri PC della rete, insieme al riepilogo live.',
+        dict(titolo='Il riepilogo del periodo nella dashboard',
+             testo='Nel riepilogo live il pulsante «Riepilogo del periodo» apre i numeri di un giorno, una settimana o un '
+                   'mese, degli ambulatori o della sala operatoria, senza uscire dalla dashboard e senza dati dei '
+                   'pazienti, anche nel modo schermo: si può mostrare anche sugli altri PC della rete, insieme al '
+                   'riepilogo live.',
              guida='riepilogo-live'),
     ]),
     ('1.12.5', [

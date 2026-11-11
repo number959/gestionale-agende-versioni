@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {#- Il riepilogo del periodo (1.12.2), degli ambulatori o della sala operatoria (parte, 1.12.6). Con cruscotto e' la
-    stessa pagina dentro la dashboard (Statistiche del riepilogo live): senza Excel e senza collegamenti alle pagine
-    fuori dalla dashboard; con la classe pagina-live gestionale.js non chiede le notifiche (avrebbero dei nomi). #}
+    stessa pagina dentro la dashboard (il pulsante «Riepilogo del periodo» del riepilogo live, 1.12.6): con ?schermo=1
+    senza menu, senza Excel e senza collegamenti alle pagine fuori dalla dashboard; con la classe pagina-live gestionale.js non chiede le notifiche (avrebbero dei nomi). #}
 {% block titolo %}{{ titolo }}{% endblock %}
 {% block classe_body %}{% if cruscotto %} class="pagina-live pagina-statistiche{% if schermo %} schermo{% endif %}"{% endif %}{% endblock %}
 {% block menu %}{% if not schermo %}{% include "_menu.html" %}{% endif %}{% endblock %}
@@ -12,7 +12,7 @@
 {% macro nome_gruppo(chiave, nome, n) %}{% if chiave == 'fatti' and parte == 'sala' %}{{ 'arrivato' if n == 1 else 'arrivati' }}{% else %}{{ singolari[chiave] if n == 1 else nome }}{% endif %}{% endmacro %}
 <div class="barra">
   <span class="marchio">{% include "_marchio.html" %}</span>
-  <h1 class="giorno">{% if cruscotto %}Statistiche{% else %}Riepilogo del periodo{% endif %} <small class="sotto-titolo">{% if parte == 'sala' %}sala operatoria · {% endif %}{{ r.titolo }}</small></h1>
+  <h1 class="giorno">Riepilogo del periodo <small class="sotto-titolo">{% if parte == 'sala' %}sala operatoria · {% endif %}{{ r.titolo }}</small></h1>
   <span class="conteggio">{{ t.totale }} {{ app(t.totale) }} in {{ r.stanze|length }} {{ w.stanza if r.stanze|length == 1 else w.stanze }}</span>
   <div class="comandi">
     <a class="passo" data-tasto="precedente" href="{{ url_for(vista, struttura=sid, parte=parte, schermo=sch, **prima) }}" title="Periodo precedente">&lsaquo;</a>
@@ -28,9 +28,12 @@
     {% endif %}
     {% if cruscotto %}
     <a class="bottone primario" href="{{ url_for('live.pagina', struttura=sid, schermo=sch) }}" data-guida="statistiche-torna">Torna al riepilogo live</a>
-    {% else %}
-    <a class="bottone primario" href="{{ url_for('ambulatori.riepilogo_excel', struttura=sid, da=r.da, a=r.a, parte=parte) }}" data-guida="periodo-excel">Scarica in Excel</a>
+    {% endif %}
+    {% if not schermo %}
+    <a class="bottone{% if not cruscotto %} primario{% endif %}" href="{{ url_for('ambulatori.riepilogo_excel', struttura=sid, da=r.da, a=r.a, parte=parte) }}" data-guida="periodo-excel">Scarica in Excel</a>
     <button class="bottone" type="button" onclick="window.print()">Stampa</button>
+    {% endif %}
+    {% if not cruscotto %}
     <a class="bottone" href="{{ url_for('live.pagina', struttura=sid) }}">Riepilogo live</a>
     {% endif %}
   </div>
@@ -70,7 +73,7 @@
     </ul>
   </section>
 
-  <h2 class="sezione">Le {{ w.stanze }} <small class="sotto-titolo">ore di turno, quanto sono state occupate e com'è andata</small></h2>
+  <h2 class="sezione">{{ w.le_stanze }} <small class="sotto-titolo">ore di turno, {{ w.quanto }} e com'è andata</small></h2>
   <div class="scorri-live">
   <table class="elenco tabella-periodo" data-guida="periodo-stanze">
     <thead><tr><th>{{ w.Stanza }}</th><th>{{ w.Medici }}</th><th class="n">Ore di turno</th><th class="n">Occupate</th><th>Occupazione</th><th class="n">{{ 'Interv.' if parte == 'sala' else 'Appunt.' }}</th><th class="n">{{ w.fatti }}</th><th class="n">Non pres.</th><th class="n">Disdetti</th><th class="n">Da segnare</th><th class="n">Da fare</th><th class="n">Mezze giornate {{ 'con la sala libera' if parte == 'sala' else 'senza medico' }}</th></tr></thead>

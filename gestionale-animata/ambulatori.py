@@ -1358,12 +1358,20 @@ PAROLE_RIEPILOGO = {
                        la_stanza='la stanza', nelle='nelle stanze', medico='medico', medici='medici', Medico='Medico',
                        Medici='Medici', senza='senza nessun medico', Senza='Senza medico',
                        occupate='Le stanze sono state occupate', fatti='Fatti', titolo='Riepilogo di agende e ambulatori',
-                       file='riepilogo-ambulatori', di_turno='di turno nelle stanze'),
+                       file='riepilogo-ambulatori', di_turno='di turno nelle stanze', le_stanze='Le stanze',
+                       quanto='quanto sono state occupate'),
     'sala': dict(app='intervent', stanza='sala', stanze='sale', Stanza='Sala', Stanze='Sale', la_stanza='la sala',
                  nelle='nelle sale', medico='chirurgo', medici='chirurghi', Medico='Chirurgo', Medici='Chirurghi',
                  senza='con la sala libera', Senza='Sala libera', occupate='Le sale sono state occupate',
                  fatti='Arrivati', titolo='Riepilogo della sala operatoria', file='riepilogo-sala-operatoria',
-                 di_turno='di turno in sala'),
+                 di_turno='di turno in sala', le_stanze='Le sale', quanto='quanto sono state occupate'),
+}
+# con una sola stanza o una sola sala nel periodo le frasi vanno al singolare («La sala è stata occupata», «nella sala»)
+PAROLE_UNA = {
+    'ambulatori': dict(nelle='nella stanza', occupate='La stanza è stata occupata', le_stanze='La stanza',
+                       quanto='quanto è stata occupata'),
+    'sala': dict(nelle='nella sala', occupate='La sala è stata occupata', le_stanze='La sala',
+                 quanto='quanto è stata occupata'),
 }
 
 
@@ -1405,9 +1413,9 @@ def riepilogo_periodo(ses, st, da, a, adesso=None, parte='ambulatori'):
     interventi, interventi per gruppo, chirurghi, giorni e mezze giornate con la sala libera."""
     adesso = adesso or datetime.now()
     parte = parte_riepilogo(parte)
-    w = PAROLE_RIEPILOGO[parte]
     regole = servizi.Regole(ses, da, a)
     stanze, fino = stanze_del_periodo(ses, st, da, a, parte)
+    w = dict(PAROLE_RIEPILOGO[parte], **(PAROLE_UNA[parte] if len(stanze) == 1 else {}))
     per_id = {r.id: r for r in stanze}
     attive = {r.id for r in (sale_della(st) if parte == 'sala' else stanze_della(st))}
     # anche il giorno prima: la coda dopo la mezzanotte di una visita cominciata la sera prima conta nel giorno dopo
@@ -1545,8 +1553,11 @@ def riepilogo_periodo(ses, st, da, a, adesso=None, parte='ambulatori'):
             frase += ' %s di turno%s.' % (ore_in_parole(totale['minuti_turno']).capitalize(),
                                           '' if totale['minuti_occupati'] else ', senza %s' % visite)
         if code_minuti:
-            frase += ' Dopo la mezzanotte ci sono %s di %s cominciat%s il giorno prima.' % (
-                ore_in_parole(code_minuti), visite, 'e' if parte == 'ambulatori' else 'i')
+            quante = ore_in_parole(code_minuti)
+            # «c'è 1 ora», «c'è 1 minuto»; «ci sono 30 minuti», «ci sono 1 ora e 30 minuti»
+            frase += ' Dopo la mezzanotte %s %s di %s cominciat%s il giorno prima.' % (
+                'c\'è' if quante.startswith('1 ') and ' e ' not in quante else 'ci sono', quante, visite,
+                'e' if parte == 'ambulatori' else 'i')
         if totale['mezze']:
             frase += ' %d mezz%s giornat%s su %d %s.' % (
                 totale['libere'], 'a' if totale['libere'] == 1 else 'e', 'a' if totale['libere'] == 1 else 'e', totale['mezze'],
@@ -1696,9 +1707,11 @@ def riepilogo():
 
 
 def pagina_riepilogo(s, st, strutture, cruscotto=False):
-    """La pagina del riepilogo del periodo; con cruscotto=True la stessa dentro la dashboard (le Statistiche del
-    riepilogo live, 1.12.6): senza menu se ?schermo=1, senza Excel e senza collegamenti alle pagine fuori dalla
-    dashboard, cosi' passa dal «portiere» della rete locale."""
+    """La pagina del riepilogo del periodo; con cruscotto=True la stessa dentro la dashboard (1.12.6: il pulsante
+    «Riepilogo del periodo» del riepilogo live, sotto /riepilogo-live/statistiche): con ?schermo=1 senza menu, senza
+    Excel e senza collegamenti alle pagine fuori dalla dashboard, cosi' passa dal «portiere» della rete locale. Il nome
+    e' quello della pagina del menu Ambulatori, con gli stessi numeri: «Statistiche» e' un'altra pagina, che conta in
+    un altro modo."""
     da, a, nome = _periodo_chiesto()
     parte = parte_riepilogo(request.args.get('parte'))
     r = riepilogo_periodo(s, st, da, a, parte=parte)
@@ -1711,7 +1724,7 @@ def pagina_riepilogo(s, st, strutture, cruscotto=False):
                            vista='live.statistiche' if cruscotto else 'ambulatori.riepilogo',
                            sezione='live' if cruscotto else 'riepilogo-periodo',
                            massimo=MASSIMO_GIORNI_RIEPILOGO, data_menu=min(a, date.today()).isoformat(),
-                           titolo='%s · %s' % ('Statistiche' if cruscotto else 'Riepilogo del periodo', r['titolo']))
+                           titolo='Riepilogo del periodo · %s' % r['titolo'])
 
 
 @bp.route('/riepilogo.xlsx')
