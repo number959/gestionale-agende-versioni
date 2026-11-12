@@ -180,12 +180,11 @@ def candidati_attesa(s, a):
 
 def messaggio_posto_libero(a):
     st = a.risorsa.struttura if a.risorsa else None
-    telefono = (st.telefono or '').strip() if st else ''
     return ('Buongiorno, si è liberato un posto %s il %s alle %s presso %s. '
-            'Se le interessa ci %s. Grazie.') % (
+            'Se le interessa %s. Grazie.') % (
         'con %s' % a.operatore.etichetta if a.operatore else '',
         a.inizio.strftime('%d/%m'), a.inizio.strftime('%H:%M'), st.nome if st else '',
-        ('chiami al %s' % telefono) if telefono else 'contatti')
+        servizi.recapito(st))
 
 
 def _leggi_attesa(s, f, x=None):
@@ -382,9 +381,9 @@ def sposta(aid):
 def messaggio_spostamento(a, prima):
     st = a.risorsa.struttura if a.risorsa else None
     return ('Buongiorno, il suo appuntamento%s è stato spostato a %s alle %s presso %s. '
-            'Per qualsiasi necessità ci contatti. Grazie.') % (
+            'Per qualsiasi necessità %s. Grazie.') % (
         (' del %s' % prima.strftime('%d/%m')) if prima else '',
-        giorno_breve(a.inizio.date()), a.inizio.strftime('%H:%M'), st.nome if st else '')
+        giorno_breve(a.inizio.date()), a.inizio.strftime('%H:%M'), st.nome if st else '', servizi.recapito(st))
 
 
 def proposte_blocco(s, apps, modo, dopo, sostituto_id=None):

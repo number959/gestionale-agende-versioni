@@ -758,7 +758,10 @@ def branche_della_struttura(s, gid):
 def scheda_struttura(s, g, voce=None, paziente=None, st=None):
     """Tutto quello che serve alla scheda della struttura: recapiti, il
     messaggio per il paziente e i collegamenti per mandarglielo."""
-    firma = st.nome if st is not None else ''
+    # la firma: il nome della struttura e, dalla 1.12.6, come contattarla (telefono, email della segreteria)
+    firma = '\n'.join(x for x in (st.nome if st is not None else '',
+                                   ('Tel: %s' % st.telefono.strip()) if st is not None and (st.telefono or '').strip() else '',
+                                   ('Mail: %s' % servizi.email_struttura(st)) if servizi.email_struttura(st) else '') if x)
     testo = messaggio(g, voce, paziente, firma)
     oggetto = ('Dove fare: %s' % voce.nome) if voce is not None else 'Dove fare la prestazione'
     sede = None

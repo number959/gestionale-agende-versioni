@@ -35,7 +35,7 @@ TESTO_PREDEFINITO = (
     "Per disdire o spostare l'appuntamento {recapito}. Grazie.")
 OGGETTO_PREDEFINITO = 'Promemoria appuntamento del {data} alle {ora} - {struttura}'
 SEGNAPOSTO = ['paziente', 'giorno', 'data', 'ora', 'struttura', 'indirizzo', 'prestazione',
-              'medico', 'stanza', 'preparazione', 'recapito', 'telefono_struttura']
+              'medico', 'stanza', 'preparazione', 'recapito', 'telefono_struttura', 'email_struttura']
 
 
 def collega(app, fornitore_sessione, lucchetto=None, fabbrica=None):
@@ -76,8 +76,9 @@ def testo_messaggio(a, modello=None):
         'medico': a.operatore.etichetta if a.operatore else '',
         'stanza': a.risorsa.nome if a.risorsa else '',
         'preparazione': (' ' + prep if prep.endswith(('.', '!', '?')) else ' ' + prep + '.') if prep else '',
-        'recapito': ('chiami il ' + st.telefono.strip()) if st and (st.telefono or '').strip() else 'ci contatti',
+        'recapito': servizi.recapito(st),
         'telefono_struttura': (st.telefono or '').strip() if st else '',
+        'email_struttura': servizi.email_struttura(st),
     }
     # {Paziente} come {paziente}: a inizio frase Word mette la maiuscola
     testo = re.sub(r'\{(\w+)\}', lambda m: valori.get(m.group(1).lower(), m.group(0)),

@@ -505,6 +505,8 @@ table.lista-giorno td { vertical-align: top; }
 td.ora-lista { font-family: var(--titoli); font-size: 15px; font-weight: 600; white-space: nowrap; }
 .nota-riga { font-size: 12px; color: #5B6B75; }
 .senza { color: #8C979E; }
+/* 1.12.6: un allegato che ha ancora la Gmail di prima (va sostituito con quello della segreteria) */
+.avviso-gmail { color: #8A5A00; font-weight: 600; font-size: 13px; }
 form.ricerca, form.filtri { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; margin: 0 0 18px; }
 form.ricerca input[type="search"] { flex: 1; min-width: 260px; font: 15px var(--testo); padding: 7px 10px; border: 1px solid #B8C0C4; }
 form.filtri label { font-size: 13px; color: #46596A; }

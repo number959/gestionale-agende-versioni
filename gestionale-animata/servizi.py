@@ -122,6 +122,28 @@ INFORMATIVE_PRIMA = {
 CHIAVE_EMAIL_SEGRETERIA = 'email_segreteria_fatta'
 
 
+def email_struttura(st):
+    """L'email della struttura per i messaggi ai pazienti (vuota se manca o non sembra un indirizzo)."""
+    email = (st.email or '').strip() if st is not None else ''
+    return email if '@' in email and ' ' not in email else ''
+
+
+def recapito(st):
+    """Come il paziente contatta la struttura, per la fine dei messaggi («Per disdire o spostare l'appuntamento
+    {recapito}»): dalla 1.12.6 il telefono e l'email (richiesta di Giovanni: la mail della segreteria in tutte le
+    comunicazioni), «chiami il 081 575 1618 o scriva a segreteria@...»; solo uno dei due se manca l'altro, «ci
+    contatti» se mancano tutti e due."""
+    tel = (st.telefono or '').strip() if st is not None else ''
+    email = email_struttura(st)
+    if tel and email:
+        return 'chiami il %s o scriva a %s' % (tel, email)
+    if tel:
+        return 'chiami il %s' % tel
+    if email:
+        return 'scriva a %s' % email
+    return 'ci contatti'
+
+
 def email_segreteria(ses):
     """Una volta sola (1.12.6, richiesta di Giovanni: «controlla se ti ritrovi comunicazioni destinate a gmail, metti
     segreteria@clinicaposillipolongevity.it»): dove i pazienti leggono ancora la Gmail della clinica si mette
@@ -129,22 +151,28 @@ def email_segreteria(ses):
     - l'email delle strutture che hanno proprio quella (la firma delle email, l'indirizzo per le risposte, le stampe);
     - le informative allegate alle regole email, se sono ancora quelle di prima (stessa impronta): un file cambiato o
       caricato a mano resta com'e';
-    - oggetto e testo delle regole email, le preparazioni delle prestazioni e i moduli da stampare, solo dove c'e'
-      scritto proprio quell'indirizzo.
+    - oggetto e testo delle regole email, testo e oggetto del promemoria (Impostazioni -> Messaggi ai pazienti), le
+      preparazioni delle prestazioni, i moduli da stampare, recapiti e note delle strutture del gruppo (Dove si fa),
+      solo dove c'e' scritto proprio quell'indirizzo; l'email di medici e personale solo se e' proprio quella.
+    Gli allegati caricati a mano che hanno ancora la Gmail non si possono cambiare da qui: li segnala la pagina
+    Email e WhatsApp (invii.ha_la_gmail).
     La casella da cui partono le email (Configura -> Email) non si tocca: per cambiarla servono la password e il server
     della casella nuova. Il registro degli invii (quello che e' gia' partito) resta com'era. Fatto una volta
     (impostazione CHIAVE_EMAIL_SEGRETERIA), se poi qualcuno rimette la Gmail resta cosi'. Torna le cose cambiate."""
     import hashlib
     import re
-    from modelli import RegolaEmail, AllegatoRegola, ModuloStampa, leggi_impostazione, scrivi_impostazione
+    from modelli import (RegolaEmail, AllegatoRegola, ModuloStampa, StrutturaGruppo, Persona, Impostazione,
+                         leggi_impostazione, scrivi_impostazione)
     if leggi_impostazione(ses, CHIAVE_EMAIL_SEGRETERIA, ''):
         return []
     cambiate = []
     vecchio = re.compile(re.escape(EMAIL_POSILLIPO_PRIMA), re.IGNORECASE)
-    for st in ses.scalars(select(Struttura)):
-        if (st.email or '').strip().lower() == EMAIL_POSILLIPO_PRIMA:
-            st.email = EMAIL_POSILLIPO
-            cambiate.append('email della struttura %s' % st.nome)
+    for modello, nome, cosa in ((Struttura, 'nome', 'email della struttura'), (StrutturaGruppo, 'nome', 'email in Dove si fa di'),
+                                (Operatore, 'etichetta', 'email del medico'), (Persona, 'etichetta', 'email di')):
+        for x in ses.scalars(select(modello)):
+            if (x.email or '').strip().lower() == EMAIL_POSILLIPO_PRIMA:
+                x.email = EMAIL_POSILLIPO
+                cambiate.append('%s %s' % (cosa, getattr(x, nome)))
     cartella = os.path.join(cartella_risorse(), 'modelli_email')
     nuove = {}
     for g in ses.scalars(select(AllegatoRegola)):
@@ -162,13 +190,18 @@ def email_segreteria(ses):
         regola = ses.get(RegolaEmail, g.regola_id)
         cambiate.append('informativa %s della regola «%s»' % (g.nome, regola.nome if regola else ''))
     campi = [(RegolaEmail, 'oggetto', 'nome'), (RegolaEmail, 'testo', 'nome'), (Prestazione, 'preparazione', 'nome'),
-             (ModuloStampa, 'testo', 'nome')]
+             (ModuloStampa, 'testo', 'nome'), (StrutturaGruppo, 'prenotazione', 'nome'), (StrutturaGruppo, 'note', 'nome')]
     for modello, campo, etichetta in campi:
         for x in ses.scalars(select(modello)):
             valore = getattr(x, campo) or ''
             if vecchio.search(valore):
                 setattr(x, campo, vecchio.sub(EMAIL_POSILLIPO, valore))
                 cambiate.append('%s di «%s»' % (campo, getattr(x, etichetta)))
+    for chiave in ('testo_promemoria', 'oggetto_promemoria'):
+        riga = ses.get(Impostazione, chiave)
+        if riga is not None and vecchio.search(riga.valore or ''):
+            riga.valore = vecchio.sub(EMAIL_POSILLIPO, riga.valore)
+            cambiate.append('%s (Impostazioni, messaggi ai pazienti)' % chiave.replace('_', ' '))
     scrivi_impostazione(ses, CHIAVE_EMAIL_SEGRETERIA, datetime.now().isoformat(timespec='seconds'))
     ses.commit()
     return cambiate

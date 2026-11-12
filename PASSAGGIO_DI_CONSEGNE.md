@@ -1071,7 +1071,14 @@ nella 1.12.6: le informative nuove (solo quella riga cambiata, il resto identico
 salvate nella regola e nei testi per i pazienti (vedi *Indirizzo della segreteria* nel `LEGGIMI.md`). La casella da
 cui partono le email non si tocca: se è ancora la Gmail, le email partono da lì ma le risposte vanno alla segreteria;
 per farle partire da segreteria@ si cambia la casella in *Configura → Email* (casella del sito della clinica, con la
-sua password), vedi *Cose aperte*.
+sua password), vedi *Cose aperte*. Poi Giovanni: «Controlla questa cosa ovunque, deve comparire la mail nuova nelle
+varie informative e comunicazioni». Controllato tutto il repository (sorgenti, modelli, PDF, immagini della guida) e
+ogni messaggio che il programma prepara: ora promemoria (email e WhatsApp), messaggi di *Conferme*, spostamento, posto
+liberato e *Dove si fa* finiscono con «chiami il … o scriva a segreteria@…» (`servizi.recapito`), la sistemazione
+all'avvio copre anche i testi del promemoria, *Dove si fa*, medici e personale, e un PDF caricato a mano con ancora la
+Gmail si segnala in *Email e WhatsApp* (il programma non può riscriverlo: va sostituito). Restano fuori dal programma, e
+li deve guardare Giovanni: il modello WhatsApp approvato da Meta (il suo testo fisso sta da Meta; il recapito arriva
+come variabile), la casella da cui partono le email, e ogni documento o sito fuori dal gestionale.
 
 ## Cose aperte
 

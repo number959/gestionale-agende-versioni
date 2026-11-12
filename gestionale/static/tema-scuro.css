@@ -92,6 +92,7 @@
   html.scuro .telefono { color: #A9B7C4; }
   html.scuro .nota-riga { color: #9AA8B4; }
   html.scuro .senza { color: #7F8C97; }
+  html.scuro .avviso-gmail { color: #EAD5AD; }
   html.scuro form.ricerca input[type="search"] { border: 1px solid #45525F; }
   html.scuro form.filtri label { color: #A9B7C4; }
   html.scuro form.filtri select, html.scuro form.filtri input { border: 1px solid #45525F; background: #1C242D; }

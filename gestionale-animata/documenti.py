@@ -136,7 +136,7 @@ def elimina_documento(did):
 # ================================================================= moduli
 SEGNAPOSTO_MODULI = ['paziente', 'cognome', 'nome', 'data_nascita', 'luogo_nascita', 'sesso', 'codice_fiscale',
                      'indirizzo_paziente', 'telefono', 'data', 'giorno', 'ora', 'medico', 'prestazione', 'stanza',
-                     'struttura', 'indirizzo', 'telefono_struttura', 'oggi', 'preparazione']
+                     'struttura', 'indirizzo', 'telefono_struttura', 'email_struttura', 'oggi', 'preparazione']
 
 ESEMPIO = """Gentile {paziente},
 
@@ -146,7 +146,7 @@ Da {giorno-3}: seguire le indicazioni ricevute dal medico.
 Il giorno prima, {giorno-1}: ...
 Il giorno dell'esame: presentarsi in accettazione 15 minuti prima, con documento d'identità, tessera sanitaria ed eventuali esami precedenti.
 
-Per qualsiasi dubbio può chiamare il {telefono_struttura}.
+Per qualsiasi dubbio può chiamare il {telefono_struttura} o scrivere a {email_struttura}.
 
 Testo di esempio: va adattato e fatto verificare dal medico prima di usarlo."""
 
@@ -185,6 +185,7 @@ def compila(testo, a, adesso=None):
         'struttura': st.nome if st else '',
         'indirizzo': (', ' + st.indirizzo.strip()) if st and (st.indirizzo or '').strip() else '',
         'telefono_struttura': (st.telefono or '') if st else '',
+        'email_struttura': servizi.email_struttura(st),
         'oggi': adesso.strftime('%d/%m/%Y'),
         'preparazione': (a.prestazione.preparazione or '') if a.prestazione else '',
     }

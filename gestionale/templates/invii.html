@@ -38,7 +38,7 @@
           {%- for altra, dove in n.insieme %}<div class="nota-riga testo-avviso">Parte insieme a «{{ altra.nome }}» per {{ dove }}: il paziente riceve due email.</div>{% endfor %}
           {%- endif %}</td>
         <td>{% if r.id_prestazioni %}{% for pid in r.id_prestazioni|sort %}{{ prestazioni.get(pid, '?') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}tutte le sue{% endif %}</td>
-        <td>{% for g in r.allegati %}<a href="{{ url_for('invii.allegato', aid=g.id) }}" target="_blank">{{ g.nome }}</a>{% if not loop.last %}<br>{% endif %}{% else %}<span class="senza">nessuno</span>{% endfor %}</td>
+        <td>{% for g in r.allegati %}<a href="{{ url_for('invii.allegato', aid=g.id) }}" target="_blank">{{ g.nome }}</a>{% if g.id in con_gmail %} <span class="avviso-gmail" data-gmail="{{ g.id }}" title="Dentro c'è ancora la Gmail di prima: va sostituito con uno che dice segreteria@clinicaposillipolongevity.it">ha ancora la Gmail</span>{% endif %}{% if not loop.last %}<br>{% endif %}{% else %}<span class="senza">nessuno</span>{% endfor %}</td>
         <td>{% if r.attiva %}<b class="testo-ok">attiva</b>{% else %}<span class="senza">spenta</span>{% endif %}</td>
       </tr>
       {% endfor %}

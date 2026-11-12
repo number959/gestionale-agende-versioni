@@ -131,7 +131,7 @@ def spiega_meta(codice):
         testo = None
     return '. %s%s.' % (testo[0].upper(), testo[1:]) if testo else ''
 PARAMETRI_WA = ['paziente', 'giorno', 'data', 'ora', 'struttura', 'indirizzo', 'prestazione', 'medico',
-                'stanza', 'recapito', 'telefono_struttura']
+                'stanza', 'recapito', 'telefono_struttura', 'email_struttura']
 MODELLO_WA = ("Gentile {{1}}, le ricordiamo l'appuntamento di {{2}} alle ore {{3}} presso {{4}}. "
               "Per disdire o spostare l'appuntamento {{5}}. Grazie.")
 
@@ -160,6 +160,45 @@ PRONTA_ALLEGATI = ['INFORMATIVA_EGDS.pdf', 'INFORMATIVA_COLONSCOPIA.pdf']
 # parti del nome (senza accenti e spazi) delle prestazioni con quella
 # preparazione. Non "gastro": prenderebbe anche la visita gastroenterologica
 PRONTA_PRESTAZIONI = ('egds', 'gastroscop', 'colonscop')
+
+
+def ha_la_gmail(dati):
+    """Se un allegato ha ancora dentro la Gmail di prima della clinica (1.12.6: al suo posto va l'indirizzo della
+    segreteria). Si cerca nel file com'e' (collegamenti, segnalibri, testo semplice), nei pezzi compressi dei PDF e
+    nei file dentro un documento Word o Excel. Il testo dei PDF scritto con i codici dei caratteri non si legge: un
+    «no» non e' una garanzia, un «si'» lo e'."""
+    import zipfile
+    import zlib
+    if not dati:
+        return False
+    cerca = servizi.EMAIL_POSILLIPO_PRIMA.encode('ascii')
+    prima = cerca.split(b'@')[0]
+    aghi = (prima, prima.decode('ascii').encode('utf-16-be'))
+
+    def dentro(b):
+        b = b.lower()
+        return any(x in b for x in aghi)
+    if dentro(dati):
+        return True
+    if dati[:2] == b'PK':                     # docx, xlsx, odt: un archivio di file
+        try:
+            with zipfile.ZipFile(BytesIO(dati)) as z:
+                return any(dentro(z.read(n)) for n in z.namelist()[:400])
+        except (zipfile.BadZipFile, OSError, RuntimeError, ValueError):
+            return False
+    for m in re.finditer(rb'stream\r?\n', dati):
+        try:
+            pezzo = zlib.decompressobj().decompress(dati[m.end():m.end() + 8 * 1024 * 1024], 64 * 1024 * 1024)
+        except zlib.error:
+            continue
+        if dentro(pezzo):
+            return True
+    return False
+
+
+def allegati_con_la_gmail(allegati):
+    """Gli id degli allegati che hanno ancora la Gmail (per l'avviso nelle pagine delle email)."""
+    return {g.id for g in allegati if ha_la_gmail(g.dati)}
 
 
 class ErroreInvio(Exception):
@@ -353,7 +392,7 @@ def valori_whatsapp(a):
         'struttura': st.nome if st else '', 'indirizzo': (st.indirizzo or '').strip() if st else '',
         'prestazione': a.prestazione.nome if a.prestazione else '',
         'medico': a.operatore.etichetta if a.operatore else '', 'stanza': a.risorsa.nome if a.risorsa else '',
-        'recapito': ('chiami il ' + tel) if tel else 'ci contatti', 'telefono_struttura': tel,
+        'recapito': servizi.recapito(st), 'telefono_struttura': tel, 'email_struttura': servizi.email_struttura(st),
     }
 
 
@@ -1533,8 +1572,9 @@ def pagina():
             esempio = {'paziente': 'Paziente di prova', 'giorno': 'lunedì 1 marzo', 'data': '01/03/2027',
                        'ora': '09:00', 'struttura': st.nome if st else 'Struttura',
                        'indirizzo': (st.indirizzo or '-') if st else '-', 'prestazione': 'Visita',
-                       'medico': 'Dott. Medico', 'stanza': 'Ambulatorio', 'recapito': 'ci contatti',
-                       'telefono_struttura': (st.telefono or '-') if st else '-'}
+                       'medico': 'Dott. Medico', 'stanza': 'Ambulatorio', 'recapito': servizi.recapito(st),
+                       'telefono_struttura': (st.telefono or '-') if st else '-',
+                       'email_struttura': servizi.email_struttura(st) or '-'}
             nomi = [x.strip() for x in cfg['wa_parametri'].split(',') if x.strip()]
             with _lucchetto:
                 xid = accoda(s, 'WHATSAPP', 'PROVA', numero, a_mano=True, subito=True,
@@ -1593,6 +1633,7 @@ def pagina():
             return redirect(url_for('invii.regola', rid=r.id))
         abort(400)
     regole = s.scalars(select(RegolaEmail).order_by(RegolaEmail.id)).all()
+    con_gmail = allegati_con_la_gmail([g for r in regole for g in r.allegati])
     prestazioni = {p.id: p.nome for p in s.scalars(select(Prestazione))}
     medici = s.scalars(select(Operatore).order_by(Operatore.cognome, Operatore.nome)).all()
     nomi_medici = {o.id: o.etichetta for o in medici}
@@ -1630,7 +1671,7 @@ def pagina():
                            gruppi=gruppi, note=note, medici_attivi=[o for o in medici if o.attivo],
                            registro=registro, sicurezze=SICUREZZE, canali=CANALI, motivi=MOTIVI, stati=STATI,
                            pronta=regola_pronta_possibile(s), modello_wa=MODELLO_WA, parametri_wa=PARAMETRI_WA,
-                           struttura=st, utente_proposto=utente_proposto,
+                           struttura=st, utente_proposto=utente_proposto, con_gmail=con_gmail,
                            password_salvata=bool(leggi_impostazione(s, 'email_password', '')),
                            token_salvato=bool(leggi_impostazione(s, 'wa_token', '')),
                            ultimo_giro=ultimo_giro, anteprima=anteprima_promemoria(s, cfg),
@@ -1661,6 +1702,7 @@ def regola(rid=None):
                                      for k, v in sorted(info[chiave].items())]
             insieme, sostituita, sostituisce = elenco('insieme'), elenco('sostituita'), elenco('sostituisce')
         return render_template('regola_email.html', r=r, medici=medici, prestazioni=prestazioni, modulo=modulo,
+                               con_gmail=allegati_con_la_gmail(r.allegati) if r else set(),
                                scelte=scelte if scelte is not None else (r.id_prestazioni if r else set()),
                                segnaposto=documenti.SEGNAPOSTO_MODULI, email_pronta=email_pronta(cfg),
                                prova_a=cfg['email_utente'], proposto=proposto, insieme=insieme,

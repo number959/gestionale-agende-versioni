@@ -112,7 +112,8 @@
 
   <h2 class="sezione" id="messaggi">Messaggi ai pazienti</h2>
   <p>Il testo che WhatsApp ed Email preparano nella pagina Conferme, e dei promemoria automatici per email (<a href="{{ url_for('invii.pagina') }}#promemoria">Email e WhatsApp</a>). Si può usare:
-    {% for s in segnaposto %}<code>{{ '{' ~ s ~ '}' }}</code>{% if not loop.last %} {% endif %}{% endfor %}.</p>
+    {% for s in segnaposto %}<code>{{ '{' ~ s ~ '}' }}</code>{% if not loop.last %} {% endif %}{% endfor %}.
+    <code>{recapito}</code> diventa «chiami il …» con il telefono della struttura e «o scriva a …» con la sua email (Configura → Anagrafiche, scheda della struttura).</p>
   <form method="post">
     <div class="campo"><label for="testo">Testo del messaggio</label>
       <textarea id="testo" name="testo" rows="4" maxlength="1000">{{ modello }}</textarea></div>

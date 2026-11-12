@@ -34,7 +34,7 @@
     <div class="campo"><label>Allegati</label>
       {% if r and r.allegati %}
       <ul class="allegati-regola">
-        {% for g in r.allegati %}<li><a href="{{ url_for('invii.allegato', aid=g.id) }}" target="_blank">{{ g.nome }}</a> <span class="senza">{{ (g.dimensione / 1024)|round|int }} KB</span>
+        {% for g in r.allegati %}<li><a href="{{ url_for('invii.allegato', aid=g.id) }}" target="_blank">{{ g.nome }}</a> <span class="senza">{{ (g.dimensione / 1024)|round|int }} KB</span>{% if g.id in con_gmail %} <span class="avviso-gmail" data-gmail="{{ g.id }}">ha ancora la Gmail di prima: toglierlo e aggiungere quello con segreteria@clinicaposillipolongevity.it</span>{% endif %}
           <button class="bottone piccolo" type="submit" form="togli-{{ g.id }}" onclick="return confirm('Togliere questo allegato dall\'email?')">Togli</button></li>{% endfor %}
       </ul>
       {% else %}<p class="senza">Nessun allegato.</p>{% endif %}

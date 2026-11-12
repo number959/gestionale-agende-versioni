@@ -23,8 +23,10 @@ NOVITA = [
         dict(titolo='L\'indirizzo della segreteria nelle email',
              testo='Le informative allegate alle email di preparazione (EGDS e colonscopia) e la firma delle email ora '
                    'dicono segreteria@clinicaposillipolongevity.it al posto della Gmail, e le risposte dei pazienti '
-                   'arrivano lì. Il programma lo ha cambiato da solo, anche nelle informative già salvate nella regola. '
-                   'La casella da cui partono le email resta quella di Configura → Email.',
+                   'arrivano lì. Anche promemoria, WhatsApp, messaggi di Conferme, spostamenti e posti liberati finiscono '
+                   'con «chiami il … o scriva a segreteria@…». Il programma lo ha cambiato da solo, anche nelle '
+                   'informative già salvate nella regola; un PDF caricato a mano che ha ancora la Gmail è segnalato in '
+                   'Email e WhatsApp. La casella da cui partono le email resta quella di Configura → Email.',
              guida='email-casella'),
         dict(titolo='Il riepilogo del periodo nella dashboard',
              testo='Nel riepilogo live il pulsante «Riepilogo del periodo» apre i numeri di un giorno, una settimana o un '

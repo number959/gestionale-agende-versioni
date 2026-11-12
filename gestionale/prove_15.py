@@ -648,6 +648,12 @@ def a_email_segreteria():
     s.add(Invio(canale='EMAIL', motivo='REGOLA', stato='INVIATO', destinatario='fintini@example.com',
                 oggetto='Preparazione', testo='Mail: %s' % gmail))
     scrivi_impostazione(s, 'email_utente', gmail)            # la casella da cui partono: resta
+    scrivi_impostazione(s, 'testo_promemoria', viste.TESTO_PREDEFINITO + ' Oppure scriva a %s.' % gmail)
+    from modelli import StrutturaGruppo, Persona
+    s.add(StrutturaGruppo(nome='Clinica Posillipo', email=gmail, note='Scrivere a %s' % gmail))
+    s.add(StrutturaGruppo(nome='Centro Nord', email='prenotazioni@centronord.example.it'))
+    s.scalars(select(Operatore).where(Operatore.cognome == 'Lippi')).one().email = gmail
+    s.add(Persona(cognome='Esempietti', nome='Rita', email=gmail.upper()))
     s.commit()
     prima = dict(servizi.INFORMATIVE_PRIMA)
     servizi.INFORMATIVE_PRIMA = {hashlib.sha256(vecchia_egds).hexdigest(): 'INFORMATIVA_EGDS.pdf',
@@ -656,7 +662,7 @@ def a_email_segreteria():
         cambiate = servizi.email_segreteria(s)
     finally:
         servizi.INFORMATIVE_PRIMA = prima
-    assert len(cambiate) == 7, cambiate
+    assert len(cambiate) == 12, cambiate
     s.close()
     s = S()
     nuove = {n: open(os.path.join(CARTELLA, 'modelli_email', n), 'rb').read() for n in invii.PRONTA_ALLEGATI}
@@ -674,6 +680,12 @@ def a_email_segreteria():
     assert s.scalars(select(ModuloStampa)).one().testo == 'Recapiti: tel. 081 0000000, %s' % nuova
     assert s.scalars(select(Invio)).one().testo == 'Mail: %s' % gmail, 'il registro resta com\'era'
     assert leggi_impostazione(s, 'email_utente') == gmail, 'la casella da cui partono non si tocca'
+    assert leggi_impostazione(s, 'testo_promemoria').endswith('Oppure scriva a %s.' % nuova)
+    gruppo = {x.nome: x for x in s.scalars(select(StrutturaGruppo))}
+    assert (gruppo['Clinica Posillipo'].email, gruppo['Clinica Posillipo'].note) == (nuova, 'Scrivere a %s' % nuova)
+    assert gruppo['Centro Nord'].email == 'prenotazioni@centronord.example.it', 'le altre strutture restano'
+    assert s.scalars(select(Operatore).where(Operatore.cognome == 'Lippi')).one().email == nuova
+    assert s.scalars(select(Persona)).one().email == nuova
     # l'email che parte: firma e risposte alla segreteria (parte ancora dalla casella configurata)
     cfg = invii.impostazioni(s)
     m = invii.componi_email(s, SimpleNamespace(destinatario='fintini@example.com'), cfg, 'Prova', 'Gentile paziente.', [],
@@ -1899,7 +1911,9 @@ def e_whatsapp_riuscito():
     assert (c['messaging_product'], c['to'], c['type']) == ('whatsapp', '393330000001', 'template'), c
     assert c['template']['name'] == 'promemoria_appuntamento' and c['template']['language'] == {'code': 'it'}
     valori = [p['text'] for p in c['template']['components'][0]['parameters']]
-    assert valori == ['Mara Fintini', giorno_breve(MAR), '09:00', 'Clinica Posillipo', 'chiami il 081 0000000'], valori
+    # il recapito: telefono ed email della struttura (1.12.6: la mail della segreteria in tutte le comunicazioni)
+    assert valori == ['Mara Fintini', giorno_breve(MAR), '09:00', 'Clinica Posillipo',
+                      'chiami il 081 0000000 o scriva a segreteria@example.com'], valori
     x = invii_tutti(S)[0]
     assert (x['canale'], x['motivo'], x['destinatario']) == ('WHATSAPP', 'PROMEMORIA', '393330000001')
     assert 'wamid.PROVA1' in x['oggetto'] and x['testo'].startswith('Mara Fintini | '), x
@@ -1955,8 +1969,11 @@ def e_variabili():
     s.commit()
     a = s.get(Appuntamento, aid)
     cfg = dict(invii.impostazioni(s), wa_parametri='paziente,indirizzo,recapito,stanza,data')
-    assert invii.parametri_whatsapp(cfg, a) == ['Mara Fintini', 'Via di Prova 1, Napoli', 'ci contatti',
+    assert invii.parametri_whatsapp(cfg, a) == ['Mara Fintini', 'Via di Prova 1, Napoli', 'scriva a segreteria@example.com',
                                                 'Sala endoscopia', MAR.strftime('%d/%m/%Y')]
+    st.email = ''
+    s.commit()
+    assert invii.parametri_whatsapp(cfg, s.get(Appuntamento, aid))[2] == 'ci contatti'
     st.indirizzo = ''
     s.commit()
     assert invii.parametri_whatsapp(dict(cfg, wa_parametri='indirizzo'), s.get(Appuntamento, aid)) == ['-']
@@ -1970,7 +1987,7 @@ def e_prova_dalle_impostazioni():
     c = META.richieste[-1]['corpo']
     assert c['to'] == '393330000003'
     assert [p['text'] for p in c['template']['components'][0]['parameters']] == \
-        ['Paziente di prova', 'lunedì 1 marzo', '09:00', 'Clinica Posillipo', 'ci contatti']
+        ['Paziente di prova', 'lunedì 1 marzo', '09:00', 'Clinica Posillipo', 'chiami il 081 0000000 o scriva a segreteria@example.com']
     C.post('/invii', data={'azione': 'prova_whatsapp', 'a': '12'})
     assert 'numero di cellulare valido' in avvisi(C)
     S, C = mondo(email_ok=False)
@@ -2372,6 +2389,120 @@ def i_thread():
 
 
 prova('la prenotazione sveglia il thread e l\'email parte da sola', i_thread)
+
+
+area('indirizzo della segreteria (1.12.6)')
+
+
+def j_segreteria_ovunque():
+    """1.12.6, richiesta di Giovanni: «deve comparire la mail nuova nelle varie informative e comunicazioni, ossia quella
+    di segreteria». Con l'email della clinica nella struttura e una casella di partenza diversa: l'email della regola
+    gia' pronta partita davvero (firma in testo e HTML, risposte, le due informative), il promemoria per email partito
+    davvero, le variabili di WhatsApp, i messaggi gia' scritti di Conferme (WhatsApp ed email), spostamento e posto
+    liberato, il messaggio di Dove si fa, un modulo con {email_struttura}, il foglio del giorno e la lista operatoria:
+    in tutti l'indirizzo della segreteria, la Gmail di prima in nessuno."""
+    from urllib.parse import unquote
+    import dovesifa
+    import segreteria
+    from modelli import StrutturaGruppo
+    nuova, gmail = servizi.EMAIL_POSILLIPO, servizi.EMAIL_POSILLIPO_PRIMA
+    S, C = mondo()
+    s = S()
+    st = s.get(Struttura, 1)
+    st.email, st.telefono = nuova, '081 5751618'
+    s.commit()
+    s.close()
+    I = ids(S)
+    regola_galasso(S)
+    prenota(C, I)
+    assert [e[1] for e in invii.elabora(fabbrica)] == ['INVIATO']
+    m = messaggio()
+    semplice, pagina, allegati, _ = parti(m)
+    assert m['Reply-To'] == nuova and 'Mail: %s' % nuova in semplice and nuova in pagina, m['Reply-To']
+    assert [a[0] for a in allegati] == invii.PRONTA_ALLEGATI
+    for nome, dati in allegati:
+        assert b'mailto:' + nuova.encode() in dati and not invii.ha_la_gmail(dati), nome
+    testi = [semplice, pagina, str(m)]
+    # il promemoria per email, partito davvero
+    aid = ultimo(S)
+    assert promemoria_in_coda(S, aid) is not None
+    assert [e[1] for e in invii.elabora(fabbrica)] == ['INVIATO']
+    pm = messaggio()
+    ps, pp, _, _ = parti(pm)
+    assert 'chiami il 081 5751618 o scriva a %s' % nuova in ps and 'Mail: %s' % nuova in ps and pm['Reply-To'] == nuova, ps
+    testi += [ps, pp]
+    s = S()
+    a = s.get(Appuntamento, aid)
+    # WhatsApp, Conferme, spostamento, posto liberato, moduli
+    wa = invii.valori_whatsapp(a)
+    assert wa['recapito'] == 'chiami il 081 5751618 o scriva a %s' % nuova and wa['email_struttura'] == nuova, wa
+    modello, oggetto = viste.modelli_messaggio(s)
+    link = viste.contatti(a, modello, oggetto)
+    assert ('scriva a %s' % nuova) in unquote(link['whatsapp']) and ('scriva a %s' % nuova) in unquote(link['email']), link
+    for frase in (segreteria.messaggio_spostamento(a, None), segreteria.messaggio_posto_libero(a)):
+        assert frase.endswith('chiami il 081 5751618 o scriva a %s. Grazie.' % nuova), frase
+        testi.append(frase)
+    assert documenti.compila('Scriva a {email_struttura}.', a) == 'Scriva a %s.' % nuova
+    assert 'email_struttura' in documenti.SEGNAPOSTO_MODULI and 'email_struttura' in viste.SEGNAPOSTO \
+        and 'email_struttura' in invii.PARAMETRI_WA
+    # Dove si fa: il messaggio da mandare al paziente, firmato con i recapiti della clinica
+    g = StrutturaGruppo(nome='Centro Nord', telefono='081 0000001')
+    s.add(g)
+    s.commit()
+    with A.app.test_request_context():
+        scheda = dovesifa.scheda_struttura(s, g, None, a.paziente, st=s.get(Struttura, 1))
+    assert scheda['messaggio'].endswith('Clinica Posillipo\nTel: 081 5751618\nMail: %s' % nuova), scheda['messaggio']
+    testi += [scheda['messaggio'], unquote(scheda['email_link']), unquote(scheda['whatsapp'])]
+    testi += [unquote(x) for x in link.values()]
+    s.close()
+    # le stampe: foglio del giorno e lista operatoria
+    testi.append(testo(C.get('/giorno/%s/stampa?struttura=1' % ORA9.date().isoformat())))
+    for x in testi:
+        assert gmail not in x.lower(), x[:200]
+    # senza email nella struttura: solo il telefono, mai una frase a meta'
+    s = S()
+    s.get(Struttura, 1).email = ''
+    s.commit()
+    a = s.get(Appuntamento, aid)
+    assert segreteria.messaggio_spostamento(a, None).endswith('chiami il 081 5751618. Grazie.')
+    s.close()
+
+
+def j_allegato_con_la_gmail():
+    """Un allegato caricato a mano che ha ancora la Gmail di prima (nel collegamento, compresso, in un segnalibro, in un
+    documento Word) si segnala nella pagina Email e WhatsApp e in quella dell'email; le informative nuove no."""
+    import zlib
+    import zipfile
+    from io import BytesIO
+    gmail = servizi.EMAIL_POSILLIPO_PRIMA
+    compresso = b'%PDF-1.5\n1 0 obj\n<</Length 9/Filter/FlateDecode>>\nstream\n' + zlib.compress(
+        ('BT (Mail: %s) Tj ET' % gmail).encode()) + b'\nendstream\nendobj\n'
+    segnalibro = b'%PDF-1.5\n<</Title(\xfe\xff' + ('Mail: %s' % gmail).encode('utf-16-be') + b')>>'
+    word = BytesIO()
+    with zipfile.ZipFile(word, 'w', zipfile.ZIP_DEFLATED) as z:
+        z.writestr('word/document.xml', '<w:t>Scriva a %s</w:t>' % gmail.upper())
+    casi = {'collegamento.pdf': b'%PDF-1.5 <</URI(mailto:' + gmail.encode() + b')>>', 'compresso.pdf': compresso,
+            'segnalibro.pdf': segnalibro, 'preparazione.docx': word.getvalue()}
+    for nome, dati in casi.items():
+        assert invii.ha_la_gmail(dati), nome
+    for nome in invii.PRONTA_ALLEGATI:
+        assert not invii.ha_la_gmail(open(os.path.join(CARTELLA, 'modelli_email', nome), 'rb').read()), nome
+    assert not invii.ha_la_gmail(b'') and not invii.ha_la_gmail(b'%PDF-1.5 segreteria@clinicaposillipolongevity.it')
+    S, C = mondo()
+    rid = regola_galasso(S)
+    s = S()
+    r = s.get(RegolaEmail, rid)
+    for nome, dati in casi.items():
+        r.allegati.append(AllegatoRegola(nome=nome, dati=dati, dimensione=len(dati)))
+    s.commit()
+    s.close()
+    for pagina in (html(C.get('/invii')), html(C.get('/invii/regole/%d' % rid))):
+        assert pagina.count('class="avviso-gmail"') == len(casi), pagina.count('class="avviso-gmail"')
+
+
+prova('la mail della segreteria in ogni comunicazione: email, promemoria, WhatsApp, Conferme, spostamento, posto '
+      'liberato, Dove si fa, moduli, stampe; la Gmail di prima in nessuna', j_segreteria_ovunque)
+prova('un allegato caricato a mano con ancora la Gmail di prima si segnala', j_allegato_con_la_gmail)
 
 
 # =====================================================================

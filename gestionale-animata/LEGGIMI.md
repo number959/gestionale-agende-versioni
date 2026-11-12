@@ -759,9 +759,19 @@ ultime tre ore e chi era arrivato stamattina senza essere segnato non stava da n
   `servizi.email_segreteria` mette quelle nuove dove ci sono ancora quelle di prima (riconosciute dall'impronta,
   `INFORMATIVE_PRIMA`, anche con un altro nome; una cambiata a mano resta), l'indirizzo della segreteria nelle
   strutture che hanno la Gmail (firma, risposte, stampe) e nei testi per i pazienti dove c'è scritto proprio quello
-  (oggetto e testo delle regole, preparazioni, moduli da stampare). La casella da cui partono le email e il registro
-  degli invii non si toccano: per far partire le email da segreteria@ servono password e server della casella nuova
-  (*Configura → Email*, casella del sito). Prova: `prove_15.py` (`a_email_segreteria`).
+  (oggetto e testo delle regole, testo e oggetto del promemoria, preparazioni, moduli da stampare, note di *Dove si
+  fa*), e l'email di strutture del gruppo, medici e personale che avevano proprio la Gmail. La casella da cui partono
+  le email e il registro degli invii non si toccano: per far partire le email da segreteria@ servono password e server
+  della casella nuova (*Configura → Email*, casella del sito). Poi Giovanni: «deve comparire la mail nuova nelle varie
+  informative e comunicazioni»: il recapito alla fine dei messaggi è uno solo, `servizi.recapito` («chiami il … o
+  scriva a …», telefono ed email della struttura; uno solo se manca l'altro; «ci contatti» senza nessuno), in
+  promemoria (email e WhatsApp, `{recapito}`), messaggi di *Conferme*, spostamento e posto liberato (`segreteria.py`);
+  il messaggio di *Dove si fa* è firmato con nome, telefono ed email della struttura; c'è il segnaposto
+  `{email_struttura}` (messaggi, WhatsApp, moduli: nei moduli `{recapito}` resta sconosciuto, come deciso al difetto
+  14). Un allegato caricato a mano che ha ancora la Gmail si segnala nelle pagine delle email (`invii.ha_la_gmail`:
+  cerca nel file, nei pezzi compressi dei PDF e nei documenti Word/Excel; il testo dei PDF scritto con i codici dei
+  caratteri non si legge, quindi segnala solo quando è sicuro). Prove: `prove_15.py` (`a_email_segreteria`,
+  `j_segreteria_ovunque` con l'email e il promemoria partiti davvero, `j_allegato_con_la_gmail`).
 - **In cima** una frase in parole semplici (`riassunto`): quante visite sono in corso, quante stanze
   hanno un medico adesso, quanti pazienti hanno l'orario passato senza l'arrivo segnato e il prossimo
   appuntamento. Sotto, una barra a quattro colori e i quattro numeri, che sommano agli appuntamenti

@@ -295,6 +295,9 @@ temporanea.
   (all'avvio, una volta sola) cambia struttura, informative di prima salvate nelle regole (`INFORMATIVE_PRIMA`, dalle
   impronte) e testi; mai la casella da cui partono (`email_utente`) né il registro degli invii. Un'informativa nuova
   in `modelli_email/` cambia l'impronta: quella vecchia va aggiunta a `INFORMATIVE_PRIMA` se va sostituita in clinica.
+  Il recapito alla fine dei messaggi ai pazienti è uno solo, `servizi.recapito` (telefono ed email della struttura):
+  un messaggio nuovo lo usa, non scrive «ci contatti» da sé. `invii.ha_la_gmail` segnala gli allegati che hanno ancora
+  la Gmail; `prove_15.py` (`j_segreteria_ovunque`) controlla che la Gmail non sia in nessuna comunicazione.
   `manda_email` traduce ogni errore in un testo che dice cosa correggere e decide se riprovare
   (`permanente`: password, SSL sulla porta sbagliata, certificato di un altro nome, mittente o
   destinatario rifiutati); `spiega_accesso_rifiutato` dà il consiglio secondo il fornitore.
