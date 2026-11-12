@@ -104,7 +104,9 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   dashboard (vedi *La 1.12.6*). Due revisioni indipendenti, difetti
   confermati sistemati; prove verdi in tutte e due le cartelle (anche nel browser), immagini e video della guida
   rifatti, Setup costruiti in Wine e installati sopra la 1.12.5 pubblicata (59 controlli su 59, normale e animata), prove
-  su Windows verdi. Si pubblica solo con il via di Giovanni (workflow «Pubblica una versione», `ultima: true`). Il
+  su Windows verdi. Il 12 novembre, dopo l'indirizzo della segreteria, tutto rifatto; in Wine anche la clinica simulata
+  (la 1.12.5 con la Gmail nella struttura e le informative di prima in due regole): al primo avvio della 1.12.6 struttura
+  e informative cambiate, gli allegati caricati a mano lasciati com'erano. Si pubblica solo con il via di Giovanni (workflow «Pubblica una versione», `ultima: true`). Il
   database non cambia.
 - **Versione 1.12.5, pubblicata il 10 novembre 2026**: la release `v1.12.5`, segnata come ultima, con i due
   Setup, i due file delle versioni e il PDF della guida. Interventi e ambulatori per medico (vedi *La 1.12.5*). Il
