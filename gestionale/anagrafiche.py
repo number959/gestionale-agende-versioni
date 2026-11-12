@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 from modelli import (Struttura, Risorsa, Operatore, Prestazione, Turno,
                      Appuntamento, Assenza, Chiusura, Appunto, RegolaEmail, COLORE_PREDEFINITO, PASSI_AMMESSI,
+                     TariffarioMedico, VoceTariffario,
                      PASSI_TURNO, STATI_ATTIVI)
 import servizi
 from comune import PALETTE, PRIMA, ULTIMA, colore_libero, destinazione_sicura      # PALETTE: la leggono anche le prove
@@ -252,7 +253,8 @@ def medico(oid=None):
                      (Turno, Turno.operatore_id, 'turno', 'turni'),
                      (Appunto, Appunto.operatore_id, 'appunto da confermare', 'appunti da confermare'),
                      (RegolaEmail, RegolaEmail.operatore_id, 'regola delle email automatiche',
-                      'regole delle email automatiche')],
+                      'regole delle email automatiche'),
+                     (TariffarioMedico, TariffarioMedico.operatore_id, 'tariffario', 'tariffari')],
                     'Il medico %s' % o.etichetta, 'Medico eliminato: %s.' % o.etichetta,
                     'Si può disattivare togliendo la spunta "Attivo".')
             m = Modulo(request.form)
@@ -280,7 +282,7 @@ def medico(oid=None):
                                     % doppio.etichetta)
             if m.errori:
                 return scheda(titolo, campi(errore=True), m.errori, eliminabile=bool(o),
-                              conferma='Eliminare questo medico?', elenco_extra=email_del_medico(s, o))
+                              conferma='Eliminare questo medico?', elenco_extra=[email_del_medico(s, o), riquadro_tariffario(s, o)])
             if o is None:
                 o = Operatore()
                 s.add(o)
@@ -293,7 +295,13 @@ def medico(oid=None):
             return salva_e_torna(s, o, 'Operatore', 'Medico salvato: %s.' % o.etichetta)
 
     return scheda(titolo, campi(), eliminabile=bool(o), conferma='Eliminare questo medico?',
-                  elenco_extra=email_del_medico(s, o))
+                  elenco_extra=[email_del_medico(s, o), riquadro_tariffario(s, o)])
+
+
+def riquadro_tariffario(s, o):
+    """Sotto la scheda del medico (1.12.6): il suo tariffario e se e' attivo."""
+    import tariffari
+    return tariffari.del_medico(s, o)
 
 
 def email_del_medico(s, o):
@@ -441,7 +449,8 @@ def prestazione(pid=None):
                 return elimina(
                     s, p, 'Prestazione',
                     [(Appuntamento, Appuntamento.prestazione_id, 'appuntamento', 'appuntamenti'),
-                     (Appunto, Appunto.prestazione_id, 'appunto da confermare', 'appunti da confermare')],
+                     (Appunto, Appunto.prestazione_id, 'appunto da confermare', 'appunti da confermare'),
+                     (VoceTariffario, VoceTariffario.prestazione_id, 'voce di un tariffario', 'voci dei tariffari')],
                     'La prestazione %s' % p.nome, 'Prestazione eliminata: %s.' % p.nome,
                     'Si può rinominare invece di eliminarla.', femminile=True)
             m = Modulo(request.form)

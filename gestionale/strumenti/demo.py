@@ -101,6 +101,25 @@ pr['Visita ginecologica'].tariffa_cent = 8000; pr['Ecografia'].tariffa_cent = 60
 pr['Colonscopia'].tariffa_cent = 25000; pr['EGDS'].tariffa_cent = 18000
 s.add(Tariffa(prestazione_id=pr['Visita ginecologica'].id, convenzione='Unisalute', importo_cent=10000))
 s.flush()
+# ---- 1.12.6: un tariffario attivo (prezzi inventati) e uno spento, per il controllo dei medici (con i nomi che
+# i medici hanno alla fine: Esposito diventa Gallo, Marino diventa Monti, vedi RINOMINA)
+_t = Tariffario(nome='Dott. Gallo', note='Le tariffe valgono per la singola prestazione o per il pacchetto intero.',
+                origine='tariffario-prova.xlsx')
+_t.medici.append(TariffarioMedico(operatore_id=med['Esposito'].id))
+for _i, (_sez, _nome, _mod, _cent, _det, _p) in enumerate([
+        ('Visite', 'Visita cardiologica', '', 11000, '', pr['Visita cardiologica'].id),
+        ('Visite', 'Visita di controllo', '', 7000, '', pr['Controllo'].id),
+        ('Esami', 'Elettrocardiogramma', '', 4000, '', None),
+        ('Esami', 'Holter cardiaco', 'Singola', 9000, '24 ore', None),
+        ('Esami', 'Holter cardiaco', 'Pacchetto', 24000, '3 registrazioni in un anno', None)]):
+    _t.voci.append(VoceTariffario(sezione=_sez, nome=_nome, modalita=_mod, importo_cent=_cent, dettagli=_det,
+                                  prestazione_id=_p, ordine=_i))
+s.add(_t)
+_t2 = Tariffario(nome='Dott.ssa Monti', attivo=False)
+_t2.medici.append(TariffarioMedico(operatore_id=med['Marino'].id))
+_t2.voci.append(VoceTariffario(nome='Visita dermatologica', importo_cent=9000, prestazione_id=pr['Visita dermatologica'].id))
+s.add(_t2)
+s.flush()
 for a_ in s.scalars(select(Appuntamento).where(Appuntamento.stato == 'ARRIVATO')):
     a_.pagato_cent, a_.pagamento, a_.pagato_il = a_.importo_cent, 'POS' if a_.importo_cent and a_.importo_cent < 20000 else 'CONTANTI', a_.inizio + timedelta(minutes=40)
 paz[0].provenienza = 'MEDICO'; paz[0].inviato_da = 'Dott. Ferraro'

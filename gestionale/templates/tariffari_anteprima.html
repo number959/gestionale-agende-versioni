@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{#- L'anteprima di un file di tariffari (1.12.6): cosa c'e', a quali medici vale, a quali prestazioni corrisponde. #}
+{% block titolo %}Carica tariffario{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-tariffari">
+  <h1>Carica tariffario <small class="sotto-titolo">{{ nome_file }}</small></h1>
+  <p class="sotto">Ecco cosa c'è nel file. Per ogni tariffario: il nome, i medici a cui vale (proposti quelli con il cognome nel nome) e, per ogni voce, la prestazione del programma a cui corrisponde: con quella, prenotando con questi medici, il prezzo si propone da solo. Niente è ancora salvato.</p>
+  <form method="post">
+    {% for p in proposte %}{% set i = loop.index0 %}
+    <section class="riquadro tariffario-proposto" data-guida="anteprima-tariffario">
+      <h2 class="sezione"><label><input type="checkbox" name="carica_{{ i }}" value="1" checked> Carica</label>
+        <input type="text" name="nome_{{ i }}" value="{{ p.t.nome }}" maxlength="120" aria-label="Nome del tariffario" class="nome-tariffario">
+        <small class="sotto-titolo">{{ p.t.voci|length }} voci{% if p.t.foglio %}, foglio «{{ p.t.foglio }}»{% endif %}</small></h2>
+      {% if p.esistente %}<p class="avviso avviso-giallo">C'è già il tariffario «{{ p.esistente.nome }}» ({{ p.esistente.voci|length }} voci): caricandolo viene sostituito.</p>{% endif %}
+      {% for a in p.t.avvisi %}<p class="avviso avviso-giallo">{{ a }}</p>{% endfor %}
+      <fieldset class="medici-tariffario" data-guida="anteprima-medici">
+        <legend>Vale per i medici</legend>
+        {% for o in medici %}<label class="spunta"><input type="checkbox" name="medici_{{ i }}" value="{{ o.id }}"{% if o.id in p.medici %} checked{% endif %}> {{ o.etichetta }}{% if not o.attivo %} <span class="senza">(non attivo)</span>{% endif %}</label>
+        {% endfor %}
+        {% if not p.medici %}<p class="nota-riga">Nessun medico con il cognome nel nome del tariffario: spuntarli qui.</p>{% endif %}
+      </fieldset>
+      <div class="scorri-live">
+      <table class="elenco voci-tariffario">
+        <thead><tr><th>Sezione</th><th>Voce</th><th>Modalità</th><th class="numero">Prezzo (€)</th><th>Dettagli</th><th>Prestazione del programma</th></tr></thead>
+        <tbody>
+        {% for v in p.t.voci %}{% set j = loop.index0 %}
+        <tr><td>{{ v.sezione }}</td><td>{{ v.nome }}</td><td>{{ v.modalita }}</td><td class="numero">{{ importo_in_testo(v.importo_cent) }}</td><td>{{ v.dettagli }}</td>
+          <td><select name="prestazione_{{ i }}_{{ j }}" aria-label="Prestazione per {{ v.nome }}">
+            <option value="">— nessuna (solo nel tariffario) —</option>
+            {% for x in prestazioni %}<option value="{{ x.id }}"{% if p.prestazioni[j] == x.id %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+            <option value="nuova">+ crea la prestazione «{{ v.nome[:80] }}»</option>
+          </select></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% if p.t.note %}<p class="nota-riga">Note: {{ p.t.note }}</p>{% endif %}
+    </section>
+    {% endfor %}
+    <div class="azioni">
+      <button class="bottone primario" type="submit" name="azione" value="salva">Salva i tariffari</button>
+      <button class="bottone" type="submit" name="azione" value="annulla" formnovalidate>Annulla</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

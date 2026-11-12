@@ -746,6 +746,37 @@ ultime tre ore e chi era arrivato stamattina senza essere segnato non stava da n
   sala»); lo stesso nel riepilogo live («1 di 1 stanza», «La stanza adesso»). Mai dati dei pazienti: `prove_112.py` (`p_periodo_sala`) lo controlla con un
   paziente inventato e confronta i numeri della sala con un conto fatto a parte, minuto per minuto; il singolare con
   `p_periodo_parole_una_sala` e `p_periodo_parole_una_stanza`.
+- **Tariffari dei medici** (1.12.6, richiesta di Giovanni del 12 novembre 2026: «le schermate dove inserire le
+  tariffe non funzionano, per agevolarli implementa il tariffario prendendo i prezzi da questo file», con i tariffari
+  di tre medici o gruppi in Excel e in PDF). Il listino ha un prezzo solo per prestazione; i tariffari della clinica sono
+  per medico, con pacchetti e voci aggiuntive. Tutto in `tariffari.py`, tabelle `tariffari`, `tariffari_medici` e
+  `voci_tariffario` (schema 12, `VERSIONE_SCHEMA`). `leggi_tariffari` legge un Excel (un tariffario per foglio): la riga
+  delle intestazioni ha una colonna di prezzo («Prezzo», «Tariffa», «Importo», «€»), il titolo sopra è il nome
+  («TARIFFARIO DOTT. X» -> «Dott. X»), più coppie voce-prezzo nello stesso foglio diventano sezioni (l'istologico accanto
+  alle prestazioni), colonne Sezione, Modalità, Dettagli, righe di sezione senza prezzo, la riga senza nome che continua
+  la voce di sopra (singola e pacchetto), righe «Nota: …»; un PDF non si legge (si ricopia in Excel). Giovanni ha
+  scelto che i file veri restino fuori dal programma: si caricano dalla pagina (*Cassa → Tariffari → Carica tariffario*),
+  con un'anteprima che propone i medici (`medici_proposti`: il cognome nel nome del tariffario) e la prestazione di ogni
+  voce (`prestazione_proposta`: stesso nome senza articoli, i sinonimi EGDS/gastroscopia, o la sola prestazione con tutte
+  le parole nella voce; mai i pacchetti), e si può creare la prestazione che manca. Un tariffario con lo stesso nome si
+  sostituisce. Il file caricato aspetta nella cartella di lavoro (`importa.percorso_caricato`) e si rilegge alla
+  conferma. Nella prenotazione il prezzo si propone da solo (`prezzi_dei_medici` in `cassa.mappa_tariffe`, chiave
+  `medico:<id>`, e `gestionale.js` lo usa cambiando medico o prestazione): prima la convenzione, poi il tariffario del
+  medico, poi il listino; un importo scritto a mano non si tocca. `controllo_medici` (richiesta: «per le persone di
+  riferimento fai un controllo se questa funzione è attiva») dice per ogni medico attivo se il tariffario è attivo,
+  senza prestazioni collegate, spento o assente, i doppi prezzi e i tariffari senza medici; lo stesso riquadro nella
+  scheda del medico (`del_medico`). Medici e prestazioni usati da un tariffario non si eliminano. Stampa
+  (`/cassa/tariffari/<id>/stampa`). Prove: `prove_tariffari.py` e `prove_tariffari_browser.py`, con nomi e prezzi
+  inventati.
+- **Avviso degli aggiornamenti** (1.12.6, stessa richiesta: «prevedi un popup che informa che c'è un nuovo
+  aggiornamento e un tasto clicca qui per installare»): `aggiornamenti.popup_aggiornamento`, in
+  `_popup_aggiornamento.html` incluso nei due `base.html`. Solo nel programma installato (`installato()`: altrove
+  «Aggiorna adesso» non si può, e così la demo e le immagini della guida restano senza), con la versione nuova già
+  scaricata e integra, non mentre parte, mai nella dashboard (anche quella vista dagli altri PC), nelle stampe, nella
+  guida e nella pagina degli aggiornamenti. «Clicca qui per installare» è il POST di «Aggiorna adesso»; «Più tardi»
+  (`/aggiornamenti/piu-tardi`) lo rimanda di `ORE_RIMANDO` ore per quella versione. La pagina degli aggiornamenti dice
+  se il controllo automatico è acceso (`controllo_automatico`); nel programma installato, se è spento, una notifica.
+  Prove in `prove_16.py` (`a_popup`, `a_controllo_automatico`) e in `strumenti/prove_installato.py`.
 - **Indirizzo della segreteria** (1.12.6, richiesta di Giovanni del 12 novembre 2026: «controlla se ti ritrovi
   comunicazioni destinate a gmail, metti segreteria@clinicaposillipolongevity.it»). Le due informative della regola
   già pronta (`modelli_email/`) avevano nel piè di pagina «Mail: medicinamigliorenapolisrl@gmail.com», con il

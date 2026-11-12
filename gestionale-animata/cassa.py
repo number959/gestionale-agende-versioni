@@ -38,27 +38,36 @@ def normalizza_convenzione(testo):
 
 
 # ================================================================ listino
-def tariffa_per(s, prestazione_id, convenzione=''):
-    """Il prezzo proposto: quello della convenzione se c'e', altrimenti il
-    listino della prestazione. None se non indicato."""
+def tariffa_per(s, prestazione_id, convenzione='', operatore_id=None):
+    """Il prezzo proposto: quello della convenzione se c'e', poi quello del tariffario del medico (1.12.6),
+    altrimenti il listino della prestazione. None se non indicato."""
     conv = normalizza_convenzione(convenzione)
     if conv and conv != 'privato':
         for t in s.scalars(select(Tariffa).where(Tariffa.prestazione_id == prestazione_id)):
             if normalizza_convenzione(t.convenzione) == conv:
                 return t.importo_cent
+    if operatore_id is not None:
+        import tariffari
+        trovato = tariffari.prezzi_dei_medici(s).get((operatore_id, prestazione_id))
+        if trovato is not None:
+            return trovato[0]
     p = s.get(Prestazione, prestazione_id)
     return p.tariffa_cent if p is not None else None
 
 
 def mappa_tariffe(s):
     """Per il modulo di prenotazione: {id prestazione: {'': listino,
-    'convenzione': prezzo}}, cosi' il prezzo si propone da solo."""
+    'convenzione': prezzo, 'medico:<id>': prezzo del suo tariffario}}, cosi' il prezzo si propone da solo
+    (prima la convenzione, poi il tariffario del medico, poi il listino)."""
     uscita = {}
     for p in s.scalars(select(Prestazione)):
         if p.tariffa_cent is not None:
             uscita.setdefault(str(p.id), {})[''] = importo_in_testo(p.tariffa_cent)
     for t in s.scalars(select(Tariffa)):
         uscita.setdefault(str(t.prestazione_id), {})[normalizza_convenzione(t.convenzione)] = t.importo_testo
+    import tariffari
+    for (oid, pid), (cent, _) in tariffari.prezzi_dei_medici(s).items():
+        uscita.setdefault(str(pid), {})['medico:%d' % oid] = importo_in_testo(cent)
     return uscita
 
 

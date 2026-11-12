@@ -28,6 +28,7 @@
   {% endif %}
 {% endwith %}
 {% block corpo %}{% endblock %}
+{% include "_popup_aggiornamento.html" %}
 <script src="{{ url_for('static', filename='gestionale.js') }}"></script>
 <script src="{{ url_for('static', filename='guida.js') }}"></script>
 </body>

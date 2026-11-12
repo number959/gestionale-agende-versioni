@@ -18,6 +18,7 @@
     <span class="separa"></span>
     <a class="bottone" href="{{ url_for('cassa.cassa_mese', aaaamm=g.strftime('%Y-%m'), struttura=sid) }}">Mese</a>
     <a class="bottone" href="{{ url_for('cassa.listino', struttura=sid) }}">Listino</a>
+    <a class="bottone" href="{{ url_for('tariffari.elenco', struttura=sid) }}">Tariffari</a>
     <button class="bottone" type="button" onclick="window.print()">Stampa la chiusura di cassa</button>
   </div>
 </div>

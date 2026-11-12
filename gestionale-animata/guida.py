@@ -477,6 +477,27 @@ ARTICOLI = [
              P('Chiusura', 'Stampa la chiusura di cassa: totali per metodo di pagamento.', 'button', 'Stampa la chiusura'),
              P('Il mese', 'Mese mostra i totali giorno per giorno, anche in Excel.', 'a.bottone', 'Mese'),
          ]),
+    dict(slug='tariffari', gruppo='Cassa e fogli', titolo='I tariffari dei medici',
+         in_breve='Cassa → Tariffari: i prezzi di ogni medico, con pacchetti e voci aggiuntive, caricati da un Excel o '
+                  'scritti a mano. Prenotando con quel medico il prezzo si propone da solo.',
+         endpoint='tariffari.elenco', apri=('tariffari.elenco', {}), foto='/cassa/tariffari',
+         passi=[
+             P('Controllo dei medici', 'Per ogni medico: se il suo tariffario è attivo e per quante prestazioni il prezzo '
+               'si propone da solo. «Nessun tariffario» o «spento»: vale il listino; un punto esclamativo vuol dire che '
+               'nessuna voce è collegata a una prestazione del programma.', '[data-guida="tariffari-controllo"]'),
+             P('Carica tariffario', 'Si sceglie il file Excel e si preme «Carica tariffario». Ogni foglio è un tariffario: '
+               'servono una colonna Prestazione e una Prezzo; possono esserci anche Sezione, Modalità (singola, pacchetto) '
+               'e Dettagli. Un PDF va prima ricopiato in Excel.', '[data-guida="tariffari-carica"]'),
+             P('L\'anteprima', 'Prima di salvare si vede tutto: si correggono i nomi, si spuntano i medici a cui vale ogni '
+               'tariffario (proposti quelli con il cognome nel nome) e, voce per voce, la prestazione del programma a cui '
+               'corrisponde. Le voci aggiuntive, come l\'istologico, restano solo nel tariffario.'),
+             P('Nella prenotazione', 'Scelti medico e prestazione, il prezzo del tariffario si scrive da solo nel campo '
+               'Importo. Con una convenzione vale la sua tariffa; un importo scritto a mano non si tocca. I pacchetti non '
+               'si propongono: si scrivono a mano.'),
+             P('Cambiare e stampare', 'Un clic sul tariffario: si cambiano prezzi, voci, medici e note, lo si spegne o lo si '
+               'elimina. «Stampa» fa il foglio da dare ai pazienti.'),
+             P('Nuovo a mano', 'Senza file: un nome, «Crea», poi si scrivono le voci.', '[data-guida="tariffari-nuovo"]'),
+         ]),
     dict(slug='riepilogo', gruppo='Cassa e fogli', titolo='Riepilogo del mese per medico',
          in_breve='Da Statistiche: un foglio per medico da stampare, scaricare in Excel o mandare per email.',
          endpoint='viste.statistiche', apri=('viste.statistiche', {}), foto='/statistiche',
@@ -556,8 +577,12 @@ ARTICOLI = [
                   'aggiornato. I dati restano.',
          endpoint='aggiornamenti.pagina', apri=('aggiornamenti.pagina', {}), foto='/aggiornamenti',
          passi=[
-             P('La notifica', 'Quando c\'è una versione nuova compare la notifica «Aggiornamento disponibile»: un clic '
-               'apre la pagina degli aggiornamenti, che è anche in Configura → Aggiornamenti.'),
+             P('La notifica', 'Quando c\'è una versione nuova e il programma l\'ha già scaricata, compare un avviso in '
+               'mezzo alla pagina: «Clicca qui per installare» la installa subito, «Più tardi» lo fa tornare dopo qualche '
+               'ora. La pagina degli aggiornamenti è anche in Configura → Aggiornamenti.'),
+             P('Il controllo automatico', 'In cima alla pagina: acceso vuol dire che il programma cerca da solo le versioni '
+               'nuove, poco dopo l\'avvio e poi ogni sei ore. Spento: si riaccende con «Rimetti l\'indirizzo predefinito».',
+               '[data-guida="aggiornamento-automatico"]'),
              P('Cosa arriva', 'La pagina dice quale versione è installata, quale è pronta e cosa porta di nuovo.',
                '[data-guida="aggiornamento-stato"]'),
              P('Aggiorna adesso', 'Il programma fa prima una copia di sicurezza dei dati, poi si chiude, si aggiorna e si '

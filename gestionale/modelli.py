@@ -517,6 +517,56 @@ class Tariffa(Base):
         return importo_in_testo(self.importo_cent)
 
 
+class Tariffario(Base):
+    """Il tariffario di un medico o di un gruppo di medici (1.12.6, richiesta di Giovanni: «implementa il
+    tariffario»): visite, trattamenti, pacchetti e voci aggiuntive con i loro prezzi. Si carica da un Excel
+    (Cassa -> Tariffari -> Carica tariffario) o si scrive a mano. Vale per i medici collegati (tariffari_medici):
+    nel modulo di prenotazione il prezzo di una voce collegata a una prestazione si propone da solo."""
+    __tablename__ = 'tariffari'
+    id = Column(Integer, primary_key=True)
+    nome = Column(String(120), nullable=False)
+    attivo = Column(Boolean, default=True, nullable=False)
+    note = Column(Text, default='')                      # le note per i pazienti, in fondo alla stampa
+    origine = Column(String(200), default='')            # il file da cui e' stato caricato
+    creato_il = Column(DateTime, default=datetime.now)
+    aggiornato_il = Column(DateTime, default=datetime.now)
+    medici = relationship('TariffarioMedico', cascade='all, delete-orphan')
+    voci = relationship('VoceTariffario', cascade='all, delete-orphan',
+                        order_by='(VoceTariffario.ordine, VoceTariffario.id)')
+
+    @property
+    def id_medici(self):
+        return {m.operatore_id for m in self.medici}
+
+
+class TariffarioMedico(Base):
+    """Un medico a cui vale un tariffario (un tariffario di gruppo ne ha piu' d'uno)."""
+    __tablename__ = 'tariffari_medici'
+    tariffario_id = Column(Integer, ForeignKey('tariffari.id'), primary_key=True)
+    operatore_id = Column(Integer, ForeignKey('operatori.id'), primary_key=True)
+    operatore = relationship('Operatore')
+
+
+class VoceTariffario(Base):
+    """Una riga del tariffario: la voce, la sezione (visite, trattamenti, istologico...), la modalita' (singola,
+    pacchetto), il prezzo, i dettagli e, se c'e', la prestazione del programma a cui corrisponde."""
+    __tablename__ = 'voci_tariffario'
+    id = Column(Integer, primary_key=True)
+    tariffario_id = Column(Integer, ForeignKey('tariffari.id'), nullable=False)
+    sezione = Column(String(120), default='')
+    nome = Column(String(200), nullable=False)
+    modalita = Column(String(60), default='')
+    importo_cent = Column(Integer)
+    dettagli = Column(String(300), default='')
+    prestazione_id = Column(Integer, ForeignKey('prestazioni.id'))
+    ordine = Column(Integer, default=0, nullable=False)
+    prestazione = relationship('Prestazione')
+
+    @property
+    def importo_testo(self):
+        return importo_in_testo(self.importo_cent)
+
+
 class Attesa(Base):
     """Lista d'attesa: il paziente vuole un posto prima di quello che c'era,
     o non ce n'era proprio. Quando si libera una fascia adatta, il programma
@@ -1074,7 +1124,7 @@ CANALI_INDIRIZZO = [('voce', 'a voce'), ('telefono', 'al telefono'), ('whatsapp'
 # 9 = 1.8 (turni del personale: persone, tipi di turno, turni, coperture minime),
 # 10 = 1.9 (Dove si fa: strutture del gruppo, prestazioni e dove si fanno, pazienti indirizzati),
 # 11 = 1.10 (la durata delle fasce di ogni turno).
-VERSIONE_SCHEMA = 11
+VERSIONE_SCHEMA = 12             # 12 dalla 1.12.6: le tabelle dei tariffari, vuote
 
 # Colonne aggiunte dopo la prima versione. create_all crea le tabelle nuove
 # ma non tocca quelle esistenti: su un PC dove il gestionale e' gia'
@@ -1195,7 +1245,8 @@ def _versione_dallo_schema(c, tabelle):
             return set()
         return {r[1] for r in c.exec_driver_sql('PRAGMA table_info(%s)' % tabella)}
     pazienti, strutture = colonne('pazienti'), colonne('strutture')
-    for versione, presente in ((11, 'passo' in colonne('turni')), (10, 'strutture_gruppo' in tabelle),
+    for versione, presente in ((12, 'tariffari' in tabelle), (11, 'passo' in colonne('turni')),
+                               (10, 'strutture_gruppo' in tabelle),
                                (9, 'tipi_turno' in tabelle), (8, 'luogo_nascita' in pazienti),
                                (7, 'indirizzo' in pazienti), (6, 'posti_letto' in strutture),
                                (4, 'provenienza' in pazienti), (3, 'ora_apertura' in strutture)):

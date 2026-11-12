@@ -505,6 +505,24 @@ table.lista-giorno td { vertical-align: top; }
 td.ora-lista { font-family: var(--titoli); font-size: 15px; font-weight: 600; white-space: nowrap; }
 .nota-riga { font-size: 12px; color: #5B6B75; }
 .senza { color: #8C979E; }
+/* 1.12.6: il popup dell'aggiornamento pronto */
+.popup-aggiornamento { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 25, 35, 0.45); }
+.popup-scatola { background: #FFFFFF; color: #1F2328; max-width: 540px; width: 100%; border-radius: 12px; padding: 24px 26px; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28); }
+.popup-scatola h2 { margin: 0 0 10px; font-size: 22px; color: #154381; }
+.popup-comandi { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 0 6px; }
+.popup-comandi form { margin: 0; }
+/* 1.12.6: i tariffari dei medici */
+.controllo-tariffari .segno-tariffario { display: inline-block; min-width: 1.2em; font-weight: 700; }
+.stato-tariffario-attivo .segno-tariffario { color: #1E7B3A; }
+.stato-tariffario-scollegato .segno-tariffario { color: #8A5A00; }
+.stato-tariffario-spento .segno-tariffario, .stato-tariffario-nessuno .segno-tariffario { color: #8C979E; }
+.medici-tariffario { border: 1px solid #D0D7DE; border-radius: 8px; padding: 8px 12px; margin: 12px 0; }
+.medici-tariffario .spunta { display: inline-block; margin: 2px 16px 2px 0; }
+table.voci-tariffario.modificabile input[type="text"] { width: 100%; min-width: 7em; box-sizing: border-box; }
+table.voci-tariffario select { max-width: 16em; }
+.nome-tariffario { font-size: 18px; min-width: 16em; }
+.tariffario-stampa .sezione-stampa { font-size: 16px; margin: 18px 0 6px; }
+.tariffario-stampa .note-tariffario { margin-top: 18px; font-size: 13px; color: #33475B; }
 /* 1.12.6: un allegato che ha ancora la Gmail di prima (va sostituito con quello della segreteria) */
 .avviso-gmail { color: #8A5A00; font-weight: 600; font-size: 13px; }
 form.ricerca, form.filtri { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; margin: 0 0 18px; }

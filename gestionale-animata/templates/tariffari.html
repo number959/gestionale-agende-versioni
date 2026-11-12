@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{#- I tariffari dei medici (1.12.6): elenco, controllo per medico, caricamento da Excel, nuovo a mano. #}
+{% block titolo %}Tariffari{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-tariffari">
+  <h1>Tariffari dei medici</h1>
+  <p class="sotto">I prezzi di ogni medico (o gruppo di medici): visite, trattamenti, pacchetti e voci aggiuntive. Quando si prenota con un medico, il prezzo della sua voce collegata alla prestazione si propone da solo; con una convenzione vale la sua tariffa, senza tariffario il <a href="{{ url_for('cassa.listino', struttura=sid) }}">listino</a>.</p>
+
+  <section class="riquadro" data-guida="tariffari-controllo">
+    <h2 class="sezione">Controllo dei medici</h2>
+    <p class="aiuto">Per ogni medico attivo: se il tariffario è attivo e per quante prestazioni il prezzo si propone da solo. {{ controllo.con_tariffario }} medic{{ 'o' if controllo.con_tariffario == 1 else 'i' }} su {{ controllo.righe|length }} con il tariffario attivo.</p>
+    {% if controllo.righe %}
+    <div class="scorri-live">
+    <table class="elenco controllo-tariffari">
+      <thead><tr><th>Medico</th><th>Tariffario</th><th>Stato</th></tr></thead>
+      <tbody>
+      {% for r in controllo.righe %}
+      <tr class="stato-tariffario-{{ r.stato }}" data-medico="{{ r.medico.id }}">
+        <td>{{ r.medico.etichetta }}</td>
+        <td>{% for t in r.tariffari %}<a href="{{ url_for('tariffari.scheda', tid=t.id) }}">{{ t.nome }}</a>{% if not t.attivo %} <span class="senza">(spento)</span>{% endif %}{% if not loop.last %}<br>{% endif %}{% else %}<span class="senza">nessuno</span>{% endfor %}</td>
+        <td><span class="segno-tariffario">{{ {'attivo': '✓', 'scollegato': '!', 'spento': '–', 'nessuno': '–'}[r.stato] }}</span> {{ r.testo }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}<p class="vuoto">Nessun medico attivo in Anagrafiche.</p>{% endif %}
+    {% for t in controllo.senza_medici %}
+    <p class="avviso avviso-giallo">Il tariffario «<a href="{{ url_for('tariffari.scheda', tid=t.id) }}">{{ t.nome }}</a>» non ha nessun medico: i suoi prezzi non si propongono. Aprirlo e spuntare i medici.</p>
+    {% endfor %}
+  </section>
+
+  <h2 class="sezione">I tariffari</h2>
+  {% if tariffari %}
+  <table class="elenco">
+    <thead><tr><th>Tariffario</th><th>Medici</th><th class="numero">Voci</th><th>Stato</th><th></th></tr></thead>
+    <tbody>
+    {% for t in tariffari %}
+    <tr>
+      <td><a href="{{ url_for('tariffari.scheda', tid=t.id) }}">{{ t.nome }}</a>{% if t.origine %}<br><small class="senza">da {{ t.origine }}</small>{% endif %}</td>
+      <td>{% for m in t.medici %}{{ m.operatore.etichetta }}{% if not loop.last %}, {% endif %}{% else %}<span class="senza">nessuno</span>{% endfor %}</td>
+      <td class="numero">{{ t.voci|length }}</td>
+      <td>{% if t.attivo %}attivo{% else %}<span class="senza">spento</span>{% endif %}</td>
+      <td class="azione"><a class="bottone piccolo" href="{{ url_for('tariffari.stampa', tid=t.id) }}">Stampa</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="vuoto">Nessun tariffario: si carica da un file Excel qui sotto, o se ne crea uno a mano.</p>
+  {% endif %}
+
+  <section class="riquadro" data-guida="tariffari-carica">
+    <h2 class="sezione">Carica tariffario</h2>
+    <p class="aiuto">Un file Excel (.xlsx) con una colonna <b>Prestazione</b> e una <b>Prezzo</b> (o Tariffa); ogni foglio è un tariffario, il titolo sopra le colonne ne è il nome. Si possono avere anche le colonne Sezione, Modalità (singola, pacchetto) e Dettagli, e più coppie voce-prezzo nello stesso foglio (per esempio l'istologico accanto alle prestazioni). Prima di salvare si vede tutto e si scelgono i medici; un tariffario con lo stesso nome viene sostituito.</p>
+    <form method="post" enctype="multipart/form-data" class="filtri">
+      <input type="hidden" name="azione" value="carica">
+      <label>File Excel<br><input type="file" name="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required></label>
+      <button class="bottone primario" type="submit">Carica tariffario</button>
+    </form>
+  </section>
+
+  <section class="riquadro" data-guida="tariffari-nuovo">
+    <h2 class="sezione">Nuovo tariffario a mano</h2>
+    <form method="post" class="filtri">
+      <input type="hidden" name="azione" value="nuovo">
+      <label>Nome<br><input type="text" name="nome" maxlength="120" placeholder="per esempio Dott. Rossi" required></label>
+      <button class="bottone" type="submit">Crea</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

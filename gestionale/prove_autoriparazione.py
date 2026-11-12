@@ -1296,7 +1296,7 @@ def d_schema_senza_riga():
     riga = q.execute("SELECT valore FROM impostazioni WHERE chiave = 'versione_schema'").fetchone()
     q.close()
     assert confermati == 10, 'migrazione vecchia rifatta: %d confermati su 10' % confermati
-    assert S.versione_precedente == 11 and riga == ('11',), (S.versione_precedente, riga)
+    assert S.versione_precedente == 12 and riga == ('12',), (S.versione_precedente, riga)   # 12 dalla 1.12.6
 
 
 def d_ripristino_su_rovinato():

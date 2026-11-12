@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{#- La scheda di un tariffario (1.12.6): nome, medici, voci con prezzi e prestazioni collegate, note; si cambia tutto. #}
+{% block titolo %}{{ t.nome }}{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-tariffari">
+  <h1>{{ t.nome }} <small class="sotto-titolo">tariffario</small></h1>
+  <p class="sotto"><a href="{{ url_for('tariffari.elenco') }}">Tutti i tariffari</a> · <a href="{{ url_for('tariffari.stampa', tid=t.id) }}">Stampa</a>{% if t.origine %} · caricato da {{ t.origine }}{% endif %}</p>
+  <form method="post" class="scheda-tariffario">
+    <div class="campo"><label for="nome">Nome</label><input type="text" id="nome" name="nome" value="{{ t.nome }}" maxlength="120" required></div>
+    <label class="spunta"><input type="checkbox" name="attivo" value="1"{% if t.attivo %} checked{% endif %}> Attivo: prenotando con questi medici i prezzi si propongono da soli</label>
+    <fieldset class="medici-tariffario" data-guida="tariffario-medici">
+      <legend>Vale per i medici</legend>
+      {% for o in medici %}<label class="spunta"><input type="checkbox" name="medici" value="{{ o.id }}"{% if o.id in t.id_medici %} checked{% endif %}> {{ o.etichetta }}{% if not o.attivo %} <span class="senza">(non attivo)</span>{% endif %}</label>
+      {% endfor %}
+    </fieldset>
+    <div class="scorri-live" data-guida="tariffario-voci">
+    <table class="elenco voci-tariffario modificabile">
+      <thead><tr><th>Sezione</th><th>Voce</th><th>Modalità</th><th class="numero">Prezzo (€)</th><th>Dettagli</th><th>Prestazione collegata</th><th>Togli</th></tr></thead>
+      <tbody>
+      {% for v in t.voci %}
+      <tr><td><input type="hidden" name="voce_id" value="{{ v.id }}"><input type="text" name="sezione" value="{{ v.sezione }}" maxlength="120" aria-label="Sezione"></td>
+        <td><input type="text" name="voce" value="{{ v.nome }}" maxlength="200" aria-label="Voce"></td>
+        <td><input type="text" name="modalita" value="{{ v.modalita }}" maxlength="60" size="9" aria-label="Modalità"></td>
+        <td class="numero"><input type="text" name="prezzo" value="{{ v.importo_testo }}" inputmode="decimal" maxlength="12" size="9" aria-label="Prezzo di {{ v.nome }}"></td>
+        <td><input type="text" name="dettagli" value="{{ v.dettagli }}" maxlength="300" aria-label="Dettagli"></td>
+        <td><select name="prestazione" aria-label="Prestazione per {{ v.nome }}"><option value="">— nessuna —</option>{% for x in prestazioni %}<option value="{{ x.id }}"{% if v.prestazione_id == x.id %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}</select></td>
+        <td class="azione"><input type="checkbox" name="togli" value="{{ v.id }}" aria-label="Togli {{ v.nome }}"></td></tr>
+      {% endfor %}
+      {% for n in range(nuove) %}
+      <tr class="voce-nuova"><td><input type="hidden" name="voce_id" value=""><input type="text" name="sezione" maxlength="120" aria-label="Sezione della voce nuova" value="{{ t.voci[-1].sezione if t.voci else '' }}"></td>
+        <td><input type="text" name="voce" maxlength="200" placeholder="voce nuova" aria-label="Voce nuova"></td>
+        <td><input type="text" name="modalita" maxlength="60" size="9" aria-label="Modalità della voce nuova"></td>
+        <td class="numero"><input type="text" name="prezzo" inputmode="decimal" maxlength="12" size="9" aria-label="Prezzo della voce nuova"></td>
+        <td><input type="text" name="dettagli" maxlength="300" aria-label="Dettagli della voce nuova"></td>
+        <td><select name="prestazione" aria-label="Prestazione della voce nuova"><option value="">— nessuna —</option>{% for x in prestazioni %}<option value="{{ x.id }}">{{ x.nome }}</option>{% endfor %}</select></td>
+        <td></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <p class="nota-riga">Una voce con la prestazione collegata (e non un pacchetto) dà il prezzo che si propone prenotando quella prestazione con questi medici. Per aggiungere altre voci: salvare, ne compaiono altre {{ nuove }} vuote.</p>
+    <div class="campo"><label for="note">Note per i pazienti (in fondo alla stampa)</label><textarea id="note" name="note" rows="3" maxlength="4000">{{ t.note }}</textarea></div>
+    <div class="azioni"><button class="bottone primario" type="submit" name="azione" value="salva">Salva il tariffario</button></div>
+  </form>
+  <form method="post" class="azioni" onsubmit="return confirm('Eliminare il tariffario «{{ t.nome }}»? Le prenotazioni già fatte restano con i loro prezzi.')">
+    <button class="bottone stato-disdetto" type="submit" name="azione" value="elimina">Elimina il tariffario</button>
+  </form>
+</div>
+{% endblock %}

@@ -58,7 +58,7 @@ import time as orologio
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from sqlalchemy import select, func
@@ -66,7 +66,7 @@ from sqlalchemy import select, func
 from modelli import (cartella_risorse, percorso_db, leggi_impostazione, scrivi_impostazione, Appuntamento,
                      Paziente, Invio, Impostazione)
 import comune
-from comune import VERSIONE, json_sicuro
+from comune import VERSIONE, json_sicuro, destinazione_sicura
 import backup
 import novita
 import viste
@@ -86,6 +86,8 @@ CHIAVE = 'aggiornamenti_indirizzo'
 ATTESA_INIZIALE = 120                 # secondi dopo l'avvio
 INTERVALLO = 6 * 3600
 GIORNI_NOVITA = 14                    # per quanti giorni la notifica delle novita'
+ORE_RIMANDO = 4                       # «Piu' tardi» nel popup dell'aggiornamento: per quante ore non torna
+CHIAVE_RIMANDO = 'aggiornamento_rimandato'
 ATTESA_RETE = 30                      # secondi: oltre, "internet non risponde"
 MASSIMO_MANIFESTO = 256 * 1024
 MINIMO_SETUP = 1024 * 1024
@@ -660,10 +662,51 @@ def novita_da_annunciare(s, adesso=None):
     return novita.dopo(leggi_impostazione(s, 'versione_precedente', ''), VERSIONE)
 
 
+def popup_aggiornamento(s, endpoint, adesso=None):
+    """Il popup «E' disponibile un aggiornamento» con «Clicca qui per installare» (1.12.6, richiesta di Giovanni).
+    Solo nel programma installato con il Setup (altrove «Aggiorna adesso» non si puo'), con una versione piu' nuova
+    gia' scaricata e integra, non mentre parte, non nella dashboard (anche quella vista dagli altri PC), nelle stampe e
+    nella pagina degli aggiornamenti; «Piu' tardi» lo rimanda di ORE_RIMANDO ore. None se non va mostrato."""
+    adesso = adesso or datetime.now()
+    if not endpoint or endpoint.startswith(('live.', 'aggiornamenti.', 'static', 'guida.')) or 'stampa' in endpoint:
+        return None
+    if not installato():
+        return None
+    vista = dict(stato)
+    m, pronto = vista['disponibile'], vista['pronto']
+    if not m or not pronto or vista.get('partito') or vista.get('in_corso') \
+            or novita.confronta(m['versione'], VERSIONE) <= 0 or not os.path.exists(pronto):
+        return None
+    versione, _, quando = leggi_impostazione(s, CHIAVE_RIMANDO, '').partition('|')
+    if versione == m['versione']:
+        try:
+            if adesso - datetime.fromisoformat(quando) < timedelta(hours=ORE_RIMANDO):
+                return None
+        except ValueError:
+            pass
+    voci = [x for v in novita_del_manifesto(m) for x in v.get('voci', [])]
+    return {'versione': m['versione'], 'novita': [x.get('titolo', '') for x in voci[:4] if x.get('titolo')],
+            'altre': max(0, len(voci) - 4)}
+
+
+def controllo_automatico(s):
+    """Se la ricerca degli aggiornamenti da sola e' accesa (1.12.6: «fai un controllo se questa funzione e' attiva»):
+    {'acceso', 'indirizzo', 'ultimo', 'errore'}."""
+    vista = dict(stato)
+    return {'acceso': bool(indirizzo_configurato()), 'indirizzo': indirizzo_scritto(s) or predefinito(),
+            'ultimo': vista['controllato_il'], 'errore': vista['errore'], 'errore_il': vista['errore_il']}
+
+
 def notifiche(s, adesso=None):
     """Per le notifiche a scomparsa: aggiornamento pronto, aggiornamento non
-    riuscito, novita' della versione appena installata."""
+    riuscito, novita' della versione appena installata; dalla 1.12.6, nel programma installato, gli aggiornamenti
+    automatici spenti."""
     uscita = []
+    if installato() and not indirizzo_configurato():
+        uscita.append({'chiave': 'aggiornamenti-spenti', 'titolo': 'Aggiornamenti automatici spenti',
+                       'testo': 'Il programma non controlla da solo se ci sono versioni nuove: Configura → Aggiornamenti, '
+                                '«Rimetti l\'indirizzo predefinito».',
+                       'link': url_for('aggiornamenti.pagina'), 'azioni': [], 'livello': 'errore'})
     vista = dict(stato)                 # una fotografia sola: il controllo puo' cambiare lo stato intanto
     m, pronto = vista['disponibile'], vista['pronto']
     if m and pronto and novita.confronta(m['versione'], VERSIONE) > 0:
@@ -739,7 +782,21 @@ def pagina():
                            pronto=bool(vista['pronto'] and os.path.exists(vista['pronto'])),
                            fallito=fallito, manifesto=MANIFESTO, nome_setup=NOME_SETUP, sezione='aggiornamenti',
                            pagina_versioni=pagina_versioni(base) if base.startswith('https://') else '',
-                           certificati=comune.certificati_in_uso())
+                           certificati=comune.certificati_in_uso(), controllo=controllo_automatico(s))
+
+
+@bp.route('/aggiornamenti/piu-tardi', methods=['POST'])
+def piu_tardi():
+    """«Piu' tardi» nel popup dell'aggiornamento: non torna per ORE_RIMANDO ore (per questa versione)."""
+    m = stato['disponibile']
+    s = ses()
+    if m:
+        with _lucchetto:
+            scrivi_impostazione(s, CHIAVE_RIMANDO, '%s|%s' % (m['versione'], datetime.now().isoformat(timespec='seconds')))
+            s.commit()
+        flash('Va bene: l\'aggiornamento alla versione %s si installa più tardi (Configura → Aggiornamenti, '
+              '«Aggiorna adesso»). Il promemoria torna fra %d ore.' % (m['versione'], ORE_RIMANDO), 'ok')
+    return redirect(destinazione_sicura(request.form.get('torna'), url_for('cruscotto.oggi')))
 
 
 @bp.route('/aggiornamenti/aggiorna', methods=['POST'])

@@ -20,6 +20,16 @@ NOVITA = [
                    'state occupate, gli arrivati, i non presentati, i disdetti e le mezze giornate con la sala libera. '
                    'Anche in Excel.',
              guida='riepilogo-periodo'),
+        dict(titolo='I tariffari dei medici',
+             testo='In Cassa → Tariffari ogni medico (o gruppo di medici) ha il suo tariffario: visite, trattamenti, '
+                   'pacchetti e voci aggiuntive come l\'istologico. Si carica da un file Excel, con un\'anteprima dove si '
+                   'scelgono i medici, oppure si scrive a mano, e si stampa. Prenotando con quel medico il prezzo si '
+                   'propone da solo. Il controllo dei medici dice per chi il tariffario è attivo e cosa manca.',
+             guida='tariffari'),
+        dict(titolo='L\'avviso degli aggiornamenti',
+             testo='Quando una versione nuova è pronta compare un avviso con «Clicca qui per installare» (o «Più tardi»). '
+                   'Nella pagina degli aggiornamenti si vede se il controllo automatico è acceso.',
+             guida='aggiornare'),
         dict(titolo='L\'indirizzo della segreteria nelle email',
              testo='Le informative allegate alle email di preparazione (EGDS e colonscopia) e la firma delle email ora '
                    'dicono segreteria@clinicaposillipolongevity.it al posto della Gmail, e le risposte dei pazienti '

@@ -109,8 +109,9 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   e informative cambiate, gli allegati caricati a mano lasciati com'erano. Poi la mail della segreteria in tutte le
   comunicazioni (recapito unico, avviso sugli allegati): tutto rifatto un'altra volta, immagini e video delle guide di
   email, promemoria, WhatsApp, Dove si fa, aspetto e backup rigenerati, in Wine anche il testo del promemoria con la
-  Gmail cambiato all'avvio. Si pubblica solo con il via di Giovanni (workflow «Pubblica una versione», `ultima: true`). Il
-  database non cambia.
+  Gmail cambiato all'avvio. Poi, sempre il 12, i tariffari dei medici e l'avviso degli aggiornamenti (vedi *La 1.12.6*).
+  Si pubblica solo con il via di Giovanni (workflow «Pubblica una versione», `ultima: true`). Il database passa allo
+  schema 12 (tre tabelle nuove, vuote, dopo la copia di sicurezza).
 - **Versione 1.12.5, pubblicata il 10 novembre 2026**: la release `v1.12.5`, segnata come ultima, con i due
   Setup, i due file delle versioni e il PDF della guida. Interventi e ambulatori per medico (vedi *La 1.12.5*). Il
   database non cambia. Alla clinica va messa una volta a mano (vedi *Cose aperte*).
@@ -1083,7 +1084,24 @@ Gmail si segnala in *Email e WhatsApp* (il programma non può riscriverlo: va so
 li deve guardare Giovanni: il modello WhatsApp approvato da Meta (il suo testo fisso sta da Meta; il recapito arriva
 come variabile), la casella da cui partono le email, e ogni documento o sito fuori dal gestionale.
 
+Il 12 novembre, la sera, Giovanni ha mandato i tariffari di tre medici o gruppi (due Excel e un PDF): «Mi dicono che
+le schermate dove inserire le tariffe non funzionano: per agevolarli comunque implementa il tariffario, prendendo i prezzi
+da questo file. Per le persone di riferimento, fai un controllo se questa funzione è attiva, prevedi pure un popup che
+informa l'utente che c'è un nuovo aggiornamento e magari un tasto clicca qui per installare». Provate davvero, le pagine
+del listino salvavano i prezzi: il problema è che il listino ha un prezzo solo per prestazione, mentre i tariffari sono
+per medico, con pacchetti e voci aggiuntive, e la scheda della prestazione in Anagrafiche non ha il prezzo. Alle domande
+Giovanni ha risposto: i prezzi si caricano con un pulsante «Carica tariffario» (i file veri restano fuori dal progetto
+pubblico), il controllo vale sia per il tariffario dei medici sia per gli aggiornamenti automatici, e i tariffari non li
+carico io. Fatto nella 1.12.6: *Cassa → Tariffari* (vedi *Tariffari dei medici* e *Avviso degli aggiornamenti* nel
+`LEGGIMI.md`). Il file pronto da caricare con i tre tariffari (il PDF ricopiato in un foglio) è stato consegnato a Giovanni
+nella conversazione, fuori dal repository: va caricato una volta in clinica, scegliendo nell'anteprima i medici del
+gruppo (quelli che il programma non riconosce dal nome) e controllando le prestazioni collegate.
+
 ## Cose aperte
+
+- **I tariffari da caricare in clinica** (12 novembre 2026): dopo l'aggiornamento alla 1.12.6, *Cassa → Tariffari →
+  Carica tariffario* con il file consegnato a Giovanni; nell'anteprima spuntare i medici di ogni tariffario e scegliere
+  le prestazioni del programma per le voci che devono proporre il prezzo; poi guardare il controllo dei medici.
 
 - **La casella da cui partono le email** (12 novembre 2026): dalla 1.12.6 firma, risposte e informative dicono
   segreteria@clinicaposillipolongevity.it, ma le email partono ancora dalla casella configurata in clinica (finora la

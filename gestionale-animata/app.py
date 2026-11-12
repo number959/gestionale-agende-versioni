@@ -53,6 +53,7 @@ import ambulatori
 import esportazioni
 import live
 import dovesifa
+import tariffari
 import autoripara
 
 # i tipi dei file del programma non si chiedono a Windows: sul PC il registro puo'
@@ -270,7 +271,13 @@ def funzioni_modelli():
             return segreteria.quanti_appunti(ses())
         except Exception:
             return 0
-    return {'marchio_di': marchio_di, 'oggi_iso': date.today().isoformat(),
+    def popup_aggiornamento():
+        # il popup dell'aggiornamento pronto (1.12.6); un guasto qui non deve mai fermare una pagina
+        try:
+            return aggiornamenti.popup_aggiornamento(ses(), request.endpoint)
+        except Exception:
+            return None
+    return {'marchio_di': marchio_di, 'oggi_iso': date.today().isoformat(), 'popup_aggiornamento': popup_aggiornamento,
             'etichetta_stato': ETICHETTA_STATO, 'n_da_confermare': da_confermare, 'versione_programma': VERSIONE,
             'testo_luogo_paziente': pazienti.testo_luogo_paziente}
 
@@ -781,6 +788,7 @@ ambulatori.collega(app, ses, LUCCHETTO)
 esportazioni.collega(app, ses, LUCCHETTO)
 live.collega(app, ses, LUCCHETTO)
 dovesifa.collega(app, ses, LUCCHETTO)
+tariffari.collega(app, ses, LUCCHETTO)
 guida.collega(app)
 # la coda dei messaggi lavora in un thread suo: le serve una sessione nuova ogni volta
 invii.collega(app, ses, LUCCHETTO, lambda: Sessione())

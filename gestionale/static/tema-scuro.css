@@ -92,6 +92,13 @@
   html.scuro .telefono { color: #A9B7C4; }
   html.scuro .nota-riga { color: #9AA8B4; }
   html.scuro .senza { color: #7F8C97; }
+  html.scuro .popup-scatola { background: #1C242D; color: #D6DADF; }
+  html.scuro .popup-scatola h2 { color: #A8C4E9; }
+  html.scuro .stato-tariffario-attivo .segno-tariffario { color: #A7E9BB; }
+  html.scuro .stato-tariffario-scollegato .segno-tariffario { color: #EAD5AD; }
+  html.scuro .stato-tariffario-spento .segno-tariffario, html.scuro .stato-tariffario-nessuno .segno-tariffario { color: #7F8C97; }
+  html.scuro .medici-tariffario { border: 1px solid #3A4652; }
+  html.scuro .tariffario-stampa .note-tariffario { color: #BCCBD9; }
   html.scuro .avviso-gmail { color: #EAD5AD; }
   html.scuro form.ricerca input[type="search"] { border: 1px solid #45525F; }
   html.scuro form.filtri label { color: #A9B7C4; }

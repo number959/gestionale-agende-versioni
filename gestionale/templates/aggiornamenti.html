@@ -12,6 +12,8 @@
   <section class="riquadro stato-aggiornamento" id="stato-aggiornamento" data-guida="aggiornamento-stato"
            data-in-corso="{{ 1 if stato.in_corso else 0 }}" data-indirizzo="{{ url_for('aggiornamenti.stato_json') }}">
     <p class="versione-installata">Versione installata: <b>{{ versione }}</b>{% if variante == 'animata' %} (con animazioni){% endif %}</p>
+    {#- 1.12.6: si vede subito se il controllo da solo è acceso #}
+    <p class="controllo-automatico" data-guida="aggiornamento-automatico">Controllo automatico degli aggiornamenti: {% if controllo.acceso %}<b class="acceso">acceso</b>, poco dopo l'avvio e poi ogni sei ore{% if controllo.ultimo %} (ultimo controllo riuscito il {{ controllo.ultimo.strftime('%d/%m alle %H:%M') }}){% endif %}. Quando una versione nuova è pronta compare un avviso con «Clicca qui per installare».{% else %}<b class="spento">spento</b>: il programma non cerca da solo le versioni nuove.{% endif %}</p>
     {% if not base %}
       <p>Gli aggiornamenti automatici sono <b>spenti</b>: manca l'indirizzo da cui prenderli (qui sotto, <i>Da dove arrivano</i>).{% if predefinito %} <i>Rimetti l'indirizzo predefinito</i> li riaccende.{% endif %} Intanto si aggiorna a mano, con il Setup nuovo.</p>
     {% elif stato.in_corso %}

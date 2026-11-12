@@ -1616,8 +1616,9 @@ def f_migrazione():
     c.close()
     S = crea_sessione('sqlite:///' + percorso)
     note = ' | '.join(S.migrazioni)
-    assert S.versione_precedente == 10 and VERSIONE_SCHEMA == 11, (S.versione_precedente, VERSIONE_SCHEMA)
-    assert 'prima-della-versione-11' in note and 'da 10 a 11' in note, note
+    # (dalla 1.12.6 lo schema e' il 12: dalla 10 si arriva li', passando dalla colonna della 11)
+    assert S.versione_precedente == 10 and VERSIONE_SCHEMA == 12, (S.versione_precedente, VERSIONE_SCHEMA)
+    assert 'prima-della-versione-12' in note and 'da 10 a 12' in note, note
     assert 'turni.passo' in S.colonne_aggiunte, S.colonne_aggiunte
     assert os.listdir(os.path.join(os.path.dirname(percorso), 'backup')), 'copia di sicurezza mancante'
     s = S()

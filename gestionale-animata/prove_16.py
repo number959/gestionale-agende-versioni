@@ -1038,6 +1038,82 @@ def a_setup_non_parte():
 
 
 prova('Aggiorna adesso: copia di sicurezza, segno, pagina d\'attesa, Setup avviato', a_aggiorna_adesso)
+
+
+def a_popup():
+    """1.12.6, richiesta di Giovanni: un popup che dice che c'e' un aggiornamento, con «Clicca qui per installare».
+    Solo nel programma installato e con la versione nuova pronta; mai nella dashboard, nelle stampe, nella pagina degli
+    aggiornamenti; «Piu' tardi» lo rimanda per qualche ora; il pulsante e' lo stesso «Aggiorna adesso»."""
+    S, C, dove = mondo(con_dati=True)
+    assert 'data-popup="aggiornamento"' not in html(C.get('/oggi')), 'senza aggiornamento niente popup'
+    pronto(S, dove)
+    assert 'data-popup="aggiornamento"' not in html(C.get('/oggi')), 'non installato (le prove, la demo): niente popup'
+    AG.installato = lambda: True
+    t = html(C.get('/oggi'))
+    assert 'data-popup="aggiornamento"' in t and 'data-versione="%s"' % nuova_versione() in t, 'il popup'
+    assert 'È disponibile un aggiornamento' in t and 'Clicca qui per installare' in t and \
+        'action="/aggiornamenti/aggiorna"' in t and 'action="/aggiornamenti/piu-tardi"' in t
+    for pagina in ('/riepilogo-live', '/riepilogo-live?schermo=1', '/aggiornamenti', '/aiuto'):
+        assert 'data-popup="aggiornamento"' not in html(C.get(pagina)), pagina
+    # Piu' tardi: torna alla pagina di prima, il popup sparisce per ORE_RIMANDO ore
+    r = C.post('/aggiornamenti/piu-tardi', data={'torna': '/settimana/2026-12-07?struttura=1'})
+    assert r.status_code == 302 and r.headers['Location'].endswith('/settimana/2026-12-07?struttura=1'), r.headers
+    assert 'si installa più tardi' in avvisi(C)
+    assert 'data-popup="aggiornamento"' not in html(C.get('/oggi'))
+    r = C.post('/aggiornamenti/piu-tardi', data={'torna': '//esterno.example.com/'})
+    assert '//esterno' not in r.headers['Location'], 'solo indirizzi interni'
+    s = S()
+    adesso = datetime.now()
+    assert AG.popup_aggiornamento(s, 'cruscotto.oggi', adesso + timedelta(hours=AG.ORE_RIMANDO - 1)) is None
+    torna = AG.popup_aggiornamento(s, 'cruscotto.oggi', adesso + timedelta(hours=AG.ORE_RIMANDO, minutes=1))
+    assert torna and torna['versione'] == nuova_versione(), 'dopo le ore del rimando torna'
+    assert AG.popup_aggiornamento(s, 'viste.stampa_giorno') is None and AG.popup_aggiornamento(s, 'live.pagina') is None
+    s.close()
+    # una versione ancora piu' nuova non e' rimandata da un «piu' tardi» di un'altra
+    imposta(S, aggiornamento_rimandato='0.0.1|%s' % adesso.isoformat(timespec='seconds'))
+    assert 'data-popup="aggiornamento"' in html(C.get('/oggi'))
+    # mentre parte, o con il Setup sparito: niente popup
+    AG.stato['partito'] = datetime.now()
+    assert 'data-popup="aggiornamento"' not in html(C.get('/oggi'))
+    AG.stato['partito'] = None
+    os.remove(AG.stato['pronto'])
+    assert 'data-popup="aggiornamento"' not in html(C.get('/oggi'))
+    # un guasto nel calcolo del popup non ferma la pagina
+    AG.installato = lambda: 1 / 0
+    assert C.get('/oggi').status_code == 200
+    return 'popup, rimando, pagine escluse'
+
+
+def a_controllo_automatico():
+    """«Fai un controllo se questa funzione e' attiva»: la pagina dice se il controllo automatico e' acceso; nel
+    programma installato, se e' spento, una notifica lo dice."""
+    S, C, dove = mondo()
+    imposta(S, aggiornamenti_indirizzo=os.path.join(dove, 'pubblicata'))
+    t = testo(C.get('/aggiornamenti'))
+    assert 'Controllo automatico degli aggiornamenti: acceso' in t and 'Clicca qui per installare' in t, t[:600]
+    C.post('/aggiornamenti', data={'azione': 'indirizzo', 'indirizzo': ''})
+    t = testo(C.get('/aggiornamenti'))
+    assert 'Controllo automatico degli aggiornamenti: spento' in t, t[:600]
+    s = S()
+    with A.app.test_request_context():
+        assert not any(n['chiave'] == 'aggiornamenti-spenti' for n in AG.notifiche(s)), 'non installato: niente notifica'
+        AG.installato = lambda: True
+        n = [x for x in AG.notifiche(s) if x['chiave'] == 'aggiornamenti-spenti']
+    assert len(n) == 1 and 'Rimetti l\'indirizzo predefinito' in n[0]['testo'], n
+    assert AG.controllo_automatico(s)['acceso'] is False
+    s.close()
+    imposta(S, aggiornamenti_indirizzo=os.path.join(dove, 'pubblicata'))
+    s = S()
+    with A.app.test_request_context():
+        assert not any(x['chiave'] == 'aggiornamenti-spenti' for x in AG.notifiche(s))
+    assert AG.controllo_automatico(s)['acceso']
+    s.close()
+
+
+prova('popup «È disponibile un aggiornamento» con «Clicca qui per installare»: quando sì e quando no, «Più tardi»',
+      a_popup)
+prova('controllo automatico acceso o spento, nella pagina e con una notifica nel programma installato',
+      a_controllo_automatico)
 prova('il comando che avvia il Setup: cmd /c start, silenzioso, registro, percorsi con spazi, ambiente pulito', a_comando_setup)
 prova('rifiuti: niente pronto, copia non installata, Setup rovinato, copia di sicurezza fallita', a_rifiuti)
 prova('un\'email che sta partendo si lascia finire, ma non si aspetta all\'infinito', a_aspetta_invii)

@@ -80,7 +80,8 @@
     </div>
   </form>
 
-  {% if elenco_extra %}
+  {#- elenco_extra: un riquadro o piu' (1.12.6: le email e il tariffario del medico) #}
+  {% for elenco_extra in ([elenco_extra] if elenco_extra is mapping else (elenco_extra or [])) if elenco_extra %}
   <div class="riquadro-elenco">
     <h2>{{ elenco_extra.titolo }}</h2>
     {% if elenco_extra.nota %}<p class="aiuto">{{ elenco_extra.nota }}</p>{% endif %}
@@ -91,6 +92,6 @@
     </ul>{% endif %}
     {% if elenco_extra.azione %}<p><a class="bottone primario" href="{{ elenco_extra.azione.url }}">{{ elenco_extra.azione.testo }}</a></p>{% endif %}
   </div>
-  {% endif %}
+  {% endfor %}
 </div>
 {% endblock %}

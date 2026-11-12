@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{#- La stampa di un tariffario (1.12.6): testata della struttura, le voci per sezione, le note. #}
+{% set foglio_carta = true %}
+{% block titolo %}{{ t.nome }}{% endblock %}
+{% block classe_body %} class="pagina-stampa"{% endblock %}
+{% block menu %}{% endblock %}
+{% block corpo %}
+<div class="comandi-stampa solo-schermo">
+  <button class="bottone primario" type="button" onclick="window.print()">Stampa</button>
+  <a class="bottone" href="{{ url_for('tariffari.scheda', tid=t.id) }}">Torna al tariffario</a>
+</div>
+<div class="modulo-stampa tariffario-stampa">
+  <header class="testata-stampa">
+    <div class="logo-stampa">{% include "_marchio.html" %}</div>
+    <div class="dati-stampa">{% if st %}<div class="nome-struttura">{{ st.nome }}</div>{% if st.indirizzo or st.telefono or st.email %}<div>{{ [st.indirizzo, ('tel. ' ~ st.telefono) if st.telefono else '', st.email]|select|join(' · ') }}</div>{% endif %}{% endif %}</div>
+  </header>
+  <h1 class="giorno-stampa" style="text-transform:none">Tariffario · {{ t.nome }}</h1>
+  {% for sezione, voci in sezioni %}
+  {% if sezione %}<h2 class="sezione-stampa">{{ sezione }}</h2>{% endif %}
+  <table class="elenco tabella-tariffario">
+    <thead><tr><th>Prestazione</th>{% if con_modalita %}<th>Modalità</th>{% endif %}<th class="numero">Prezzo</th>{% if con_dettagli %}<th>Dettagli</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for v in voci %}
+    <tr><td>{{ v.nome }}</td>{% if con_modalita %}<td>{{ v.modalita }}</td>{% endif %}<td class="numero">{% if v.importo_cent is not none %}€ {{ v.importo_testo }}{% endif %}</td>{% if con_dettagli %}<td>{{ v.dettagli }}</td>{% endif %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+  {% if t.note %}<div class="note-tariffario">{% for riga in t.note.split('\n') if riga.strip() %}<p>{{ riga }}</p>{% endfor %}</div>{% endif %}
+</div>
+{% endblock %}

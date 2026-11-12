@@ -98,6 +98,15 @@ pagina_st = b.decode('utf-8', 'replace')
 controlla('Riepilogo del periodo nella dashboard (1.12.6): la pagina senza menu e senza Excel',
           s == 200 and 'class="frase-live' in pagina_st and '<nav class="menu"' not in pagina_st and 'riepilogo.xlsx' not in pagina_st
           and '<h1 class="giorno">Riepilogo del periodo' in pagina_st, s)
+s, b, _ = get('/cassa/tariffari')
+controlla('Tariffari dei medici (1.12.6): la pagina con il controllo dei medici e «Carica tariffario»',
+          s == 200 and 'Controllo dei medici' in testo(b) and 'Carica tariffario' in testo(b), s)
+s, b, _ = get('/aggiornamenti')
+controlla('Aggiornamenti (1.12.6): il controllo automatico risulta acceso', s == 200 and
+          'Controllo automatico degli aggiornamenti: acceso' in testo(b), s)
+s, b, _ = get('/oggi')
+controlla('Aggiornamenti (1.12.6): senza una versione nuova pronta nessun popup', s == 200 and
+          'data-popup="aggiornamento"' not in b.decode('utf-8', 'replace'), s)
 s, b, _ = get('/ambulatori/riepilogo.json?struttura=1&periodo=settimana')
 d = json.loads(b) if s == 200 else {}
 controlla('Riepilogo del periodo (1.12.2): il JSON con stanze, medici e giorni', s == 200 and all(k in d for k in ('stanze', 'medici', 'giorni', 'totale')), (s, list(d)[:8]))

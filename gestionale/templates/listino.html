@@ -3,7 +3,7 @@
 {% block corpo %}
 <div class="pagina larga">
   <h1>Listino</h1>
-  <p class="sotto">Il prezzo scritto qui si propone da solo nel modulo di prenotazione; si può sempre cambiare. Con una convenzione vale la sua tariffa, se c'è. <a href="{{ url_for('cassa.cassa_giorno', iso=oggi_iso, struttura=sid) }}">Cassa del giorno</a></p>
+  <p class="sotto">Il prezzo scritto qui si propone da solo nel modulo di prenotazione; si può sempre cambiare. Con una convenzione vale la sua tariffa, se c'è. <a href="{{ url_for('cassa.cassa_giorno', iso=oggi_iso, struttura=sid) }}">Cassa del giorno</a> · <a href="{{ url_for('tariffari.elenco', struttura=sid) }}">Tariffari dei medici</a> (prezzi diversi per medico, pacchetti, da Excel)</p>
   <form method="post">
     <input type="hidden" name="azione" value="listino">
     <table class="elenco">

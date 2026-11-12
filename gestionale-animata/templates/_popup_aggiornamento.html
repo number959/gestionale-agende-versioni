@@ -1,0 +1,18 @@
+{#- Il popup «È disponibile un aggiornamento» (1.12.6): lo decide aggiornamenti.popup_aggiornamento (solo nel programma
+    installato, con la versione nuova già scaricata, mai nella dashboard, nelle stampe e nella pagina degli
+    aggiornamenti). «Clicca qui per installare» è lo stesso «Aggiorna adesso»; «Più tardi» lo rimanda di qualche ora. #}
+{%- set _agg = popup_aggiornamento() if popup_aggiornamento is defined else none %}
+{%- if _agg %}
+<div class="popup-aggiornamento solo-schermo" role="dialog" aria-modal="true" aria-labelledby="popup-aggiornamento-titolo" data-popup="aggiornamento" data-versione="{{ _agg.versione }}">
+  <div class="popup-scatola">
+    <h2 id="popup-aggiornamento-titolo">È disponibile un aggiornamento</h2>
+    <p>La versione <b>{{ _agg.versione }}</b> è già scaricata e pronta. L'installazione dura circa un minuto: il programma fa una copia di sicurezza, si chiude e si riapre da solo. Appuntamenti, pazienti e impostazioni restano dove sono.</p>
+    {% if _agg.novita %}<p class="nota-riga">Cosa c'è di nuovo: {{ _agg.novita|join(', ') }}{% if _agg.altre %} e altr{{ 'o' if _agg.altre == 1 else 'e' }} {{ _agg.altre }}{% endif %}.</p>{% endif %}
+    <div class="popup-comandi">
+      <form method="post" action="{{ url_for('aggiornamenti.aggiorna') }}"><button class="bottone primario grande" type="submit" autofocus>Clicca qui per installare</button></form>
+      <form method="post" action="{{ url_for('aggiornamenti.piu_tardi') }}"><input type="hidden" name="torna" value="{{ request.full_path if request.query_string else request.path }}"><button class="bottone" type="submit">Più tardi</button></form>
+    </div>
+    <p class="nota-riga">Meglio installarlo quando non si sta prenotando. Si può fare anche da Configura → Aggiornamenti.</p>
+  </div>
+</div>
+{%- endif %}

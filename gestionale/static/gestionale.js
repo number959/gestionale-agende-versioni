@@ -408,7 +408,7 @@
     cambia();
   }
   /* ------------------------------------------ prezzo proposto dal listino */
-  var importo = $('importo'), convenzione = $('convenzione');
+  var importo = $('importo'), convenzione = $('convenzione'), medicoPrezzo = $('operatore');
   if (importo && prestazione && importo.getAttribute('data-tariffe')) {
     var tariffe = {};
     try { tariffe = JSON.parse(importo.getAttribute('data-tariffe')) || {}; } catch (e) { tariffe = {}; }
@@ -419,12 +419,15 @@
       if (importo.value && importo.value !== proposto) { return; }
       var t = tariffe[prestazione.value] || {};
       var c = (convenzione ? convenzione.value : '').trim().toLowerCase().replace(/\s+/g, ' ');
-      var v = (c && c !== 'privato' && t[c]) ? t[c] : (t[''] || '');
+      // prima la convenzione, poi il tariffario del medico (1.12.6), poi il listino
+      var m = medicoPrezzo ? t['medico:' + medicoPrezzo.value] : '';
+      var v = (c && c !== 'privato' && t[c]) ? t[c] : (m || t[''] || '');
       importo.value = v;
       proposto = v;
     };
     prestazione.addEventListener('change', proponi);
     if (convenzione) { convenzione.addEventListener('change', proponi); }
+    if (medicoPrezzo) { medicoPrezzo.addEventListener('change', proponi); }
     if (!importo.value) { proponi(); }
   }
 

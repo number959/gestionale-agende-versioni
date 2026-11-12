@@ -88,7 +88,8 @@ Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_tendin
 `prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, `prove_19_browser.py`,
 `prove_191_browser.py` (salva le impostazioni email della prova e poi rimette quelle di
 partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova),
-`prove_112_browser.py` (la pianificazione degli ambulatori: mette e toglie un turno, scarica i due Excel), nell'animata
+`prove_112_browser.py` (la pianificazione degli ambulatori: mette e toglie un turno, scarica i due Excel),
+`prove_tariffari_browser.py` (il prezzo del tariffario nella prenotazione, carica ed elimina un tariffario), nell'animata
 `prove_animazioni.py` e `prove_icone_animate.py`, e per ultima `prove_16_browser.py`, che
 cambia l'indirizzo degli aggiornamenti. Le prove nel browser salvano dati: sempre su un
 gestionale di prova, mai su quello vero.
@@ -125,7 +126,7 @@ temporanea.
   modifiche in sospeso fuori dal lucchetto.
 - Un difetto nei messaggi non deve mai far perdere una prenotazione (try/except intorno a
   `invii.dopo_salvataggio`).
-- Schema del database: `modelli.VERSIONE_SCHEMA` (11 dalla 1.10, uguale nella 1.11) e `COLONNE_AGGIUNTE`;
+- Schema del database: `modelli.VERSIONE_SCHEMA` (11 dalla 1.10, 12 dalla 1.12.6: le tabelle dei tariffari) e `COLONNE_AGGIUNTE`;
   l'aggiornamento fa prima una copia di sicurezza («prima-della-versione-N») e aggiunge
   colonne e tabelle senza toccare i dati. `_migra_a_8` ricava sesso, data e luogo di
   nascita dai codici fiscali validi già in archivio, senza cambiare quelli scritti. Alla 9
@@ -233,6 +234,14 @@ temporanea.
   il portiere della rete locale). Nella dashboard non si usa il nome «Statistiche»: è la pagina del menu, che conta in
   un altro modo. Con una sola stanza o sala le frasi vanno al singolare (`PAROLE_UNA`, anche «di turno nella stanza» e
   la nota in fondo), e così il riepilogo live con una sola stanza.
+- Tariffari dei medici (dalla 1.12.6): tutto in `tariffari.py` (lettura degli Excel, proposte, prezzi, controllo per
+  medico, pagine); i file veri dei tariffari restano fuori dal progetto e si caricano dal programma, prove ed esempi
+  usano nomi e prezzi inventati. Il prezzo proposto nella prenotazione: convenzione, poi tariffario del medico
+  (`prezzi_dei_medici`, chiave `medico:<id>` in `cassa.mappa_tariffe`), poi listino; un pacchetto non vale come prezzo
+  della seduta. Un medico o una prestazione usati da un tariffario non si eliminano. `prove_tariffari.py`.
+- Popup dell'aggiornamento (dalla 1.12.6): `aggiornamenti.popup_aggiornamento` decide, `_popup_aggiornamento.html` lo
+  mostra (incluso nei due `base.html`); solo con `installato()`, mai nella dashboard (`live.*`), nelle stampe, nella
+  guida e nella pagina degli aggiornamenti. Il pulsante è il POST di «Aggiorna adesso», nient'altro.
 - Stampe (dalla 1.12): il foglio del giorno è una `table.impaginazione` con testata in `thead` e
   piede in `tfoot` (il browser li ripete su ogni pagina); il numero di pagina viene dai margin box di
   `@page` in `stile.css`. Le colonne di partenza del foglio sono `viste.COLONNE_DI_PARTENZA`: una
