@@ -13,4 +13,6 @@ Si scarica anche in Excel.
 
 Con una sola sala (o una sola stanza) le frasi del riepilogo sono al singolare: «La sala è stata occupata», «nella sala». Lo stesso nel riepilogo live.
 
+**L'indirizzo della segreteria nelle email.** Le informative allegate alle email di preparazione (EGDS e colonscopia) e la firma delle email ora dicono **segreteria@clinicaposillipolongevity.it** al posto della Gmail, e le risposte dei pazienti arrivano lì. Il programma lo cambia da solo al primo avvio, anche nelle informative già salvate nella regola (quelle cambiate a mano restano come sono). La casella da cui partono le email resta quella impostata in *Configura → Email*.
+
 Il database non cambia rispetto alla 1.12.5. Appuntamenti, pazienti e impostazioni restano dove sono.

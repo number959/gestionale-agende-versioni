@@ -107,9 +107,10 @@ può avere le sue email**, con testi e informative sue: per le sue prestazioni p
 al posto di quella per tutti i medici, e un'email già fatta si duplica per un altro medico.
 Dalla pagina dell'appuntamento ogni email si manda anche a comando. Il giorno prima, all'ora scelta, parte il **promemoria**:
 su WhatsApp quando è configurata la piattaforma di Meta, altrimenti per email; la pagina
-Conferme dice cosa è partito e chi resta da chiamare. Le email partono dalla Gmail della
-clinica, medicinamigliorenapolisrl@gmail.com, che l'aggiornamento scrive anche nella
-struttura: compare nelle stampe e nella firma delle email. Nel modulo di prenotazione ci
+Conferme dice cosa è partito e chi resta da chiamare. Le email partono dalla casella
+configurata in *Configura → Email*; l'email della struttura compare nelle stampe, nella firma
+delle email e come indirizzo per le risposte: dalla 1.12.6 è segreteria@clinicaposillipolongevity.it
+(prima la Gmail della clinica, vedi *Indirizzo della segreteria*). Nel modulo di prenotazione ci
 sono **data di nascita**, **codice fiscale** (la data si riempie da sola) e il nuovo
 **indirizzo** del paziente, anche nella scheda e nell'importazione. Il **mese** mostra la
 sala operatoria: interventi e chirurghi di ogni giorno, e chi opera di solito quel giorno
@@ -745,6 +746,22 @@ ultime tre ore e chi era arrivato stamattina senza essere segnato non stava da n
   sala»); lo stesso nel riepilogo live («1 di 1 stanza», «La stanza adesso»). Mai dati dei pazienti: `prove_112.py` (`p_periodo_sala`) lo controlla con un
   paziente inventato e confronta i numeri della sala con un conto fatto a parte, minuto per minuto; il singolare con
   `p_periodo_parole_una_sala` e `p_periodo_parole_una_stanza`.
+- **Indirizzo della segreteria** (1.12.6, richiesta di Giovanni del 12 novembre 2026: «controlla se ti ritrovi
+  comunicazioni destinate a gmail, metti segreteria@clinicaposillipolongevity.it»). Le due informative della regola
+  già pronta (`modelli_email/`) avevano nel piè di pagina «Mail: medicinamigliorenapolisrl@gmail.com», con il
+  collegamento: ora c'è segreteria@clinicaposillipolongevity.it, nella stessa riga, centrata, con il collegamento
+  `mailto:` e il segnalibro cambiati; il resto delle pagine è identico (confrontato pixel per pixel). Fatte con
+  PyMuPDF: tolta la riga vecchia, scritta la nuova (EGDS in Liberation Sans, le misure di Arial; colonscopia in
+  DejaVu Serif al 92%, perché il Georgia dentro il file ha solo le lettere già usate e non la «v» e la «y»), riusato
+  l'oggetto del collegamento (la struttura del PDF lo indica), caratteri ridotti alle lettere usate; in nessun oggetto
+  né flusso resta «gmail». Il database della clinica ha una copia delle informative in ogni regola (`AllegatoRegola`,
+  copiate da `crea_regola_pronta`): all'avvio, una volta sola (impostazione `email_segreteria_fatta`),
+  `servizi.email_segreteria` mette quelle nuove dove ci sono ancora quelle di prima (riconosciute dall'impronta,
+  `INFORMATIVE_PRIMA`, anche con un altro nome; una cambiata a mano resta), l'indirizzo della segreteria nelle
+  strutture che hanno la Gmail (firma, risposte, stampe) e nei testi per i pazienti dove c'è scritto proprio quello
+  (oggetto e testo delle regole, preparazioni, moduli da stampare). La casella da cui partono le email e il registro
+  degli invii non si toccano: per far partire le email da segreteria@ servono password e server della casella nuova
+  (*Configura → Email*, casella del sito). Prova: `prove_15.py` (`a_email_segreteria`).
 - **In cima** una frase in parole semplici (`riassunto`): quante visite sono in corso, quante stanze
   hanno un medico adesso, quanti pazienti hanno l'orario passato senza l'arrivo segnato e il prossimo
   appuntamento. Sotto, una barra a quattro colori e i quattro numeri, che sommano agli appuntamenti
@@ -887,7 +904,7 @@ sicurezza, con le istruzioni di quel tipo.
   della casella (la stessa della webmail). Non una casella PEC.
 - **Gmail**: Gmail non accetta la password normale da un programma, vuole una *password per
   le app*, che Google dà solo con la verifica in due passaggi attiva.
-  1. Accedere a Gmail con l'account della clinica (medicinamigliorenapolisrl@gmail.com).
+  1. Accedere a Gmail con l'account della clinica.
   2. In **myaccount.google.com → Sicurezza** attivare la **Verifica in due passaggi**, se
      non c'è già (serve un cellulare).
   3. Aprire **myaccount.google.com/apppasswords**, scrivere un nome (*Gestionale*) e
@@ -1846,8 +1863,8 @@ già salvati. I codici fiscali non vengono cambiati: quelli che non vanno si ved
 **Aggiornamento dalla 1.4.x.** Al primo avvio della 1.5 il programma copia il database
 in `backup\agende-…-prima-della-versione-7.db`, poi aggiunge le tabelle delle regole, degli
 allegati e dei messaggi e la colonna dell'indirizzo del paziente. Nelle strutture che si
-chiamano *Posillipo* e non hanno ancora un'email scrive medicinamigliorenapolisrl@gmail.com,
-una volta sola: se poi la si cambia o la si toglie, resta così. Niente di quello che c'era
+chiamano *Posillipo* e non hanno ancora un'email scrive quella della clinica (`servizi.EMAIL_POSILLIPO`:
+fino alla 1.12.5 la Gmail, dalla 1.12.6 segreteria@clinicaposillipolongevity.it), una volta sola: se poi la si cambia o la si toglie, resta così. Niente di quello che c'era
 viene toccato, e niente parte verso i pazienti finché non si configura l'account email.
 
 **Aggiornamento dalla 1.3.** Al primo avvio della 1.4 il programma copia il database
@@ -2850,6 +2867,7 @@ falliscono, cioè il difetto c'era davvero.
 | Due «Statistiche» diverse (revisione della 1.12.6) | Il pulsante nuovo della dashboard si chiamava come la voce del menu *Statistiche*, che conta in un altro modo: per la stessa settimana numeri diversi | Il pulsante e la pagina si chiamano *Riepilogo del periodo*, come la pagina del menu Ambulatori con gli stessi numeri; un solo pulsante con quel nome; `p_periodo_sala` |
 | Un collegamento fuori dalla dashboard nel modo schermo (revisione della 1.12.6) | La nota sotto le mezze giornate libere portava alla pianificazione anche con `?schermo=1`: dagli altri PC della rete il portiere la blocca | La nota c'è solo fuori dal modo schermo; `p_periodo_sala` e `prove_112_browser.py` controllano tutti i collegamenti della dashboard nel modo schermo |
 | Frasi al plurale con una sala sola (revisione della 1.12.6) | «2 interventi in 1 sala», ma «Le sale sono state occupate», «nelle sale», titolo «Le sale»; e «ci sono 1 ora di interventi» dopo la mezzanotte | `PAROLE_UNA` al singolare con una sola stanza o sala; «c'è 1 ora», «c'è 1 minuto»; `p_periodo_parole_una_sala` |
+| La Gmail nelle email ai pazienti (richiesta di Giovanni, 12 novembre 2026) | Le informative allegate e la firma delle email dicevano medicinamigliorenapolisrl@gmail.com, e le risposte dei pazienti andavano lì | 1.12.6: informative nuove con segreteria@clinicaposillipolongevity.it; all'avvio, una volta sola, `servizi.email_segreteria` cambia struttura, informative di prima (dall'impronta) e testi; `a_email_segreteria` |
 | Plurale rimasto con una stanza sola (seconda revisione della 1.12.6) | «La stanza è stata occupata», ma «6 h di turno nelle stanze» e la nota «i turni dei medici nelle stanze»; nel riepilogo live «1 di 1 stanze», «Le stanze adesso», «nelle stanze» (questo già da prima) | `di_turno` in `PAROLE_UNA`, la nota con le parole della parte, il riepilogo live al singolare con una stanza; `p_periodo_parole_una_stanza`; `prove_installato.py` accetta «La sala» e «La stanza» |
 | Riepilogo del periodo, seconda revisione (1.12.2) | I turni di una stanza disattivata contavano anche dopo lo spegnimento; la sola coda dopo la mezzanotte non la faceva comparire; una visita fino alle 24:00 lasciava una riga del medico a zero; un giorno chiuso con soli disdetti sembrava aperto; le prove dell'Excel avevano solo ore intere | Turni della stanza spenta fino al suo ultimo appuntamento; la coda la fa comparire; niente coda alle 24:00; i disdetti non aprono il giorno; Excel provato cella per cella con un terzo d'ora |
 

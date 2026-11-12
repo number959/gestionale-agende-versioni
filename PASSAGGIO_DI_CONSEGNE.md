@@ -57,9 +57,9 @@ ambulatorio (ogni turno con la sua durata delle fasce; la prestazione occupa fas
   da WhatsApp. Il programma parla a lei: le parole devono essere semplici, mai da tecnico.
 - Nei dati di partenza (`seed.py`) e in alcuni testi ci sono medici veri della clinica: il
   Dr. Galasso (endoscopia, con l'email di preparazione già pronta) e la Dr.ssa Lippiello. Le
-  email sono partite finora dalla Gmail della clinica, medicinamigliorenapolisrl@gmail.com
-  (`servizi.EMAIL_POSILLIPO`, che è anche l'email della struttura); dalla 1.9.1 va bene
-  qualsiasi casella, e per non dipendere dalla verifica in due passaggi di Gmail è consigliata
+  email sono partite finora dalla Gmail della clinica; dalla 1.12.6 l'email della struttura (firma, risposte, stampe)
+  e le informative dicono segreteria@clinicaposillipolongevity.it (`servizi.EMAIL_POSILLIPO`, vedi *La 1.12.6*);
+  dalla 1.9.1 va bene qualsiasi casella, e per non dipendere dalla verifica in due passaggi di Gmail è consigliata
   una casella del sito (vedi *Cose aperte*).
 
 ## Dove sta ogni cosa
@@ -99,8 +99,9 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
-- **Versione 1.12.6, pronta ma NON pubblicata** (11 novembre 2026): il riepilogo del periodo anche della sala
-  operatoria e lo stesso riepilogo dentro la dashboard (vedi *La 1.12.6*). Due revisioni indipendenti, difetti
+- **Versione 1.12.6, pronta ma NON pubblicata** (11 novembre 2026, poi il 12 l'indirizzo della segreteria nelle
+  informative e nelle email): il riepilogo del periodo anche della sala operatoria e lo stesso riepilogo dentro la
+  dashboard (vedi *La 1.12.6*). Due revisioni indipendenti, difetti
   confermati sistemati; prove verdi in tutte e due le cartelle (anche nel browser), immagini e video della guida
   rifatti, Setup costruiti in Wine e installati sopra la 1.12.5 pubblicata (59 controlli su 59, normale e animata), prove
   su Windows verdi. Si pubblica solo con il via di Giovanni (workflow «Pubblica una versione», `ultima: true`). Il
@@ -1058,7 +1059,25 @@ stessa revisione: nel modo schermo la dashboard non ha più collegamenti fuori d
 pianificazione), e con una sola sala o stanza le frasi sono al singolare (una seconda revisione ha trovato ancora «di
 turno nelle stanze» e il plurale nel riepilogo live con una stanza: sistemati).
 
+Il 12 novembre, prima della pubblicazione, Giovanni ha chiesto: «Occorre modificare l'informativa dell'invio mail,
+controlla se all'interno ti ritrovi comunicazioni destinate a gmail, metti segreteria@clinicaposillipolongevity.it».
+Dentro le due informative (EGDS e colonscopia) c'era, nel piè di pagina, «Mail: medicinamigliorenapolisrl@gmail.com»
+con il collegamento; nei testi del programma nient'altro, ma l'email della struttura in clinica è la stessa Gmail
+(scritta dall'aggiornamento alla 1.5), e finisce nella firma di ogni email e come indirizzo per le risposte. Fatto
+nella 1.12.6: le informative nuove (solo quella riga cambiata, il resto identico), e all'avvio, una volta sola,
+`servizi.email_segreteria` mette l'indirizzo della segreteria nella struttura, al posto delle informative di prima
+salvate nella regola e nei testi per i pazienti (vedi *Indirizzo della segreteria* nel `LEGGIMI.md`). La casella da
+cui partono le email non si tocca: se è ancora la Gmail, le email partono da lì ma le risposte vanno alla segreteria;
+per farle partire da segreteria@ si cambia la casella in *Configura → Email* (casella del sito della clinica, con la
+sua password), vedi *Cose aperte*.
+
 ## Cose aperte
+
+- **La casella da cui partono le email** (12 novembre 2026): dalla 1.12.6 firma, risposte e informative dicono
+  segreteria@clinicaposillipolongevity.it, ma le email partono ancora dalla casella configurata in clinica (finora la
+  Gmail). Per farle partire dalla segreteria: *Configura → Email*, tipo «casella del sito della clinica», indirizzo
+  segreteria@clinicaposillipolongevity.it e la sua password (il server proposto è mail.clinicaposillipolongevity.it:
+  va controllato con chi gestisce il sito), poi «Manda la prova». Lo fa la segreteria o Giovanni, con la password.
 
 - **La dashboard sugli altri PC della rete** (11 novembre 2026): senza modificare il programma, con Caddy sul PC della
   segreteria. Il Caddyfile (indirizzo e rete da adattare):

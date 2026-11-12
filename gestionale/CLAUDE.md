@@ -290,6 +290,11 @@ temporanea.
   l'accesso. Il server proposto per la casella del sito (mail. + il dominio) si calcola in
   `invii.server_proposto` e, mentre si scrive, in `serverPerTipo()` di `gestionale.js`: se si
   cambia uno, va cambiato l'altro (i valori dei tipi arrivano alla pagina in `#caselle-email`).
+  Dalla 1.12.6 l'indirizzo della clinica per i pazienti è segreteria@clinicaposillipolongevity.it
+  (`servizi.EMAIL_POSILLIPO`): le informative in `modelli_email/` non hanno più la Gmail, e `servizi.email_segreteria`
+  (all'avvio, una volta sola) cambia struttura, informative di prima salvate nelle regole (`INFORMATIVE_PRIMA`, dalle
+  impronte) e testi; mai la casella da cui partono (`email_utente`) né il registro degli invii. Un'informativa nuova
+  in `modelli_email/` cambia l'impronta: quella vecchia va aggiunta a `INFORMATIVE_PRIMA` se va sostituita in clinica.
   `manda_email` traduce ogni errore in un testo che dice cosa correggere e decide se riprovare
   (`permanente`: password, SSL sulla porta sbagliata, certificato di un altro nome, mittente o
   destinatario rifiutati); `spiega_accesso_rifiutato` dà il consiglio secondo il fornitore.

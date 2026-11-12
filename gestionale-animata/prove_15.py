@@ -610,6 +610,92 @@ prova('versione in Aiuto uguale a quella dell\'installatore; guida all\'aggiorna
 prova('logo nuovo (Longevity Institute) al posto del precedente, solo dove c\'era quello', a_logo_nuovo)
 
 
+def a_email_segreteria():
+    """1.12.6, richiesta di Giovanni: al posto della Gmail della clinica l'indirizzo della segreteria. Una volta sola,
+    all'avvio: l'email della struttura (firma e risposte), le informative di prima (riconosciute dall'impronta, anche
+    con un altro nome; quelle cambiate a mano restano), i testi per i pazienti dove c'e' proprio quell'indirizzo. La
+    casella da cui partono le email e il registro degli invii non si toccano. Le informative nuove del programma non
+    hanno piu' la Gmail."""
+    import hashlib
+    from types import SimpleNamespace
+    from modelli import AllegatoRegola, ModuloStampa, scrivi_impostazione, leggi_impostazione
+    gmail = servizi.EMAIL_POSILLIPO_PRIMA
+    nuova = 'segreteria@clinicaposillipolongevity.it'
+    assert servizi.EMAIL_POSILLIPO == nuova
+    # le informative del programma: senza Gmail, con il collegamento alla segreteria, diverse da quelle di prima
+    for nome in invii.PRONTA_ALLEGATI:
+        dati = open(os.path.join(CARTELLA, 'modelli_email', nome), 'rb').read()
+        assert dati[:5] == b'%PDF-' and b'gmail' not in dati.lower() and b'mailto:' + nuova.encode() in dati, nome
+        assert hashlib.sha256(dati).hexdigest() not in servizi.INFORMATIVE_PRIMA, nome
+    assert sorted(servizi.INFORMATIVE_PRIMA.values()) == sorted(invii.PRONTA_ALLEGATI)
+    S, C = mondo()
+    rid = regola_galasso(S)
+    s = S()
+    s.get(Struttura, 1).email = ' MedicinaMiglioreNapoliSrl@Gmail.com '
+    s.add(Struttura(nome='Altra sede', email='altra@example.com'))
+    r = s.get(RegolaEmail, rid)
+    assert [g.nome for g in r.allegati] == invii.PRONTA_ALLEGATI and all(b'gmail' not in g.dati.lower() for g in r.allegati)
+    # come in clinica: le informative di prima (qui due file finti, con le loro impronte), una cambiata a mano
+    vecchia_egds, vecchia_colon, mia = b'%PDF-1.5 egds di prima', b'%PDF-1.5 colonscopia di prima', b'%PDF-1.5 la mia'
+    r.allegati.clear()
+    r.allegati.extend([AllegatoRegola(nome='INFORMATIVA_EGDS.pdf', dati=vecchia_egds, dimensione=len(vecchia_egds)),
+                       AllegatoRegola(nome='preparazione colon.pdf', dati=vecchia_colon, dimensione=len(vecchia_colon)),
+                       AllegatoRegola(nome='INFORMATIVA_COLONSCOPIA.pdf', dati=mia, dimensione=len(mia))])
+    r.testo = invii.PRONTA_TESTO + '\nPer domande: %s.' % gmail
+    s.add(RegolaEmail(nome='Altra regola', oggetto='Scriva a %s' % gmail.upper(), testo='Nessun indirizzo qui.'))
+    s.add(Prestazione(nome='Rettoscopia di prova', durata_min=30, preparazione='Dubbi? %s' % gmail))
+    s.add(ModuloStampa(nome='Consenso', testo='Recapiti: tel. 081 0000000, %s' % gmail))
+    s.add(Invio(canale='EMAIL', motivo='REGOLA', stato='INVIATO', destinatario='fintini@example.com',
+                oggetto='Preparazione', testo='Mail: %s' % gmail))
+    scrivi_impostazione(s, 'email_utente', gmail)            # la casella da cui partono: resta
+    s.commit()
+    prima = dict(servizi.INFORMATIVE_PRIMA)
+    servizi.INFORMATIVE_PRIMA = {hashlib.sha256(vecchia_egds).hexdigest(): 'INFORMATIVA_EGDS.pdf',
+                                 hashlib.sha256(vecchia_colon).hexdigest(): 'INFORMATIVA_COLONSCOPIA.pdf'}
+    try:
+        cambiate = servizi.email_segreteria(s)
+    finally:
+        servizi.INFORMATIVE_PRIMA = prima
+    assert len(cambiate) == 7, cambiate
+    s.close()
+    s = S()
+    nuove = {n: open(os.path.join(CARTELLA, 'modelli_email', n), 'rb').read() for n in invii.PRONTA_ALLEGATI}
+    st = {x.nome: x.email for x in s.scalars(select(Struttura))}
+    assert st == {'Clinica Posillipo': nuova, 'Altra sede': 'altra@example.com'}, st
+    allegati = {g.nome: g for g in s.get(RegolaEmail, rid).allegati}
+    assert allegati['INFORMATIVA_EGDS.pdf'].dati == nuove['INFORMATIVA_EGDS.pdf']
+    assert allegati['preparazione colon.pdf'].dati == nuove['INFORMATIVA_COLONSCOPIA.pdf'], 'riconosciuta dall\'impronta'
+    assert allegati['preparazione colon.pdf'].dimensione == len(nuove['INFORMATIVA_COLONSCOPIA.pdf'])
+    assert allegati['INFORMATIVA_COLONSCOPIA.pdf'].dati == mia, 'quella cambiata a mano resta'
+    regole = {x.nome: x for x in s.scalars(select(RegolaEmail))}
+    assert regole[invii.PRONTA_NOME].testo.endswith('Per domande: %s.' % nuova) and gmail not in regole[invii.PRONTA_NOME].testo
+    assert regole['Altra regola'].oggetto == 'Scriva a %s' % nuova and regole['Altra regola'].testo == 'Nessun indirizzo qui.'
+    assert s.scalars(select(Prestazione).where(Prestazione.nome == 'Rettoscopia di prova')).one().preparazione == 'Dubbi? %s' % nuova
+    assert s.scalars(select(ModuloStampa)).one().testo == 'Recapiti: tel. 081 0000000, %s' % nuova
+    assert s.scalars(select(Invio)).one().testo == 'Mail: %s' % gmail, 'il registro resta com\'era'
+    assert leggi_impostazione(s, 'email_utente') == gmail, 'la casella da cui partono non si tocca'
+    # l'email che parte: firma e risposte alla segreteria (parte ancora dalla casella configurata)
+    cfg = invii.impostazioni(s)
+    m = invii.componi_email(s, SimpleNamespace(destinatario='fintini@example.com'), cfg, 'Prova', 'Gentile paziente.', [],
+                            s.get(Struttura, 1))
+    assert m['Reply-To'] == nuova and gmail in m['From'] and 'Mail: %s' % nuova in m.get_body(('plain',)).get_content()
+    # una volta sola: rimessa la Gmail a mano, resta
+    s.get(Struttura, 1).email = gmail
+    s.commit()
+    assert servizi.email_segreteria(s) == [] and s.get(Struttura, 1).email == gmail
+    s.close()
+    # un database nuovo: niente da cambiare, e la regola pronta nasce con le informative nuove
+    S2, _ = mondo()
+    s = S2()
+    assert servizi.email_segreteria(s) == [] and leggi_impostazione(s, servizi.CHIAVE_EMAIL_SEGRETERIA)
+    s.close()
+    return '%d cose cambiate' % len(cambiate)
+
+
+prova('1.12.6: l\'indirizzo della segreteria al posto della Gmail (struttura, informative, testi), una volta sola',
+      a_email_segreteria)
+
+
 # ================================================== campi nuovi del paziente
 area('paziente: nascita, codice fiscale, indirizzo')
 

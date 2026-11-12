@@ -1045,6 +1045,12 @@ def principale():
             logging.info("email della struttura %s impostata", nome)
         for nome in servizi.logo_nuovo(s, Sessione.colonne_aggiunte):
             logging.info("logo nuovo (Longevity Institute) nella struttura %s", nome)
+        try:
+            for cosa in servizi.email_segreteria(s):
+                logging.info("indirizzo della segreteria al posto della Gmail: %s", cosa)
+        except Exception:
+            s.rollback()
+            logging.exception("indirizzo della segreteria: non cambiato, si riprova al prossimo avvio")
         nuova = servizi.prepara_primo_avvio(s)
         if nuova:
             logging.info("primo avvio: creata la struttura %s con le stanze iniziali", nuova.nome)

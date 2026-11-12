@@ -109,8 +109,69 @@ def logo_nuovo(ses, colonne_aggiunte):
     return aggiornate
 
 
-# l'indirizzo da cui la Clinica Posillipo manda le email ai pazienti
-EMAIL_POSILLIPO = 'medicinamigliorenapolisrl@gmail.com'
+# l'indirizzo della Clinica Posillipo per i pazienti: firma e risposte delle email, stampe, informative. Dalla 1.12.6
+# quello della segreteria (richiesta di Giovanni del 12 novembre 2026); prima era la Gmail della clinica
+EMAIL_POSILLIPO = 'segreteria@clinicaposillipolongevity.it'
+EMAIL_POSILLIPO_PRIMA = 'medicinamigliorenapolisrl@gmail.com'
+# le impronte (SHA-256) delle due informative della regola gia' pronta fino alla 1.12.5, con la Gmail nel pie' di
+# pagina: un allegato con una di queste impronte e' l'informativa di prima, mai cambiata a mano
+INFORMATIVE_PRIMA = {
+    '2dd6ef5f6e6b5923a9e6c92a10a7a6d77d15398452a674dff06b7a70a599df12': 'INFORMATIVA_COLONSCOPIA.pdf',
+    '77db01484dad20056f22b1547d4f04facaf6e48191f20ace2cf7b29ae91047b9': 'INFORMATIVA_EGDS.pdf',
+}
+CHIAVE_EMAIL_SEGRETERIA = 'email_segreteria_fatta'
+
+
+def email_segreteria(ses):
+    """Una volta sola (1.12.6, richiesta di Giovanni: «controlla se ti ritrovi comunicazioni destinate a gmail, metti
+    segreteria@clinicaposillipolongevity.it»): dove i pazienti leggono ancora la Gmail della clinica si mette
+    l'indirizzo della segreteria:
+    - l'email delle strutture che hanno proprio quella (la firma delle email, l'indirizzo per le risposte, le stampe);
+    - le informative allegate alle regole email, se sono ancora quelle di prima (stessa impronta): un file cambiato o
+      caricato a mano resta com'e';
+    - oggetto e testo delle regole email, le preparazioni delle prestazioni e i moduli da stampare, solo dove c'e'
+      scritto proprio quell'indirizzo.
+    La casella da cui partono le email (Configura -> Email) non si tocca: per cambiarla servono la password e il server
+    della casella nuova. Il registro degli invii (quello che e' gia' partito) resta com'era. Fatto una volta
+    (impostazione CHIAVE_EMAIL_SEGRETERIA), se poi qualcuno rimette la Gmail resta cosi'. Torna le cose cambiate."""
+    import hashlib
+    import re
+    from modelli import RegolaEmail, AllegatoRegola, ModuloStampa, leggi_impostazione, scrivi_impostazione
+    if leggi_impostazione(ses, CHIAVE_EMAIL_SEGRETERIA, ''):
+        return []
+    cambiate = []
+    vecchio = re.compile(re.escape(EMAIL_POSILLIPO_PRIMA), re.IGNORECASE)
+    for st in ses.scalars(select(Struttura)):
+        if (st.email or '').strip().lower() == EMAIL_POSILLIPO_PRIMA:
+            st.email = EMAIL_POSILLIPO
+            cambiate.append('email della struttura %s' % st.nome)
+    cartella = os.path.join(cartella_risorse(), 'modelli_email')
+    nuove = {}
+    for g in ses.scalars(select(AllegatoRegola)):
+        nome = INFORMATIVE_PRIMA.get(hashlib.sha256(g.dati or b'').hexdigest())
+        if nome is None:
+            continue
+        if nome not in nuove:
+            try:
+                with open(os.path.join(cartella, nome), 'rb') as f:
+                    nuove[nome] = f.read()
+            except OSError:
+                ses.rollback()
+                return []           # senza le informative nuove non si fa niente: si riprova al prossimo avvio
+        g.dati, g.dimensione = nuove[nome], len(nuove[nome])
+        regola = ses.get(RegolaEmail, g.regola_id)
+        cambiate.append('informativa %s della regola «%s»' % (g.nome, regola.nome if regola else ''))
+    campi = [(RegolaEmail, 'oggetto', 'nome'), (RegolaEmail, 'testo', 'nome'), (Prestazione, 'preparazione', 'nome'),
+             (ModuloStampa, 'testo', 'nome')]
+    for modello, campo, etichetta in campi:
+        for x in ses.scalars(select(modello)):
+            valore = getattr(x, campo) or ''
+            if vecchio.search(valore):
+                setattr(x, campo, vecchio.sub(EMAIL_POSILLIPO, valore))
+                cambiate.append('%s di «%s»' % (campo, getattr(x, etichetta)))
+    scrivi_impostazione(ses, CHIAVE_EMAIL_SEGRETERIA, datetime.now().isoformat(timespec='seconds'))
+    ses.commit()
+    return cambiate
 
 
 def email_della_struttura(ses, colonne_aggiunte):
