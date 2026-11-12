@@ -47,9 +47,12 @@ with sync_playwright() as p:
     pg.goto(B + '/cassa/tariffari')
     righe = {pg.locator('tr[data-medico]').nth(i).locator('td').first.inner_text().strip():
              pg.locator('tr[data-medico]').nth(i).get_attribute('class') for i in range(pg.locator('tr[data-medico]').count())}
+    # (nell'animata le righe hanno anche la classe dell'animazione d'entrata)
+    def classi(nome):
+        return (righe.get(nome) or '').split()
     ok('controllo dei medici: il tariffario di Gallo attivo, quello di Monti spento, gli altri senza',
-       righe.get('Gallo') == 'stato-tariffario-attivo' and righe.get('Monti') == 'stato-tariffario-spento'
-       and righe.get('Galasso') == 'stato-tariffario-nessuno', righe)
+       'stato-tariffario-attivo' in classi('Gallo') and 'stato-tariffario-spento' in classi('Monti')
+       and 'stato-tariffario-nessuno' in classi('Galasso'), righe)
     # il prezzo nella prenotazione
     pg.goto(B + '/appuntamento?data=2030-01-08&ora=10:00&risorsa=3&struttura=1')
     gallo, galasso, guarino = (valore_di(pg, '#operatore', x) for x in ('Gallo', 'Galasso', 'Guarino'))

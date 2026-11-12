@@ -109,7 +109,10 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   e informative cambiate, gli allegati caricati a mano lasciati com'erano. Poi la mail della segreteria in tutte le
   comunicazioni (recapito unico, avviso sugli allegati): tutto rifatto un'altra volta, immagini e video delle guide di
   email, promemoria, WhatsApp, Dove si fa, aspetto e backup rigenerati, in Wine anche il testo del promemoria con la
-  Gmail cambiato all'avvio. Poi, sempre il 12, i tariffari dei medici e l'avviso degli aggiornamenti (vedi *La 1.12.6*).
+  Gmail cambiato all'avvio. Poi, sempre il 12, i tariffari dei medici e l'avviso degli aggiornamenti (vedi *La 1.12.6*):
+  tutto rifatto ancora (27 raccolte senza browser in tutte e due le cartelle, nel browser anche `prove_tariffari_browser.py`,
+  guide di tariffari, cassa e aggiornare rigenerate), in Wine sopra la 1.12.5 lo schema 12 con la sua copia di
+  sicurezza e 62 controlli su 62, normale e animata.
   Si pubblica solo con il via di Giovanni (workflow «Pubblica una versione», `ultima: true`). Il database passa allo
   schema 12 (tre tabelle nuove, vuote, dopo la copia di sicurezza).
 - **Versione 1.12.5, pubblicata il 10 novembre 2026**: la release `v1.12.5`, segnata come ultima, con i due
