@@ -101,7 +101,7 @@ def _normale(testo):
 
 
 def _titolo(testo):
-    """«TARIFFARIO  GRUPPO COLAO» -> «Gruppo Fittizi», «TARIFFARIO DOTT. GALASSO» -> «Dott. Galasso»."""
+    """«TARIFFARIO  GRUPPO FITTIZI» -> «Gruppo Fittizi», «TARIFFARIO DOTT. GALASSO» -> «Dott. Galasso»."""
     t = _testo(testo)
     t = re.sub(r'^(tariffario|tariffe|listino)( prezzi| delle prestazioni| prestazioni)?\b[\s:.-]*', '', t,
                flags=re.I).strip()

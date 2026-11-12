@@ -434,6 +434,11 @@ def prestazione(pid=None):
             campo('preparazione', 'Indicazioni per il paziente', tipo='textarea', massimo=1000,
                   valore=dati.get('preparazione') if dati else (p.preparazione if p else ''),
                   aiuto='Finiscono sul promemoria stampato e nei messaggi. Esempio: digiuno da 6 ore.'),
+            # 1.12.6: il prezzo anche qui, dove lo si cerca (lo stesso della pagina Listino)
+            campo('tariffa', 'Prezzo di listino (€)', massimo=12,
+                  valore=dati.get('tariffa') if dati else (p.tariffa_testo if p else ''),
+                  aiuto='Si propone da solo nella prenotazione, se il medico non ha un suo tariffario (Cassa → Tariffari). '
+                        'Vuoto: nessun prezzo. Esempio: 80 o 1.250,50.'),
         ]
 
     if request.method == 'POST':
@@ -460,6 +465,13 @@ def prestazione(pid=None):
             campi_extra = m.testo('campi_extra', 'Campi in più', 200) if 'campi_extra' in request.form else None
             preparazione = m.testo('preparazione', 'Indicazioni per il paziente', 1000) \
                 if 'preparazione' in request.form else None
+            tariffa = None
+            if 'tariffa' in request.form:
+                import tariffari
+                scritto = (request.form.get('tariffa') or '').strip()
+                tariffa = tariffari.leggi_importo(scritto) if scritto else ''
+                if tariffa is None:
+                    m.errori.append('Prezzo di listino non valido: si scrive per esempio 80 o 1.250,50.')
             if not m.errori:
                 doppia = s.scalars(select(Prestazione).where(
                     func.lower(Prestazione.nome) == nome.lower(),
@@ -478,6 +490,8 @@ def prestazione(pid=None):
                                           Prestazione(campi_extra=campi_extra).elenco_campi_extra)
             if preparazione is not None:
                 p.preparazione = preparazione
+            if tariffa is not None:
+                p.tariffa_cent = tariffa if tariffa != '' else None
             return salva_e_torna(s, p, 'Prestazione', 'Prestazione salvata: %s.' % p.nome)
 
     return scheda(titolo, campi(), eliminabile=bool(p), conferma='Eliminare questa prestazione?')

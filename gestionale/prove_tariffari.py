@@ -459,11 +459,48 @@ def e_schema():
     s.close()
 
 
+def e_prezzo_in_anagrafiche():
+    """1.12.6: il prezzo di listino anche nella scheda della prestazione (Anagrafiche), dove lo si cerca: si scrive,
+    si cambia, si toglie; uno sbagliato non si salva; e' lo stesso della pagina Listino."""
+    S, I, C = mondo()
+    pid = I['Ecografia tiroide']
+    assert 'value="70,00"' in testo(C.get('/anagrafiche/prestazioni/%d' % pid)) and 'Prezzo di listino' in \
+        testo(C.get('/anagrafiche/prestazioni/%d' % pid))
+    base = {'nome': 'Ecografia tiroide', 'durata': '20', 'campi_extra': '', 'preparazione': ''}
+    for scritto, cent in (('85', 8500), ('1.250,50', 125050), ('', None)):
+        r = C.post('/anagrafiche/prestazioni/%d' % pid, data=dict(base, tariffa=scritto), headers=CASA)
+        assert r.status_code == 302, (scritto, r.status_code)
+        s = S()
+        assert s.get(Prestazione, pid).tariffa_cent == cent, (scritto, s.get(Prestazione, pid).tariffa_cent)
+        s.close()
+    r = C.post('/anagrafiche/prestazioni/%d' % pid, data=dict(base, tariffa='ottanta'), headers=CASA)
+    assert 'Prezzo di listino non valido' in testo(r), r.status_code
+    s = S()
+    assert s.get(Prestazione, pid).tariffa_cent is None
+    s.close()
+    # senza il campo (un modulo vecchio) il prezzo resta com'era
+    s = S()
+    s.get(Prestazione, pid).tariffa_cent = 7000
+    s.commit()
+    s.close()
+    C.post('/anagrafiche/prestazioni/%d' % pid, data=base, headers=CASA)
+    s = S()
+    assert s.get(Prestazione, pid).tariffa_cent == 7000
+    s.close()
+    # nuova prestazione con il prezzo; e il listino lo mostra
+    C.post('/anagrafiche/prestazioni/nuova', data=dict(base, nome='Visita endocrinologica', tariffa='120'), headers=CASA)
+    s = S()
+    assert s.scalars(select(Prestazione).where(Prestazione.nome == 'Visita endocrinologica')).one().tariffa_cent == 12000
+    s.close()
+    assert 'value="120,00"' in testo(C.get('/cassa/listino'))
+
+
 prova('scheda: cambia, aggiungi, togli, medici, note; errori senza cambiare niente; spento; stampa; elimina; nuovo',
       e_scheda)
 prova('controllo dei medici (attivo, senza collegamenti, spento, nessuno, doppi prezzi, senza medici), riquadro nella '
       'scheda del medico, protezioni in Anagrafiche, collegamenti', e_controllo)
 prova('schema 12: tabelle nuove, aggiornamento dalla 11 con la copia di sicurezza', e_schema)
+prova('il prezzo di listino anche nella scheda della prestazione in Anagrafiche', e_prezzo_in_anagrafiche)
 
 
 # =====================================================================

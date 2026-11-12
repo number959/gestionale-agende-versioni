@@ -760,7 +760,9 @@ ultime tre ore e chi era arrivato stamattina senza essere segnato non stava da n
   medico, poi il listino; un importo scritto a mano non si tocca. `controllo_medici` (richiesta: «per le persone di
   riferimento fai un controllo se questa funzione è attiva») dice per ogni medico attivo se il tariffario è attivo,
   senza prestazioni collegate, spento o assente, i doppi prezzi e i tariffari senza medici; lo stesso riquadro nella
-  scheda del medico (`del_medico`). Medici e prestazioni usati da un tariffario non si eliminano. Stampa
+  scheda del medico (`del_medico`). Il prezzo di listino si scrive anche nella scheda della prestazione in Anagrafiche
+  (campo `tariffa`, letto con `tariffari.leggi_importo`; senza il campo resta com'era), dove la segreteria lo cercava.
+  Medici e prestazioni usati da un tariffario non si eliminano. Stampa
   (`/cassa/tariffari/<id>/stampa`). Prove: `prove_tariffari.py` e `prove_tariffari_browser.py`, con nomi e prezzi
   inventati.
 - **Avviso degli aggiornamenti** (1.12.6, stessa richiesta: «prevedi un popup che informa che c'è un nuovo

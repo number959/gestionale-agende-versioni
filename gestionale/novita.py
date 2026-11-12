@@ -24,7 +24,8 @@ NOVITA = [
              testo='In Cassa → Tariffari ogni medico (o gruppo di medici) ha il suo tariffario: visite, trattamenti, '
                    'pacchetti e voci aggiuntive come l\'istologico. Si carica da un file Excel, con un\'anteprima dove si '
                    'scelgono i medici, oppure si scrive a mano, e si stampa. Prenotando con quel medico il prezzo si '
-                   'propone da solo. Il controllo dei medici dice per chi il tariffario è attivo e cosa manca.',
+                   'propone da solo. Il controllo dei medici dice per chi il tariffario è attivo e cosa manca. Il '
+                   'prezzo di listino si scrive anche nella scheda della prestazione, in Anagrafiche.',
              guida='tariffari'),
         dict(titolo='L\'avviso degli aggiornamenti',
              testo='Quando una versione nuova è pronta compare un avviso con «Clicca qui per installare» (o «Più tardi»). '
