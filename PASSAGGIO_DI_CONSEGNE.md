@@ -106,7 +106,10 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   rifatti, Setup costruiti in Wine e installati sopra la 1.12.5 pubblicata (59 controlli su 59, normale e animata), prove
   su Windows verdi. Il 12 novembre, dopo l'indirizzo della segreteria, tutto rifatto; in Wine anche la clinica simulata
   (la 1.12.5 con la Gmail nella struttura e le informative di prima in due regole): al primo avvio della 1.12.6 struttura
-  e informative cambiate, gli allegati caricati a mano lasciati com'erano. Si pubblica solo con il via di Giovanni (workflow «Pubblica una versione», `ultima: true`). Il
+  e informative cambiate, gli allegati caricati a mano lasciati com'erano. Poi la mail della segreteria in tutte le
+  comunicazioni (recapito unico, avviso sugli allegati): tutto rifatto un'altra volta, immagini e video delle guide di
+  email, promemoria, WhatsApp, Dove si fa, aspetto e backup rigenerati, in Wine anche il testo del promemoria con la
+  Gmail cambiato all'avvio. Si pubblica solo con il via di Giovanni (workflow «Pubblica una versione», `ultima: true`). Il
   database non cambia.
 - **Versione 1.12.5, pubblicata il 10 novembre 2026**: la release `v1.12.5`, segnata come ultima, con i due
   Setup, i due file delle versioni e il PDF della guida. Interventi e ambulatori per medico (vedi *La 1.12.5*). Il
