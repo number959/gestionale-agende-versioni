@@ -103,8 +103,12 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   principale `ccr-07f8e160-7j5lup` resta quello da cui si pubblica (versioni 1.12.x e correzioni urgenti); il lavoro sui
   moduli (la 1.13, vedi *Cose aperte*) va nel ramo `ccr-moduli`, nato dalla 1.12.6 pubblicata. Il nome comincia con
   `ccr-` perché le prove su Windows (`prove.yml`) partono da sole sui rami `ccr-*`. Dal ramo dei moduli non si pubblica
-  mai: le correzioni fatte sul principale si portano anche lì, e quando i moduli sono pronti e provati il ramo si unisce
-  al principale e da lì si pubblica la 1.13.
+  mai (Giovanni: «non voglio che la nuova versione che stiamo facendo si aggiorni automaticamente, facciamo tutto in un
+  ramo a parte così possiamo testare e provare prima di cambiare tutto»): `pubblica.yml` ha un primo lavoro, «Solo dal
+  ramo principale», che si ferma con un errore se il ramo non è `ccr-07f8e160-7j5lup`, prima di costruire e pubblicare
+  qualsiasi cosa; il programma della clinica scarica solo l'ultima release, quindi niente del ramo dei moduli le può
+  arrivare. Le correzioni fatte sul principale si portano anche lì, e quando i moduli sono pronti, provati e approvati da
+  Giovanni il ramo si unisce al principale e da lì si pubblica la 1.13.
 - **Versione 1.12.6, pubblicata il 13 novembre 2026** (via di Giovanni: «Pubblicala»): la release `v1.12.6`, segnata
   come ultima, con i due Setup, i due file delle versioni e il PDF della guida (60 pagine); l'indirizzo pubblico
   risponde «1.12.6» e le impronte dei Setup scaricati sono quelle dei file delle versioni. Dentro: il riepilogo del

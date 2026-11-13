@@ -18,8 +18,26 @@ permissions:
   contents: write
 
 jobs:
+  # Si pubblica solo dal ramo principale (13 novembre 2026, Giovanni: «non voglio che la nuova versione che stiamo
+  # facendo si aggiorni automaticamente, facciamo tutto in un ramo a parte»). Il programma della clinica scarica da
+  # solo l'ultima release: avviato su un altro ramo (per esempio ccr-moduli) questo workflow si ferma qui, prima di
+  # costruire e di pubblicare qualsiasi cosa.
+  ramo:
+    name: Solo dal ramo principale
+    runs-on: ubuntu-latest
+    steps:
+      - name: Controllo del ramo
+        shell: bash
+        run: |
+          if [ "${{ github.ref_name }}" != "ccr-07f8e160-7j5lup" ]; then
+            echo "::error::Dal ramo «${{ github.ref_name }}» non si pubblica: è un ramo di prova. Le versioni si pubblicano solo dal ramo principale (ccr-07f8e160-7j5lup)."
+            exit 1
+          fi
+          echo "ramo principale: si pubblica"
+
   costruisci:
     name: Costruisci ${{ matrix.cartella }}
+    needs: ramo
     runs-on: windows-latest
     strategy:
       matrix:

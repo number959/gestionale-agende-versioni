@@ -410,6 +410,8 @@ serve disinstallare.
    della clinica la trova da solo (ogni sei ore, o con «Controlla adesso») all'indirizzo
    predefinito, che legge sempre l'ultima release:
    `https://github.com/number959/gestionale-agende-versioni/releases/latest/download/`.
+   Si pubblica solo dal ramo principale `ccr-07f8e160-7j5lup`: `pubblica.yml` si ferma da solo su ogni altro ramo (il
+   lavoro sui moduli sta in `ccr-moduli`, che non deve mai arrivare alla clinica da solo).
    Mentre `pubblica.yml` gira, niente push di modifiche a `.github/workflows/`: il ramo di lavoro
    è il ramo principale, e GitHub rifiuta la release (HTTP 403) se il commit di partenza ha le
    automazioni diverse dal ramo (vedi `../PASSAGGIO_DI_CONSEGNE.md`, *Pubblicare senza un PC*).
