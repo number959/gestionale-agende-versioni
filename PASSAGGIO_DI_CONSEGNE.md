@@ -99,22 +99,22 @@ strutture inventate di `strumenti/catalogo_prova.py`).
 
 ## Stato alla consegna
 
-- **Versione 1.12.6, pronta ma NON pubblicata** (11 novembre 2026, poi il 12 l'indirizzo della segreteria nelle
-  informative e nelle email): il riepilogo del periodo anche della sala operatoria e lo stesso riepilogo dentro la
-  dashboard (vedi *La 1.12.6*). Due revisioni indipendenti, difetti
-  confermati sistemati; prove verdi in tutte e due le cartelle (anche nel browser), immagini e video della guida
-  rifatti, Setup costruiti in Wine e installati sopra la 1.12.5 pubblicata (59 controlli su 59, normale e animata), prove
-  su Windows verdi. Il 12 novembre, dopo l'indirizzo della segreteria, tutto rifatto; in Wine anche la clinica simulata
-  (la 1.12.5 con la Gmail nella struttura e le informative di prima in due regole): al primo avvio della 1.12.6 struttura
-  e informative cambiate, gli allegati caricati a mano lasciati com'erano. Poi la mail della segreteria in tutte le
-  comunicazioni (recapito unico, avviso sugli allegati): tutto rifatto un'altra volta, immagini e video delle guide di
-  email, promemoria, WhatsApp, Dove si fa, aspetto e backup rigenerati, in Wine anche il testo del promemoria con la
-  Gmail cambiato all'avvio. Poi, sempre il 12, i tariffari dei medici e l'avviso degli aggiornamenti (vedi *La 1.12.6*):
-  tutto rifatto ancora (27 raccolte senza browser in tutte e due le cartelle, nel browser anche `prove_tariffari_browser.py`,
-  guide di tariffari, cassa e aggiornare rigenerate), in Wine sopra la 1.12.5 lo schema 12 con la sua copia di
-  sicurezza e 62 controlli su 62, normale e animata.
-  Si pubblica solo con il via di Giovanni (workflow «Pubblica una versione», `ultima: true`). Il database passa allo
-  schema 12 (tre tabelle nuove, vuote, dopo la copia di sicurezza).
+- **I due rami** (dal 13 novembre 2026, richiesta di Giovanni: «possiamo lavorarci su un'altra branch?»): il ramo
+  principale `ccr-07f8e160-7j5lup` resta quello da cui si pubblica (versioni 1.12.x e correzioni urgenti); il lavoro sui
+  moduli (la 1.13, vedi *Cose aperte*) va nel ramo `ccr-moduli`, nato dalla 1.12.6 pubblicata. Il nome comincia con
+  `ccr-` perché le prove su Windows (`prove.yml`) partono da sole sui rami `ccr-*`. Dal ramo dei moduli non si pubblica
+  mai: le correzioni fatte sul principale si portano anche lì, e quando i moduli sono pronti e provati il ramo si unisce
+  al principale e da lì si pubblica la 1.13.
+- **Versione 1.12.6, pubblicata il 13 novembre 2026** (via di Giovanni: «Pubblicala»): la release `v1.12.6`, segnata
+  come ultima, con i due Setup, i due file delle versioni e il PDF della guida (60 pagine); l'indirizzo pubblico
+  risponde «1.12.6» e le impronte dei Setup scaricati sono quelle dei file delle versioni. Dentro: il riepilogo del
+  periodo anche della sala operatoria e nella dashboard, l'indirizzo della segreteria in tutte le comunicazioni, i
+  tariffari dei medici, l'avviso degli aggiornamenti con «Clicca qui per installare» (vedi *La 1.12.6*). Provata dopo la
+  pubblicazione in Wine: dalla 1.12.5 con «Aggiorna adesso» dall'indirizzo vero di GitHub (14 controlli su 14, dati
+  intatti, copia «prima di aggiornare»), poi 62 controlli su 62 sul programma installato; dalla 1.9 animata con il Setup
+  scaricato (schema da 10 a 12 con la copia «prima-della-versione-12», 62 su 62). Il database passa allo schema 12 (tre
+  tabelle nuove, vuote). Alla clinica arriva da sola con «Aggiorna adesso» (o con il popup, dalla prossima); poi vanno
+  caricati i tariffari (vedi *Cose aperte*).
 - **Versione 1.12.5, pubblicata il 10 novembre 2026**: la release `v1.12.5`, segnata come ultima, con i due
   Setup, i due file delle versioni e il PDF della guida. Interventi e ambulatori per medico (vedi *La 1.12.5*). Il
   database non cambia. Alla clinica va messa una volta a mano (vedi *Cose aperte*).
@@ -1101,6 +1101,21 @@ nella conversazione, fuori dal repository: va caricato una volta in clinica, sce
 gruppo (quelli che il programma non riconosce dal nome) e controllando le prestazioni collegate.
 
 ## Cose aperte
+
+- **Il programma a moduli (la 1.13, nel ramo `ccr-moduli`)** (13 novembre 2026, Giovanni: «voglio che il software non
+  ragioni più come ora, ma che abbiamo dei moduli separati per tutte le branche che abbiamo implementato»). Proposta
+  fatta: un nucleo sempre acceso (strutture, stanze, medici, prestazioni, pazienti, agenda, copie di sicurezza,
+  autoriparazione, aggiornamenti, impostazioni, guida) e i moduli Sala operatoria, Ambulatori e riepiloghi, Cassa e
+  tariffari, Segreteria, Comunicazioni (email e WhatsApp), Turni del personale, Dove si fa, Statistiche; *Configura →
+  Moduli* per accenderli e spegnerli (i dati restano sempre); ogni modulo nella sua cartella con codice, pagine, tabelle
+  e prove; un modulo usa il nucleo e gli altri solo con agganci dichiarati, e una prova dei confini lo controlla. Non
+  cambiano: un solo Setup, lo stesso database, gli stessi indirizzi delle pagine (anche quelli del portiere della
+  dashboard), le due versioni. Tappe: 1.13.0 fondamenta senza cambiamenti visibili; 1.13.1 la pagina dei moduli con
+  Dove si fa, Turni e Cassa spegnibili; poi un modulo per versione (Comunicazioni, Statistiche, Ambulatori, Sala,
+  Segreteria); 1.14 il nucleo ripulito. Al 13 novembre si fotografa il programma: circa 24.000 righe in 28 file, 32
+  tabelle in `modelli.py`, 86 modelli di pagina, giri di dipendenze fra `comune`, `servizi`, `viste`, `segreteria`,
+  `sala`, `pazienti`, `dovesifa`, `importa`, `anagrafiche` e `ambulatori`. Aspettano la risposta di Giovanni: moduli
+  per tutto il programma o per struttura; utenti e permessi sì o no; l'elenco dei moduli.
 
 - **I tariffari da caricare in clinica** (12 novembre 2026): dopo l'aggiornamento alla 1.12.6, *Cassa → Tariffari →
   Carica tariffario* con il file consegnato a Giovanni; nell'anteprima spuntare i medici di ogni tariffario e scegliere
