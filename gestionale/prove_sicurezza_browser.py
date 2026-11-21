@@ -90,6 +90,12 @@ with sync_playwright() as p:
                                  timeout=8000)
         except Exception:
             pass
+        # la risposta del gestionale si aspetta, fino a 10 secondi: con le due cartelle provate insieme la richiesta
+        # della cornice partiva dopo il segnale «fatto» (1,5 secondi fissi) e non si vedeva (21/11/2026)
+        for _ in range(100):
+            if risposte:
+                break
+            pg.wait_for_timeout(100)
         pg.wait_for_timeout(800)
         dopo = testo_promemoria()
         stati = sorted({s for _, _, s in risposte})

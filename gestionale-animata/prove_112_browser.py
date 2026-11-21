@@ -31,6 +31,25 @@ LUN = OGGI - timedelta(days=OGGI.weekday()) + timedelta(days=7)        # il lune
 GIORNI = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica']
 
 
+TENDINE_MENU_APERTE = """() => [...document.querySelectorAll('nav.menu .gruppo')]
+    .filter(g => { const t = g.querySelector('.tendina'); return t && getComputedStyle(t).display !== 'none'; })
+    .map(g => ({gruppo: (g.querySelector('.apri-gruppo') || g).textContent.trim(), classi: g.className,
+                mouse_sopra: g.matches(':hover'), focus_dentro: g.matches(':focus-within')}))"""
+
+
+def apri_stampa_e_scarica():
+    """Apre «Stampa e scarica» come una persona: il mouse prima in un punto neutro della pagina, e nessuna tendina del
+    menu deve restare aperta da sola (21/11/2026: nell'animata, una volta sola in tutti i giri di quel giorno, la tendina
+    «Ambulatori» copriva il pulsante e il clic non arrivava; se succede, qui si vede quale tendina e perché)."""
+    pg.mouse.move(2, 500)
+    try:
+        pg.wait_for_function('() => (%s)().length === 0' % TENDINE_MENU_APERTE, timeout=5000)
+    except Exception:
+        ok('nessuna tendina del menu resta aperta da sola', False, pg.evaluate(TENDINE_MENU_APERTE))
+        raise
+    pg.locator('.gruppo-comandi .apri-gruppo').click()
+
+
 def ok(n, c, d=''):
     esiti.append(bool(c))
     print(('OK ' if c else 'KO ') + n, '' if c else d)
@@ -110,17 +129,17 @@ with sync_playwright() as p:
        len(voci) == 7 and 'La matrice in Excel' in voci[0] and 'settimana tipo' in voci[1] and 'sala operatoria in Excel' in voci[2]
        and 'Ambulatori e sala' in voci[3] and 'Programmazione del mese' in voci[4] and 'Tutte le esportazioni' in voci[5]
        and 'Stampa' in voci[6], voci)
-    pg.locator('.gruppo-comandi .apri-gruppo').click()
+    apri_stampa_e_scarica()
     with pg.expect_download() as scaricato:
         pg.locator('.gruppo-comandi .tendina a', has_text='Ambulatori e sala in Excel').click()
     ok('ambulatori e sala della settimana in un file solo',
        scaricato.value.suggested_filename == 'ambulatori-e-sala-settimana-%s.xlsx' % LUN.isoformat(), scaricato.value.suggested_filename)
-    pg.locator('.gruppo-comandi .apri-gruppo').click()
+    apri_stampa_e_scarica()
     with pg.expect_download() as scaricato:
         pg.locator('.gruppo-comandi .tendina a', has_text='La matrice in Excel').click()
     ok('la matrice in Excel si scarica con il nome della settimana',
        scaricato.value.suggested_filename == 'matrice-ambulatori-%s.xlsx' % LUN.isoformat(), scaricato.value.suggested_filename)
-    pg.locator('.gruppo-comandi .apri-gruppo').click()
+    apri_stampa_e_scarica()
     with pg.expect_download() as scaricato:
         pg.locator('.gruppo-comandi .tendina a', has_text='settimana tipo').click()
     ok('la settimana tipo in Excel', scaricato.value.suggested_filename == 'matrice-ambulatori-%s-settimana-tipo.xlsx' % LUN.isoformat(), scaricato.value.suggested_filename)
