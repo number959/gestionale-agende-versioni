@@ -10,6 +10,7 @@ Non cambia niente nel database: le richieste rifiutate non scrivono e quella
 buona rimette il testo che c'era."""
 import functools
 import http.server
+import os
 import re
 import sys
 import threading
@@ -76,7 +77,7 @@ threading.Thread(target=server.serve_forever, daemon=True).start()
 
 prima = testo_promemoria()
 with sync_playwright() as p:
-    b = p.chromium.launch()
+    b = p.chromium.launch(executable_path=os.environ.get('CHROMIUM') or None)
     pg = b.new_page()
     risposte = []
     pg.on('response', lambda r: risposte.append((r.request.method, r.url, r.status))

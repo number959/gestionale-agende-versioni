@@ -78,7 +78,7 @@ controlla('notifica «Aggiornamento disponibile»', any(n['titolo'] == 'Aggiorna
           [n['titolo'] for n in notifiche])
 
 with sync_playwright() as p:
-    br = p.chromium.launch()
+    br = p.chromium.launch(executable_path=os.environ.get('CHROMIUM') or None)
     pg = br.new_page(viewport={'width': 1366, 'height': 860})
     pg.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); } catch (e) {}")
     pg.goto(B + '/aggiornamenti')

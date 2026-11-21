@@ -1,7 +1,7 @@
 """Prove della versione animata nel browser (Playwright), su un gestionale gia avviato
 con dati di prova: python prove_animazioni.py http://127.0.0.1:5000
 Non usarla sul database vero: aggiunge una cosa da fare di prova."""
-import re, datetime as dt
+import os, re, datetime as dt
 from playwright.sync_api import sync_playwright
 import os, sys
 B = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000'
@@ -13,7 +13,7 @@ def ok(n, c, d=''):
 oggi=dt.date.today()
 mar=oggi-dt.timedelta(days=(oggi.weekday()-1)%7)
 with sync_playwright() as p:
-    br=p.chromium.launch()
+    br=p.chromium.launch(executable_path=os.environ.get('CHROMIUM') or None)
     ctx=br.new_context(viewport={'width':1366,'height':820})
     ctx.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste','{\"*\":1}'); } catch (e) {}")
     pg=ctx.new_page(); err=[]; pg.on('pageerror', lambda e: err.append(str(e))); pg.on('console', lambda m: err.append(m.text) if m.type=='error' else None)
