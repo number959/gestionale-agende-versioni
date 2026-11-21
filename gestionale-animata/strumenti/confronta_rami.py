@@ -179,17 +179,22 @@ def riassunto(stato, intestazioni, corpo, con_testo, dati=''):
     return r, []
 
 
+def uguali(a, b):
+    """Uguali anche nel tipo: per Python 1 e 1.0, o 1 e True, sono uguali, per chi legge il JSON no."""
+    return json.dumps(a, sort_keys=True, default=repr) == json.dumps(b, sort_keys=True, default=repr)
+
+
 def primo_punto_diverso(a, b, dove=''):
     """Dove due JSON o due fogli Excel cominciano a essere diversi: (posto, valore di qua, valore di là)."""
     if isinstance(a, dict) and isinstance(b, dict):
         for k in list(a) + [k for k in b if k not in a]:
-            if a.get(k, '(manca)') != b.get(k, '(manca)'):
+            if not uguali(a.get(k, '(manca)'), b.get(k, '(manca)')):
                 return primo_punto_diverso(a.get(k, '(manca)'), b.get(k, '(manca)'), '%s[%r]' % (dove, k))
-    elif isinstance(a, list) and isinstance(b, list):
+    elif isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
         for i in range(max(len(a), len(b))):
             x = a[i] if i < len(a) else '(manca)'
             y = b[i] if i < len(b) else '(manca)'
-            if x != y:
+            if not uguali(x, y):
                 return primo_punto_diverso(x, y, '%s[%d]' % (dove, i))
     return dove or '(tutto)', a, b
 
@@ -206,7 +211,7 @@ def cella(dove):
 def differenze(a, b):
     out = []
     for k in sorted(set(a) | set(b)):
-        if a.get(k) == b.get(k):
+        if uguali(a.get(k), b.get(k)):
             continue
         va, vb = a.get(k), b.get(k)
         if k in ('json', 'excel'):
@@ -303,9 +308,9 @@ def main():
                 b = riassunto(*leggi(porte['qui'], percorso), not arg.senza_testo, cartelle['qui'])
                 return a[0], a[1], b[0]
             ra, la, rb = due()
-            if ra != rb:                                   # l'ora può scattare fra le due richieste: una volta ancora
+            if not uguali(ra, rb):                                   # l'ora può scattare fra le due richieste: una volta ancora
                 ra, la, rb = due()
-            if ra != rb:
+            if not uguali(ra, rb):
                 diverse.append(percorso)
                 righe.append('DIVERSA %s\n  %s' % (percorso, '\n  '.join(differenze(ra, rb))))
             for nuovo in interni(percorso, la):

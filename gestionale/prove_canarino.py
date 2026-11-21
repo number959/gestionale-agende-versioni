@@ -6,7 +6,7 @@ passare solo loro): lì non deve mai comparire un dato di un paziente. Il «pazi
 telefoni, email, codice fiscale e note che non possono comparire per caso; ha appuntamenti di oggi in ogni
 stato, un intervento in sala, un posto in lista d'attesa, e il suo nome è scritto anche in una cosa da fare,
 nella nota del giorno e in un appunto. Nessuno di questi testi deve uscire da /riepilogo-live*, con e senza
-schermo, per ogni struttura e, nelle statistiche, per giorno, settimana, mese e sala operatoria.
+schermo, per ogni struttura e, nelle statistiche, per i sei periodi con nome, degli ambulatori e della sala operatoria.
 Il gemello: gli stessi dati compaiono nelle pagine normali (la scheda del paziente e la giornata), così si sa
 che il canarino c'è davvero e che la prova non passa per caso.
 
@@ -105,8 +105,9 @@ def indirizzi_dello_schermo():
     for radice in radici:
         varianti = ['']
         if 'statistiche' in radice:
-            varianti = ['periodo=%s&parte=%s' % (per, parte) for per in ('giorno', 'settimana', 'mese')
-                        for parte in ('', 'sala')]
+            varianti = ['periodo=%s&parte=%s' % (per, parte)
+                        for per in ('oggi', 'ieri', 'settimana', 'settimana-scorsa', 'mese', 'mese-scorso')
+                        for parte in ('ambulatori', 'sala')]
         for sid in STRUTTURE:
             for schermo in ('', 'schermo=1'):
                 for v in varianti:
