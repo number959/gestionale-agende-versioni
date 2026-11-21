@@ -10,6 +10,9 @@ WINE="$(command -v wine64 || command -v wine || true)"
 [ -n "$WINE" ] || WINE=/usr/lib/wine/wine64
 # il Python di Windows non deve leggere la configurazione di pip di Linux
 unset PIP_CONFIG_FILE
+# Wine 9.0 di Ubuntu si chiude appena parte («free(): invalid pointer») se TMPDIR è impostata, anche a /tmp;
+# senza, usa /tmp da solo (21/11/2026: nelle sessioni nel cloud TMPDIR=/tmp, il 1° novembre non c'era)
+unset TMPDIR
 # dietro un proxy che controlla i certificati (come nelle sessioni nel cloud) pip dentro
 # Wine deve conoscere lo stesso certificato: lo stesso file, visto da Windows (Z: e' la radice)
 ENV_CERTIFICATI=()
