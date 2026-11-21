@@ -29,7 +29,7 @@ import time
 
 QUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SENZA_BROWSER = ['prove_indirizzi.py', 'prove_canarino.py', 'prove.py', 'prove2.py', 'prove100.py', 'prove200.py', 'prove_14.py', 'prove_143.py',
+SENZA_BROWSER = ['prove_indirizzi.py', 'prove_canarino.py', 'prove_pagine.py', 'prove.py', 'prove2.py', 'prove100.py', 'prove200.py', 'prove_14.py', 'prove_143.py',
                  'prove_145.py', 'prove_146.py', 'prove_anagrafiche.py', 'prove_funzioni.py', 'prove_guida.py',
                  'prove_personalizzazione.py', 'prove_15.py', 'prove_16.py', 'prove_17.py', 'prove_18.py',
                  'prove_19.py', 'prove_191.py', 'prove_110.py', 'prove_autoriparazione.py', 'prove_111.py', 'prove_111_importa.py', 'prove_111_turni.py',

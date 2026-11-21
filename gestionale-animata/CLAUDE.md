@@ -120,6 +120,9 @@ sparisce o cambia la fa cadere, uno nuovo si aggiunge con `python prove_indirizz
 di oggi in ogni stato, un intervento, la lista d'attesa e il nome scritto in note, cose da fare e appunti, non deve
 comparire in nessuna pagina sotto `/riepilogo-live*`, con e senza schermo, per ogni struttura e periodo; i suoi gemelli
 controllano che lo stesso canarino si veda nelle pagine normali.
+`prove_pagine.py` segue i collegamenti da tutte le pagine senza parametri (ogni tipo di pagina al massimo due
+volte) e controlla che in nessuna ci siano moduli dentro altri moduli, id ripetuti o cose prese da internet
+(script, fogli di stile, immagini, caratteri; lo stesso nei fogli di `static/`).
 `strumenti/confronta_rami.py` (non è nel giro di `tutte_le_prove.py`: vuole git) confronta il programma del ramo
 principale con quello della cartella, sugli stessi dati di prova copiati due volte: segue i collegamenti da tutte
 le pagine senza parametri (ogni tipo di pagina al massimo 4 volte) e confronta risposte, moduli e campi (anche
