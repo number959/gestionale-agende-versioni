@@ -115,8 +115,9 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   il tariffario si cancellavano subito). Con lei, fuori dal programma: una prova di `prove_15.py` che falliva a caso e la
   casella «ultima» di `pubblica.yml` spenta per difetto (vedi *Pubblicare una versione*). Provata: tutte le prove nelle due cartelle, anche nel browser e su Windows; in Wine dalla 1.12.6 ufficiale con
   «Aggiorna adesso» (14 controlli su 14) e 62 su 62 sul programma installato, e l'animata con il Setup sopra la 1.12.6
-  animata (62 su 62). Si pubblica solo
-  con il via di Giovanni («pubblicala»), con la casella «ultima» spenta; la release si segna ultima la sera, dalla sua
+  animata (62 su 62). Giovanni (21 novembre): «Non pubblicare nulla perché voglio prima testarlo io sul mio PC»: il
+  Setup della normale gli è stato mandato nella conversazione. Si pubblica solo dopo la sua prova e
+  con il suo via («pubblicala»), con la casella «ultima» spenta; la release si segna ultima la sera, dalla sua
   pagina, quando lo decide lui (vedi *Pubblicare una versione*, passo 6). Il piano per passi è nel documento «Interfaccia nuova: il piano», il
   disegno del programma nella pagina «Mappa del Gestionale» (tutti e due su claude.ai).
 - **Versione 1.12.6, pubblicata il 13 novembre 2026** (via di Giovanni: «Pubblicala»): la release `v1.12.6`, segnata
@@ -1191,6 +1192,20 @@ accetta circa 3 MB per volta: cartella e documento ci sono, l'archivio aspetta l
 piccoli, o il file nella conversazione).
 
 ## Cose aperte
+
+- **Altri PC e «Statistiche e report»** (21 novembre 2026, Giovanni: «voglio pure che il modulo agenda sala operatoria
+  sia accessibile da altri PC così come gli altri moduli, le esportazioni devono risiedere nel modulo statistiche che
+  diventa appunto statistiche e report, con sia file Excel che PDF con i grafici»). Due richieste per i moduli:
+  1. *Dagli altri PC*: oggi il programma risponde solo sul PC della segreteria (127.0.0.1, voluto: non ha password e ha
+     i dati dei pazienti); il portiere (Caddy) proposto lascia passare solo la dashboard in sola lettura. Aprire i moduli
+     agli altri PC vuol dire: accesso con nome e password per ogni persona e cosa può fare ciascuno (vedere o anche
+     cambiare), la connessione protetta fra i PC (HTTPS attraverso il portiere), le regole contro gli altri siti
+     (`solo_dal_gestionale`, `NOMI_LOCALI`) che accettano anche l'indirizzo della rete, la porta aperta nel firewall di
+     Windows, il PC della segreteria sempre acceso. È il cambiamento più grande del piano: va nei moduli, provato prima
+     sul PC di Giovanni. Domande fatte a Giovanni: quali PC e quali persone, chi può anche cambiare e chi solo vedere.
+  2. *Statistiche e report*: le esportazioni (oggi la pagina con i nove pulsanti) dentro Statistiche, che si chiama
+     «Statistiche e report»; ogni report in Excel (con i grafici di Excel, che openpyxl sa fare senza librerie nuove) e
+     in PDF con i grafici, scaricabile come file. Come fare il PDF dentro l'eseguibile, senza internet, è da decidere.
 
 - **Il programma a moduli (la 1.13, nel ramo `ccr-moduli`)** (13 novembre 2026, Giovanni: «voglio che il software non
   ragioni più come ora, ma che abbiamo dei moduli separati per tutte le branche che abbiamo implementato»). Proposta
