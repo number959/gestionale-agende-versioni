@@ -13,6 +13,13 @@ spiega (lo slug di guida.py: il suo video e il suo articolo).
 Nessun import: lo legge anche prepara_aggiornamento.py, senza Flask."""
 
 NOVITA = [
+    ('1.12.7', [
+        dict(titolo='La domanda prima di eliminare compare sempre',
+             testo='Eliminando una persona del personale (Turni → Persone) o un tariffario (Cassa → Tariffari), la '
+                   'domanda «Eliminare…?» ora compare sempre. Prima, se nel nome c\'era un apostrofo, la domanda non '
+                   'compariva e l\'eliminazione partiva subito.',
+             guida='turni-persone'),
+    ]),
     ('1.12.6', [
         dict(titolo='Il riepilogo del periodo anche della sala operatoria',
              testo='Nel riepilogo del periodo, oltre agli ambulatori, c\'è la scheda Sala operatoria: per un giorno, una '

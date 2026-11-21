@@ -109,13 +109,14 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   qualsiasi cosa; il programma della clinica scarica solo l'ultima release, quindi niente del ramo dei moduli le può
   arrivare. Le correzioni fatte sul principale si portano anche lì, e quando i moduli sono pronti, provati e approvati da
   Giovanni il ramo si unisce al principale e da lì si pubblica la 1.13.
-- **Sul ramo principale, non ancora pubblicato (21 novembre 2026)**: Giovanni ha detto sì al piano per passi, prima la
-  base e poi i moduli («Ok su tutto, iniziamo per step senza fare tutto insieme»). Il primo passo è fatto: la domanda
-  «Eliminare…?» di persone del personale e tariffari, che con un apostrofo nel nome non compariva (la persona o il
-  tariffario si cancellavano subito); una prova di `prove_15.py` che falliva a caso; la casella «ultima» di
-  `pubblica.yml` spenta per difetto (vedi *Pubblicare una versione*). Sarà la 1.12.7, da pubblicare quando lo decide
-  Giovanni; il numero di versione non è ancora cambiato. Il piano per passi è nel documento «Interfaccia nuova: il
-  piano», il disegno del programma nella pagina «Mappa del Gestionale» (tutti e due su claude.ai).
+- **Versione 1.12.7, pronta e non pubblicata (21 novembre 2026)**: Giovanni ha detto sì al piano per passi, prima la
+  base e poi i moduli («Ok su tutto, iniziamo per step senza fare tutto insieme»), e poi «Ok preparala». Dentro: la
+  domanda «Eliminare…?» di persone del personale e tariffari, che con un apostrofo nel nome non compariva (la persona o
+  il tariffario si cancellavano subito). Con lei, fuori dal programma: una prova di `prove_15.py` che falliva a caso e la
+  casella «ultima» di `pubblica.yml` spenta per difetto (vedi *Pubblicare una versione*). Le prove nelle due cartelle e quelle dei Setup in Wine sono in corso (vedi *La 1.12.7*). Si pubblica solo
+  con il via di Giovanni («pubblicala»), con la casella «ultima» spenta; la release si segna ultima la sera, dalla sua
+  pagina, quando lo decide lui (vedi *La 1.12.7*). Il piano per passi è nel documento «Interfaccia nuova: il piano», il
+  disegno del programma nella pagina «Mappa del Gestionale» (tutti e due su claude.ai).
 - **Versione 1.12.6, pubblicata il 13 novembre 2026** (via di Giovanni: «Pubblicala»): la release `v1.12.6`, segnata
   come ultima, con i due Setup, i due file delle versioni e il PDF della guida (60 pagine); l'indirizzo pubblico
   risponde «1.12.6» e le impronte dei Setup scaricati sono quelle dei file delle versioni. Dentro: il riepilogo del
@@ -1140,6 +1141,40 @@ carico io. Fatto nella 1.12.6: *Cassa → Tariffari* (vedi *Tariffari dei medici
 `LEGGIMI.md`). Il file pronto da caricare con i tre tariffari (il PDF ricopiato in un foglio) è stato consegnato a Giovanni
 nella conversazione, fuori dal repository: va caricato una volta in clinica, scegliendo nell'anteprima i medici del
 gruppo (quelli che il programma non riconosce dal nome) e controllando le prestazioni collegate.
+
+## La 1.12.7
+
+Giovanni ha chiesto come lo farebbe uno sviluppatore senior; la risposta (dieci consigli e due difetti trovati) è
+diventata il piano per passi, prima la base e poi i moduli, approvato il 21 novembre 2026: «Ok su tutto, iniziamo per
+step senza fare tutto insieme». Il primo passo è la 1.12.7, solo correzioni:
+
+- la domanda «Eliminare…?» di una persona del personale e di un tariffario: il nome entrava nel testo di JavaScript
+  dell'attributo `onsubmit` con il solo escape dell'HTML, e un apostrofo («D'Esempio») chiudeva il testo: niente
+  domanda, e il modulo partiva subito. Ora il testo passa da `tojson`, fra apici singoli; le prove nuove, senza e con il
+  browser, falliscono con i modelli di prima (vedi lo storico dei difetti nel `LEGGIMI.md`);
+- una prova di `prove_15.py` che falliva a caso: l'area della 1.12.6 a volte trovava la sua email già partita dal
+  thread degli invii. Il 13 novembre lo stesso commit era verde su Windows nel ramo principale e rosso nel ramo dei
+  moduli, con «da guardare prove_15.py»;
+- `pubblica.yml` con la casella «ultima» spenta per difetto, e le istruzioni per pubblicare cambiate qui, nei due
+  `LEGGIMI.md` e nei due `CLAUDE.md`. Una revisione indipendente ha trovato che dalla pagina web di GitHub togliere la
+  spunta «Set as the latest release» non basta (senza spunta GitHub sceglie l'ultima dal numero di versione): da lì la
+  release nuova si crea come pre-release.
+
+Le prove della 1.12.7 sono in corso dal 21 novembre 2026: tutte le raccolte nelle due cartelle, anche nel browser,
+poi i due Setup in Wine, a partire dalla 1.12.6 ufficiale.
+
+Lo stesso giorno Giovanni ha scritto che in clinica si usa Chrome e ha chiesto di Firefox, per avere un browser solo.
+Per il gestionale è sconsigliato: tutte le prove nel browser girano con Chromium, e Firefox non disegna i margin box di
+`@page`, da cui vengono i numeri di pagina delle stampe (vedi *Stampe* nei `CLAUDE.md`; il difetto di Firefox è il
+bug 856371, ancora aperto). Consigliato restare su Chrome, oppure Edge, che ha lo stesso motore, è già dentro Windows
+11 e si gestisce con i criteri di gruppo. Se un giorno servisse Firefox: prima le prove nel browser anche con Firefox
+(Playwright lo ha) e i numeri di pagina fatti in un altro modo.
+
+Le anteprime della nuova interfaccia (`tela/project/` e `anteprime/`, nella cartella di lavoro temporanea della sessione)
+vanno nella cartella privata «Gestionale Agende - anteprime» del Drive di Giovanni, con un documento che spiega come
+aprirle (le tavole `.dc.html` vogliono accanto `support.js`, il piccolo motore che riempie le liste). Il 21 novembre l'archivio unico (4,5 MB) non è passato dal collegamento con Drive, che
+accetta circa 3 MB per volta: cartella e documento ci sono, l'archivio aspetta la scelta di Giovanni (due archivi più
+piccoli, o il file nella conversazione).
 
 ## Cose aperte
 
