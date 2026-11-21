@@ -584,13 +584,20 @@ release è stata segnata ultima subito (la casella era accesa per difetto).
 4. La release nel progetto delle versioni, con il tag `vX.Y`, contiene i quattro file
    `GestionaleAgende-setup.exe`, `aggiornamento.json`,
    `GestionaleAgende-animata-setup.exe` e `aggiornamento-animata.json`, e non è segnata come
-   ultima. Si fa con `pubblica.yml` (casella «ultima» spenta, com'è già), dalla pagina
-   *Releases → Create a new release* (spegnendo *Set as the latest release*) oppure con
-   `gh release create vX.Y --repo number959/gestionale-agende-versioni --latest=false …`.
+   ultima. Si fa con `pubblica.yml` (casella «ultima» spenta, com'è già), con
+   `gh release create vX.Y --repo number959/gestionale-agende-versioni --latest=false …`
+   oppure dalla pagina *Releases → Create a new release* con la casella della pre-release
+   (*Set as a pre-release*) accesa. Dalla pagina non basta togliere la spunta di *Set as the
+   latest release*: senza spunta GitHub sceglie l'ultima da solo guardando il numero di versione,
+   e la versione nuova, che ha il numero più alto, diventerebbe subito l'ultima. Una pre-release
+   invece non è mai l'ultima, e i suoi file si scaricano lo stesso da `…/releases/download/vX.Y/`.
    I nomi dei file devono essere proprio questi.
 
-   In una sessione nel cloud di Claude il `gh` è un altro (fa solo `gh api`) e il
-   collegamento a GitHub rifiuta sia il push dei tag con git sia le richieste GraphQL. La
+   Da una sessione nel cloud di Claude la release non si crea e non si cambia: il collegamento a
+   GitHub lo vieta (vedi *Pubblicare senza un PC con Python e Inno Setup*, 1° novembre 2026). Da
+   lì si avvia `pubblica.yml`, e il passo 6 lo fa Giovanni dalla pagina della release. Prima di
+   saperlo, il modo previsto era questo: in una sessione nel cloud il `gh` è un altro (fa solo
+   `gh api`), il collegamento rifiuta sia il push dei tag con git sia le richieste GraphQL, e la
    release si crea con l'API REST, che crea anche il tag:
 
    ```
@@ -610,10 +617,13 @@ release è stata segnata ultima subito (la casella era accesa per difetto).
    `curl -sL https://github.com/number959/gestionale-agende-versioni/releases/latest/download/aggiornamento.json`
    deve dire ancora la versione **di prima**; `…/releases/download/vX.Y/aggiornamento.json` deve
    dire la versione nuova, e l'impronta del Setup scaricato da lì deve essere quella scritta nel
-   file.
+   file. Se `latest` dice già la versione nuova, la clinica la scaricherebbe: subito si rimette
+   ultima la release di prima (dalla sua pagina: *Edit*, *Set as the latest release*, *Update
+   release*; oppure `gh release edit` con il tag di prima e `--latest`) e si rifà il controllo.
 6. Nel momento scelto da Giovanni (a fine giornata, con lui raggiungibile) la release si segna
-   ultima dalla sua pagina su GitHub: *Edit*, *Set as the latest release*, *Update release*. Poi lo
-   stesso `curl` di `latest` deve dire la versione nuova.
+   ultima dalla sua pagina su GitHub: *Edit*, *Set as a pre-release* spento (se era acceso), *Set
+   as the latest release* acceso, *Update release*. Poi lo stesso `curl` di `latest` deve dire la
+   versione nuova.
 
 Il programma della clinica la trova entro sei ore da quando è segnata ultima, o subito con
 «Controlla adesso».

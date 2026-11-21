@@ -408,8 +408,11 @@ serve disinstallare.
    ```
 
    Se `gh` non può scrivere in quel progetto, la release la fa Giovanni dalla pagina
-   GitHub (Releases → Draft a new release, *Set as the latest release* spento), con gli stessi
-   quattro file. Il gestionale della clinica legge sempre l'ultima release, all'indirizzo
+   GitHub (Releases → Draft a new release, con la casella della pre-release, *Set as a
+   pre-release*, accesa), con gli stessi quattro file: togliere solo la spunta di *Set as the
+   latest release* non basta, perché senza spunta GitHub sceglie l'ultima da solo guardando il
+   numero di versione (la nuova lo diventerebbe subito), mentre una pre-release non è mai
+   l'ultima. Il gestionale della clinica legge sempre l'ultima release, all'indirizzo
    predefinito `https://github.com/number959/gestionale-agende-versioni/releases/latest/download/`:
    la trova da solo (ogni sei ore, o con «Controlla adesso») solo da quando è segnata ultima.
    Si pubblica solo dal ramo principale `ccr-07f8e160-7j5lup`: `pubblica.yml` si ferma da solo su ogni altro ramo (il
@@ -420,9 +423,12 @@ serve disinstallare.
 5. Controllo, subito dopo: `curl -sL` di quell'indirizzo + `aggiornamento.json` deve dare ancora
    la versione di prima (`pubblica.yml` lo controlla da solo); `…/releases/download/v1.10/aggiornamento.json`
    deve dare la versione nuova, e l'impronta del Setup scaricato da lì deve essere quella scritta nel file.
+   Se `latest` dà già la versione nuova, subito si rimette ultima la release di prima (dalla sua pagina:
+   *Edit*, *Set as the latest release*, *Update release*; oppure `gh release edit` con il tag di prima e
+   `--latest`) e si rifà il controllo.
 6. Nel momento scelto da Giovanni (a fine giornata, con lui raggiungibile) la release si segna ultima
-   dalla sua pagina su GitHub (*Edit*, *Set as the latest release*, *Update release*); poi l'indirizzo di
-   `latest` deve dare la versione nuova.
+   dalla sua pagina su GitHub (*Edit*, *Set as a pre-release* spento se era acceso, *Set as the latest
+   release* acceso, *Update release*); poi l'indirizzo di `latest` deve dare la versione nuova.
 
 Per passare i file a mano dove c'è un limite di dimensione (una chat):
 `python strumenti/consegna.py <cartella con i file> <cartella di uscita>` li divide in

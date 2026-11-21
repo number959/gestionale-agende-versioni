@@ -308,8 +308,11 @@ A ogni versione:
    con l'automazione «Pubblica una versione» (`.github/workflows/pubblica.yml`), che ha la
    casella «ultima» spenta per difetto; oppure dalla pagina del progetto, *Releases → Create
    a new release* (tag `v1.10`, titolo *Gestionale Agende 1.10*, i quattro file trascinati
-   nel riquadro dei file, *Set as the latest release* spento, *Publish release*); oppure con
-   la riga di comando `gh`:
+   nel riquadro dei file, la casella della pre-release, *Set as a pre-release*, accesa, *Publish
+   release*: togliere solo la spunta di *Set as the latest release* non basta, perché senza
+   spunta GitHub sceglie l'ultima da solo guardando il numero di versione, e la nuova, che ha il
+   numero più alto, lo diventerebbe subito; una pre-release invece non è mai l'ultima); oppure
+   con la riga di comando `gh`:
 
    ```
    gh release create v1.10 --repo number959/gestionale-agende-versioni --latest=false ^
@@ -322,10 +325,13 @@ A ogni versione:
    `https://github.com/number959/gestionale-agende-versioni/releases/latest/download/aggiornamento.json`
    deve dire ancora la versione di prima (la clinica non scarica niente di nuovo), e
    `…/releases/download/v1.10/aggiornamento.json` la versione nuova (`pubblica.yml` li
-   controlla da solo);
+   controlla da solo). Se `latest` dice già la versione nuova, subito si rimette ultima la
+   versione di prima dalla sua pagina (*Edit*, *Set as the latest release*, *Update release*) e
+   si rifà il controllo;
 6. nel momento scelto da Giovanni, a fine giornata e con lui raggiungibile, la versione si
-   segna ultima dalla sua pagina su GitHub (*Edit*, *Set as the latest release*, *Update
-   release*); da lì l'indirizzo di `latest` deve dire la versione nuova.
+   segna ultima dalla sua pagina su GitHub (*Edit*, *Set as a pre-release* spento se era
+   acceso, *Set as the latest release* acceso, *Update release*); da lì l'indirizzo di
+   `latest` deve dire la versione nuova.
 
 Il programma della clinica scarica solo la versione segnata ultima: entro sei ore da quel
 momento la trova da solo; con *Controlla adesso*, subito. Il file delle versioni va
