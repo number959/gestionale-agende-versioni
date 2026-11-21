@@ -113,7 +113,9 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   base e poi i moduli («Ok su tutto, iniziamo per step senza fare tutto insieme»), e poi «Ok preparala». Dentro: la
   domanda «Eliminare…?» di persone del personale e tariffari, che con un apostrofo nel nome non compariva (la persona o
   il tariffario si cancellavano subito). Con lei, fuori dal programma: una prova di `prove_15.py` che falliva a caso e la
-  casella «ultima» di `pubblica.yml` spenta per difetto (vedi *Pubblicare una versione*). Le prove nelle due cartelle e quelle dei Setup in Wine sono in corso (vedi *La 1.12.7*). Si pubblica solo
+  casella «ultima» di `pubblica.yml` spenta per difetto (vedi *Pubblicare una versione*). Provata: tutte le prove nelle due cartelle, anche nel browser e su Windows; in Wine dalla 1.12.6 ufficiale con
+  «Aggiorna adesso» (14 controlli su 14) e 62 su 62 sul programma installato, e l'animata con il Setup sopra la 1.12.6
+  animata (62 su 62). Si pubblica solo
   con il via di Giovanni («pubblicala»), con la casella «ultima» spenta; la release si segna ultima la sera, dalla sua
   pagina, quando lo decide lui (vedi *La 1.12.7*). Il piano per passi è nel documento «Interfaccia nuova: il piano», il
   disegno del programma nella pagina «Mappa del Gestionale» (tutti e due su claude.ai).
@@ -1160,8 +1162,16 @@ step senza fare tutto insieme». Il primo passo è la 1.12.7, solo correzioni:
   spunta «Set as the latest release» non basta (senza spunta GitHub sceglie l'ultima dal numero di versione): da lì la
   release nuova si crea come pre-release.
 
-Le prove della 1.12.7 sono in corso dal 21 novembre 2026: tutte le raccolte nelle due cartelle, anche nel browser,
-poi i due Setup in Wine, a partire dalla 1.12.6 ufficiale.
+Provata il 21 novembre 2026: tutte le prove senza browser nelle due cartelle (27 raccolte, 1152 prove e 2550 casi
+generati in ciascuna), tutte quelle nel browser con le due cartelle provate insieme (12 raccolte e 501 prove nella
+normale, 14 e 568 nell'animata), le prove su Windows di GitHub. In Wine: la 1.12.6 ufficiale scaricata dalla release,
+poi «Aggiorna adesso» da una cartella con la 1.12.7 (14 controlli su 14: notifica, pagina d'attesa, novità, copia
+«prima di aggiornare», dati intatti), poi 62 controlli su 62 sul programma installato; l'animata: la 1.12.6 animata
+ufficiale e sopra il Setup della 1.12.7 animata, 62 su 62. Strada facendo sono venute fuori tre cose delle prove e una
+di Wine, tutte nello storico dei difetti del `LEGGIMI.md`: tre prove nel browser che non leggevano `CHROMIUM`, la
+«cornice» di `prove_sicurezza_browser.py` che sotto carico a volte non vedeva il 403 (il modulo della cornice ora parte
+dopo un secondo), un clic su «Stampa e scarica» coperto una volta dalla tendina del menu nell'animata, e Wine 9.0 che
+non parte con `TMPDIR` impostata (ora `strumenti/wine/ambiente.sh` la toglie).
 
 Lo stesso giorno Giovanni ha scritto che in clinica si usa Chrome e ha chiesto di Firefox, per avere un browser solo.
 Per il gestionale è sconsigliato: tutte le prove nel browser girano con Chromium, e Firefox non disegna i margin box di
