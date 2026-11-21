@@ -120,6 +120,11 @@ sparisce o cambia la fa cadere, uno nuovo si aggiunge con `python prove_indirizz
 di oggi in ogni stato, un intervento, la lista d'attesa e il nome scritto in note, cose da fare e appunti, non deve
 comparire in nessuna pagina sotto `/riepilogo-live*`, con e senza schermo, per ogni struttura e periodo; i suoi gemelli
 controllano che lo stesso canarino si veda nelle pagine normali.
+`strumenti/confronta_rami.py` (non è nel giro di `tutte_le_prove.py`: vuole git) confronta il programma del ramo
+principale con quello della cartella, sugli stessi dati di prova copiati due volte: segue i collegamenti da tutte
+le pagine senza parametri (ogni tipo di pagina al massimo 4 volte) e confronta risposte, moduli e campi (anche
+nascosti), collegamenti, `data-tasto`, `data-guida`, testo, JSON e Excel cella per cella. Nella veste nuova si
+lancia dopo ogni passo: le differenze che restano devono essere solo quelle volute, una per una.
 Quando una prova cade, il messaggio dice anche file e riga (`prove_dove.py`). Alcune delle più vecchie escono con codice 0 anche se qualcosa non va: conta la
 riga finale («0 da sistemare»), ed è quella che legge `tutte_le_prove.py`.
 `PROVE_SOLO=nome1,nome2 python prove_15.py` rifà solo alcune prove di una raccolta. Le due
