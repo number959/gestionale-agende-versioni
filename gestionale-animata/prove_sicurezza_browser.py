@@ -51,9 +51,9 @@ ATTACCO = """<!doctype html><meta charset="utf-8"><title>altro sito</title>
     c.setAttribute('sandbox', 'allow-forms allow-scripts');
     c.srcdoc = '<form id=g method=post action="%(b)s/impostazioni"><input name=azione value=testo>' +
       '<input name=testo value="SCRITTO DA UNA CORNICE"><input name=oggetto value=x></form>' +
-      '<script>document.getElementById("g").submit()<\\/script>';
+      '<script>setTimeout(function () { document.getElementById("g").submit(); }, 1000)<\\/script>';
     document.body.appendChild(c);
-    setTimeout(function () { document.title = 'fatto'; }, 1500);
+    setTimeout(function () { document.title = 'fatto'; }, 3000);
   }
 </script>"""
 
@@ -83,24 +83,30 @@ with sync_playwright() as p:
     pg.on('response', lambda r: risposte.append((r.request.method, r.url, r.status))
           if r.url.startswith(B) and r.request.method == 'POST' else None)
     for modo in ('modulo', 'fetch', 'cornice'):
-        risposte.clear()
-        pg.goto(ALTRO + '/attacco-%s.html#%s' % (modo, modo))      # pagina nuova, non solo l'ancora
-        try:
-            pg.wait_for_function("document.title === 'fatto' || location.href.indexOf('%s') === 0" % B,
-                                 timeout=8000)
-        except Exception:
-            pass
-        # la risposta del gestionale si aspetta, fino a 10 secondi: con le due cartelle provate insieme la richiesta
-        # della cornice partiva dopo il segnale «fatto» (1,5 secondi fissi) e non si vedeva (21/11/2026)
-        for _ in range(100):
-            if risposte:
+        # 21/11/2026: Chrome fa girare la cornice chiusa in una sandbox in un processo suo; se il modulo partiva
+        # subito, a volte partiva prima che Playwright seguisse la cornice e la prova non vedeva né la richiesta né il
+        # 403 (la cornice finisce comunque sulla pagina d'errore di Chrome: il gestionale non si lascia aprire in una
+        # cornice). Ora il modulo della cornice parte dopo un secondo, e senza il 403 visto si riprova, fino a tre
+        # volte. Se intanto il testo cambia, l'attacco è riuscito e la prova fallisce subito.
+        for tentativo in range(3):
+            risposte.clear()
+            pg.goto(ALTRO + '/attacco-%s.html#%s' % (modo, modo))      # pagina nuova, non solo l'ancora
+            try:
+                pg.wait_for_function("document.title === 'fatto' || location.href.indexOf('%s') === 0" % B,
+                                     timeout=8000)
+            except Exception:
+                pass
+            for _ in range(30):
+                if risposte:
+                    break
+                pg.wait_for_timeout(100)
+            pg.wait_for_timeout(800)
+            dopo = testo_promemoria()
+            if risposte or dopo != prima:
                 break
-            pg.wait_for_timeout(100)
-        pg.wait_for_timeout(800)
-        dopo = testo_promemoria()
         stati = sorted({s for _, _, s in risposte})
         controlla('%s da un altro sito: rifiutato' % modo, dopo == prima and stati == [403],
-                  'testo ora %r, risposte %s' % (dopo, risposte))
+                  'testo ora %r, risposte %s, tentativi %d' % (dopo, risposte, tentativo + 1))
     # le pagine del gestionale invece salvano
     pg.goto(B + '/impostazioni')
     campo = pg.locator('textarea[name="testo"]')
