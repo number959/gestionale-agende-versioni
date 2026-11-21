@@ -1329,7 +1329,10 @@ piccoli, o il file nella conversazione).
    «Executable doesn't exist … playwright install», la libreria Playwright di Python cerca un
    Chromium più nuovo di quello installato: le prove usano il Chromium indicato nella variabile
    `CHROMIUM` (nelle sessioni nel cloud `CHROMIUM=/opt/pw-browsers/chromium`, dove non si
-   scaricano browser; successo il 21 novembre 2026).
+   scaricano browser; successo il 21 novembre 2026). Se invece cadono `prove_16.py` («No space left on device») e
+   `prove_autoriparazione.py` (righe 615 e 1002), guardare lo spazio su disco: sotto i 300 MB liberi il programma
+   segnala giustamente «poco spazio» e le prove non se lo aspettano. Nelle sessioni lunghe lo riempiono le copie del
+   codice fatte dagli agenti nella cartella degli appunti (21 novembre 2026: 12 GB).
 3. Lancia le prove di tutte e due le cartelle (`python strumenti/tutte_le_prove.py` dentro
    ciascuna): devono essere tutte verdi prima di toccare qualcosa.
 4. Per vedere il programma: `python strumenti/demo.py` dentro `gestionale/`, poi
