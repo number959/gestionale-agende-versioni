@@ -9,6 +9,7 @@ Niente rete vera: le email vanno a un finto server di posta su 127.0.0.1
 (con STARTTLS e accesso con password, come Gmail) e i WhatsApp a un finto
 server di Meta. I dati sono inventati."""
 import base64
+from prove_dove import dove
 import email
 import json
 import os
@@ -86,7 +87,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 

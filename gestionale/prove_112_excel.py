@@ -9,6 +9,7 @@ una formula. Dati inventati.
     python prove_112_excel.py
 """
 import logging
+from prove_dove import dove
 import os
 import sys
 import tempfile
@@ -49,7 +50,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 

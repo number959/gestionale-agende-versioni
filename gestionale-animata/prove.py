@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Prove sul gestionale. Cerca i casi che rompono, non quelli che funzionano."""
 import os
+from prove_dove import dove
 import tempfile
 import sys
 import threading
@@ -31,7 +32,7 @@ def prova(nome, funzione):
         messaggio = funzione()
         esiti.append(('OK  ', nome, messaggio or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', nome, str(e)))
+        esiti.append(('ROTTO', nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', nome, traceback.format_exc().strip().splitlines()[-1]))
 

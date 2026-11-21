@@ -11,6 +11,7 @@ prestazione si trova con l'inizio delle sue parole), le pagine e le richieste
 Excel, statistiche, ricerca rapida, protezioni) e l'aggiornamento del database
 dalla versione 9. Strutture, prestazioni e pazienti sono inventati."""
 import json
+from prove_dove import dove
 import os
 import random
 import re
@@ -61,7 +62,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e)[:600] or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e)[:600] or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 

@@ -7,6 +7,7 @@ dallo schema esatto di quella versione e verificano che l'aggiornamento
 aggiunga le colonne senza toccare i dati.
 """
 import io
+from prove_dove import dove
 import os
 import random
 import re
@@ -54,7 +55,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 

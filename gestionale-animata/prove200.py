@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Terza suite. Molte prove generate a matrice: se una rompe, il nome dice quale caso."""
 import os
+from prove_dove import dove
 import tempfile
 import random
 import time as clock
@@ -32,7 +33,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome,
                       traceback.format_exc().strip().splitlines()[-1]))

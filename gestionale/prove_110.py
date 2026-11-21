@@ -27,6 +27,7 @@ Dati inventati.
     PROVE_GIRI=400 python prove_110.py    # piu' giorni inventati per i confronti (predefinito 120)
     PROVE_SOLO=c_mano_20 python prove_110.py"""
 import io
+from prove_dove import dove
 import os
 import random
 import re
@@ -82,7 +83,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e)[:900] or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e)[:900] or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 

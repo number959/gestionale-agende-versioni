@@ -9,6 +9,7 @@ GitHub. Il Setup non parte davvero: si controlla il comando che lo
 avvierebbe. La prova vera, con il Setup che chiude, aggiorna e riapre il
 programma, si fa con l'eseguibile su Windows (vedi LEGGIMI)."""
 import hashlib
+from prove_dove import dove
 import json
 import os
 import random
@@ -71,7 +72,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
     finally:

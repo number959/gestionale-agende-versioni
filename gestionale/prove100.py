@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Suite estesa. Ogni prova ha un nome parlante: se rompe si sa dove guardare."""
 import os
+from prove_dove import dove
 import tempfile
 import random
 import threading
@@ -34,7 +35,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         ultima = traceback.format_exc().strip().splitlines()[-1]
         esiti.append(('ERRORE', _area[0], nome, ultima))

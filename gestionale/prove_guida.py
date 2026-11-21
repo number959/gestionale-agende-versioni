@@ -6,6 +6,7 @@ ricerca nella guida trova quello che deve; la versione da stampare contiene
 tutto. La prova nel browser (fumetti, riflettore, tasti) e' in
 prove_guida_browser.py."""
 import json
+from prove_dove import dove
 import os
 import re
 import shutil
@@ -31,7 +32,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', nome, traceback.format_exc().strip().splitlines()[-1]))
 

@@ -113,7 +113,14 @@ anche lo svuotamento dei file rovinati messi da parte), `prove_112.py` (dalla 1.
 ambulatori: matrice della settimana contro un oracolo minuto per minuto, programmazione del mese, i due Excel,
 Metti e Togli, la regola della stanza e il ritorno alla pagina di partenza) e
 `campagna.py` (casi generati con oracoli e
-invarianti). Alcune delle più vecchie escono con codice 0 anche se qualcosa non va: conta la
+invarianti), e dalla tappa 1 della base `prove_indirizzi.py`: l'elenco degli indirizzi in
+`indirizzi.txt` (uguale nelle due cartelle), con come risponde ogni pagina senza parametri; un indirizzo che
+sparisce o cambia la fa cadere, uno nuovo si aggiunge con `python prove_indirizzi.py --scrivi`, nello stesso commit.
+`prove_canarino.py` è la guardia del Modo schermo: un paziente inventato apposta (il «canarino»), con appuntamenti
+di oggi in ogni stato, un intervento, la lista d'attesa e il nome scritto in note, cose da fare e appunti, non deve
+comparire in nessuna pagina sotto `/riepilogo-live*`, con e senza schermo, per ogni struttura e periodo; i suoi gemelli
+controllano che lo stesso canarino si veda nelle pagine normali.
+Quando una prova cade, il messaggio dice anche file e riga (`prove_dove.py`). Alcune delle più vecchie escono con codice 0 anche se qualcosa non va: conta la
 riga finale («0 da sistemare»), ed è quella che legge `tutte_le_prove.py`.
 `PROVE_SOLO=nome1,nome2 python prove_15.py` rifà solo alcune prove di una raccolta. Le due
 cartelle si possono provare insieme: ogni giro di `tutte_le_prove.py` ha la sua cartella

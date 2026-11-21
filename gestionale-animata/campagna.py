@@ -10,6 +10,7 @@ la campagna si ferma del tutto, perche' andare avanti non aggiunge informazione.
 Ogni guasto riporta la semenza che lo riproduce.
 """
 import io
+from prove_dove import dove
 import os
 import random
 import re
@@ -91,7 +92,7 @@ def prova(area, riproduci, corpo):
     try:
         corpo()
     except AssertionError as e:
-        R.guasto(area, str(e) or 'asserzione fallita', riproduci)
+        R.guasto(area, '%s · %s' % (dove(e), str(e) or 'asserzione fallita'), riproduci)
     except Exception as e:
         R.guasto(area, '%s: %s' % (type(e).__name__, e), riproduci)
 

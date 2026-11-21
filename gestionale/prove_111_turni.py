@@ -16,6 +16,7 @@ Il terzo difetto (Ctrl+Z mentre si scrive un codice, o mentre una modifica si
 sta ancora salvando) e' della pagina: le sue prove sono in prove_18_browser.py.
 Tutti i nomi sono inventati."""
 import json
+from prove_dove import dove
 import logging
 import os
 import re
@@ -56,7 +57,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 

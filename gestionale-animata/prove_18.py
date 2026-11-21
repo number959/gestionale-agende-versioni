@@ -10,6 +10,7 @@ rifai (lo stato di prima torna identico), errori e protezioni, Excel,
 aggiornamento del database dalla versione 8, e un giro di modifiche a caso
 con gli invarianti controllati dopo ogni passo. Tutti i nomi sono inventati."""
 import json
+from prove_dove import dove
 import os
 import random
 import re
@@ -56,7 +57,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 
