@@ -1296,7 +1296,11 @@ piccoli, o il file nella conversazione).
 2. `python -m pip install -r gestionale/requirements.txt playwright python-codicefiscale`, poi
    `python -m playwright install chromium` (se non c'è già un Chromium). Su Windows servono
    anche Git for Windows (la riga di comando bash e `openssl`, che usano alcune prove) e, per
-   i Setup, Inno Setup 6.
+   i Setup, Inno Setup 6. Se le prove nel browser si fermano tutte dopo un secondo con
+   «Executable doesn't exist … playwright install», la libreria Playwright di Python cerca un
+   Chromium più nuovo di quello installato: le prove usano il Chromium indicato nella variabile
+   `CHROMIUM` (nelle sessioni nel cloud `CHROMIUM=/opt/pw-browsers/chromium`, dove non si
+   scaricano browser; successo il 21 novembre 2026).
 3. Lancia le prove di tutte e due le cartelle (`python strumenti/tutte_le_prove.py` dentro
    ciascuna): devono essere tutte verdi prima di toccare qualcosa.
 4. Per vedere il programma: `python strumenti/demo.py` dentro `gestionale/`, poi
