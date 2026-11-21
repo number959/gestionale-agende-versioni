@@ -16,9 +16,13 @@ avviato con i dati di prova (strumenti/demo.py):
   totale, una riga per stanza con turni e visite come nel JSON, la linea di
   adesso, le notifiche nascoste, il telefono senza scorrimento laterale e il
   modo schermo; il riepilogo del periodo: i gruppi che sommano, i periodi
-  pronti, la freccia, l'Excel; nessun errore JavaScript.
+  pronti, la freccia, l'Excel; nessun errore JavaScript;
+- dalla tappa 1 della base la dashboard rimasta aperta, con l'orologio della pagina mandato avanti: il rinnovo di
+  ogni minuto ricarica la pagina solo se cambia data-giorno (giorno e versione), e ogni richiesta resta dentro
+  /riepilogo-live, /static/ e /logo/.
 Mette e toglie un turno sui dati di prova: alla fine sono come prima."""
 import os
+import re
 import sys
 from datetime import date, timedelta
 
@@ -336,6 +340,80 @@ with sync_playwright() as p:
     pg.click('[data-guida="statistiche-torna"]')
     pg.wait_for_selector('#riepilogo-live .frase-live')
     ok('dashboard: «Torna al riepilogo live» resta nel modo schermo', '/riepilogo-live' in pg.url and 'schermo=1' in pg.url, pg.url)
+    # tappa 1 della base: la dashboard rimasta aperta su un altro PC. Con l'orologio della pagina mandato avanti, il
+    # rinnovo di ogni minuto ricarica tutta la pagina solo se cambia data-giorno, che dice giorno e versione: così dopo
+    # la mezzanotte e dopo un aggiornamento la pagina passa da sola al giorno nuovo e alla versione nuova. E ogni
+    # richiesta della pagina resta dentro quello che il portiere della rete lascia passare.
+    sch = ctx.new_page()
+    sch.on('pageerror', lambda e: err.append(str(e)))
+    richieste = []
+    sch.on('request', lambda r: richieste.append((r.resource_type, r.url)))
+    sch.clock.install()
+    sch.goto(B + '/riepilogo-live?struttura=1&schermo=1')
+    sch.wait_for_selector('#riepilogo-live .frase-live')
+    giorno = sch.get_attribute('#riepilogo-live', 'data-giorno') or ''
+    ok('dashboard: data-giorno dice il giorno e la versione del programma',
+       re.fullmatch(r'\d{4}-\d\d-\d\d \d+(\.\d+)+', giorno) is not None, giorno)
+    giorno_solo, _, versione = giorno.partition(' ')
+    cambia = {'come': None, 'cambiate': 0}
+
+    def rinnovo(route):
+        # solo il rinnovo di ogni minuto (fetch) si cambia; la pagina ricaricata arriva com'è
+        if route.request.resource_type != 'fetch' or cambia['come'] is None:
+            route.continue_()
+            return
+        r = route.fetch()
+        corpo = cambia['come'](r.text())
+        cambia['cambiate'] += 1
+        route.fulfill(response=r, body=corpo)
+    sch.route('**/riepilogo-live?*', rinnovo)
+
+    def segna():
+        # un segno nella finestra (sparisce se la pagina si ricarica) e uno dentro il riquadro (sparisce al rinnovo)
+        sch.evaluate('window.__ancora_la_stessa = 1; document.getElementById("riepilogo-live")'
+                     '.insertAdjacentHTML("beforeend", "<i id=\\"segno-dentro\\"></i>")')
+
+    def un_minuto_senza_ricaricare():
+        segna()
+        with sch.expect_response(lambda r: r.request.resource_type == 'fetch' and '/riepilogo-live' in r.url):
+            sch.clock.run_for(61000)
+        sch.wait_for_timeout(800)
+        return sch.evaluate('[window.__ancora_la_stessa === 1, !document.getElementById("segno-dentro")]')
+
+    def un_minuto_ricaricando(come):
+        segna()
+        cambia['come'] = come
+        try:
+            with sch.expect_navigation(timeout=15000):
+                sch.clock.run_for(61000)
+        except Exception:
+            return False
+        finally:
+            cambia['come'] = None
+        sch.wait_for_selector('#riepilogo-live .frase-live')
+        return sch.evaluate('window.__ancora_la_stessa === undefined')
+
+    stessa, rinnovata = un_minuto_senza_ricaricare()
+    ok('dashboard (gemello): con giorno e versione uguali il rinnovo cambia il contenuto senza ricaricare la pagina',
+       stessa and rinnovata, (stessa, rinnovata))
+    # un programma di un'altra versione: lo stesso numero di versione cambiato dovunque il programma lo scriva
+    ok('dashboard: dopo un aggiornamento (il programma ha un\'altra versione) il rinnovo ricarica tutta la pagina',
+       un_minuto_ricaricando(lambda c: c.replace(versione, '99.0.1')), cambia)
+    ok('dashboard: dopo la mezzanotte (giorno diverso) il rinnovo ricarica tutta la pagina',
+       un_minuto_ricaricando(lambda c: c.replace('data-giorno="%s' % giorno_solo, 'data-giorno="2000-01-01', 1)), cambia)
+    ok('dashboard: il rinnovo dopo la ricarica è tornato quello di prima (niente ricariche di seguito)',
+       un_minuto_senza_ricaricare()[0], cambia)
+    sch.clock.run_for(5 * 60000)
+    sch.wait_for_timeout(1500)
+    fuori = sorted({u for _, u in richieste
+                    if not re.sub(r'^https?://[^/]+', '', u).startswith(('/riepilogo-live', '/static/', '/logo/'))})
+    rinnovi = sum(1 for tipo, u in richieste if tipo == 'fetch' and '/riepilogo-live?' in u)
+    ok('dashboard nel modo schermo: con l\'orologio avanti di dieci minuti ogni richiesta resta in /riepilogo-live, /static/, /logo/',
+       not fuori, fuori[:5])
+    ok('dashboard (gemello): la registrazione vede davvero le richieste (rinnovi, file di /static/, la pagina)',
+       rinnovi >= 8 and any('/static/' in u for _, u in richieste) and cambia['cambiate'] == 2,
+       (rinnovi, cambia, len(richieste)))
+    sch.close()
     ok('nessun errore JavaScript', not err, err[:3])
     br.close()
 

@@ -232,7 +232,10 @@ temporanea.
   scuro le eccezioni (asse, mezze giornate tratteggiate) sono ripetute in `tema-scuro-correzioni.css`,
   perché le regole generate con `html.scuro` vincerebbero. Sulla pagina le notifiche non si chiedono
   (`gestionale.js`, `body.pagina-live`): non viste, risulterebbero viste anche nelle altre pagine.
-  Dopo la mezzanotte il rinnovo vede un altro `data-giorno` e ricarica tutta la pagina.
+  Dopo la mezzanotte il rinnovo vede un altro `data-giorno` e ricarica tutta la pagina; dalla tappa 1 della base
+  `data-giorno` contiene anche la versione («2026-12-10 1.13»), così dopo un aggiornamento la pagina rimasta aperta
+  su un altro PC passa da sola alla versione nuova entro un minuto (`prove_112_browser.py` lo prova con l'orologio
+  della pagina mandato avanti, e controlla che ogni richiesta resti in `/riepilogo-live`, `/static/`, `/logo/`).
 - Riepilogo del periodo (dalla 1.12.2): `ambulatori.riepilogo_periodo`, `/ambulatori/riepilogo` (`.xlsx`,
   `.json`). Ore di turno = turni effettivi della stanza uniti (`unisci_intervalli`); ore occupate = la
   parte dei turni coperta dagli appuntamenti in `STATI_OCCUPANO` (il non presentato tiene il posto, il

@@ -26,7 +26,7 @@
     {% endif %}
   </div>
 </div>
-<div class="contenuto pagina-live-contenuto" id="riepilogo-live" data-giorno="{{ r.data }}" data-indirizzo="{{ url_for('live.pagina', struttura=sid, schermo=1 if schermo else none) }}">
+<div class="contenuto pagina-live-contenuto" id="riepilogo-live" data-giorno="{{ r.data }} {{ versione_programma }}" data-indirizzo="{{ url_for('live.pagina', struttura=sid, schermo=1 if schermo else none) }}">
   {% set o = r.oggi %}
   <section class="riassunto-live" data-guida="live-numeri">
     <p class="frase-live{% if r.chiusa %} chiusa{% endif %}">{{ r.riassunto }}</p>
@@ -132,7 +132,8 @@
       .then(function (t) {
         var doc = new DOMParser().parseFromString(t, 'text/html');
         var nuovo = doc.getElementById('riepilogo-live'), ora = doc.getElementById('live-ora');
-        // dopo la mezzanotte cambia il giorno: si ricarica tutta la pagina (titolo, data, collegamenti)
+        // dopo la mezzanotte cambia il giorno, dopo un aggiornamento la versione (data-giorno ha tutti e due, tappa 1
+        // della base): si ricarica tutta la pagina (titolo, data, collegamenti, e i file nuovi della versione nuova)
         if (nuovo && nuovo.getAttribute('data-giorno') !== box.getAttribute('data-giorno')) { window.location.reload(); return; }
         if (nuovo) { box.innerHTML = nuovo.innerHTML; }
         if (ora && document.getElementById('live-ora')) { document.getElementById('live-ora').textContent = ora.textContent; }

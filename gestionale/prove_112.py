@@ -2009,7 +2009,7 @@ def l_chiaro():
         t = testo(C.get('/riepilogo-live?struttura=1'))
         d = json.loads(C.get('/riepilogo-live.json?struttura=1').data.decode('utf-8'))
     for pezzo in ('class="frase-live', 'class="pista-live"', 'class="libere-tab"', 'turno del medico', d['riassunto'],
-                  'data-giorno="%s"' % LUN.isoformat()):
+                  'data-giorno="%s %s"' % (LUN.isoformat(), comune.VERSIONE)):
         assert pezzo.replace("'", '&#39;') in t or pezzo in t, pezzo
     assert t.count('class="riga-live ') == len(d['stanze']) + 1, t.count('class="riga-live ')
     assert t.count('class="turno-live"') == sum(len(x['linea']['turni']) for x in d['stanze']) >= 1
