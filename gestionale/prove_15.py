@@ -2368,29 +2368,7 @@ prova('mese senza sale operatorie: niente righe di sala', h_senza_sale)
 prova('email della struttura nel foglio del giorno, nella lista operatoria, nei moduli', h_stampe)
 
 
-# ================================================================ il thread
-area('thread della coda')
-
-
-def i_thread():
-    """Ultima prova: il thread resta acceso fino alla fine del programma."""
-    S, C = mondo()
-    I = ids(S)
-    regola_galasso(S, allegati=False)
-    filo = invii.avvia(fabbrica, intervallo=30)
-    assert filo.is_alive() and invii.avvia(fabbrica) is filo, 'un thread solo'
-    prenota(C, I)                       # la prenotazione sveglia il thread
-    for _ in range(50):
-        if POSTA.messaggi:
-            break
-        orologio.sleep(0.1)
-    assert len(POSTA.messaggi) == 1 and invii_tutti(S)[0]['stato'] == 'INVIATO', invii_tutti(S)
-    return 'partita in meno di 5 secondi'
-
-
-prova('la prenotazione sveglia il thread e l\'email parte da sola', i_thread)
-
-
+# =============================================== indirizzo della segreteria
 area('indirizzo della segreteria (1.12.6)')
 
 
@@ -2503,6 +2481,31 @@ def j_allegato_con_la_gmail():
 prova('la mail della segreteria in ogni comunicazione: email, promemoria, WhatsApp, Conferme, spostamento, posto '
       'liberato, Dove si fa, moduli, stampe; la Gmail di prima in nessuna', j_segreteria_ovunque)
 prova('un allegato caricato a mano con ancora la Gmail di prima si segnala', j_allegato_con_la_gmail)
+
+
+# ================================================================ il thread
+# Il thread degli invii resta acceso fino alla fine del programma: quest'area resta l'ultima.
+# (21/11/2026: l'area della 1.12.6, aggiunta dopo, a volte trovava l'email gia' partita dal thread.)
+area('thread della coda')
+
+
+def i_thread():
+    """Ultima prova: il thread resta acceso fino alla fine del programma."""
+    S, C = mondo()
+    I = ids(S)
+    regola_galasso(S, allegati=False)
+    filo = invii.avvia(fabbrica, intervallo=30)
+    assert filo.is_alive() and invii.avvia(fabbrica) is filo, 'un thread solo'
+    prenota(C, I)                       # la prenotazione sveglia il thread
+    for _ in range(50):
+        if POSTA.messaggi:
+            break
+        orologio.sleep(0.1)
+    assert len(POSTA.messaggi) == 1 and invii_tutti(S)[0]['stato'] == 'INVIATO', invii_tutti(S)
+    return 'partita in meno di 5 secondi'
+
+
+prova('la prenotazione sveglia il thread e l\'email parte da sola', i_thread)
 
 
 # =====================================================================

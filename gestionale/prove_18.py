@@ -893,6 +893,41 @@ def p_persone():
     assert 'Persona eliminata' in avvisi(C)
 
 
+def domanda_del_modulo(corpo):
+    """Il testo della domanda dell'unico modulo della pagina con onsubmit, letto come fa il browser: l'attributo
+    finisce all'apice uguale a quello con cui comincia, poi si toglie l'escape dell'HTML; il codice che resta deve
+    essere proprio return confirm(<JSON>)."""
+    valori = [m.group(1) if m.group(1) is not None else m.group(2)
+              for tag in re.findall(r'''<form\b(?:[^>"']|"[^"]*"|'[^']*')*>''', corpo)
+              for m in re.finditer(r'''\sonsubmit\s*=\s*(?:"([^"]*)"|'([^']*)')''', tag)]
+    assert len(valori) == 1, valori
+    codice = unescape(valori[0])
+    m = re.fullmatch(r'return confirm\((.*)\)', codice, re.S)
+    assert m, 'non è return confirm(...): %s' % codice
+    try:
+        return json.loads(m.group(1))
+    except ValueError:
+        raise AssertionError('il testo della domanda non è JSON, nel browser si rompe: %s' % codice)
+
+
+def p_domanda_elimina():
+    """21/11/2026: con un nome come «D'Esempio» la domanda «Eliminare…?» non compariva: il browser rimetteva
+    l'apostrofo al posto di &#39;, l'apostrofo chiudeva il testo di JavaScript e il modulo partiva lo stesso (una
+    persona senza turni spariva subito). Ora il testo arriva da tojson; per i nomi normali è quello di prima."""
+    S, C = mondo(con_persone=False)
+    # anche la barra rovesciata: «\u» senza le quattro cifre romperebbe il testo di JavaScript
+    for cognome, nome in (("D'Esempio", 'Anna'), ("Dell'Inventato", 'Marco'), ("L'Esempio", 'Lia "Lilla"'),
+                          ('Barra\\Rovescia', 'Ada'), ('Esempio\\uZ', 'Uno'), ('Fittizi', 'Ada')):
+        r = C.post('/personale/persone/nuova', data={'cognome': cognome, 'nome': nome, 'ruolo': 'OSS', 'attiva': '1'})
+        assert r.status_code == 302, (cognome, r.status_code)
+        s = S()
+        pid = s.scalars(select(Persona.id).where(Persona.cognome == cognome)).one()
+        s.close()
+        atteso = 'Eliminare %s %s?' % (cognome, nome)
+        domanda = domanda_del_modulo(html(C.get('/personale/persone/%d' % pid)))
+        assert domanda == atteso, (domanda, atteso)
+
+
 def p_tipi():
     S, C = mondo()
     T = tipi(S)
@@ -1055,6 +1090,7 @@ def p_contrasti_icone():
 
 prova('pagine: primi passi, mese, settimana, giorno, filtri, indirizzi storti', p_pagine)
 prova('persone: modulo, ore 37,5, «In servizio», medici dall\'agenda, eliminare', p_persone)
+prova('persone: la domanda «Eliminare…?» intera anche con l\'apostrofo nel nome (21/11/2026)', p_domanda_elimina)
 prova('tipi di turno e coperture: controlli, colore sicuro, eliminare un tipo usato', p_tipi)
 prova('schema a rotazione e copia della settimana dalla pagina', p_schema_copia)
 prova('Excel del mese: foglio, totali, elenco, filtro per area', p_excel)

@@ -253,7 +253,8 @@ adesso*, oppure il Setup nuovo a mano.
 **Da dove arrivano.** Dalle versioni pubblicate su GitHub, nel progetto
 `https://github.com/number959/gestionale-agende-versioni`: è l'indirizzo predefinito, già
 scritto nel programma, e alla clinica non c'è niente da impostare. Il programma prende
-sempre l'ultima versione pubblicata (`…/releases/latest/download/`). In *Configura →
+sempre la versione segnata come ultima («latest») su GitHub (`…/releases/latest/download/`), non
+semplicemente l'ultima pubblicata. In *Configura →
 Aggiornamenti → Da dove arrivano* se ne può scrivere un altro:
 
 - l'indirizzo di un altro progetto su GitHub, `https://github.com/<utente>/<progetto>`;
@@ -308,24 +309,33 @@ A ogni versione:
 3. in ciascuna cartella `CREA_EXE.bat` e `CREA_SETUP.bat`: in `Output` ci sono il Setup e
    il file delle versioni (`GestionaleAgende-setup.exe` e `aggiornamento.json`;
    nell'animata `GestionaleAgende-animata-setup.exe` e `aggiornamento-animata.json`);
-4. la versione su GitHub con i quattro file: dalla pagina del progetto, *Releases → Create
+4. la versione su GitHub con i quattro file, **senza segnarla come ultima** (dal 21/11/2026):
+   con l'automazione «Pubblica una versione» (`.github/workflows/pubblica.yml`), che ha la
+   casella «ultima» spenta per difetto; oppure dalla pagina del progetto, *Releases → Create
    a new release* (tag `v1.10`, titolo *Gestionale Agende 1.10*, i quattro file trascinati
-   nel riquadro dei file, *Set as the latest release* lasciato acceso, *Publish release*),
-   oppure con la riga di comando `gh`:
+   nel riquadro dei file, *Set as the latest release* spento, *Publish release*); oppure con
+   la riga di comando `gh`:
 
    ```
-   gh release create v1.10 --repo number959/gestionale-agende-versioni --latest ^
+   gh release create v1.10 --repo number959/gestionale-agende-versioni --latest=false ^
      --title "Gestionale Agende 1.10" --notes "Le fasce di ogni ambulatorio" ^
      gestionale\Output\GestionaleAgende-setup.exe gestionale\Output\aggiornamento.json ^
      gestionale-animata\Output\GestionaleAgende-animata-setup.exe gestionale-animata\Output\aggiornamento-animata.json
    ```
 
-Entro sei ore il gestionale della clinica la trova da solo; con *Controlla adesso*,
-subito. Il file delle versioni va pubblicato insieme al suo Setup: se il Setup non
-corrisponde all'impronta scritta nel file, il programma non lo installa. Per controllare la
-pubblicazione basta aprire nel browser
-`https://github.com/number959/gestionale-agende-versioni/releases/latest/download/aggiornamento.json`:
-deve dire la versione nuova.
+5. subito dopo, il controllo: nel browser
+   `https://github.com/number959/gestionale-agende-versioni/releases/latest/download/aggiornamento.json`
+   deve dire ancora la versione di prima (la clinica non scarica niente di nuovo), e
+   `…/releases/download/v1.10/aggiornamento.json` la versione nuova (`pubblica.yml` li
+   controlla da solo);
+6. nel momento scelto da Giovanni, a fine giornata e con lui raggiungibile, la versione si
+   segna ultima dalla sua pagina su GitHub (*Edit*, *Set as the latest release*, *Update
+   release*); da lì l'indirizzo di `latest` deve dire la versione nuova.
+
+Il programma della clinica scarica solo la versione segnata ultima: entro sei ore da quel
+momento la trova da solo; con *Controlla adesso*, subito. Il file delle versioni va
+pubblicato insieme al suo Setup: se il Setup non corrisponde all'impronta scritta nel file,
+il programma non lo installa.
 
 ## Primo avvio
 
@@ -2386,16 +2396,17 @@ python prove_143.py          # 19 prove sulle funzioni della 1.4.3
 python prove_145.py          # 21 prove: le segnalazioni della revisione esterna, confermate e respinte
 python prove_146.py          # 11 prove: la seconda parte della revisione
 python prove_guida.py        # 3 prove (con centinaia di controlli) sulla guida e sul menu a gruppi
-python prove_15.py           # 69 prove sulla 1.5: campi del paziente, email automatiche e per medico, invio con un
+python prove_15.py           # 72 prove sulla 1.5: campi del paziente, email automatiche e per medico, invio con un
                              # finto Gmail (STARTTLS vero), WhatsApp con una finta Meta, promemoria, logo nuovo, versione
 python prove_17.py           # 33 prove sulla 1.7: codice fiscale (controllo, omocodia, calcolo e lettura confrontati
                              # con python-codicefiscale su migliaia di casi), luoghi, scheda, prenotazione,
                              # aggiornamento dello schema, Controllo dei codici fiscali, importazione, unione
-python prove_18.py           # 34 prove sulla 1.8: turni del personale (regole contro oracoli scritti a parte, conti,
+python prove_18.py           # 35 prove sulla 1.8: turni del personale (regole contro oracoli scritti a parte, conti,
                              # schema, copia, annulla e rifai, protezioni, 260 modifiche a caso con invarianti,
                              # aggiornamento dalla 8), registrazione del numero WhatsApp con una finta Meta e, dalla
                              # 1.12.1, le notti del cambio dell'ora (le date e i minuti veri confrontati con il fuso
-                             # di Roma di Python su ogni giorno dal 2024 al 2039 e su 41.000 coppie di orari)
+                             # di Roma di Python su ogni giorno dal 2024 al 2039 e su 41.000 coppie di orari) e,
+                             # dal 21/11/2026, la domanda «Eliminare…?» con l'apostrofo nel nome
 python prove_19.py           # 27 prove sulla 1.9: Dove si fa (lettura del file in tanti modi e con i suoi errori,
                              # importazione e versioni nuove, ricerca contro un oracolo su 1200 prestazioni
                              # inventate, pagine, registro, statistiche, protezioni, aggiornamento dalla 9)
@@ -2432,9 +2443,10 @@ python prove_16_browser.py http://127.0.0.1:5001   # 19 controlli: finestra dei 
 python prove_17_browser.py http://127.0.0.1:5001   # 16 controlli: codice fiscale mentre si scrive, calcolo,
                              # suggerimenti del luogo, prenotazione, pagina di controllo (salva pazienti di prova)
 python prove_tendine_browser.py http://127.0.0.1:5001   # 152 controlli: le tendine sopra la pagina e le notifiche, a 1366x657
-python prove_18_browser.py http://127.0.0.1:5001   # 56 controlli sui turni: griglia, tastiera (anche due codici scritti
+python prove_18_browser.py http://127.0.0.1:5001   # 59 controlli sui turni: griglia, tastiera (anche due codici scritti
                              # di seguito senza aspettare), annulla e rifai, scelta del turno (dove si apre, mai
-                             # coperta), schema, giorno a ore, schermo stretto, movimento ridotto
+                             # coperta), schema, giorno a ore, schermo stretto, movimento ridotto, la domanda prima
+                             # di eliminare una persona con l'apostrofo nel nome («Annulla» la lascia)
 python prove_19_browser.py http://127.0.0.1:5001   # 37 controlli su Dove si fa: ricerca mentre si scrive, frecce, scheda della
                              # struttura, messaggio cambiato, Copia, WhatsApp e Stampa, registro con Annulla, paziente,
                              # ricerca rapida, schermo stretto, tema scuro (segna pazienti indirizzati di prova)
@@ -2913,6 +2925,8 @@ falliscono, cioè il difetto c'era davvero.
 | La Gmail nelle email ai pazienti (richiesta di Giovanni, 12 novembre 2026) | Le informative allegate e la firma delle email dicevano medicinamigliorenapolisrl@gmail.com, e le risposte dei pazienti andavano lì | 1.12.6: informative nuove con segreteria@clinicaposillipolongevity.it; all'avvio, una volta sola, `servizi.email_segreteria` cambia struttura, informative di prima (dall'impronta) e testi; `a_email_segreteria` |
 | Plurale rimasto con una stanza sola (seconda revisione della 1.12.6) | «La stanza è stata occupata», ma «6 h di turno nelle stanze» e la nota «i turni dei medici nelle stanze»; nel riepilogo live «1 di 1 stanze», «Le stanze adesso», «nelle stanze» (questo già da prima) | `di_turno` in `PAROLE_UNA`, la nota con le parole della parte, il riepilogo live al singolare con una stanza; `p_periodo_parole_una_stanza`; `prove_installato.py` accetta «La sala» e «La stanza» |
 | Riepilogo del periodo, seconda revisione (1.12.2) | I turni di una stanza disattivata contavano anche dopo lo spegnimento; la sola coda dopo la mezzanotte non la faceva comparire; una visita fino alle 24:00 lasciava una riga del medico a zero; un giorno chiuso con soli disdetti sembrava aperto; le prove dell'Excel avevano solo ore intere | Turni della stanza spenta fino al suo ultimo appuntamento; la coda la fa comparire; niente coda alle 24:00; i disdetti non aprono il giorno; Excel provato cella per cella con un terzo d'ora |
+| La domanda «Eliminare…?» con l'apostrofo nel nome (21/11/2026) | Con una persona del personale o un tariffario dal nome come «D'Esempio» la domanda non compariva e il modulo partiva lo stesso: la persona (se non aveva turni) o il tariffario si cancellavano subito. La causa: il nome entrava nel testo di JavaScript dentro l'attributo `onsubmit` con l'escape dell'HTML (`&#39;`), il browser rimetteva l'apostrofo e l'apostrofo chiudeva il testo. Lo stesso con una barra rovesciata o un a capo nel nome | Il testo della domanda passa da `tojson`, con l'attributo fra apici singoli, come già nella scheda di Anagrafiche; per i nomi normali la domanda è quella di prima. Le altre domande con valori dentro non possono rompersi (numeri, date, codici dei turni con sole lettere e cifre, testi fissi). Prove: `p_domanda_elimina` in `prove_18.py` e `e_domanda_elimina` in `prove_tariffari.py` (l'attributo letto come fa il browser deve essere `return confirm(<JSON>)` con il testo atteso, anche con nomi come «Esempio\uZ»), e nel browser `prove_18_browser.py` e `prove_tariffari_browser.py` («Elimina» fa la domanda, «Annulla» lascia la persona e il tariffario, «OK» li toglie); con i modelli di prima falliscono |
+| Una prova di `prove_15.py` che falliva a caso (21/11/2026) | `i_thread` accende il thread degli invii, che resta acceso fino alla fine delle prove; l'area dell'indirizzo della segreteria (1.12.6), aggiunta dopo, a volte trovava la sua email già partita dal thread e `j_segreteria_ovunque` falliva. Un difetto della prova, non del programma | L'area della 1.12.6 spostata prima di quella del thread, che resta l'ultima (lo dice una nota nel file); le prove sono le stesse, 72. Dieci giri di fila tutti verdi; con mezzo secondo di attesa dopo la prenotazione l'ordine di prima fallisce, quello nuovo no |
 
 Nota sullo schema: `create_all` crea le tabelle mancanti ma non modifica quelle già
 esistenti. Le colonne nuove le aggiunge `aggiorna_database` con `ALTER TABLE`, al primo

@@ -395,28 +395,34 @@ serve disinstallare.
 3. In ciascuna cartella `CREA_EXE.bat` e `CREA_SETUP.bat` (o `strumenti/wine/costruisci.sh`),
    poi le prove sul programma installato sopra la versione precedente.
 4. Una release nel progetto delle versioni, con i quattro file di `Output` delle due
-   cartelle (il tag è la versione con una "v" davanti) e segnata come ultima ("latest"); il
-   workflow `pubblica.yml` ci mette anche il PDF della guida, generato dal gestionale di prova:
+   cartelle (il tag è la versione con una "v" davanti), **non** segnata come ultima ("latest"):
+   dal 21 novembre 2026 il workflow `pubblica.yml` ha la casella «ultima» spenta per difetto (va
+   lasciata così; si accende solo per rifare i file di una release già segnata ultima) e ci mette
+   anche il PDF della guida, generato dal gestionale di prova:
 
    ```
-   gh release create v1.10 --repo number959/gestionale-agende-versioni --latest \
+   gh release create v1.10 --repo number959/gestionale-agende-versioni --latest=false \
      --title "Gestionale Agende 1.10" --notes "…" \
      gestionale/Output/GestionaleAgende-setup.exe gestionale/Output/aggiornamento.json \
      gestionale-animata/Output/GestionaleAgende-animata-setup.exe gestionale-animata/Output/aggiornamento-animata.json
    ```
 
    Se `gh` non può scrivere in quel progetto, la release la fa Giovanni dalla pagina
-   GitHub (Releases → Draft a new release), con gli stessi quattro file. Il gestionale
-   della clinica la trova da solo (ogni sei ore, o con «Controlla adesso») all'indirizzo
-   predefinito, che legge sempre l'ultima release:
-   `https://github.com/number959/gestionale-agende-versioni/releases/latest/download/`.
+   GitHub (Releases → Draft a new release, *Set as the latest release* spento), con gli stessi
+   quattro file. Il gestionale della clinica legge sempre l'ultima release, all'indirizzo
+   predefinito `https://github.com/number959/gestionale-agende-versioni/releases/latest/download/`:
+   la trova da solo (ogni sei ore, o con «Controlla adesso») solo da quando è segnata ultima.
    Si pubblica solo dal ramo principale `ccr-07f8e160-7j5lup`: `pubblica.yml` si ferma da solo su ogni altro ramo (il
    lavoro sui moduli sta in `ccr-moduli`, che non deve mai arrivare alla clinica da solo).
    Mentre `pubblica.yml` gira, niente push di modifiche a `.github/workflows/`: il ramo di lavoro
    è il ramo principale, e GitHub rifiuta la release (HTTP 403) se il commit di partenza ha le
    automazioni diverse dal ramo (vedi `../PASSAGGIO_DI_CONSEGNE.md`, *Pubblicare senza un PC*).
-5. Controllo: `curl -sL` di quell'indirizzo + `aggiornamento.json` deve dare la versione
-   nuova, e l'impronta del Setup scaricato da lì deve essere quella scritta nel file.
+5. Controllo, subito dopo: `curl -sL` di quell'indirizzo + `aggiornamento.json` deve dare ancora
+   la versione di prima (`pubblica.yml` lo controlla da solo); `…/releases/download/v1.10/aggiornamento.json`
+   deve dare la versione nuova, e l'impronta del Setup scaricato da lì deve essere quella scritta nel file.
+6. Nel momento scelto da Giovanni (a fine giornata, con lui raggiungibile) la release si segna ultima
+   dalla sua pagina su GitHub (*Edit*, *Set as the latest release*, *Update release*); poi l'indirizzo di
+   `latest` deve dare la versione nuova.
 
 Per passare i file a mano dove c'è un limite di dimensione (una chat):
 `python strumenti/consegna.py <cartella con i file> <cartella di uscita>` li divide in

@@ -6,6 +6,8 @@
   listino con un medico senza tariffario, un importo scritto a mano resta;
 - «Carica tariffario» con un Excel inventato: l'anteprima propone il medico e la prestazione, si salva, il prezzo si
   propone nella prenotazione; poi si elimina, e i dati di prova restano come prima;
+- dal 21/11/2026: un tariffario nuovo con l'apostrofo nel nome, «Elimina il tariffario» fa la domanda, «Annulla» lo
+  lascia, «OK» lo toglie;
 - la stampa del tariffario; nessun errore JavaScript."""
 import os
 import sys
@@ -43,7 +45,9 @@ with sync_playwright() as p:
     pg = br.new_page(viewport={'width': 1366, 'height': 900})
     err = []
     pg.on('pageerror', lambda e: err.append(str(e)))
-    pg.on('dialog', lambda d: d.accept())
+    domande = []
+    annulla = [False]          # True: alla prossima domanda si risponde «Annulla»
+    pg.on('dialog', lambda d: (domande.append(d.message), d.dismiss() if annulla[0] else d.accept()))
     pg.goto(B + '/cassa/tariffari')
     righe = {pg.locator('tr[data-medico]').nth(i).locator('td').first.inner_text().strip():
              pg.locator('tr[data-medico]').nth(i).get_attribute('class') for i in range(pg.locator('tr[data-medico]').count())}
@@ -106,6 +110,28 @@ with sync_playwright() as p:
     pg.click('button:has-text("Elimina il tariffario")')
     pg.wait_for_load_state()
     ok('eliminato: non c\'è più', pg.locator('a', has_text='Dott. Guarino').count() == 0, pg.url)
+    # 21/11/2026: con l'apostrofo nel nome la domanda non compariva e il tariffario si cancellava subito
+    pg.goto(B + '/cassa/tariffari')
+    pg.fill('section[data-guida="tariffari-nuovo"] input[name="nome"]', "Tariffario dell'esempio")
+    with pg.expect_navigation():
+        pg.click('section[data-guida="tariffari-nuovo"] button[type=submit]')
+    scheda = pg.url
+    n = len(domande)
+    annulla[0] = True
+    pg.click('button:has-text("Elimina il tariffario")')
+    pg.wait_for_timeout(500)
+    annulla[0] = False
+    ok("«Tariffario dell'esempio»: «Elimina il tariffario» fa la domanda con il nome intero", domande[n:] == [
+        "Eliminare il tariffario «Tariffario dell'esempio»? Le prenotazioni già fatte restano con i loro prezzi."],
+       domande[n:])
+    r = pg.goto(scheda)
+    resta = r.status == 200 and pg.input_value('#nome') == "Tariffario dell'esempio"
+    ok('... e con «Annulla» il tariffario resta', resta, r.status)
+    if resta:
+        with pg.expect_navigation():
+            pg.click('button:has-text("Elimina il tariffario")')
+    ok('... con «OK» si elimina (i dati di prova restano come prima)', resta and pg.request.get(scheda).status == 404,
+       pg.url)
     pg.set_viewport_size({'width': 390, 'height': 844})
     pg.goto(B + '/cassa/tariffari')
     ok('sul telefono la pagina dei tariffari non scorre di lato',

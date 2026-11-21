@@ -55,7 +55,8 @@
     </div>
   </form>
   {% if p %}
-  <form method="post" class="elimina-persona" onsubmit="return confirm('Eliminare {{ p.etichetta|e }}?')">
+  {#- il testo passa da tojson, fra apici singoli: un nome con l'apostrofo (D'Esempio) non rompe la domanda #}
+  <form method="post" class="elimina-persona" onsubmit='return confirm({{ ("Eliminare %s?" % p.etichetta)|tojson }})'>
     <input type="hidden" name="azione" value="elimina">
     <button class="bottone con-icona pericolo" type="submit">{{ icona('trash-2') }}Elimina</button>
     <span class="aiuto">Solo se non ha turni: altrimenti si toglie la spunta «In servizio».</span>

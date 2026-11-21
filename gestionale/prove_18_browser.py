@@ -12,6 +12,8 @@ avviato con i dati di prova (strumenti/demo.py):
 - giorno a ore: scelta sulla riga, «Turno a...», Annulla dopo il ricaricare;
 - tipi di turno e scheda di una persona; Oggi; schermo stretto; movimento
   ridotto; nessun errore JavaScript;
+- dal 21/11/2026: una persona con l'apostrofo nel nome (D'Esempio Anna),
+  «Elimina» fa la domanda, «Annulla» la lascia, «OK» la toglie;
 - dalla 1.11: Ctrl+Z mentre si scrive un codice lo lascia perdere, e mentre
   una modifica si sta ancora salvando (programma lento) annulla quella, nella
   griglia e nella vista del giorno; con il filtro per area il codice scritto
@@ -62,7 +64,8 @@ with sync_playwright() as p:
     pg.on('pageerror', lambda e: err.append(str(e)))
     pg.on('console', lambda m: err.append(m.text) if m.type == 'error' else None)
     conferme = []
-    pg.on('dialog', lambda d: (conferme.append(d.message), d.accept()))
+    annulla = [False]          # True: alla prossima domanda si risponde «Annulla»
+    pg.on('dialog', lambda d: (conferme.append(d.message), d.dismiss() if annulla[0] else d.accept()))
 
     def quieta():
         pg.wait_for_function("() => !document.querySelector('.in-attesa')", timeout=8000)
@@ -446,6 +449,32 @@ with sync_playwright() as p:
     nascosto = pg.locator('.campo-medico').is_hidden()
     pg.locator('.ruolo-opzione', has_text='Medico').click()
     ok('scheda persona: il medico dell\'agenda solo per i medici', nascosto and pg.locator('.campo-medico').is_visible())
+    # 21/11/2026: con l'apostrofo nel nome la domanda «Eliminare…?» non compariva e la persona spariva subito
+    pg.goto(B + '/personale/persone/nuova?ruolo=OSS')
+    pg.fill('#cognome', "D'Esempio")
+    pg.fill('#nome', 'Anna')
+    with pg.expect_navigation():
+        pg.click('.modulo-persona button.primario')
+    with pg.expect_navigation():
+        pg.locator('table.elenco-persone tr', has_text="D'Esempio Anna").last.locator('a', has_text='Modifica').click()
+    scheda = pg.url
+    n = len(conferme)
+    annulla[0] = True
+    pg.click('.elimina-persona button[type=submit]')
+    pg.wait_for_timeout(500)
+    annulla[0] = False
+    ok("D'Esempio Anna: «Elimina» fa la domanda con il nome intero", conferme[n:] == ["Eliminare D'Esempio Anna?"],
+       conferme[n:])
+    r = pg.goto(scheda)
+    resta = r.status == 200 and pg.input_value('#cognome') == "D'Esempio"
+    ok('... e con «Annulla» la persona resta', resta, r.status)
+    eliminata = ''
+    if resta:
+        with pg.expect_navigation():
+            pg.click('.elimina-persona button[type=submit]')
+        eliminata = pg.inner_text('.avvisi') if pg.locator('.avvisi').count() else ''
+    ok('... con «OK» si elimina (i dati di prova restano come prima)', 'Persona eliminata' in eliminata and
+       pg.request.get(scheda).status == 404, eliminata)
     pg.goto(B + '/oggi')
     ok('Oggi: la scheda «In servizio oggi»', pg.locator('.in-servizio').count() == 1)
 

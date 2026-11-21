@@ -42,7 +42,8 @@
     <div class="campo"><label for="note">Note per i pazienti (in fondo alla stampa)</label><textarea id="note" name="note" rows="3" maxlength="4000">{{ t.note }}</textarea></div>
     <div class="azioni"><button class="bottone primario" type="submit" name="azione" value="salva">Salva il tariffario</button></div>
   </form>
-  <form method="post" class="azioni" onsubmit="return confirm('Eliminare il tariffario «{{ t.nome }}»? Le prenotazioni già fatte restano con i loro prezzi.')">
+  {#- il testo passa da tojson, fra apici singoli: un nome con l'apostrofo non rompe la domanda #}
+  <form method="post" class="azioni" onsubmit='return confirm({{ ("Eliminare il tariffario «%s»? Le prenotazioni già fatte restano con i loro prezzi." % t.nome)|tojson }})'>
     <button class="bottone stato-disdetto" type="submit" name="azione" value="elimina">Elimina il tariffario</button>
   </form>
 </div>

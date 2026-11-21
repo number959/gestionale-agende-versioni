@@ -9,16 +9,19 @@
   stesso nome, l'annullamento, il file che non c'e' piu';
 - il prezzo proposto nella prenotazione: convenzione, poi tariffario del medico, poi listino; i tariffari spenti e
   i pacchetti non contano;
-- la scheda (cambia, aggiungi, togli, errori), il controllo per medico, la stampa, il riquadro nella scheda del
-  medico, le protezioni in Anagrafiche, lo schema 12.
+- la scheda (cambia, aggiungi, togli, errori), la domanda prima di eliminarla (anche con l'apostrofo nel nome), il
+  controllo per medico, la stampa, il riquadro nella scheda del medico, le protezioni in Anagrafiche, lo schema 12.
 
 Nomi e prezzi inventati."""
+import json
 import logging
 import os
+import re
 import shutil
 import sys
 import tempfile
 import traceback
+from html import unescape
 from io import BytesIO
 
 CARTELLA = os.path.dirname(os.path.abspath(__file__))
@@ -401,6 +404,38 @@ def e_scheda():
     assert r.status_code == 302 and '/cassa/tariffari/' in r.headers['Location']
 
 
+def domanda_del_modulo(corpo):
+    """Il testo della domanda dell'unico modulo della pagina con onsubmit, letto come fa il browser: l'attributo
+    finisce all'apice uguale a quello con cui comincia, poi si toglie l'escape dell'HTML; il codice che resta deve
+    essere proprio return confirm(<JSON>)."""
+    valori = [m.group(1) if m.group(1) is not None else m.group(2)
+              for tag in re.findall(r'''<form\b(?:[^>"']|"[^"]*"|'[^']*')*>''', corpo)
+              for m in re.finditer(r'''\sonsubmit\s*=\s*(?:"([^"]*)"|'([^']*)')''', tag)]
+    assert len(valori) == 1, valori
+    codice = unescape(valori[0])
+    m = re.fullmatch(r'return confirm\((.*)\)', codice, re.S)
+    assert m, 'non è return confirm(...): %s' % codice
+    try:
+        return json.loads(m.group(1))
+    except ValueError:
+        raise AssertionError('il testo della domanda non è JSON, nel browser si rompe: %s' % codice)
+
+
+def e_domanda_elimina():
+    """21/11/2026: con l'apostrofo nel nome («Tariffario dell'esempio») la domanda «Eliminare il tariffario…?» non
+    compariva e il tariffario si cancellava subito (il browser rimetteva l'apostrofo al posto di &#39; e
+    l'apostrofo chiudeva il testo di JavaScript). Ora il testo arriva da tojson; per i nomi normali è quello di
+    prima."""
+    S, I, C = mondo()
+    for nome in ("Tariffario dell'esempio", "Dott.ssa D'Esempio & C. «gruppo \"prova\"»", 'Tariffario Esempio\\uZ',
+                 'Dott. Esempietti'):
+        r = C.post('/cassa/tariffari', data={'azione': 'nuovo', 'nome': nome}, headers=CASA)
+        assert r.status_code == 302 and '/cassa/tariffari/' in r.headers['Location'], (nome, r.status_code)
+        atteso = 'Eliminare il tariffario «%s»? Le prenotazioni già fatte restano con i loro prezzi.' % nome
+        domanda = domanda_del_modulo(testo(C.get(r.headers['Location'])))
+        assert domanda == atteso, (domanda, atteso)
+
+
 def e_controllo():
     S, I, C = mondo()
     tariffario(S, 'Dott. Esempietti', [I['Esempietti']], [('Gastroscopia', I['EGDS'], 21000, '')])
@@ -497,6 +532,7 @@ def e_prezzo_in_anagrafiche():
 
 prova('scheda: cambia, aggiungi, togli, medici, note; errori senza cambiare niente; spento; stampa; elimina; nuovo',
       e_scheda)
+prova('la domanda «Eliminare il tariffario…?» intera anche con l\'apostrofo nel nome (21/11/2026)', e_domanda_elimina)
 prova('controllo dei medici (attivo, senza collegamenti, spento, nessuno, doppi prezzi, senza medici), riquadro nella '
       'scheda del medico, protezioni in Anagrafiche, collegamenti', e_controllo)
 prova('schema 12: tabelle nuove, aggiornamento dalla 11 con la copia di sicurezza', e_schema)

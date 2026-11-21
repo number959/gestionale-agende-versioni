@@ -9,10 +9,12 @@ name: Pubblica una versione
 on:
   workflow_dispatch:
     inputs:
+      # Spenta per difetto (21/11/2026): la release nasce senza essere l'ultima, quindi il programma della clinica
+      # non la scarica ancora; la si segna ultima dalla pagina della release su GitHub nel momento scelto da Giovanni.
       ultima:
-        description: "Segnare la release come ultima (quella che il programma scarica)"
+        description: "Segnare subito la release come ultima (quella che il programma della clinica scarica)"
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: write
@@ -199,7 +201,10 @@ jobs:
             curl -sSL "https://github.com/$GITHUB_REPOSITORY/releases/download/v$V/$f" -o "scaricato-$f"
             python3 -c "import json,sys; m=json.load(open('scaricato-$f')); assert m['versione']=='$V', m['versione']; print('$f ->', m['versione'], m['file'])"
           done
+          curl -sSL "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/aggiornamento.json" -o ultima.json
           if [ "${{ inputs.ultima }}" = "true" ]; then
-            curl -sSL "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/aggiornamento.json" -o ultima.json
             python3 -c "import json; m=json.load(open('ultima.json')); assert m['versione']=='$V', 'latest dice %s' % m['versione']; print('latest ->', m['versione'])"
+          else
+            # «ultima» spenta: latest deve dire ancora la versione di prima, la clinica non scarica niente di nuovo
+            python3 -c "import json; m=json.load(open('ultima.json')); assert m['versione']!='$V', 'latest dice la versione nuova %s: il programma della clinica la scarica' % m['versione']; print('latest ->', m['versione'], '(la versione di prima: la $V si segna ultima dalla pagina della release)')"
           fi

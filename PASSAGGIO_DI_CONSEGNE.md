@@ -109,6 +109,13 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   qualsiasi cosa; il programma della clinica scarica solo l'ultima release, quindi niente del ramo dei moduli le può
   arrivare. Le correzioni fatte sul principale si portano anche lì, e quando i moduli sono pronti, provati e approvati da
   Giovanni il ramo si unisce al principale e da lì si pubblica la 1.13.
+- **Sul ramo principale, non ancora pubblicato (21 novembre 2026)**: Giovanni ha detto sì al piano per passi, prima la
+  base e poi i moduli («Ok su tutto, iniziamo per step senza fare tutto insieme»). Il primo passo è fatto: la domanda
+  «Eliminare…?» di persone del personale e tariffari, che con un apostrofo nel nome non compariva (la persona o il
+  tariffario si cancellavano subito); una prova di `prove_15.py` che falliva a caso; la casella «ultima» di
+  `pubblica.yml` spenta per difetto (vedi *Pubblicare una versione*). Sarà la 1.12.7, da pubblicare quando lo decide
+  Giovanni; il numero di versione non è ancora cambiato. Il piano per passi è nel documento «Interfaccia nuova: il
+  piano», il disegno del programma nella pagina «Mappa del Gestionale» (tutti e due su claude.ai).
 - **Versione 1.12.6, pubblicata il 13 novembre 2026** (via di Giovanni: «Pubblicala»): la release `v1.12.6`, segnata
   come ultima, con i due Setup, i due file delle versioni e il PDF della guida (60 pagine); l'indirizzo pubblico
   risponde «1.12.6» e le impronte dei Setup scaricati sono quelle dei file delle versioni. Dentro: il riepilogo del
@@ -561,6 +568,14 @@ Dalla 1.11 c'è la via senza PC: l'automazione `.github/workflows/pubblica.yml` 
 *Actions* del progetto (vedi *La 1.11*, «Pubblicare senza un PC con Python e Inno Setup»). I passi
 qui sotto sono quelli a mano.
 
+**La regola dal 21 novembre 2026: «ultima» spenta.** La release si pubblica **senza** segnarla come
+ultima ("latest"): il programma della clinica scarica solo l'ultima, quindi così non le arriva niente.
+Subito dopo si controlla che `latest` dica ancora la versione di prima. La si segna ultima più tardi,
+dalla pagina della release su GitHub, nel momento scelto da Giovanni: a fine giornata, con lui
+raggiungibile. In `pubblica.yml` la casella «ultima» di *Run workflow* è spenta per difetto e il
+controllo finale verifica proprio che `latest` dica ancora la versione di prima. Fino alla 1.12.6 ogni
+release è stata segnata ultima subito (la casella era accesa per difetto).
+
 1. Il numero nuovo va in `comune.py` (`VERSIONE`) e in `installer.iss` (`#define Versione`)
    di tutte e due le cartelle. In `novita.py` va una voce per ogni novità, con la guida
    che la spiega.
@@ -568,10 +583,10 @@ qui sotto sono quelli a mano.
 3. Eseguibile e Setup di tutte e due le versioni, provati.
 4. La release nel progetto delle versioni, con il tag `vX.Y`, contiene i quattro file
    `GestionaleAgende-setup.exe`, `aggiornamento.json`,
-   `GestionaleAgende-animata-setup.exe` e `aggiornamento-animata.json`. Si fa dalla pagina
-   *Releases → Create a new release* (lasciando acceso *Set as the latest release*) oppure
-   con
-   `gh release create vX.Y --repo number959/gestionale-agende-versioni --latest …`.
+   `GestionaleAgende-animata-setup.exe` e `aggiornamento-animata.json`, e non è segnata come
+   ultima. Si fa con `pubblica.yml` (casella «ultima» spenta, com'è già), dalla pagina
+   *Releases → Create a new release* (spegnendo *Set as the latest release*) oppure con
+   `gh release create vX.Y --repo number959/gestionale-agende-versioni --latest=false …`.
    I nomi dei file devono essere proprio questi.
 
    In una sessione nel cloud di Claude il `gh` è un altro (fa solo `gh api`) e il
@@ -580,7 +595,7 @@ qui sotto sono quelli a mano.
 
    ```
    gh api repos/number959/gestionale-agende-versioni/releases -f tag_name=vX.Y \
-     -f name="Gestionale Agende X.Y" -f body="…" -f make_latest=true     # risponde con "id"
+     -f name="Gestionale Agende X.Y" -f body="…" -f make_latest=false    # risponde con "id"
    curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Content-Type: application/octet-stream" \
      --data-binary @Output/GestionaleAgende-setup.exe \
      "https://uploads.github.com/repos/number959/gestionale-agende-versioni/releases/ID/assets?name=GestionaleAgende-setup.exe"
@@ -591,12 +606,17 @@ qui sotto sono quelli a mano.
    risultava gestito dal collegamento, ma il caricamento non era ancora stato provato. Nel
    progetto del codice i tag si creano allo stesso modo:
    `gh api repos/number959/gestionale-agende/git/refs -f ref=refs/tags/vX.Y -f sha=$(git rev-parse HEAD)`.
-5. Controllo:
+5. Controllo, subito dopo:
    `curl -sL https://github.com/number959/gestionale-agende-versioni/releases/latest/download/aggiornamento.json`
-   deve dire la versione nuova, e l'impronta del Setup scaricato da lì deve essere quella
-   scritta nel file.
+   deve dire ancora la versione **di prima**; `…/releases/download/vX.Y/aggiornamento.json` deve
+   dire la versione nuova, e l'impronta del Setup scaricato da lì deve essere quella scritta nel
+   file.
+6. Nel momento scelto da Giovanni (a fine giornata, con lui raggiungibile) la release si segna
+   ultima dalla sua pagina su GitHub: *Edit*, *Set as the latest release*, *Update release*. Poi lo
+   stesso `curl` di `latest` deve dire la versione nuova.
 
-Il programma della clinica la trova entro sei ore, o subito con «Controlla adesso».
+Il programma della clinica la trova entro sei ore da quando è segnata ultima, o subito con
+«Controlla adesso».
 
 ## Consegnare file a Giovanni
 
@@ -702,11 +722,18 @@ riferimenti sono rifiutati), e Giovanni non ha Git né Python sul suo PC. Per qu
 `.github/workflows/pubblica.yml`, un'automazione di GitHub («Actions») che fa tutto sui computer
 di GitHub: un Windows vero con Python 3.13 e Inno Setup rifà i passi di `CREA_EXE.bat` e
 `CREA_SETUP.bat` nelle due cartelle, controlla che l'impronta scritta in ogni `aggiornamento.json`
-sia quella del suo Setup, crea la release `vX.Y` (la versione è quella di `comune.py`) segnata come
-ultima, con le note prese da `NOTE-RELEASE-X.Y.md` se c'è, e alla fine scarica dall'indirizzo
-pubblico come fa il programma e controlla che dica la versione nuova. Si avvia a mano dalla pagina
+sia quella del suo Setup, crea la release `vX.Y` (la versione è quella di `comune.py`), segnata come
+ultima solo con la casella «ultima» accesa, con le note prese da `NOTE-RELEASE-X.Y.md` se c'è, e alla
+fine scarica i file della release nuova come fa il programma e controlla che dicano la versione nuova,
+poi guarda cosa dice `latest` (vedi sotto). Si avvia a mano dalla pagina
 *Actions* del progetto: «Pubblica una versione» → *Run workflow* → scegliere il ramo → *Run
 workflow*. Dura una decina di minuti. Se la release esiste già, i quattro file vengono sostituiti.
+Dal 21 novembre 2026 la casella «ultima» di *Run workflow* è spenta per difetto e va lasciata così: la
+release nasce senza essere l'ultima, il controllo finale verifica che `latest` dica ancora la versione
+di prima (e che il file della release nuova dica la versione nuova), e la release si segna ultima più
+tardi dalla sua pagina, quando lo decide Giovanni (vedi *Pubblicare una versione*). Solo per rifare i
+file di una release già segnata ultima la casella si accende: così resta l'ultima e il controllo
+finale lo verifica (spenta, il controllo sarebbe rosso, perché `latest` dice già quella versione).
 Mentre gira, sul ramo non si carica nessuna modifica ai file di `.github/workflows/`: il ramo di
 lavoro è anche il ramo principale del progetto, la release si crea sul commit da cui l'automazione è
 partita, e GitHub rifiuta di crearla («HTTP 403: Resource not accessible by integration») se quel
