@@ -87,10 +87,12 @@ with sync_playwright() as p:
         # subito, a volte partiva prima che Playwright seguisse la cornice e la prova non vedeva né la richiesta né il
         # 403 (la cornice finisce comunque sulla pagina d'errore di Chrome: il gestionale non si lascia aprire in una
         # cornice). Ora il modulo della cornice parte dopo un secondo, e senza il 403 visto si riprova, fino a tre
-        # volte. Se intanto il testo cambia, l'attacco è riuscito e la prova fallisce subito.
+        # volte. Se intanto il testo cambia, l'attacco è riuscito e la prova fallisce subito. Ogni tentativo apre un
+        # indirizzo suo: con lo stesso indirizzo e la stessa ancora il browser resta nella stessa pagina e l'attacco
+        # non riparte (lo ha trovato la revisione della 1.12.7); il server delle pagine d'attacco risponde a ogni percorso.
         for tentativo in range(3):
             risposte.clear()
-            pg.goto(ALTRO + '/attacco-%s.html#%s' % (modo, modo))      # pagina nuova, non solo l'ancora
+            pg.goto(ALTRO + '/attacco-%s-%d.html#%s' % (modo, tentativo + 1, modo))      # pagina nuova, non solo l'ancora
             try:
                 pg.wait_for_function("document.title === 'fatto' || location.href.indexOf('%s') === 0" % B,
                                      timeout=8000)

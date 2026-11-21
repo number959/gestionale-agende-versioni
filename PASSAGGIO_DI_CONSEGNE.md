@@ -117,7 +117,7 @@ strutture inventate di `strumenti/catalogo_prova.py`).
   «Aggiorna adesso» (14 controlli su 14) e 62 su 62 sul programma installato, e l'animata con il Setup sopra la 1.12.6
   animata (62 su 62). Si pubblica solo
   con il via di Giovanni («pubblicala»), con la casella «ultima» spenta; la release si segna ultima la sera, dalla sua
-  pagina, quando lo decide lui (vedi *La 1.12.7*). Il piano per passi è nel documento «Interfaccia nuova: il piano», il
+  pagina, quando lo decide lui (vedi *Pubblicare una versione*, passo 6). Il piano per passi è nel documento «Interfaccia nuova: il piano», il
   disegno del programma nella pagina «Mappa del Gestionale» (tutti e due su claude.ai).
 - **Versione 1.12.6, pubblicata il 13 novembre 2026** (via di Giovanni: «Pubblicala»): la release `v1.12.6`, segnata
   come ultima, con i due Setup, i due file delle versioni e il PDF della guida (60 pagine); l'indirizzo pubblico
@@ -622,7 +622,11 @@ release è stata segnata ultima subito (la casella era accesa per difetto).
    dire la versione nuova, e l'impronta del Setup scaricato da lì deve essere quella scritta nel
    file. Se `latest` dice già la versione nuova, la clinica la scaricherebbe: subito si rimette
    ultima la release di prima (dalla sua pagina: *Edit*, *Set as the latest release*, *Update
-   release*; oppure `gh release edit` con il tag di prima e `--latest`) e si rifà il controllo.
+   release*; oppure `gh release edit` con il tag di prima e `--latest`) e si rifà il controllo. Se intanto il programma
+   della clinica può averla già trovata (due minuti dopo l'accensione, poi ogni sei ore, o con «Controlla adesso»), l'ha
+   già scaricata e continua a proporla, con la notifica e il riquadro «Clicca qui per installare», fino al controllo
+   dopo: in clinica si apre *Configura → Aggiornamenti* e si preme «Controlla adesso», e notifica e riquadro spariscono.
+   Da una sessione nel cloud la release non si cambia: il rimedio lo fa Giovanni, da avvisare subito.
 6. Nel momento scelto da Giovanni (a fine giornata, con lui raggiungibile) la release si segna
    ultima dalla sua pagina su GitHub: *Edit*, *Set as a pre-release* spento (se era acceso), *Set
    as the latest release* acceso, *Update release*. Poi lo stesso `curl` di `latest` deve dire la

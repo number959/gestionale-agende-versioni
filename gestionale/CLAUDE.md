@@ -425,7 +425,9 @@ serve disinstallare.
    deve dare la versione nuova, e l'impronta del Setup scaricato da lì deve essere quella scritta nel file.
    Se `latest` dà già la versione nuova, subito si rimette ultima la release di prima (dalla sua pagina:
    *Edit*, *Set as the latest release*, *Update release*; oppure `gh release edit` con il tag di prima e
-   `--latest`) e si rifà il controllo.
+   `--latest`) e si rifà il controllo. Se intanto il programma della clinica può averla già trovata (due minuti dopo
+   l'avvio, ogni sei ore o con «Controlla adesso»), la propone ancora fino al controllo dopo: in clinica «Controlla
+   adesso» in *Configura → Aggiornamenti*.
 6. Nel momento scelto da Giovanni (a fine giornata, con lui raggiungibile) la release si segna ultima
    dalla sua pagina su GitHub (*Edit*, *Set as a pre-release* spento se era acceso, *Set as the latest
    release* acceso, *Update release*); poi l'indirizzo di `latest` deve dare la versione nuova.

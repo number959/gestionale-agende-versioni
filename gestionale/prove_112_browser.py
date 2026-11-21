@@ -38,9 +38,11 @@ TENDINE_MENU_APERTE = """() => [...document.querySelectorAll('nav.menu .gruppo')
 
 
 def apri_stampa_e_scarica():
-    """Apre «Stampa e scarica» come una persona: il mouse prima in un punto neutro della pagina, e nessuna tendina del
-    menu deve restare aperta da sola (21/11/2026: nell'animata, una volta sola in tutti i giri di quel giorno, la tendina
-    «Ambulatori» copriva il pulsante e il clic non arrivava; se succede, qui si vede quale tendina e perché)."""
+    """Apre «Stampa e scarica» come una persona: il mouse prima in un punto neutro della pagina, poi nessuna tendina del
+    menu deve essere aperta. 21/11/2026, nell'animata: la tendina «Stampa e scarica» entra con un'animazione, Playwright
+    fa scorrere la pagina per cliccarne una voce e lascia il mouse in cima alla finestra; al clic dopo la pagina torna in
+    cima, il gruppo «Ambulatori» del menu finisce sotto il mouse e apre la sua tendina sopra il pulsante (una volta in
+    tutti i giri di quel giorno; la causa l'ha trovata la revisione della 1.12.7). Con il mouse in (2, 500) non succede."""
     pg.mouse.move(2, 500)
     try:
         pg.wait_for_function('() => (%s)().length === 0' % TENDINE_MENU_APERTE, timeout=5000)
