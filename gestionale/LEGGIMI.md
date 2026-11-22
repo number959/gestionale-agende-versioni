@@ -3040,6 +3040,38 @@ Dove si fa (`prove_accessi.py`, una prova ciascuno); nel browser, su gestionali 
 senza il ritorno per «solo guardare» (il clic e la M mandano il salvataggio: 3 controlli su 50) e `veste.css` senza le
 regole nuove (la barra a 66 px, con il nome lungo già a 1366: 1 su 50).
 
+La verifica finale dell'unione (22/11/2026, indipendente: ogni numero rifatto da capo, senza fidarsi dei resoconti). Il
+ramo pulito e `allinea_animata.py` con 262 file comuni, tutti uguali. Riga per riga, ogni riga aggiunta da uno dei due
+lati (dal commit di partenza comune) c'è ancora, o è stata riscritta apposta (la riga dell'utente spostata nella barra in
+alto, il percorso «Configura → Aree e accessi», il conto delle pagine senza menu). Tutte le prove senza browser verdi
+nelle due cartelle (37 raccolte, in 792 e 796 s); nel browser tutte le raccolte con il lanciatore, 15 nella normale (1370
+controlli) e 17 nell'animata (1435), su un gestionale di prova per cartella; `prove_accessi_browser.py` (50) e
+`prove_cornice_browser.py` (652) due volte di fila sullo stesso gestionale di prova, dopo tutte le altre, verdi;
+`confronta_rami.py` dalle due cartelle: 610 pagine, nessuna diversa (206 solo per i cambiamenti approvati), la cornice
+senza differenze, 49 fogli e pagine che si stampano in PDF, nessuno diverso. Nell'animata il lanciatore va con il TMPDIR
+di sistema (`/tmp`): con uno più lungo, anche `/dev/shm/u1`, la cartella del giro porta il socket di Chromium oltre i
+107 caratteri (solo su Linux; su Windows Chromium non usa quel socket).
+
+Un giro a mano con le prese vere, nelle due cartelle: il gestionale di prova su 127.0.0.1, l'accesso acceso dalla
+linguetta *Configura → Aree e accessi*, due utenti inventati (Agenda da modificare e Pazienti da guardare; Turni e Sala da
+guardare e Cassa da modificare), ognuno con il suo browser e tutti e due insieme, dall'indirizzo della scheda di rete
+del PC (come da un altro PC). La porta del PC principale da lì non si apre; accesso e password nuova senza cornice; menu,
+linguette, tendina Aiuto e collegamenti dei tasti con le sole pagine che si aprono, seguiti tutti (tutti 200); la ricerca
+rapida solo a chi serve; i rifiuti in italiano, senza cornice, con «Torna alle pagine disponibili» verso la sua prima
+pagina; la scheda di un paziente in «solo guardare» (moduli spenti, il POST mandato a mano rifiutato); i Turni da
+guardare senza salvataggi; la nota del giorno salvata e vista dal PC; «Fai uscire» dal PC mentre l'altro resta dentro;
+Esci; il registro con i due nomi e l'indirizzo; spegnendo, la porta chiusa davvero. 47 controlli, tutti andati.
+
+Una prova caduta, e corretta: nell'animata, con il computer carico, `prove_110_browser.py` cadeva ogni tanto («"libero"
+accanto all'ora solo al passaggio del mouse»; riprodotto 1 volta su 12, mentre girava `confronta_rami.py`). La causa:
+le notifiche in basso a destra arrivano dopo la pagina (`gestionale.js` le chiede dopo 800 ms; nell'animata entrano da
+destra) e, con il menu a sinistra, la cella della prova (la prima fascia libera della sala endoscopia) sta anche sotto
+di loro: una notifica arrivata mentre il mouse era sulla cella la copriva e le toglieva il :hover (il browser diceva il
+mouse sulla notifica). Il programma non cambia (le notifiche vanno nella campanella con la tappa 3): la prova nasconde
+le notifiche prima del passaggio del mouse. Gemello: la prova di prima con una notifica messa sopra la cella subito dopo
+il passaggio del mouse cade sempre, quella nuova no; il mutante (il :hover della cella tolto) la fa cadere. Dopo la
+correzione 16 giri su 16 verdi mentre girava `confronta_rami.py`.
+
 ### Il pacchetto di prova (dalla tappa 1 della base)
 
 Il gestionale di oggi, da provare sul PC di Giovanni prima che arrivi in clinica, senza toccare il programma della

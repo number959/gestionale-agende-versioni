@@ -106,7 +106,11 @@ with sync_playwright() as p:
        altre and all(c['testo'] == 'libero' and 'con-ora' not in c['posa'] and c['righe'] == 2
                      and abs(c['posaAlta'] - (2 * riga - 2)) <= 1.5 for c in altre),
        [(c['testo'], c['righe'], c['posaAlta']) for c in altre][:3])
-    # "libero" compare passando con il mouse
+    # "libero" compare passando con il mouse. Le notifiche in basso a destra qui non c'entrano e si nascondono: arrivano
+    # dopo la pagina (gestionale.js le chiede dopo 800 ms, nell'animata entrano da destra) e, se arrivano mentre il mouse
+    # è sulla cella, la coprono e le tolgono il :hover. Con il menu a sinistra (tappa 2) la cella sta anche sotto di loro
+    # (verifica finale dell'unione: nell'animata, sotto carico, 1 giro su 12 cadeva così)
+    pg.add_style_tag(content='#notifiche { display: none !important; }')
     x = pg.locator('tbody.fasce-miste td.aperta a.posa.con-ora').first
     nascosto = x.locator('span').evaluate('e => getComputedStyle(e).display')
     x.hover()
