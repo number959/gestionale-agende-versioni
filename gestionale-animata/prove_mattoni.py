@@ -136,6 +136,17 @@ def gemello_scuro():
 COLORE_A_MANO = re.compile(r'#[0-9A-Fa-f]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklch|oklab|color-mix)\(|'
                            r'(?<![-\w])(?:white|black|red|blue|green|gray|grey|navy|silver|orange|purple|yellow)(?![-\w])',
                            re.I)
+# tutti i 148 nomi di colore del CSS (teal, crimson, gold…; Pillow li ha già in ImageColor.colormap, transparent no):
+# contano nel CSS (i fogli, i blocchi <style> e gli attributi style="…" dei modelli), non nel testo delle pagine
+from PIL import ImageColor  # noqa: E402
+NOME_DI_COLORE = re.compile(r'(?<![-\w])(?:%s)(?![-\w])' % '|'.join(sorted(ImageColor.colormap, key=len, reverse=True)), re.I)
+
+
+def css_del_modello(testo):
+    """Il CSS scritto in un modello: i blocchi <style> e gli attributi style="…"."""
+    blocchi = re.findall(r'<style[^>]*>(.*?)</style>', testo, re.S)
+    attributi = [a or b for a, b in re.findall(r'''\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')''', testo)]
+    return '\n'.join(blocchi + attributi)
 
 
 def testa_nuova(base):
@@ -147,10 +158,12 @@ def controlla_colori(file_):
     male = []
     for nome, testo in file_.items():
         if nome.endswith('.css'):
-            testo = L.senza_commenti(testo)
+            testo = css = L.senza_commenti(testo)
         else:
             testo = re.sub(r'\{#.*?#\}', '', testo, flags=re.S)
+            css = L.senza_commenti(css_del_modello(testo))
         male += ['%s: %s' % (nome, m.group(0)) for m in COLORE_A_MANO.finditer(testo)]
+        male += ['%s: %s' % (nome, m.group(0)) for m in NOME_DI_COLORE.finditer(css)]
     assert not male, 'colori scritti a mano: %s' % male[:8]
 
 
@@ -165,6 +178,11 @@ def gemello_colori():
     cade(controlla_colori, {'_pezzi.html': PEZZI + '<span style="color: red">x</span>'})
     cade(controlla_colori, {'catalogo': CATALOGO + '<i style="background: rgb(1, 2, 3)"></i>'})
     controlla_colori({'commenti.css': '/* #FFFFFF nei commenti va bene */ .v-x { color: var(--v-testo); }'})
+    # i colori con un nome qualsiasi del CSS, non solo i dodici più comuni; nel testo della pagina una parola resta parola
+    assert 'Teal' in cade(controlla_colori, {'veste.css': VESTE + '\n.v-x { border-color: Teal; }'})
+    assert 'crimson' in cade(controlla_colori, {'_pezzi.html': PEZZI + '<span style="background: crimson">x</span>'})
+    assert 'gold' in cade(controlla_colori, {'catalogo': CATALOGO + '<style>.cat-x { outline: 1px solid gold; }</style>'})
+    controlla_colori({'testo.html': '<p>Gold e Tan, nomi inventati: nel testo non sono colori</p>'})
 
 
 # ================================================================ lo strato in base.html
@@ -259,6 +277,26 @@ def classi_vecchie():
     return classi
 
 
+FUNZIONE_DI_SCELTA = re.compile(r':(not|is|where|matches|-webkit-any|-moz-any)\(')
+
+
+def tocca_un_pezzo(sel):
+    """Il selettore prende solo un pezzo v- (o quello che c'è dentro)? Un .v- dentro :not() non basta
+    (a:not(.v-bottone) prende tutti i collegamenti di oggi); dentro :is() e :where() conta solo se ce l'hanno tutte le
+    scelte (:where(.v-pagina, body) a prende anche quelli di oggi). Dentro :has() conta: la regola vale solo dove c'è
+    un pezzo nuovo, e le pagine di oggi non ne hanno."""
+    m = FUNZIONE_DI_SCELTA.search(sel)
+    if not m:
+        return '.v-' in sel
+    fine, livello = m.end(), 1
+    while livello and fine < len(sel):
+        livello += {'(': 1, ')': -1}.get(sel[fine], 0)
+        fine += 1
+    scelte = L._argomenti(sel[m.end():fine - 1])
+    al_posto = '.v-' if m.group(1) != 'not' and all(tocca_un_pezzo(s) for s in scelte) else ''
+    return tocca_un_pezzo(sel[:m.start()] + al_posto + sel[fine:])
+
+
 def controlla_prefisso(veste, vecchie):
     css = L.senza_commenti(veste)
     usate = set(re.findall(r'\.([a-zA-Z_][\w-]*)', re.sub(r'url\([^)]*\)|\d*\.\d+', '', css)))
@@ -273,7 +311,7 @@ def controlla_prefisso(veste, vecchie):
         for sel in re.split(r',(?![^(]*\))', regola):
             sel = sel.strip()
             if sel and not re.match(r'^(from|to|\d+%)$', sel):
-                assert '.v-' in sel, 'selettore senza un pezzo v-: %r' % sel
+                assert tocca_un_pezzo(sel), 'selettore senza un pezzo v-: %r' % sel
     return '%d classi, %d di oggi controllate' % (len(usate), len(vecchie))
 
 
@@ -286,6 +324,11 @@ def gemello_prefisso():
     assert 'senza il prefisso' in cade(controlla_prefisso, VESTE + '\n.voce { color: var(--v-testo); }', vecchie)
     assert 'senza un pezzo v-' in cade(controlla_prefisso, VESTE + '\nbody { margin: 0; }', vecchie)
     assert 'già usate' in cade(controlla_prefisso, VESTE, vecchie | {'v-scheda'})
+    # un .v- dentro :not() o in una sola scelta di :where() non basta: la regola prenderebbe i collegamenti di oggi
+    assert 'senza un pezzo v-' in cade(controlla_prefisso, VESTE + '\na:not(.v-bottone) { color: var(--v-testo); }', vecchie)
+    assert 'senza un pezzo v-' in cade(controlla_prefisso, VESTE + '\n:where(.v-pagina, body) a { color: var(--v-testo); }', vecchie)
+    assert tocca_un_pezzo(':where(.v-pagina) a:not([class])') and tocca_un_pezzo('.v-campo :is(input:not([type=radio]), select)')
+    assert tocca_un_pezzo('.v-barra-comandi:has(.aperto)') and not tocca_un_pezzo(':is(.v-scheda, .elenco) td')
     assert {'voce', 'bottone', 'elenco', 'passo', 'anim'} <= vecchie, 'le classi di oggi non si leggono più'
 
 
@@ -497,11 +540,11 @@ prova('gemello: un testo chiaro, il premuto schiarito in scuro e un colore senza
 prova('gettoni: ogni colore ha il suo valore scuro, solo a schermo', g_scuro)
 prova('gemello: un valore scuro tolto, il tema scuro anche in stampa', gemello_scuro)
 prova('nessun colore scritto a mano nei file nuovi (veste.css, _pezzi.html, catalogo, testa di base.html)', g_colori)
-prova('gemello: un colore a mano in ogni file nuovo si vede, nei commenti no', gemello_colori)
+prova('gemello: un colore a mano in ogni file nuovo si vede, anche con un nome (teal, crimson, gold); nei commenti e nel testo no', gemello_colori)
 prova('strato: fogli di oggi in @layer vecchio nell\'ordine di ogni variante, :root dentro, gettoni e veste fuori, fogli da stampare come prima', s_strato)
 prova('gemello: :root fuori, sotto-strati, ordine dell\'animata, veste nello strato, fogli nuovi nella carta', gemello_strato)
 prova('prefisso: solo classi v- in veste.css, nessuna classe di oggi pestata, nessun selettore senza un pezzo v-', p_prefisso)
-prova('gemello: classe senza prefisso, elemento nudo, classe v- già usata', gemello_prefisso)
+prova('gemello: classe senza prefisso, elemento nudo, classe v- già usata, .v- solo dentro :not() o in una scelta di :where()', gemello_prefisso)
 prova('pezzi con le variabili rigide: agganci di JavaScript, guida e prove, testo letto, icone non vuote', pz_pezzi)
 prova('gemello: aria-current tolto, icona che non esiste, striscia senza ul, tendina senza gruppo-comandi', gemello_pezzi)
 prova('icone dei pezzi e del catalogo tutte in _icone.html (chevron-down e id-card comprese)', i_icone)

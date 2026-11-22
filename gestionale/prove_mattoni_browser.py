@@ -60,6 +60,10 @@ def apri(tema, larghezza=1366, mutante=None):
     """La pagina del catalogo; mutante: 'strato' toglie lo strato (i fogli di oggi diventano normali <link>),
     'sopra' toglie da veste.css la regola che porta sopra la barra con la tendina aperta."""
     ctx = BROWSER.new_context(viewport={'width': larghezza, 'height': catalogo_pezzi.ALTEZZA}, reduced_motion='reduce')
+    # un mutante che non si applica si segna qui e si dice dopo il caricamento (RuntimeError: la prova finisce in
+    # ERRORE). Un assert dentro il gestore di route.fulfill arriverebbe solo a BROWSER.close() e fermerebbe tutta la
+    # raccolta senza resoconto: succede proprio quando la regola che il mutante toglie manca già davvero
+    non_applicati = []
     ctx.add_init_script("try { localStorage.setItem('gestionale-tema', '%s'); } catch (e) {}" % tema)
     if mutante == 'strato':
         def senza_strato(route):
@@ -68,7 +72,8 @@ def apri(tema, larghezza=1366, mutante=None):
             nuovo = SENZA_STRATO.sub(lambda m: ''.join('<link rel="stylesheet" href="/static/%s">' % f for f in
                                                        re.findall(r'/static/([\w.-]+)', m.group(0))), corpo)
             nuovo = nuovo.replace('<style>@layer vecchio { :root {', '<style>:root {').replace('} }</style>', '}</style>', 1)
-            assert nuovo != corpo, 'il mutante dello strato non si applica'
+            if nuovo == corpo:
+                non_applicati.append('strato')
             route.fulfill(response=r, body=nuovo)
         ctx.route(re.compile(r'.*/catalogo-pezzi(\?.*)?$'), senza_strato)
     if mutante == 'margini':
@@ -76,7 +81,8 @@ def apri(tema, larghezza=1366, mutante=None):
             r = route.fetch()
             corpo = r.text()
             nuovo = corpo.replace('  margin: 0;                         /* anche quando la barra è il modulo di oggi', '  /* ')
-            assert nuovo != corpo, 'il mutante dei margini non si applica'
+            if nuovo == corpo:
+                non_applicati.append('margini')
             route.fulfill(response=r, body=nuovo)
         ctx.route(re.compile(r'.*/static/veste\.css$'), senza_margini)
     if mutante == 'sopra':
@@ -84,7 +90,8 @@ def apri(tema, larghezza=1366, mutante=None):
             r = route.fetch()
             corpo = r.text()
             nuovo = corpo.replace('.v-barra-comandi:is(:hover, :focus-within), .v-barra-comandi:has(.aperto) { z-index: 41; }', '')
-            assert nuovo != corpo, 'il mutante della barra non si applica'
+            if nuovo == corpo:
+                non_applicati.append('sopra (la regola che porta sopra la barra aperta)')
             route.fulfill(response=r, body=nuovo)
         ctx.route(re.compile(r'.*/static/veste\.css$'), senza_sopra)
     p = ctx.new_page()
@@ -93,6 +100,9 @@ def apri(tema, larghezza=1366, mutante=None):
     p.on('console', lambda m: p.errori.append(m.text) if m.type == 'error' else None)
     p.goto(INDIRIZZO, wait_until='load')
     p.evaluate('document.fonts.ready')
+    if non_applicati:
+        ctx.close()
+        raise RuntimeError('il mutante non si applica: %s' % ', '.join(non_applicati))
     return ctx, p
 
 

@@ -2582,7 +2582,9 @@ Prima delle pagine nuove, i pezzi con cui si faranno, senza cambiare di un pixel
   chiaro e in scuro, e dice se la pagina scorre di lato o ha errori.
 - **Le prove.** `prove_mattoni.py` (20 prove, 10 con il loro mutante): contrasti di 36 coppie testo/fondo su 444 colori
   della struttura, in chiaro e in scuro (la più bassa 4,50, il testo bianco sul primario che `marchio.leggibile` porta
-  proprio a 4,5); valori scuri; nessun colore scritto a mano nei file nuovi; lo strato; il prefisso; i pezzi con le
+  proprio a 4,5); valori scuri; nessun colore scritto a mano nei file nuovi (anche con uno dei 148 nomi del CSS, come
+  `teal`); lo strato; il prefisso (un `.v-` solo dentro `:not()`, o in una sola scelta di `:where()`, non basta: lo ha
+  trovato la revisione della tappa); i pezzi con le
   variabili rigide; le icone; `euro()` su 3009 importi; `marchio.tema`; l'autoriparazione (`risorse_presenti` controlla
   anche `gettoni.css` e `veste.css`, e `prove_installato.py` li chiede). `prove_mattoni_browser.py` (nel giro nel
   browser) avvia da sé il catalogo e vuole i colori dei gettoni su campo, tendina, bottoni e collegamenti in chiaro e in

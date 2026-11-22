@@ -417,10 +417,11 @@ temporanea.
   (`--v-…`), il valore scuro sotto `@media screen { html.scuro { … } }` e la loro coppia testo/fondo in
   `strumenti/leggi_gettoni.py` (`COPPIE`): `prove_mattoni.py` le calcola tutte, per il colore della struttura predefinito,
   quelli delle prove e una griglia di 444 colori, e vuole almeno 4,5:1 in chiaro e in scuro. `veste.css`, `_pezzi.html` e
-  le pagine nuove usano solo `var(--v-…)`, mai un colore scritto. Le varianti del colore della struttura per la veste
+  le pagine nuove usano solo `var(--v-…)`, mai un colore scritto (nemmeno con un nome, come `teal`). Le varianti del colore della struttura per la veste
   (`tinta`, `bordo`, `profondo`, `testo`) le calcola `marchio.varianti_veste` dentro `marchio.tema`, senza cambiare le
   cinque di sempre (`prove_mattoni.py` ne tiene una copia ferma). Le classi nuove hanno il prefisso `v-` e nessuna è già
-  usata dalle pagine di oggi; i pezzi comuni stanno in `templates/_pezzi.html` (macro con `{% call %}`: il pezzo dà il
+  usata dalle pagine di oggi; ogni selettore di `veste.css` prende solo un pezzo `v-` (un `.v-` dentro `:not()`, o in
+  una sola delle scelte di `:is()` e `:where()`, non basta: `a:not(.v-bottone)` prenderebbe i collegamenti di oggi); i pezzi comuni stanno in `templates/_pezzi.html` (macro con `{% call %}`: il pezzo dà il
   contenitore, moduli, campi e bottoni restano scritti nella pagina) e tengono gli agganci di oggi (`primario`,
   `gruppo-comandi`, `apri-gruppo`, `tendina`, `ul.numeri` per l'animata). Un pezzo che tiene una classe di oggi riscrive in
   `veste.css` ogni proprietà che quella cambierebbe (margini compresi: `elenco`, `vuoto`, `ricerca`, `numeri`). Il
