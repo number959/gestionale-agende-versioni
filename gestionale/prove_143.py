@@ -7,6 +7,7 @@ Dove si puo' il risultato si confronta con un calcolo fatto a parte (un
 oracolo) e non con quello che il programma stesso ha prodotto."""
 import io
 from prove_dove import dove
+from prove_gemelli import manca
 import json
 import os
 import random
@@ -401,18 +402,30 @@ def lo_foglio():
     r = C.get('/lista-operatoria/%s?struttura=1' % MAR)
     t = testo(r)
     assert r.status_code == 200 and '2 interventi' in t, t[:300]
-    assert 'Rossi' in t and 'Bianchi' in t and 'Verdi' not in t and 'Gialli' not in t, 'pazienti sbagliati'
-    assert 'ROMANO' in t and 'Protesi: 350cc' in t and 'Medico anestesista: ROMANO' not in t, 'anestesista'
+    assert 'Rossi' in t and 'Bianchi' in t, 'pazienti sbagliati'
+    # i gemelli: la visita di Verdi e l'intervento disdetto di Gialli si vedono nella giornata dello stesso giorno
+    giornata = lambda: testo(C.get('/giorno/%s?struttura=1' % MAR))  # noqa: E731
+    manca(t, 'Verdi', dove_ce=giornata, perche='una visita in ambulatorio non va nella lista operatoria')
+    manca(t, 'Gialli', dove_ce=giornata, perche='un intervento disdetto non va nella lista operatoria')
+    assert 'ROMANO' in t and 'Protesi: 350cc' in t, 'anestesista'
+    # il gemello: l'agenda del chirurgo scrive tutti i campi in più con il loro nome, anestesista compreso
+    agenda = lambda: testo(C.get('/agenda-medico/%s?medico=%d' % (MAR, I['Borrelli'])))  # noqa: E731
+    manca(t, 'Medico anestesista: ROMANO', dove_ce=agenda,
+          perche='l\'anestesista ha la sua colonna, non si ripete fra gli altri campi')
     assert 'Notte' in t and 'DH' in t, 'degenza'
     riga_rossi = t.split('Rossi')[1].split('Sala B')[0]
-    assert 'Esami pre-operatori, Anestesista confermato' in riga_rossi and 'Consenso firmato' not in riga_rossi, riga_rossi
+    assert 'Esami pre-operatori, Anestesista confermato' in riga_rossi, riga_rossi
+    # il gemello: Bianchi non ha spuntato niente, nella sua riga «Consenso firmato» è fra le cose da completare
+    riga_bianchi = t.split('Bianchi')[1].split('stampato il')[0]
+    manca(riga_rossi, 'Consenso firmato', dove_ce=riga_bianchi, perche='la voce spuntata non è più da completare')
     assert t.index('Sala A') < t.index('Sala B'), 'ordine delle sale'
     assert 'letti la notte 1' in t
     t = testo(C.get('/lista-operatoria/%s?struttura=1' % (MAR + timedelta(days=1))))
     assert 'Nessun intervento in questo giorno' in t
     # la pagina del giorno della sala
     t = testo(C.get('/sala/%s?struttura=1' % MAR))
-    assert 'Rossi' in t and 'Verdi' not in t and '1/5' in t and 'In sala: Borrelli (1), Mancini (1)' in t, t[:800]
+    assert 'Rossi' in t and '1/5' in t and 'In sala: Borrelli (1), Mancini (1)' in t, t[:800]
+    manca(t, 'Verdi', dove_ce=giornata, perche='una visita in ambulatorio non va nella pagina Sala')
     t = testo(C.get('/sala/%s?struttura=1&giorni=7' % (MAR - timedelta(days=2))))
     assert 'Rossi' in t and '7 giorni' in t
 
@@ -454,8 +467,15 @@ def pl_oracolo():
         assert len(notti_calc[n]) == atteso, 'notte %s: %d invece di %d' % (n, len(notti_calc[n]), atteso)
     oltre_attese = [dal + timedelta(days=k) for k in range(10) if len(notti_calc[dal + timedelta(days=k)]) > 2]
     t = testo(C.get('/posti-letto?dal=%s&struttura=1' % dal))
-    assert t.count('non bastano') == 0  # la pagina non ha frasi, solo righe evidenziate
     assert html(C.get('/posti-letto?dal=%s&struttura=1' % dal)).count('<tr class="oltre') >= len(oltre_attese)
+    # la pagina non ha frasi, solo righe evidenziate. Il gemello (in fondo, perché toglie i letti): la stessa pagina
+    # con il numero di letti non indicato scrive «non bastano» nella spiegazione di come avere l'avviso
+    s = S()
+    s.get(Struttura, 1).posti_letto = None
+    s.commit()
+    s.close()
+    manca(t, 'non bastano', dove_ce=testo(C.get('/posti-letto?dal=%s&struttura=1' % dal)),
+          perche='i letti che non bastano si vedono dalle righe evidenziate, non da una frase')
     return '%d notti oltre i letti' % len(oltre_attese)
 
 
@@ -467,19 +487,20 @@ def pl_avvisi():
     r = C.post('/appuntamento', data=modulo_app(I, 'Sala B', 'Mancini', MAR + timedelta(days=1), degenza='NOTTE'))
     m = avvisi(C)
     assert r.status_code == 302 and 'servono 2 letti e ce ne sono 1' in m, m
+    # i «non c'è» di sotto hanno per gemello questo avviso, letto nello stesso modo: comincia con «Posti letto»
     # un DH non occupa letti: nessun avviso
     C.post('/appuntamento', data=modulo_app(I, 'Sala B', 'Mancini', MAR + timedelta(days=2), ora='12:00', degenza='DH'))
-    assert 'Posti letto' not in avvisi(C)
+    manca(avvisi(C), 'Posti letto', dove_ce=m, perche='un DH non occupa letti')
     # dopo il ricovero il letto e' libero
     C.post('/appuntamento', data=modulo_app(I, 'Sala B', 'Ferri', MAR + timedelta(days=3), ora='12:00', degenza='NOTTE'))
-    assert 'Posti letto' not in avvisi(C)
+    manca(avvisi(C), 'Posti letto', dove_ce=m, perche='dopo il ricovero il letto è libero')
     # letti non indicati: nessun controllo
     s = S()
     s.get(Struttura, 1).posti_letto = None
     s.commit()
     s.close()
     C.post('/appuntamento', data=modulo_app(I, 'Sala A', 'Ferri', MAR + timedelta(days=1), ora='14:00', degenza='NOTTE'))
-    assert 'Posti letto' not in avvisi(C)
+    manca(avvisi(C), 'Posti letto', dove_ce=m, perche='con i letti non indicati non si controlla')
 
 
 def pl_notifica_e_struttura():
@@ -613,7 +634,11 @@ def ri_oracolo():
     t = testo(C.get('/riepilogo-medici/%s' % aaaamm))
     assert all(m in t for m in atteso) and 'Manda per email a borrelli@example.it' in t
     r = C.get('/riepilogo-medici/%s?medico=%d' % (aaaamm, I['Mancini']))
-    assert 'Mancini' in testo(r) and 'Borrelli' not in testo(r).split('Scarica in Excel')[1]
+    assert 'Mancini' in testo(r)
+    # il gemello: la stessa parte della pagina di Borrelli ha il suo nome
+    di_borrelli = lambda: testo(C.get('/riepilogo-medici/%s?medico=%d' % (aaaamm, I['Borrelli'])))  # noqa: E731
+    manca(testo(r).split('Scarica in Excel')[1], 'Borrelli', perche='nella pagina di un medico solo lui',
+          dove_ce=lambda: di_borrelli().split('Scarica in Excel')[1])
     corpo = unquote(re.search(r'href="(mailto:[^"]+)"', html(C.get('/riepilogo-medici/%s?medico=%d' % (aaaamm, I['Borrelli'])))).group(1))
     assert 'Appuntamenti: %d' % atteso['Borrelli']['n'] in corpo and len(corpo) < 2100, corpo[:200]
     r = C.get('/riepilogo-medici/%s/excel' % aaaamm)
@@ -701,13 +726,15 @@ def gs_proposta_e_griglia():
     nuovo_app(S, I['Sala A'], I['Borrelli'], MAR, 8)
     t = testo(C.get('/giorno/%s?struttura=1' % MAR))
     assert 'in sala Borrelli' in t and 'liberi Borrelli' not in t
-    # assente: non e' libero
+    # assente: non e' libero. Il gemello: lo stesso martedi' prima di segnare l'assenza lo dice libero
+    prima = testo(C.get('/sala/%s?struttura=1' % (MAR + timedelta(days=7))))
     s = S()
     s.add(Assenza(operatore_id=I['Borrelli'], dal=MAR + timedelta(days=7), al=MAR + timedelta(days=7), motivo='Ferie'))
     s.commit()
     s.close()
     t = testo(C.get('/sala/%s?struttura=1' % (MAR + timedelta(days=7))))
-    assert 'Assenti: Borrelli' in t and 'liberi: Borrelli' not in t, t[:600]
+    assert 'Assenti: Borrelli' in t, t[:600]
+    manca(t, 'liberi: Borrelli', dove_ce=prima, perche='un chirurgo assente non è libero')
 
 
 def gs_avviso():
@@ -828,9 +855,21 @@ def ro_senza_sale():
     s.close()
     C = collega(S)
     t = html(C.get('/giorno/%s?struttura=1' % MAR))
-    assert '>Sala</a>' not in t and 'sala-giorno' not in t
     assert 'non ha stanze di tipo' in html(C.get('/sala/%s' % MAR))
-    assert C.get('/oggi').status_code == 200 and 'Sala operatoria' not in testo(C.get('/oggi'))
+    assert C.get('/oggi').status_code == 200
+    oggi = testo(C.get('/oggi'))
+    # i gemelli, in fondo: la stessa struttura con una sala operatoria (e un intervento quel giorno) ha la voce Sala
+    # nel menu, la riga della sala nella giornata e la sala operatoria nella pagina Oggi
+    s = S()
+    s.add(Risorsa(nome='Sala A', tipo='SALA_OPERATORIA', struttura_id=1, ordine=10))
+    s.commit()
+    s.close()
+    I = ids(S)
+    nuovo_app(S, I['Sala A'], I['Lippi'], MAR, 9)
+    con_sala = html(C.get('/giorno/%s?struttura=1' % MAR))
+    manca(t, '>Sala</a>', dove_ce=con_sala, perche='senza sale niente voce Sala nel menu')
+    manca(t, 'sala-giorno', dove_ce=con_sala, perche='senza sale niente riga della sala nella giornata')
+    manca(oggi, 'Sala operatoria', dove_ce=testo(C.get('/oggi')), perche='senza sale niente sala operatoria in Oggi')
 
 
 prova('indirizzi sporchi e moduli a caso sulle pagine nuove: mai errore 500', ro_indirizzi)

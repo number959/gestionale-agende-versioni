@@ -12,6 +12,7 @@ Excel, statistiche, ricerca rapida, protezioni) e l'aggiornamento del database
 dalla versione 9. Strutture, prestazioni e pazienti sono inventati."""
 import json
 from prove_dove import dove
+from prove_gemelli import manca, protetto
 import os
 import random
 import re
@@ -726,7 +727,10 @@ def p_pagina():
     assert '5 prestazioni in Cardiologia' in t, t[:400]
     # pezzi della pagina chiesti mentre si scrive: stesso modello, niente cache
     r = C.get('/dove-si-fa/risultati?q=holter')
-    assert r.status_code == 200 and '<html' not in html(r) and 'Holter ECG' in html(r)
+    assert r.status_code == 200 and 'Holter ECG' in html(r)
+    # il gemello: la pagina intera con la stessa ricerca comincia con <html
+    manca(html(r), '<html', dove_ce=lambda: html(C.get('/dove-si-fa/?q=holter')),
+          perche='il pezzo non è una pagina intera')
     assert r.headers['Cache-Control'] == 'no-store' and r.headers['X-Content-Type-Options'] == 'nosniff'
     assert 'Per branca' in html(C.get('/dove-si-fa/risultati'))
     d = json.loads(html(C.get('/dove-si-fa/cerca.json?q=tac+torace')))
@@ -741,7 +745,10 @@ def p_scheda():
     assert C.get('/dove-si-fa/scheda/999').status_code == 404
     r = C.get('/dove-si-fa/scheda/%d?voce=%d' % (G['Centro Nord'], V['RM ginocchio']))
     corpo, t = html(r), testo(r)
-    assert r.headers['Cache-Control'] == 'no-store' and '<html' not in corpo
+    assert r.headers['Cache-Control'] == 'no-store'
+    # il gemello: la pagina intera con la stessa scheda aperta comincia con <html
+    intera = '/dove-si-fa/?q=rm+ginocchio&voce=%d&gruppo=%d' % (V['RM ginocchio'], G['Centro Nord'])
+    manca(corpo, '<html', dove_ce=lambda: html(C.get(intera)), perche='la scheda chiesta da sola non è una pagina intera')
     for x in ('Centro Nord', 'Caserta', 'Via Esempio 10, Caserta', '0823 000 011', '333 000 0011', 'Prenotazione online',
               'dal lunedì al sabato 7.30-19.30', 'Segna come indirizzato', 'RM ginocchio'):
         assert x in t, x
@@ -907,12 +914,25 @@ def p_sicurezza():
     S, C = mondo()
     importa_file(S, CP.libro(voci=righe, strutture=strutture))
     G, V = gruppo(S), voci(S)
-    for url in ('/dove-si-fa/?q=holter', '/dove-si-fa/risultati?q=holter', '/dove-si-fa/',
-                '/dove-si-fa/scheda/%d?voce=%d' % (G['<script>alert(1)</script>'], V['<img src=x onerror=alert(3)> holter']),
-                '/dove-si-fa/stampa?gruppo=%d' % G['<script>alert(1)</script>'], '/dove-si-fa/strutture'):
+    pezzi = ('<script>alert', '<img src=x', '<svg onload', '<b>081', '<i>sin')
+    # per ogni pagina i pezzi che mostra: li' ci sono protetti da Jinja (il gemello) e mai vivi; quelli che la pagina
+    # non mostra non ci sono vivi lo stesso. Ogni pezzo e' mostrato (e quindi provato davvero) in almeno una pagina.
+    xs = G['<script>alert(1)</script>']
+    scheda = '/dove-si-fa/scheda/%d?voce=%d' % (xs, V['<img src=x onerror=alert(3)> holter'])
+    pagine = (('/dove-si-fa/?q=holter', ('<script>alert', '<img src=x', '<svg onload', '<i>sin')),
+              ('/dove-si-fa/risultati?q=holter', ('<script>alert', '<img src=x', '<svg onload', '<i>sin')),
+              ('/dove-si-fa/', ('<script>alert',)),
+              (scheda, ('<script>alert', '<img src=x', '<b>081')),
+              ('/dove-si-fa/stampa?gruppo=%d' % xs, ('<script>alert', '<img src=x', '<b>081')),
+              ('/dove-si-fa/strutture', ('<script>alert', '<b>081')))
+    assert set(pezzi) == {x for _, mostrati in pagine for x in mostrati}, 'un pezzo non e\' mostrato in nessuna pagina'
+    for url, mostrati in pagine:
         corpo = html(C.get(url))
-        for x in ('<script>alert', '<img src=x', '<svg onload', '<b>081', '<i>sin'):
-            assert x not in corpo, (url, x)
+        for x in pezzi:
+            if x in mostrati:
+                protetto(corpo, x, perche=url)
+            else:
+                assert x not in corpo, (url, x)
     corpo = html(C.get('/dove-si-fa/?q=holter'))
     assert '&lt;img src=x onerror=alert(3)&gt; holter' in corpo and '&lt;script&gt;alert(1)&lt;/script&gt;' in corpo
     d = html(C.get('/dove-si-fa/cerca.json?q=holter'))

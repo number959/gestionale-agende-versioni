@@ -11,6 +11,7 @@ Dove si puo' il risultato si confronta con un calcolo fatto a parte (un
 oracolo) e non con quello che il programma stesso ha prodotto."""
 import io
 from prove_dove import dove
+from prove_gemelli import manca
 import os
 import re
 import shutil
@@ -604,12 +605,16 @@ def r05_ritorno_dopo_nuovo_paziente():
     """BUG 05. Il ritorno dopo "nuovo paziente" accetta solo indirizzi che
     cominciano con /appuntamento: non puo' portare fuori dal programma."""
     S, C = mondo()
+    # il gemello: un ritorno interno che porta «esempio.invalid» nell'indirizzo lo fa arrivare nella Location
+    interno = C.post('/pazienti/nuovo', data={'cognome': 'Interno', 'telefono': '3331230001', 'torna':
+                                              '/appuntamento?nota=esempio.invalid', 'doppione_confermato': '1'})
+    interno = interno.headers.get('Location', '')
     for torna in ('//esempio.invalid/x', '/\\esempio.invalid', 'https://esempio.invalid', '/appuntamento\\x'):
         r = C.post('/pazienti/nuovo', data={'cognome': 'Prova%d' % len(torna), 'telefono': '3331234567',
                                             'torna': torna, 'doppione_confermato': '1'})
         luogo = r.headers.get('Location', '')
-        assert r.status_code == 302 and luogo.startswith('/') and not luogo.startswith(('//', '/\\')) and \
-            'esempio.invalid' not in luogo, (torna, luogo)
+        assert r.status_code == 302 and luogo.startswith('/') and not luogo.startswith(('//', '/\\')), (torna, luogo)
+        manca(luogo, 'esempio.invalid', dove_ce=interno, perche='il ritorno %r porta fuori dal programma' % torna)
     r = C.post('/pazienti/nuovo', data={'cognome': 'Ultimo', 'telefono': '3331230000', 'doppione_confermato': '1',
                                         'torna': '/appuntamento?data=%s&ora=09:00' % MAR})
     assert re.fullmatch(r'/appuntamento\?data=[\d-]+&ora=09:00&paziente_id=\d+', r.headers['Location']), \
