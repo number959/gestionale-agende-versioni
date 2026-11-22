@@ -31,6 +31,10 @@ Aprire e chiudere
 I dati
   Stanno in %LOCALAPPDATA%\GestionaleAgendeProva e si rifanno da capo al primo avvio di ogni giorno
   (o con un pacchetto nuovo): quello che si scrive nella prova il giorno dopo non c'è più. Lasciata aperta
-  oltre la mezzanotte, mostra i dati di ieri fino al prossimo avvio. Per togliere tutto: chiudere la
+  oltre la mezzanotte (o chiuso solo il browser, senza «Chiudi la prova»), mostra i dati di ieri e la
+  scritta in alto lo dice: chiuderla con «Chiudi la prova» e riaprirla. Anche i file caricati spariscono
+  quando i dati si rifanno. WhatsApp, telefono ed email non si aprono: i numeri sono inventati ma
+  potrebbero essere di qualcuno. Le copie di sicurezza («Backup ora», e quella prima di un'importazione)
+  restano nella cartella della prova. Per togliere tutto: chiudere la
   prova e cancellare quella cartella e il file. La cartella %LOCALAPPDATA%\GestionaleAgende è quella della
   clinica: non si tocca.

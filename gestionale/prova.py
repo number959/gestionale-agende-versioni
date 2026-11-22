@@ -33,6 +33,7 @@ import logging
 import os
 import re
 import secrets
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -69,6 +70,8 @@ def firma():
     """{'tappa', 'commit', 'giorno', 'costruito'} del pacchetto. Dentro l'eseguibile da firma_prova.json; dai
     sorgenti dal git (con «+modifiche» se ci sono file cambiati), e il giorno e' oggi."""
     try:
+        if not getattr(sys, 'frozen', False):
+            raise OSError('dai sorgenti la firma viene dal git (firma_prova.json è dell\'ultima costruzione)')
         with open(os.path.join(cartella_risorse(), FILE_FIRMA), encoding='utf-8') as f:
             d = json.load(f)
         if isinstance(d, dict) and all(isinstance(d.get(k), str) for k in ('tappa', 'commit', 'giorno')):
@@ -162,8 +165,16 @@ def chiudi_le_porte(cartella, db):
     aggiornamenti.avvia = lambda *_, **__: None
 
     def niente_copie(*_, **__):
-        raise RuntimeError('versione di prova: le copie di sicurezza non si fanno e non si rimettono')
-    backup.esegui = backup.ripristina = backup.avvia_automatico = niente_copie
+        raise RuntimeError('versione di prova: le copie di sicurezza non si rimettono')
+    copia_vera = backup.esegui
+
+    def copia_nella_prova(percorso_db, _cartella=None, motivo=''):
+        # le importazioni vogliono prima una copia: nella prova si fa, ma solo del database della prova e solo
+        # nella sua cartella (quella scritta nelle impostazioni non conta)
+        assert os.path.normcase(os.path.abspath(percorso_db)) == os.path.normcase(os.path.abspath(db)), percorso_db
+        return copia_vera(db, os.path.join(cartella, 'backup'), motivo)
+    backup.esegui = copia_nella_prova
+    backup.ripristina = backup.avvia_automatico = niente_copie
 
     # le importazioni lavorano in %TEMP%\gestionale-importazioni, la stessa cartella del programma vero
     # (importa.cartella_lavoro, che li' cancella i file di ieri): qui nella cartella della prova
@@ -187,6 +198,11 @@ def integro(db):
         return False
 
 
+def togli_i_caricamenti(cartella):
+    for sotto in ('gestionale-importazioni', 'backup'):
+        shutil.rmtree(os.path.join(cartella, sotto), ignore_errors=True)
+
+
 def pacchetto(sig):
     return '%s %s' % (sig.get('commit'), sig.get('costruito') or '')
 
@@ -205,6 +221,7 @@ def dati_pronti(cartella, sig, da_capo=False):
         os.remove(segno_file)          # se fai_dati si ferma a meta', al prossimo avvio si rifa'
     except OSError:
         pass
+    togli_i_caricamenti(cartella)      # quello che si è caricato ieri non resta (come promette il foglio)
     from strumenti import dati_prova
     S = dati_prova.fai_dati(db)        # cancella prova.db, -wal e -shm
     rimasti = dati_prova.nomi_inventati(S)
@@ -239,7 +256,14 @@ PAGINA_CHIUSA = ('<!doctype html><html lang="it"><head><meta charset="utf-8"><ti
                  'Si riapre con un doppio clic sul file.</p></body></html>')
 
 
-def collega_la_prova(A, sig, rimasti):
+PAGINA_CONTATTO = ('<!doctype html><html lang="it"><head><meta charset="utf-8"><title>PROVA · Contatto</title></head>'
+                   '<body><p style="font:16px Segoe UI,Arial,sans-serif;margin:3em">Nella versione di prova WhatsApp, '
+                   'telefono ed email non si aprono: i numeri e gli indirizzi sono inventati, ma potrebbero essere di '
+                   'qualcuno. <a href="javascript:history.back()">Torna indietro</a></p></body></html>')
+VERSO_FUORI = re.compile(r'href="(https://wa\.me/|https://api\.whatsapp\.com/|tel:|mailto:)[^"]*"', re.I)
+
+
+def collega_la_prova(A, sig, rimasti, giorno_dati=None):
     """Chiave e cookie suoi, il no alla cartella dei backup, la cornice e /prova/chiudi."""
     from flask import Response, flash, redirect, request
     from markupsafe import escape
@@ -260,15 +284,32 @@ def collega_la_prova(A, sig, rimasti):
 
     @A.app.after_request
     def metti_la_cornice(r):
-        if r.direct_passthrough or r.is_streamed or r.mimetype != 'text/html' or not 200 <= r.status_code < 300:
-            return r
+        if r.direct_passthrough or (r.is_streamed and r.status_code < 400) or r.mimetype != 'text/html':
+            # (le pagine d'errore di Flask sono «a pezzi» ma corte: si leggono)
+            return r                    # anche le pagine d'errore (4xx, 5xx) prendono la cornice
         html = r.get_data(as_text=True)
+        # WhatsApp, telefono ed email non si aprono: anche nei pezzi di pagina chiesti dagli script
+        html = VERSO_FUORI.sub('href="/prova/contatto"', html)
+        if '<body' not in html and r.status_code >= 400 and re.search(r'<html\b[^>]*>', html):
+            # le pagine d'errore di Flask (404, 405) non hanno <body>: la cornice va dopo <html>
+            html = re.sub(r'(<html\b[^>]*>)', lambda m: m.group(1) + cornice, html, count=1)
+            html = re.sub(r'<title>', '<title>PROVA &middot; ', html, count=1)
+            r.set_data(html)
+            return r
         if '<body' not in html:
-            return r                    # i pezzi di pagina chiesti dagli script (Dove si fa) restano come sono
-        html = re.sub(r'(<body\b[^>]*>)', lambda m: m.group(1) + cornice, html, count=1)
+            r.set_data(html)
+            return r                    # i pezzi di pagina chiesti dagli script (Dove si fa) senza cornice
+        qui = cornice
+        if giorno_dati and giorno_dati != date.today().isoformat():
+            qui = cornice.replace('dati inventati', 'dati inventati di un altro giorno: chiudi la prova e riaprila', 1)
+        html = re.sub(r'(<body\b[^>]*>)', lambda m: m.group(1) + qui, html, count=1)
         html = re.sub(r'<title>', '<title>PROVA &middot; ', html, count=1)
         r.set_data(html)
         return r
+
+    @A.app.route('/prova/contatto')
+    def contatto_nella_prova():
+        return Response(PAGINA_CONTATTO, mimetype='text/html')
 
     @A.app.route('/prova/chiudi', methods=['GET', 'POST'])
     def chiudi_la_prova():
@@ -347,7 +388,7 @@ def principale(argomenti=None):
         A.Sessione = S
         A._registro = None
         viste._sessionmaker = lambda: S
-        collega_la_prova(A, sig, rimasti)
+        collega_la_prova(A, sig, rimasti, giorno_dati=date.today().isoformat())
 
         def pronto(porta):
             autoripara.stato['porta'] = porta

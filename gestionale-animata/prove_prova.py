@@ -33,6 +33,7 @@ import socket
 import sqlite3
 import subprocess
 import sys
+import types
 import tempfile
 import time
 import urllib.error
@@ -170,13 +171,16 @@ SOLLEVANO = {(invii, 'manda_email'): invii.ErroreInvio, (invii, 'manda_whatsapp'
              (aggiornamenti, 'scarica'): aggiornamenti.ErroreAggiornamento,
              (aggiornamenti, 'apri'): aggiornamenti.ErroreAggiornamento,
              (aggiornamenti, 'lancia'): aggiornamenti.ErroreAggiornamento,
-             (backup, 'esegui'): RuntimeError, (backup, 'ripristina'): RuntimeError,
+             (backup, 'ripristina'): RuntimeError,
              (backup, 'avvia_automatico'): RuntimeError}
 NON_FANNO_NIENTE = [(invii, 'avvia'), (aggiornamenti, 'avvia'), (autoripara, 'imposta_riavvio'),
                     (autoripara, 'avvia_custode')]
 DANNO = {(aggiornamenti, 'installato'): False, (autoripara, 'riavvia_programma'): False}
+# backup.esegui: le importazioni vogliono prima una copia; nella prova si fa, solo del database della prova e solo
+# nella sua cartella (lo controlla p_sostituzioni)
+COPIA_NELLA_PROVA = (backup, 'esegui')
 # le chiamate che vanno in rete o lanciano programmi (vedi g_guardia): sostituite, o ammesse con il perche'
-SOSTITUITE = {'%s.%s' % (m.__name__, n) for m, n in list(SOLLEVANO) + NON_FANNO_NIENTE + list(DANNO)}
+SOSTITUITE = {'%s.%s' % (m.__name__, n) for m, n in list(SOLLEVANO) + NON_FANNO_NIENTE + list(DANNO) + [COPIA_NELLA_PROVA]}
 AMMESSE = {
     'app.porta_in_uso': 'si collega solo a 127.0.0.1',
     'app.presa_in_ascolto': 'il server della prova, solo su 127.0.0.1',
@@ -192,7 +196,7 @@ AMMESSE = {
     'prova.principale': 'apre il browser sulla pagina della prova gia\' aperta',
     'prova.avvio_non_riuscito': 'apre nel browser la pagina dell\'errore, scritta nella cartella della prova',
 }
-ORIGINALI = {(m, n): getattr(m, n) for m, n in list(SOLLEVANO) + NON_FANNO_NIENTE + list(DANNO)}
+ORIGINALI = {(m, n): getattr(m, n) for m, n in list(SOLLEVANO) + NON_FANNO_NIENTE + list(DANNO) + [COPIA_NELLA_PROVA]}
 PDB_VERO = modelli.percorso_db
 try:
     prova.chiudi_le_porte(CART, DB)
@@ -225,6 +229,13 @@ def p_sostituzioni():
         f = getattr(m, n)
         assert f is not ORIGINALI[(m, n)], '%s.%s non e\' stata sostituita' % (m.__name__, n)
         assert (f() if n == 'installato' else f('motivo')) is valore, '%s.%s non da\' %r' % (m.__name__, n, valore)
+    assert backup.esegui is not ORIGINALI[COPIA_NELLA_PROVA], 'backup.esegui non e\' stata sostituita'
+    try:
+        backup.esegui(os.path.join(VUOTA, 'GestionaleAgende', 'agende.db'), VUOTA, 'x')
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError('backup.esegui copia anche un database che non e\' quello della prova')
     assert aggiornamenti.INDIRIZZO_PREDEFINITO == '' and aggiornamenti.predefinito() == ''
     assert autoripara.PROGRAMMA == 'Gestionale Agende (prova)', 'nome del programma per /salute: %s' % autoripara.PROGRAMMA
     con_percorso = [m for m in list(sys.modules.values()) if callable(getattr(m, 'percorso_db', None))
@@ -306,8 +317,13 @@ def p_dati():
     d['giorno'] = (date.today() - timedelta(days=1)).isoformat()
     with open(segno, 'w', encoding='utf-8') as f:
         json.dump(d, f)
+    caricato = os.path.join(CART, 'gestionale-importazioni', 'di-ieri.xlsx')
+    os.makedirs(os.path.dirname(caricato), exist_ok=True)
+    with open(caricato, 'wb') as f:
+        f.write(b'x')
     S, rifatti, _ = prova.dati_pronti(CART, SIG)
     assert rifatti, 'con il segno di ieri i dati vanno rifatti'
+    assert not os.path.exists(caricato), 'i file caricati ieri restano'
     lascia(S)
     S, rifatti, _ = prova.dati_pronti(CART, dict(SIG, costruito='2026-11-23T10:00:00'))
     assert rifatti, 'con un pacchetto nuovo i dati vanno rifatti'
@@ -356,13 +372,16 @@ def p_pagine_con_la_cornice():
     funzioni = A.app.after_request_funcs[None]
     metti = next(f for f in funzioni if f.__name__ == 'metti_la_cornice')
     C = A.app.test_client()
-    pagine, diverse, cornici = pagine_senza_parametri(), [], 0
+    pagine, diverse, cornici, verso_fuori = pagine_senza_parametri(), [], 0, 0
     assert len(pagine) > 50, 'troppo poche pagine in indirizzi.txt: %d' % len(pagine)
     for indirizzo, attesa in pagine:
         dopo = C.get(indirizzo)
         assert risposta(dopo) == attesa, '%s: %s invece di %s' % (indirizzo, risposta(dopo), attesa)
         if dopo.status_code != 200 or dopo.mimetype != 'text/html' or b'<body' not in dopo.data:
-            assert b'cornice-prova' not in dopo.data, '%s: la cornice in un pezzo di pagina' % indirizzo
+            if dopo.status_code >= 400 and dopo.mimetype == 'text/html':       # anche le pagine d'errore dicono PROVA
+                assert b'id="cornice-prova"' in dopo.data, '%s: pagina d\'errore senza cornice' % indirizzo
+            else:
+                assert b'cornice-prova' not in dopo.data, '%s: la cornice in un pezzo di pagina' % indirizzo
             continue
         posto = funzioni.index(metti)
         funzioni.remove(metti)                     # la stessa pagina senza la cornice: il programma di oggi
@@ -370,7 +389,10 @@ def p_pagine_con_la_cornice():
             prima = C.get(indirizzo).get_data(as_text=True)
         finally:
             funzioni.insert(posto, metti)
+        verso_fuori += len(prova.VERSO_FUORI.findall(prima))
+        prima = prova.VERSO_FUORI.sub('href="/prova/contatto"', prima)
         testo = dopo.get_data(as_text=True)
+        assert not prova.VERSO_FUORI.search(testo), '%s: un collegamento WhatsApp, telefono o email aperto' % indirizzo
         assert testo.count(cornice) == 1 and testo.count('id="cornice-prova"') == 1, '%s: cornice non una volta' % indirizzo
         assert '<title>PROVA &middot; ' in testo, '%s: il titolo non comincia con PROVA' % indirizzo
         assert 'cornice-prova' not in prima, '%s: cornice anche senza la prova' % indirizzo
@@ -379,6 +401,7 @@ def p_pagine_con_la_cornice():
             diverse.append(indirizzo)
         cornici += 1
     assert not diverse, 'pagine cambiate oltre alla cornice: %s' % diverse
+    assert verso_fuori > 0, 'gemello: nessuna pagina aveva collegamenti WhatsApp, telefono o email da spegnere'
     # gemello: i pezzi di pagina e il JSON restano senza cornice
     for indirizzo in ('/salute', '/aggiornamenti/stato.json', '/dove-si-fa/risultati?q=eco'):
         r = C.get(indirizzo)
@@ -395,12 +418,41 @@ def p_cookie_e_cartella_dei_backup():
     assert any(b.startswith('gestionale_prova=') for b in biscotti), biscotti
     assert not any(b.startswith('session=') for b in biscotti), biscotti
     assert A.app.secret_key != 'gestionale-locale' and len(A.app.secret_key) >= 32
-    pagina = C.get('/impostazioni').get_data(as_text=True)
-    assert 'versione di prova' in pagina and 'Backup non riuscito' in pagina, 'Backup ora non dice di no'
+    copie = os.listdir(os.path.join(CART, 'backup')) if os.path.isdir(os.path.join(CART, 'backup')) else []
+    assert any(c.endswith('.db') for c in copie), '«Backup ora» nella prova fa la copia nella sua cartella: %s' % copie
+    assert not os.path.exists(os.path.join(VUOTA, 'GestionaleAgende')), 'la cartella vera e\' stata creata'
     altrove = os.path.join(PROVVISORIA, 'cartella-dei-backup-scritta')
     r = C.post('/impostazioni', data={'azione': 'cartella', 'cartella': altrove})
     assert r.status_code == 302 and not os.path.exists(altrove), 'la cartella dei backup e\' stata creata'
     assert 'la cartella dei backup non si cambia' in C.get('/impostazioni').get_data(as_text=True)
+
+
+def p_cornice_dappertutto():
+    """Su una piccola applicazione a parte: la cornice anche nelle pagine d'errore, i collegamenti verso fuori spenti,
+    la scritta quando i dati sono di un altro giorno, la firma dai sorgenti senza firma_prova.json."""
+    from flask import Flask
+    finta = types.SimpleNamespace(app=Flask('finta'))
+
+    @finta.app.route('/con-contatti')
+    def con_contatti():
+        return ('<!doctype html><html><head><title>T</title></head><body><a href="https://wa.me/39333?text=x">W</a>'
+                '<a href="tel:333">T</a><a href="mailto:a@example.it">E</a></body></html>')
+    prova.collega_la_prova(finta, SIG, [], giorno_dati=(date.today() - timedelta(days=1)).isoformat())
+    C = finta.app.test_client()
+    t = C.get('/con-contatti').get_data(as_text=True)
+    assert t.count('href="/prova/contatto"') == 3 and 'wa.me' not in t and 'tel:' not in t, t
+    assert 'di un altro giorno' in t, 'la scritta non dice che i dati sono di ieri'
+    r = C.get('/non-esiste')
+    assert r.status_code == 404 and 'id="cornice-prova"' in r.get_data(as_text=True), 'pagina 404 senza cornice'
+    assert 'Nella versione di prova WhatsApp' in C.get('/prova/contatto').get_data(as_text=True)
+    falsa = os.path.join(prova.cartella_risorse(), prova.FILE_FIRMA)
+    assert not os.path.exists(falsa), falsa
+    try:
+        with open(falsa, 'w', encoding='utf-8') as f:
+            json.dump({'tappa': '9', 'commit': 'vecchio', 'giorno': '2000-01-01'}, f)
+        assert prova.firma()['commit'] != 'vecchio', 'dai sorgenti la firma viene da firma_prova.json'
+    finally:
+        os.remove(falsa)
 
 
 prova_('le porte 5000-5009 si rifiutano, prima di creare la cartella', p_porte)
@@ -410,7 +462,8 @@ prova_('ogni sostituzione di chiudi_le_porte e\' fatta e dice di no', p_sostituz
 prova_('guardia: ogni chiamata verso fuori nei sorgenti e\' sostituita o ammessa', g_guardia)
 prova_('i dati: fatti, ripresi, rifatti con un altro giorno, un altro pacchetto o il database rovinato', p_dati)
 prova_('le pagine di oggi con la sola cornice, nei pezzi e nel JSON niente', p_pagine_con_la_cornice)
-prova_('cookie e chiave suoi, «Backup ora» e la cartella dei backup dicono di no', p_cookie_e_cartella_dei_backup)
+prova_('cookie e chiave suoi; «Backup ora» copia nella cartella della prova; la cartella dei backup non si cambia', p_cookie_e_cartella_dei_backup)
+prova_('cornice anche sugli errori, WhatsApp, telefono ed email spenti, dati di un altro giorno, firma', p_cornice_dappertutto)
 
 
 # =========================================================== in un processo a parte, come si avvia davvero
@@ -573,7 +626,8 @@ def p_avvio_vero():
         _, t = chiedi('/invii', {'azione': 'registra_whatsapp', 'pin': '123456'})
         assert 'email e WhatsApp non partono mai' in t, 'la registrazione del numero non dice di no'
         _, t = chiedi('/impostazioni', {'azione': 'backup_ora'})
-        assert 'Backup non riuscito' in t and 'versione di prova' in t, '«Backup ora» non dice di no'
+        # nella prova la copia si fa, ma solo nella sua cartella (la cartella vera resta intatta: impronta in fondo)
+        assert 'Backup non riuscito' not in t, '«Backup ora» nella prova non riesce: %s' % t[:300]
         altrove = os.path.join(PROVVISORIA, 'cartella-dei-backup-dal-browser')
         _, t = chiedi('/impostazioni', {'azione': 'cartella', 'cartella': altrove})
         assert 'non si cambia' in t and not os.path.exists(altrove), 'la cartella dei backup e\' cambiata'
