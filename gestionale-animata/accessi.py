@@ -163,6 +163,13 @@ CENSIMENTO = {
     'guida.indice': 'guida', 'guida.articolo': 'guida', 'guida.stampa': 'guida', 'aggiornamenti.novita_pagina': 'guida',
 }
 
+# Le parti del Sistema dentro una pagina di un'area (correzione 3 della revisione): nella pagina Email e WhatsApp la
+# casella email (server, porta, sicurezza, utente: con un altro server la password salvata partirebbe verso di lui) e
+# il token di WhatsApp, con le loro prove e la registrazione del numero, si configurano solo dal PC principale. Dalla
+# rete i loro moduli rispondono 403 (sistema_dentro) e la pagina non li mostra ({% if puo('sistema') %} in invii.html).
+SISTEMA_DENTRO = {'invii.pagina': lambda f: f.get('azione') in ('prova_email', 'prova_whatsapp', 'registra_whatsapp')
+                  or (f.get('azione') == 'salva' and f.get('sezione') in ('email', 'whatsapp'))}
+
 # la prima pagina da aprire dopo l'accesso (nell'ordine di AREE: la prima area che l'utente ha)
 PRIMA_PAGINA = {'agenda': 'cruscotto.oggi', 'pazienti': 'pazienti.elenco', 'segreteria': 'viste.conferme',
                 'cassa': 'cassa.listino', 'sala': 'sala.posti_letto', 'turni': 'personale.turni',
@@ -190,6 +197,12 @@ REGISTRA_LETTURE = frozenset({
 
 PORTA_RETE = 5080
 FILI_RETE = 4                   # le richieste dalla rete servite insieme: fili loro, non quelli del PC principale
+# I limiti di waitress, uguali per il server del PC principale (app.crea_server) e per quello della rete (correzione
+# 2 della revisione): moduli fino a 13 MB (Flask ne accetta 12, MAX_CONTENT_LENGTH: oltre risponde 413 da sé), al
+# massimo 20 collegamenti aperti insieme (gli altri aspettano il loro turno), e un collegamento fermo da 30 secondi si
+# chiude (solo se non ha una richiesta in corso: un Excel lungo da preparare non si taglia)
+LIMITI_SERVER = {'max_request_body_size': 13 * 1024 * 1024, 'connection_limit': 20, 'channel_timeout': 30}
+NOME_REGOLA_FIREWALL = 'Gestionale Agende (rete della clinica)'
 TENTATIVI_COPPIA = 5            # password sbagliate dallo stesso PC per lo stesso nome...
 FINESTRA = 15 * 60              # ...in un quarto d'ora: poi si aspetta un quarto d'ora dall'ultima
 SOGLIA_NOME = 20                # per un nome, da qualsiasi PC: dopo 20 sbagliate di fila si aspetta...
@@ -698,14 +711,49 @@ eventi = collections.deque(maxlen=200)       # gli ultimi, per la pagina (tutti 
 
 
 def annota(testo, nome='', livello_log=logging.INFO):
-    riga = (datetime.now().strftime('%d/%m %H:%M:%S'), pulito(nome, 60), indirizzo_chi_chiama(), pulito(testo, 200))
-    eventi.appendleft(riga)
+    # nel file i campi sono separati da « | »: un nome scritto con | non deve poter spostare gli altri campi
+    riga = (datetime.now().strftime('%d/%m %H:%M:%S'), pulito(nome, 60).replace('|', '/'), indirizzo_chi_chiama(),
+            pulito(testo, 200).replace('|', '/'))
+    eventi.appendleft(riga + (livello_log >= logging.WARNING,))
     registro.log(livello_log, '%s | utente=%s | da=%s', riga[3], riga[1] or '-', riga[2] or '-')
+
+
+RIGA_REGISTRO = re.compile(r'(\d{4})-(\d\d)-(\d\d) (\d\d:\d\d:\d\d)[,.]\d+ (\w+) (.*) \| utente=(.*) \| da=(.*)')
+
+
+def ultimi_accessi(giorni=7, quanti=150):
+    """Le righe del registro degli ultimi giorni, dai file (le più recenti prima): (quando, utente, da, cosa,
+    attenzione). Senza la cartella del registro (il gestionale di prova di demo.py), quelle dall'avvio."""
+    cartella = _cartella_registro[0]
+    if not cartella:
+        return list(eventi)[:quanti]
+    righe = []
+    oggi = date.today()
+    for n in range(giorni):
+        percorso = os.path.join(cartella, 'accessi-%s.log' % (oggi - timedelta(days=n)).isoformat())
+        try:
+            with open(percorso, encoding='utf-8', errors='replace') as f:
+                del_giorno = f.read().splitlines()
+        except OSError:
+            continue
+        for testo in reversed(del_giorno):
+            m = RIGA_REGISTRO.fullmatch(testo)
+            if m:
+                a, me, g, ora, lv, cosa, nome, da = m.groups()
+                righe.append(('%s/%s %s' % (g, me, ora), '' if nome == '-' else nome, '' if da == '-' else da, cosa,
+                              lv in ('WARNING', 'ERROR', 'CRITICAL')))
+            if len(righe) >= quanti:
+                return righe
+    return righe
+
+
+_cartella_registro = [None]
 
 
 def prepara_registro(cartella):
     """Il registro accanto al database, nella cartella accessi; via i file più vecchi di GIORNI_REGISTRO."""
     cartella = os.path.join(cartella, 'accessi')
+    _cartella_registro[0] = cartella
     for h in list(registro.handlers):
         if isinstance(h, FilePerGiorno):
             registro.removeHandler(h)
@@ -727,10 +775,13 @@ def prepara_registro(cartella):
 
 # ============================================================= il controllo
 PAGINA_NO = '''<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ titolo }}</title><link rel="stylesheet" href="/static/stile.css"></head><body>
+<title>{{ titolo }}</title><link rel="stylesheet" href="/static/stile.css"><link rel="icon" type="image/png" href="/static/icona.png"></head><body>
 <main class="pagina" style="max-width:40em;margin:4em auto"><h1>{{ titolo }}</h1><p>{{ motivo }}</p>
-{% if utente %}<p>Si è entrati come <b>{{ utente }}</b>. Per avere anche questa parte, chiedere a chi usa il PC della
-segreteria (<i>Configura → Aree e accessi</i>).</p>{% endif %}
+{% if sistema %}<p>Aggiornamenti, copie di sicurezza, impostazioni, controllo del programma e la scelta degli accessi si
+fanno solo dal PC della segreteria, anche per chi dagli altri PC ha tutte le parti.</p>
+{% else %}<p>{% if utente %}Si è entrati come <b>{{ utente }}</b>. {% endif %}Quali parti del programma si aprono dagli
+altri PC, e per chi, lo sceglie chi usa il PC della segreteria (<i>Configura → Aree e accessi</i>): per avere anche
+questa parte, chiedere a lei.</p>{% endif %}
 <p>{% if torna %}<a class="bottone" href="{{ torna }}">Torna alle pagine disponibili</a>{% endif %}
 {% if utente %}<form method="post" action="/esci" style="display:inline"><button class="bottone" type="submit">Esci</button></form>{% endif %}</p>
 </main></body></html>'''
@@ -741,11 +792,13 @@ def vuole_json():
         request.accept_mimetypes.best == 'application/json'
 
 
-def rifiuta(motivo, titolo='Questa parte non è disponibile', utente=None, codice=403):
+def rifiuta(motivo, titolo='Questa parte non è disponibile', utente=None, codice=403, sistema=False):
+    """La risposta di un rifiuto: la pagina in italiano (chi è entrato, a chi chiedere, «Torna alle pagine
+    disponibili» ed «Esci») o, per gli script, il JSON con l'errore."""
     if vuole_json():
         return Response(json.dumps({'errore': motivo}, ensure_ascii=False), status=codice,
                         mimetype='application/json')
-    return Response(render_template_string(PAGINA_NO, titolo=titolo, motivo=motivo,
+    return Response(render_template_string(PAGINA_NO, titolo=titolo, motivo=motivo, sistema=sistema,
                                            utente=utente['nome'] if utente else '',
                                            torna=prima_pagina(utente) if utente else ''),
                     status=codice, mimetype='text/html')
@@ -782,7 +835,8 @@ def controlla_accesso():
     if area == SISTEMA:             # prima di leggere qualsiasi cosa
         if endpoint not in CENSIMENTO:
             logging.warning('accessi: la pagina %s non ha un\'area: rifiutata dalla rete', endpoint)
-        return rifiuta('Questa pagina si apre solo dal PC della segreteria.', titolo='Solo dal PC della segreteria')
+        return rifiuta('Questa pagina si apre solo dal PC della segreteria.', titolo='Solo dal PC della segreteria',
+                       sistema=True)
     if endpoint == 'static':
         return None                 # i file del programma: nessun dato
     from app import ses
@@ -818,6 +872,10 @@ def controlla_accesso():
         return None                 # le trasversali si filtrano in dopo_la_risposta
     if area == SCHERMO:
         area = 'ambulatori'
+    if sistema_dentro(endpoint):
+        annota('negato (Sistema) %s %s' % (request.method, request.path), utente['nome'], logging.WARNING)
+        return rifiuta('Questa parte si configura solo dal PC della segreteria.', titolo='Solo dal PC della segreteria',
+                       utente=utente, sistema=True)
     lv = livello(utente, area)
     nome_area = NOMI_AREE.get(area if isinstance(area, str) else area[0], '')
     if lv == 'no':
@@ -832,6 +890,13 @@ def controlla_accesso():
     elif endpoint in REGISTRA_LETTURE:
         annota('aperto %s' % request.full_path.rstrip('?'), utente['nome'])
     return None
+
+
+def sistema_dentro(endpoint):
+    """La richiesta tocca una parte del Sistema dentro una pagina di un'area (SISTEMA_DENTRO)? Solo i salvataggi:
+    le pagine si guardano, senza quelle parti."""
+    controllo = SISTEMA_DENTRO.get(endpoint)
+    return controllo is not None and request.method not in ('GET', 'HEAD', 'OPTIONS') and bool(controllo(request.form))
 
 
 def _filtra_notifiche(lista, utente):
@@ -887,14 +952,16 @@ def dopo_la_risposta(risposta):
 
 
 # ================================================== nome dell'host e origine
-_nomi_del_pc = []
+_nomi_del_pc = {'quando': -1e9, 'nomi': []}
+IPV4 = re.compile(r'(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}')
 
 
 def nomi_del_pc():
     """Come gli altri PC possono chiamare questo: nome, nome completo, nome.local e indirizzi IPv4 (senza 127.* e
-    169.254.*). Solo quello che sa il PC stesso: nessuna connessione."""
-    if _nomi_del_pc:
-        return _nomi_del_pc
+    169.254.*). Solo quello che sa il PC stesso: nessuna connessione. Si rifanno ogni minuto: con il DHCP
+    l'indirizzo del PC può cambiare a programma aperto."""
+    if time.monotonic() - _nomi_del_pc['quando'] < 60:
+        return _nomi_del_pc['nomi']
     nomi = set()
     try:
         nome = socket.gethostname()
@@ -903,8 +970,9 @@ def nomi_del_pc():
             nomi.add(info[4][0])
     except OSError:
         pass
-    _nomi_del_pc.extend(sorted(n for n in nomi if n and not n.startswith(('127.', '169.254.'))))
-    return _nomi_del_pc
+    _nomi_del_pc['nomi'] = sorted(n for n in nomi if n and n != 'localhost' and not n.startswith(('127.', '169.254.')))
+    _nomi_del_pc['quando'] = time.monotonic()
+    return _nomi_del_pc['nomi']
 
 
 def indirizzi_da_usare(porta):
@@ -913,21 +981,24 @@ def indirizzi_da_usare(porta):
         nome = socket.gethostname()
     except OSError:
         nome = 'NOME-DEL-PC'
-    ip = [n for n in nomi_del_pc() if re.fullmatch(r'\d+\.\d+\.\d+\.\d+', n)]
+    ip = [n for n in nomi_del_pc() if IPV4.fullmatch(n)]
     return ['http://%s:%d/' % (nome, porta)] + ['http://%s:%d/' % (x, porta) for x in ip]
 
 
 def host_valido_dalla_rete(host, cfg_nomi, porta):
     """Il nome con cui è stata chiamata la pagina (Host) è di questo PC? Contro il DNS rebinding, come NOMI_LOCALI
     per il PC principale: un altro nome che punta qui non passa. 127.0.0.1 e localhost vanno bene (il portiere
-    sullo stesso PC, o il PC della segreteria sulla porta della rete)."""
+    sullo stesso PC, o il PC della segreteria sulla porta della rete). Un indirizzo scritto in numeri (192.168.1.10)
+    va sempre bene sulla porta della rete: il DNS rebinding passa per un nome, mai per i numeri (così un indirizzo
+    cambiato dal DHCP, o di una seconda scheda di rete, funziona subito)."""
     m = re.fullmatch(r'\[?([^\]\[/@]+?)\]?(?::(\d{1,5}))?', (host or '').lower())
     if not m:
         return False
     nome, p = m.group(1), int(m.group(2) or 80)
     if nome in ('127.0.0.1', 'localhost'):
         return True
-    return p == porta and (nome in nomi_del_pc() or nome in [x.lower() for x in cfg_nomi])
+    return p == porta and (bool(IPV4.fullmatch(nome)) or nome in nomi_del_pc() or
+                           nome in [x.lower() for x in cfg_nomi])
 
 
 # ============================================================ secondo ascolto
@@ -959,9 +1030,12 @@ def presa_della_rete(porta):
     return presa
 
 
-def porta_ammessa(porta, principale=5000):
-    from autoripara import PORTE_DI_RISERVA
-    return 1024 <= porta <= 65535 and porta != principale and porta not in PORTE_DI_RISERVA
+def porta_ammessa(porta, principale=None):
+    """Una porta per la rete: fra 1024 e 65535, mai quella del PC principale (5000, o quella su cui è partito) né
+    quelle di riserva 5001-5009 (al prossimo avvio il PC principale potrebbe doverne usare una)."""
+    import autoripara
+    principale = principale or autoripara.stato.get('porta') or 5000
+    return 1024 <= porta <= 65535 and porta not in (principale, 5000) and porta not in autoripara.PORTE_DI_RISERVA
 
 
 def spiega_errore_porta(porta, e):
@@ -1005,12 +1079,10 @@ class AscoltoRete:
                 logging.warning('accessi: porta %d della rete non utilizzabile: %s', porta, e)
                 return False
             self._spegni()
-            # i portieri non si fidano (le loro intestazioni restano: dalla rete comunque), e limiti più stretti di
-            # quelli del PC principale: moduli fino a 13 MB, 20 collegamenti, 30 secondi di silenzio
+            # i portieri non si fidano (le loro intestazioni restano: dalla rete comunque), con i limiti di sempre
             self.server = create_server(MarcaRete(app), sockets=[presa], threads=FILI_RETE,
                                         clear_untrusted_proxy_headers=False, ident='Gestionale Agende',
-                                        max_request_body_size=13 * 1024 * 1024, connection_limit=20,
-                                        channel_timeout=30)
+                                        **LIMITI_SERVER)
             self.porta, self.errore = porta, ''
             server = self.server
 
@@ -1065,14 +1137,24 @@ def applica(app, sessione_fabbrica=None):
     return ascolto.accendi(app, cfg['porta'])
 
 
-def all_avvio(app, sessione_fabbrica, cartella, prove=10, pausa=30):
+RIPROVE_AVVIO = 10              # all'avvio, con la porta della rete occupata: 10 tentativi...
+PAUSA_AVVIO = 30                # ...ogni mezzo minuto (cinque minuti in tutto)
+
+
+def all_avvio(app, sessione_fabbrica, cartella, prove=None, pausa=None):
     """Dall'avvio del programma (app.principale), dopo che il server principale è in ascolto: registro, sessioni
     e, se è acceso, l'ascolto della rete. Se la porta non è ancora libera (il programma di prima si sta chiudendo,
-    la rete di Windows non è pronta) si riprova per qualche minuto, in un filo a parte."""
+    la rete di Windows non è pronta) si riprova per qualche minuto, in un filo a parte. Il PC principale intanto
+    funziona già: la rete non ferma mai il suo avvio (app.principale la chiama dentro un try)."""
+    prove = RIPROVE_AVVIO if prove is None else prove
+    pausa = PAUSA_AVVIO if pausa is None else pausa
     prepara_registro(cartella)
     sessioni.carica(cartella)
-    if applica(app, sessione_fabbrica):
-        return
+    try:
+        if applica(app, sessione_fabbrica):
+            return
+    except Exception:
+        logging.exception('accessi: avvio dell\'ascolto della rete')
 
     def riprova():
         for _ in range(prove):
@@ -1228,7 +1310,11 @@ def pagina():
                 scrivi_impostazione(s, 'rete_accesa', '1' if accesa else '')
                 s.commit()
                 if accesa:
-                    flash('Accesso dagli altri PC acceso: sugli altri PC aprire %s' % indirizzi_da_usare(porta)[0], 'ok')
+                    flash('Accesso dagli altri PC acceso: sugli altri PC aprire %s' % ' oppure '.join(
+                        indirizzi_da_usare(porta)[:3]), 'ok')
+                    if not [u for u in utenti if u.get('attivo', True)]:
+                        flash('Nessun utente ancora: dagli altri PC non entra nessuno finché non se ne aggiunge uno qui '
+                              'sotto.', 'avviso')
                 else:
                     ascolto.spegni()
                     flash('Accesso dagli altri PC spento.', 'ok')
@@ -1293,9 +1379,19 @@ def pagina():
         return redirect(url_for('accessi.pagina'))
     cfg = configurazione(s)
     return render_template('accessi.html', cfg=cfg, aree=AREE, livelli=LIVELLI, acceso=ascolto.acceso(),
-                           errore_ascolto=ascolto.errore, indirizzi=indirizzi_da_usare(cfg['porta']),
-                           eventi=list(eventi)[:30], bloccati=tentativi.bloccati(), entrati=sessioni.quante,
+                           porta_accesa=ascolto.porta, errore_ascolto=ascolto.errore,
+                           indirizzi=indirizzi_da_usare(ascolto.porta or cfg['porta']),
+                           eventi=ultimi_accessi(), giorni_registro=7, bloccati=tentativi.bloccati(),
+                           entrati=sessioni.quante, firewall=comandi_firewall(ascolto.porta or cfg['porta']),
                            consiglio=CONSIGLIO_PASSWORD, minimo=MINIMO_PASSWORD, sezione='impostazioni', sid=None)
+
+
+def comandi_firewall(porta):
+    """Per chi fa la regola del firewall di Windows a mano (prompt dei comandi aperto come amministratore): la
+    regola solo per le reti private, e il comando che la toglie."""
+    return ('netsh advfirewall firewall add rule name="%s" dir=in action=allow protocol=TCP localport=%d '
+            'profile=private' % (NOME_REGOLA_FIREWALL, porta),
+            'netsh advfirewall firewall delete rule name="%s"' % NOME_REGOLA_FIREWALL)
 
 
 # ================================================================= aggancio

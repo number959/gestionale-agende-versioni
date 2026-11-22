@@ -38,7 +38,7 @@ SENZA_BROWSER = ['prove_indirizzi.py', 'prove_accessi.py', 'prove_canarino.py', 
 NEL_BROWSER = ['prove_guida_browser.py', 'prove_sicurezza_browser.py', 'prove_mattoni_browser.py', 'prove_animazioni.py', 'prove_icone_animate.py',
                'prove_tendine_browser.py', 'prove_15_browser.py', 'prove_17_browser.py', 'prove_18_browser.py',
                'prove_19_browser.py', 'prove_191_browser.py', 'prove_110_browser.py', 'prove_112_browser.py',
-               'prove_tariffari_browser.py',
+               'prove_tariffari_browser.py', 'prove_accessi_browser.py',
                'prove_16_browser.py']
 
 

@@ -18,11 +18,14 @@ import os
 import re
 import shutil
 import socket
+import sqlite3
+import subprocess
 import sys
 import tempfile
 import threading
 import time
 import types
+import urllib.parse
 from datetime import date, datetime, timedelta
 from html.parser import HTMLParser
 
@@ -33,7 +36,8 @@ PROVVISORIA = tempfile.mkdtemp(prefix='prove-accessi-')
 import seed  # noqa: E402
 import app as A  # noqa: E402
 import accessi  # noqa: E402
-from modelli import (Appuntamento, Appunto, Attesa, Attivita, NotaGiorno, Operatore, Paziente, Prestazione,  # noqa: E402
+import invii  # noqa: E402
+from modelli import (Appuntamento, Appunto, Attesa, Attivita, Invio, NotaGiorno, Operatore, Paziente, Prestazione,  # noqa: E402
                      Risorsa, StrutturaGruppo, leggi_impostazione, scrivi_impostazione)
 from sqlalchemy import event, func, select  # noqa: E402
 
@@ -1049,9 +1053,14 @@ def p_chiave():
 
 
 def porta_libera():
-    with socket.socket() as x:
-        x.bind(('127.0.0.1', 0))
-        return x.getsockname()[1]
+    """Una porta libera su tutte le schede (la presa della rete si lega a 0.0.0.0), fuori da quelle del programma vero
+    e della prova (5000-5089)."""
+    while True:
+        with socket.socket() as x:
+            x.bind(('0.0.0.0', 0))
+            p = x.getsockname()[1]
+        if not 5000 <= p < 5090:
+            return p
 
 
 def get_vero(porta, percorso, intestazioni=None):
@@ -1206,6 +1215,413 @@ def s_rifiuto_in_italiano():
     assert 'Entrato da un altro PC come <b>Anna Esempietti</b>' in t and '/accesso/password' in t
     assert 'Entrato da un altro PC' not in locale().get('/oggi').get_data(as_text=True), 'gemello: sul PC no'
     return '9 aree negate con la pagina italiana; solo guardare: 403 e niente salvato; la barra con Esci'
+
+
+# ======================================================= la presa della rete, la pagina, il programma vero
+def t_limiti_dei_server():
+    """Correzione 2: il server del PC principale (app.crea_server) e quello della rete con gli stessi limiti di
+    waitress: moduli fino a 13 MB (oltre: 413 da waitress, prima ancora di Flask), 20 collegamenti, 30 secondi di
+    silenzio; le intestazioni dei portieri restano (correzione 1). Gemello: un modulo piccolo arriva al programma."""
+    def manda(porta, lunghezza):
+        with socket.create_connection(('127.0.0.1', porta), timeout=10) as x:
+            x.sendall(('POST /note-giorno HTTP/1.1\r\nHost: 127.0.0.1:%d\r\nContent-Type: application/x-www-form-'
+                       'urlencoded\r\nContent-Length: %d\r\nConnection: close\r\n\r\n' % (porta, lunghezza)).encode())
+            if lunghezza < 100:
+                x.sendall(b'x' * lunghezza)
+            return int(x.recv(200).split()[1])
+    principale, porta_p = A.crea_server(porta_libera())
+    filo = threading.Thread(target=principale.run, daemon=True)
+    filo.start()
+    try:
+        assert accessi.ascolto.accendi(A.app, porta_libera()), accessi.ascolto.errore
+        for nome, server, porta in (('PC principale', principale, porta_p),
+                                    ('rete', accessi.ascolto.server, accessi.ascolto.porta)):
+            adj = server.adj
+            valori = (adj.max_request_body_size, adj.connection_limit, adj.channel_timeout,
+                      adj.clear_untrusted_proxy_headers)
+            assert valori == (13 * 1024 * 1024, 20, 30, False), (nome, valori)
+            assert manda(porta, 14 * 1024 * 1024) == 413, '%s: un modulo di 14 MB non si ferma' % nome
+            assert manda(porta, 10) != 413, 'gemello (%s): un modulo piccolo arriva al programma' % nome
+    finally:
+        accessi.ascolto.spegni()
+        from waitress import wasyncore
+        principale.trigger.pull_trigger(lambda: wasyncore.close_all(principale._map))
+        filo.join(5)
+    return 'stessi limiti sui due server; 14 MB: 413 da waitress; un modulo piccolo passa'
+
+
+def u_email_e_whatsapp_nel_sistema():
+    """Correzione 3: la casella email e il token di WhatsApp di /invii sono Sistema. Dalla rete, anche con «Email e
+    WhatsApp» da modificare, i loro moduli (salva, prova, registra il numero) rispondono 403 e niente cambia; la
+    pagina non mostra le due parti. Gemelli: dalla rete i promemoria si salvano; dal PC le due parti ci sono e si
+    salvano."""
+    imposta(email_server='mail.example.it', email_utente='accettazione@example.it', email_porta='465',
+            email_sicurezza='ssl', email_password=invii.proteggi('Password-di-prova'), wa_token=invii.proteggi('token-finto'),
+            wa_numero_id='123456789', wa_modello='promemoria_appuntamento')
+    chiavi = ('email_server', 'email_utente', 'email_porta', 'email_sicurezza', 'email_password', 'wa_token',
+              'wa_numero_id', 'wa_registrato', 'wa_modello')
+    prima, invii_prima = {k: leggi(k) for k in chiavi}, conta(Invio)
+    c = rete(ip='192.168.1.160')
+    entra(c, 'Tutto Provolo')
+    for dati in ({'azione': 'salva', 'sezione': 'email', 'email_utente': 'altro@example.org', 'email_tipo': 'altro',
+                  'email_server': 'smtp.cattivo.example', 'email_porta': '25', 'email_sicurezza': 'nessuna',
+                  'email_attiva': '1'},
+                 {'azione': 'salva', 'sezione': 'whatsapp', 'wa_numero_id': '999', 'wa_token': 'altro-token',
+                  'wa_modello': 'altro', 'wa_lingua': 'it', 'wa_versione': 'v22.0'},
+                 {'azione': 'prova_email', 'a': 'chiunque@example.org'},
+                 {'azione': 'prova_whatsapp', 'a': '3330000000'},
+                 {'azione': 'registra_whatsapp', 'pin': '123456'}):
+        r = chiedi(c, 'POST', '/invii', data=dati)
+        assert r.status_code == 403 and 'Solo dal PC della segreteria' in testo(r), (dati['azione'], r.status_code)
+    assert {k: leggi(k) for k in chiavi} == prima and conta(Invio) == invii_prima, 'dalla rete la casella è cambiata'
+    r = chiedi(c, 'GET', '/invii')
+    t = testo(r)
+    assert r.status_code == 200 and 'si configura solo dal PC della segreteria' in t, r.status_code
+    for parte in ('id="modulo-email"', 'name="email_server"', 'name="wa_token"', 'name="pin"', 'mail.example.it',
+                  'value="prova_email"', 'value="prova_whatsapp"'):
+        assert parte not in t, 'dalla rete la pagina mostra %s' % parte
+    r = chiedi(c, 'POST', '/invii', data={'azione': 'salva', 'sezione': 'promemoria', 'promemoria_attivo': '1',
+                                         'promemoria_ora': '09:35'})
+    assert r.status_code == 302 and leggi('promemoria_ora') == '09:35', 'gemello: dalla rete i promemoria si salvano'
+    loc = locale()
+    t = loc.get('/invii').get_data(as_text=True)
+    assert all(parte in t for parte in ('id="modulo-email"', 'name="email_server"', 'name="wa_token"', 'name="pin"',
+                                        'mail.example.it')) and 'si configura solo dal PC' not in t, \
+        'gemello: dal PC le due parti ci sono'
+    r = chiedi(loc, 'POST', '/invii', data={'azione': 'salva', 'sezione': 'whatsapp', 'wa_numero_id': '123456789',
+                                            'wa_modello': 'modello_dal_pc', 'wa_lingua': 'it', 'wa_versione': 'v22.0'})
+    assert r.status_code == 302 and leggi('wa_modello') == 'modello_dal_pc', 'gemello: dal PC WhatsApp si salva'
+    assert leggi('wa_token') == prima['wa_token'], 'dal PC, senza token nuovo, quello salvato resta'
+    return '5 moduli della casella e di WhatsApp: 403 dalla rete, niente cambiato, parti nascoste; promemoria sì'
+
+
+def v_password_email_tolta():
+    """Correzione 3, seconda parte: la password salvata della casella vale solo per server, porta, sicurezza e nome
+    utente per cui è stata scritta. Cambiato uno di questi senza riscriverla, si toglie (e la pagina lo dice). Gemelli:
+    la stessa casella salvata di nuovo (anche con il server in maiuscolo) la tiene; riscritta, vale quella nuova."""
+    loc = locale()
+    base = {'azione': 'salva', 'sezione': 'email', 'email_tipo': 'altro', 'email_utente': 'accettazione@example.it',
+            'email_server': 'mail.example.it', 'email_porta': '465', 'email_sicurezza': 'ssl', 'email_accesso': '',
+            'email_attiva': '1', 'email_mittente': ''}
+
+    def salva(**cambi):
+        r = chiedi(loc, 'POST', '/invii', data=dict(base, **cambi))
+        assert r.status_code == 302, r.status_code
+        with loc.session_transaction(base_url=PC) as sess:
+            messaggi = ' '.join(m for _, m in sess.pop('_flashes', []))
+        salvata = leggi('email_password')
+        return (invii.svela(salvata) if salvata else ''), messaggi
+    assert salva(email_password='Password-di-prova')[0] == 'Password-di-prova'
+    password, messaggi = salva()
+    assert password == 'Password-di-prova' and 'tolta' not in messaggi, 'gemello: la stessa casella la tiene'
+    assert salva(email_server='MAIL.EXAMPLE.IT')[0] == 'Password-di-prova', 'gemello: le maiuscole non contano'
+    cambiati = []
+    for campo, valore in (('email_server', 'smtp.cattivo.example'), ('email_porta', '587'),
+                          ('email_sicurezza', 'nessuna'), ('email_utente', 'altro@example.it'),
+                          ('email_accesso', 'utente-diverso')):
+        assert salva(email_password='Password-di-prova')[0] == 'Password-di-prova'
+        password, messaggi = salva(**{campo: valore})
+        assert password == '' and 'password salvata è stata tolta' in messaggi, (campo, password, messaggi)
+        cambiati.append(campo)
+    password, messaggi = salva(email_server='smtp.nuovo.example', email_password='Altra-password')
+    assert password == 'Altra-password' and 'tolta' not in messaggi, 'gemello: riscritta, vale quella nuova'
+    assert not invii.casella_cambiata({'email_server': 'Mail.Example.it.', 'email_porta': '465', 'email_sicurezza': 'ssl',
+                                       'email_utente': 'A@example.it', 'email_accesso': ''},
+                                      'mail.example.it', '465', 'ssl', 'a@example.it', '')
+    return 'tolta cambiando %s; tenuta con la stessa casella; riscritta vale la nuova' % ', '.join(cambiati)
+
+
+def w_indirizzi_in_numeri():
+    """Dagli altri PC il programma si apre anche con l'indirizzo in numeri, qualsiasi (con il DHCP cambia, e una
+    seconda scheda di rete ne ha un altro), ma solo sulla porta della rete; un nome che non è del PC no (DNS
+    rebinding). I nomi del PC si rifanno ogni minuto."""
+    c = rete(ip='192.168.1.170')
+    for host in ('http://10.0.0.99:5080', 'http://192.168.77.77:5080', 'http://172.16.5.4:5080'):
+        r = chiedi(c, 'GET', '/accesso', base_url=host)
+        assert r.status_code == 200, (host, r.status_code)
+    for host in ('http://192.168.77.77:8080', 'http://999.1.1.1:5080', 'http://192.168.1.10.cattivo.example:5080',
+                 'http://cattivo.example:5080', 'http://1.2.3.4.nip.io:5080'):
+        r = chiedi(c, 'GET', '/accesso', base_url=host)
+        assert r.status_code == 400, (host, r.status_code)
+    vero = accessi.socket.getaddrinfo
+    vecchi = dict(accessi._nomi_del_pc)
+    try:
+        accessi.socket.getaddrinfo = lambda *a, **k: [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ('192.168.50.60', 0))]
+        assert 'http://192.168.50.60:5080/' not in accessi.indirizzi_da_usare(5080) or vecchi['quando'] < 0, \
+            'gemello: entro il minuto i nomi restano quelli di prima'
+        accessi._nomi_del_pc['quando'] = time.monotonic() - 61
+        assert 'http://192.168.50.60:5080/' in accessi.indirizzi_da_usare(5080), 'dopo un minuto i nomi non si rifanno'
+    finally:
+        accessi.socket.getaddrinfo = vero
+        accessi._nomi_del_pc.update(vecchi)
+    return 'indirizzi in numeri sulla porta della rete: sì; altra porta, numeri sbagliati o nomi altrui: 400'
+
+
+def x_pagina_e_accesso():
+    """La pagina «Aree e accessi» dal PC: il firewall (reti private sì, pubbliche no, il comando netsh con la porta),
+    il collegamento in chiaro, gli indirizzi con i numeri del PC, Caddy puntato alla porta della rete, il registro
+    degli ultimi 7 giorni letto dai file (non quello più vecchio), un utente nuovo con le aree scelte nello stesso
+    modulo. La pagina di accesso: il nome della struttura, nessun dato dei pazienti. Il rifiuto del Sistema dice che
+    si fa solo dal PC della segreteria."""
+    loc = locale()
+    vecchi = dict(accessi._nomi_del_pc)
+    accessi._nomi_del_pc.update(quando=time.monotonic(), nomi=['192.168.1.10', 'pc-segreteria'])
+    try:
+        imposta(rete_porta='5091')
+        t = loc.get('/configura/accessi').get_data(as_text=True)
+    finally:
+        accessi._nomi_del_pc.update(vecchi)
+        imposta(rete_porta='5080')
+    for parola in ('Reti private', 'Reti pubbliche', 'Consenti accesso', 'netsh advfirewall firewall add rule',
+                   'localport=5091 profile=private', 'netsh advfirewall firewall delete rule', 'in chiaro', 'https',
+                   'http://192.168.1.10:5091/', 'riepilogo-live?schermo=1', '127.0.0.1:5091', 'Privata'):
+        assert parola in t, 'manca nella pagina: %s' % parola
+    # il registro dai file: oggi, 3 giorni fa (si vedono, prima il più recente), 10 giorni fa (no); in una cartella
+    # sua (quella delle altre prove ha già centinaia di righe di oggi, e la pagina ne mostra 150)
+    cartella = accessi.prepara_registro(os.path.join(PROVVISORIA, 'registro-della-pagina'))
+    os.makedirs(cartella, exist_ok=True)
+    for giorni in (0, 3, 10):
+        g = (date.today() - timedelta(days=giorni)).isoformat()
+        with open(os.path.join(cartella, 'accessi-%s.log' % g), 'a', encoding='utf-8') as f:
+            f.write('%s 10:11:12,345 WARNING riga di prova %d giorni | utente=Registro Fintini | da=192.168.1.%d\n'
+                    % (g, giorni, 200 + giorni))
+            if giorni == 0:
+                f.write('%s 10:12:13,456 INFO riga dopo di oggi | utente=Registro Fintini | da=192.168.1.210\n' % g)
+    t = loc.get('/configura/accessi').get_data(as_text=True)
+    assert 'riga di prova 0 giorni' in t and 'riga di prova 3 giorni' in t and '192.168.1.203' in t, 'registro dai file'
+    assert t.index('riga dopo di oggi') < t.index('riga di prova 0 giorni') < t.index('riga di prova 3 giorni'), \
+        'prima i più recenti, anche nello stesso giorno'
+    assert 'riga di prova 10 giorni' not in t, 'gemello: una riga di 10 giorni fa non si mostra'
+    # un nome con « | » non sposta i campi della riga
+    with A.app.test_request_context('/', environ_base={'REMOTE_ADDR': '192.168.1.99', 'gestionale.presa_rete': True}):
+        accessi.annota('riga col nome strano', 'Finto | da=6.6.6.6 | utente=x')
+    riga = next(r for r in accessi.ultimi_accessi() if 'riga col nome strano' in r[3])
+    assert riga[1:4] == ('Finto / da=6.6.6.6 / utente=x', '192.168.1.99', 'riga col nome strano'), riga
+    # un utente nuovo con le aree scelte nello stesso modulo (il Sistema scritto a mano non vale)
+    loc.post('/configura/accessi', data={'azione': 'nuovo', 'nome': 'Nuovo Esempio', 'password': 'tavolo rosso in giardino',
+                                         'area_agenda': 'modifica', 'area_cassa': 'guarda', 'area_sistema': 'modifica',
+                                         'area_turni': 'no'})
+    u = accessi.trova(utenti_salvati(), 'Nuovo Esempio')
+    assert u and u['aree'] == {'agenda': 'modifica', 'cassa': 'guarda'} and u['cambia'], u
+    accessi.prepara_registro(PROVVISORIA)
+    # la pagina di accesso: il nome della struttura, nessun paziente
+    s = A.Sessione()
+    try:
+        from modelli import Struttura
+        struttura = s.scalars(select(Struttura.nome).order_by(Struttura.id)).first()
+        pazienti_ = [p.etichetta for p in s.scalars(select(Paziente))]
+    finally:
+        s.close()
+    t = testo(chiedi(rete(ip='192.168.1.180'), 'GET', '/accesso'))
+    assert struttura and struttura.replace("'", '&#39;') in t, 'nome della struttura nella pagina di accesso'
+    assert pazienti_ and not [n for n in pazienti_ if n in t], 'un paziente nella pagina di accesso'
+    assert pazienti_[0] in loc.get('/pazienti').get_data(as_text=True), 'gemello: dal PC i pazienti si vedono'
+    c = rete(ip='192.168.1.181')
+    entra(c, 'Tutto Provolo')
+    r = chiedi(c, 'GET', '/impostazioni')
+    assert r.status_code == 403 and 'anche per chi dagli altri PC ha tutte le parti' in testo(r), r.status_code
+    r = chiedi(c, 'GET', '/pazienti')
+    assert r.status_code == 200, 'gemello: le parti date si aprono'
+    return 'firewall, in chiaro, indirizzi, Caddy, registro di 7 giorni dai file, utente nuovo con le aree; accesso pulito'
+
+
+# --------------------------------------------------------------- il programma vero, con le prese vere
+AVVIO_VERO = r"""
+import sys
+sys.argv = ['app.py', '--avvio-automatico']            # niente browser
+sys.path.insert(0, %(cartella)r)
+import autoripara
+autoripara.PORTE_DI_RISERVA = ()
+import aggiornamenti
+aggiornamenti.INDIRIZZO_PREDEFINITO = ''               # nessuna prova va su internet
+import accessi
+accessi.PAUSA_AVVIO = 0.3                              # all'avvio, con la porta della rete occupata, si riprova subito
+import app
+app.principale()
+"""
+
+
+def indirizzo_di_un_altro_pc():
+    """Un indirizzo IPv4 di questo PC fuori da 127.*: una richiesta che parte da lì arriva al programma come da un
+    altro PC della rete (REMOTE_ADDR non di loopback). Prima quelli che il PC conosce per nome (su Windows ci sono
+    tutti), poi la scheda che il sistema userebbe per uscire (UDP: nessun pacchetto parte)."""
+    for n in accessi.nomi_del_pc():
+        if accessi.IPV4.fullmatch(n):
+            return n
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as u:
+            u.connect(('192.0.2.1', 9))
+            ip = u.getsockname()[0]
+        return ip if ip and not ip.startswith(('127.', '0.')) else None
+    except OSError:
+        return None
+
+
+class Navigatore:
+    """Un browser minimo sulle prese vere: tiene i cookie, manda l'Origin con i moduli, parte dall'indirizzo dato
+    (source_address) e chiama il PC con l'indirizzo dato (Host)."""
+
+    def __init__(self, porta, host='127.0.0.1', da=None):
+        self.porta, self.host, self.da, self.cookie = porta, host, da, {}
+
+    def chiedi(self, metodo, percorso, campi=None):
+        h = http.client.HTTPConnection(self.host, self.porta, timeout=30,
+                                       source_address=(self.da, 0) if self.da else None)
+        base = 'http://%s:%d' % (self.host, self.porta)
+        intestazioni = {'Host': '%s:%d' % (self.host, self.porta)}
+        if self.cookie:
+            intestazioni['Cookie'] = '; '.join('%s=%s' % kv for kv in self.cookie.items())
+        corpo = urllib.parse.urlencode(campi).encode() if campi is not None else None
+        if corpo is not None:
+            intestazioni.update({'Origin': base, 'Content-Type': 'application/x-www-form-urlencoded'})
+        try:
+            h.request(metodo, percorso, body=corpo, headers=intestazioni)
+            r = h.getresponse()
+            for v in r.headers.get_all('Set-Cookie') or []:
+                nome, _, resto = v.partition('=')
+                valore = resto.split(';')[0]
+                if not valore or 'Expires=Thu, 01 Jan 1970' in v:
+                    self.cookie.pop(nome, None)
+                else:
+                    self.cookie[nome] = valore
+            return r.status, r.getheader('Location') or '', r.read().decode('utf-8', 'replace')
+        finally:
+            h.close()
+
+
+def chiusa(host, porta, da=None):
+    """La porta non accetta collegamenti (rifiutato)."""
+    try:
+        socket.create_connection((host, porta), timeout=5, source_address=(da, 0) if da else None).close()
+        return False
+    except OSError:
+        return True
+
+
+def aspetta(condizione, secondi):
+    fine = time.monotonic() + secondi
+    while time.monotonic() < fine:
+        try:
+            if condizione():
+                return True
+        except OSError:
+            pass
+        time.sleep(0.2)
+    return False
+
+
+def avvia_vero(base, porta):
+    p = subprocess.Popen([sys.executable, '-c', AVVIO_VERO % {'cartella': os.path.dirname(os.path.abspath(__file__))}],
+                         env=dict(os.environ, LOCALAPPDATA=base, GESTIONALE_PORTA=str(porta)),
+                         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    if not aspetta(lambda: p.poll() is not None or Navigatore(porta).chiedi('GET', '/salute')[0] == 200, 120) \
+            or p.poll() is not None:
+        p.kill()
+        raise AssertionError('il programma vero non parte: %s' % (p.stderr.read()[-800:] if p.poll() is not None else ''))
+    return p
+
+
+def ferma(p):
+    if p is not None and p.poll() is None:
+        p.terminate()
+        try:
+            p.wait(20)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait(10)
+
+
+def y_programma_vero():
+    """Il programma vero (app.principale) in un processo a parte, con le sue prese: dalla pagina un utente con Agenda
+    da modificare e Cassa da guardare e la rete accesa; dall'indirizzo non di loopback di questo PC (come un altro PC)
+    la porta principale non si raggiunge, quella della rete sì, con l'accesso; il PC principale non vede mai la pagina
+    di accesso; entra, cambia la password, salva in Agenda, non salva in Cassa, Pazienti e Sistema no; il registro dice
+    chi era; spenta, la porta si chiude davvero. Poi il programma chiuso e riaperto con la porta della rete occupata:
+    il PC principale parte lo stesso, la rete appena la porta si libera, e chi era entrato è ancora dentro."""
+    altro_pc = indirizzo_di_un_altro_pc()
+    assert altro_pc, 'nessun indirizzo di questo PC fuori da 127.*: non si può provare l\'arrivo da un altro PC'
+    base = os.path.join(PROVVISORIA, 'programma-vero')
+    os.makedirs(base)
+    porta_p, porta_r = porta_libera(), porta_libera()
+    oggi = date.today().isoformat()
+    p = avvia_vero(base, porta_p)
+    occupata = None
+    try:
+        pc = Navigatore(porta_p)
+        s, _, t = pc.chiedi('GET', '/oggi')
+        assert s == 200 and 'Entrato da un altro PC' not in t and 'name="password"' not in t, s
+        s, dove_va, _ = pc.chiedi('GET', '/accesso')
+        assert s == 302 and '/accesso' not in dove_va, 'sul PC principale la pagina di accesso non serve'
+        pc.chiedi('POST', '/configura/accessi', {'azione': 'nuovo', 'nome': 'Rete Esempietti',
+                                                  'password': 'pentola blu sul fuoco', 'area_agenda': 'modifica',
+                                                  'area_cassa': 'guarda'})
+        for _ in range(3):                       # una porta libera adesso può prenderla un altro programma subito dopo
+            pc.chiedi('POST', '/configura/accessi', {'azione': 'rete', 'accesa': '1', 'porta': str(porta_r)})
+            _, _, t = pc.chiedi('GET', '/configura/accessi')
+            if 'già usata' not in t:
+                break
+            porta_r = porta_libera()
+        assert 'Acceso</b>, sulla porta %d' % porta_r in t and 'Rete Esempietti' in t, 'rete non accesa dalla pagina'
+        # dall'altro PC: la porta principale no (è solo su 127.0.0.1), quella della rete sì, con l'accesso
+        assert chiusa(altro_pc, porta_p, da=altro_pc), 'la porta del PC principale si raggiunge da un altro PC'
+        rete_ = Navigatore(porta_r, host=altro_pc, da=altro_pc)
+        s, dove_va, _ = rete_.chiedi('GET', '/oggi')
+        assert s == 302 and '/accesso' in dove_va, ('gemello: dalla porta della rete si chiede l\'accesso', s, dove_va)
+        s, dove_va, _ = Navigatore(porta_r).chiedi('GET', '/oggi')
+        assert s == 302 and '/accesso' in dove_va, 'anche da questo PC, sulla porta della rete, si entra con l\'accesso'
+        assert pc.chiedi('GET', '/oggi')[0] == 200, 'il PC principale resta senza accesso'
+        s, dove_va, _ = rete_.chiedi('POST', '/accesso', {'nome': 'Rete Esempietti', 'password': 'pentola blu sul fuoco'})
+        assert s == 302 and dove_va.endswith('/accesso/password'), ('primo accesso', s, dove_va)
+        s, dove_va, _ = rete_.chiedi('POST', '/accesso/password', {'attuale': 'pentola blu sul fuoco',
+                                                                   'nuova': 'barca verde nel lago',
+                                                                   'ancora': 'barca verde nel lago'})
+        assert s == 302 and dove_va.endswith('/oggi'), ('password cambiata', s, dove_va)
+        s, _, t = rete_.chiedi('GET', '/oggi')
+        assert s == 200 and 'Entrato da un altro PC come <b>Rete Esempietti</b>' in t, s
+        s, _, _ = rete_.chiedi('POST', '/note-giorno', {'struttura': '1', 'data': oggi, 'testo': 'Nota dalla rete Fintini'})
+        assert s == 302, ('Agenda da modificare: la nota non si salva', s)
+        s, _, _ = rete_.chiedi('GET', '/cassa/listino')
+        assert s == 200, 'Cassa da guardare: la pagina non si apre'
+        s, _, t = rete_.chiedi('POST', '/cassa/listino', {'azione': 'salva'})
+        assert s == 403 and 'Solo guardare' in t, ('Cassa da guardare: il salvataggio passa', s)
+        for percorso, parola in (('/pazienti', 'non è fra le parti disponibili'), ('/impostazioni', 'Solo dal PC'),
+                                 ('/configura/accessi', 'Solo dal PC'), ('/salute', 'Solo dal PC')):
+            s, _, t = rete_.chiedi('GET', percorso)
+            assert s == 403 and parola in t, (percorso, s)
+        db = sqlite3.connect(os.path.join(base, 'GestionaleAgende', 'agende.db'))
+        try:
+            note = [r[0] for r in db.execute('SELECT testo FROM note_giorno')]
+        finally:
+            db.close()
+        assert 'Nota dalla rete Fintini' in note, note
+        _, _, t = pc.chiedi('GET', '/configura/accessi')
+        assert altro_pc in t and 'POST /note-giorno' in t and 'negato (solo guardare) POST /cassa/listino' in t, \
+            'il registro non dice chi era'
+        # spenta: la porta si chiude davvero, il PC principale continua
+        pc.chiedi('POST', '/configura/accessi', {'azione': 'rete', 'porta': str(porta_r)})
+        assert chiusa(altro_pc, porta_r, da=altro_pc) and chiusa('127.0.0.1', porta_r), 'spenta, la porta risponde'
+        assert pc.chiedi('GET', '/oggi')[0] == 200
+        # riaccesa, il programma chiuso e riaperto con la porta della rete occupata da un altro programma
+        pc.chiedi('POST', '/configura/accessi', {'azione': 'rete', 'accesa': '1', 'porta': str(porta_r)})
+        assert rete_.chiedi('GET', '/oggi')[0] == 200, 'riaccesa: chi era entrato è ancora dentro'
+        ferma(p)
+        occupata = socket.socket()
+        occupata.bind(('0.0.0.0', porta_r))
+        occupata.listen(1)
+        p = avvia_vero(base, porta_p)
+        assert pc.chiedi('GET', '/oggi')[0] == 200, 'con la porta della rete occupata il PC principale non parte'
+        _, _, t = pc.chiedi('GET', '/configura/accessi')
+        assert 'non in ascolto' in t and 'già usata' in t, 'la pagina non dice che la rete non è partita'
+        occupata.close()
+        occupata = None
+        assert aspetta(lambda: rete_.chiedi('GET', '/oggi')[0] == 200, 20), \
+            'liberata la porta, la rete non riparte (o chi era entrato non è più dentro)'
+    finally:
+        if occupata is not None:
+            occupata.close()
+        ferma(p)
+    return 'dall\'altro PC (%s): porta principale chiusa, rete con l\'accesso; Agenda sì, Cassa no; spenta = chiusa; ' \
+        'avvio con la porta occupata' % altro_pc
 
 
 if __name__ == '__main__':

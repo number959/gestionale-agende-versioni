@@ -65,9 +65,19 @@ accessi-rete/revisione/attacchi/): DA FARE quando si applica (M2):
 11. Password: lista di vietate, frase lunga consigliata, cambio al primo accesso.
 Nucleo applicato (22/11, ramo `accessi`, gestionale/accessi.py + prove_accessi.py): correzioni 4-11 tutte; della 1 il
 `clear_untrusted_proxy_headers=False` in crea_server (senza, il portiere di Caddy sembrerebbe il PC); della 2 i limiti
-solo per l'ascolto della rete (13 MB, 20 collegamenti, 30 s). Restano da fare: 1 (i portieri puntati alla porta della
-rete, nella guida), 2 nel server principale, 3 (email e WhatsApp nel Sistema, password salvata cancellata), la pagina
-come settima linguetta di Configura (dopo la tappa 2), la guida e il LEGGIMI, le prove nel browser della pagina.
+solo per l'ascolto della rete (13 MB, 20 collegamenti, 30 s).
+Presa della rete e pagina (22/11, ramo `accessi`, secondo commit): correzioni 1-3 e il resto della 10 applicati. 1: i
+portieri puntati alla porta della rete detto nella pagina, nella guida e nel LEGGIMI (con l'accesso acceso gli schermi
+non hanno più bisogno di Caddy); 2: gli stessi limiti anche sul server principale (`accessi.LIMITI_SERVER`); 3:
+`SISTEMA_DENTRO` (casella email e WhatsApp di /invii: 403 dalla rete e nascoste nella pagina) e la password salvata
+tolta se cambiano server, porta, sicurezza o utente (`invii.casella_cambiata`). La pagina: firewall (reti private sì,
+pubbliche no, comando netsh), indirizzi, in chiaro, utente nuovo con le aree nello stesso modulo, registro degli ultimi
+7 giorni dai file; pagina di accesso con il nome della struttura; rifiuto che dice a chi chiedere. Indirizzi in numeri
+sempre buoni sulla porta della rete; nomi del PC rifatti ogni minuto. La guida «Far usare il programma dagli altri PC»
+(altri-pc, con immagine e video fatti solo per lei: le altre si rifanno nella tappa 10). Nella prova la porta della rete
+è la 5085, mai la 5080. Prove: prove_accessi.py (25, con il programma vero in un processo a parte e richieste
+dall'indirizzo non di loopback), prove_accessi_browser.py (nel browser), prove_prova.py. Resta: la pagina come settima
+linguetta di Configura (dopo la tappa 2) e la metà «aree accese/spente» (con M1).
 Scelte del nucleo: Modo schermo libero solo con ?schermo=1 (le pagine con il menu vogliono l'accesso); «Oggi» senza i
 riquadri delle aree che l'utente non ha; menu (_menu.html) non toccato: le voci delle aree negate portano al 403.
 Domande lasciate a Giovanni (decido io il predefinito e lo scrivo): Importa da Excel → Configura «modificare» (no Sistema);

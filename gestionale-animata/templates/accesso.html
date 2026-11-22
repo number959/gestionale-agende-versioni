@@ -3,8 +3,9 @@
 {% block menu %}{% endblock %}
 {% block corpo %}
 <div class="pagina pagina-accesso">
-  <h1>Gestionale Agende</h1>
-  <p class="sotto">Da questo PC si entra con il proprio nome e la propria password.</p>
+  {%- set m = marchio_di() %}
+  <h1>{{ m.nome }}</h1>
+  <p class="sotto">Gestionale Agende. Da questo PC si entra con il proprio nome e la propria password; nome e password li dà chi usa il PC della segreteria.</p>
   {% if nessuna %}<div class="avviso errore">Questo utente non ha nessuna parte del programma disponibile: chiedere a chi usa il PC della segreteria.</div>{% endif %}
   {% if errore %}<div class="avviso errore" role="alert">{{ errore }}</div>{% endif %}
   <form method="post" action="{{ url_for('accessi.accesso') }}" class="riquadro">

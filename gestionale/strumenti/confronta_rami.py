@@ -257,6 +257,9 @@ def leggi_approvati(percorso):
                 regole.append(('sostituisci', parti[1], re.compile(parti[2]), parti[3]))
             elif parti[0] == 'nuova' and parti[1:2] == ['indirizzo'] and len(parti) >= 4:
                 regole.append(('nuova', parti[1], re.compile(parti[2]), None))
+            elif parti[0] == 'foglio' and len(parti) >= 5 and parti[2].isdigit() and parti[3].isdigit():
+                # un foglio da stampare che cambia: quante pagine in più e da quale pagina può cambiare il contenuto
+                regole.append(('foglio', parti[1], None, (int(parti[2]), int(parti[3]))))
             else:
                 sys.exit('cambiamenti_approvati.txt, riga %d: non la capisco: %r' % (n, riga))
     return regole
@@ -288,6 +291,31 @@ def pagina_nuova(percorso, ra, regole):
     parametri): non è una differenza."""
     return ra.get('stato') == 404 and any(tipo == 'nuova' and rx.search(urlsplit(percorso).path)
                                           for tipo, _, rx, _ in regole)
+
+
+def fogli_approvati_da(righe, regole):
+    """Le righe dei fogli da stampare con quelli approvati da una regola «foglio» (nome, pagine in più, da quale
+    pagina): approvato solo se il numero delle pagine cambia esattamente di quanto scritto, e se fra la seconda pagina
+    e quella scritta le pagine differiscono solo nel piede (il numero «Pagina N di M», in basso: sopra i 1100 punti
+    dall'alto niente). La prima pagina (l'indice) può cambiare. Torna (righe, quanti approvati)."""
+    approvate = {chiave: valori for tipo, chiave, _, valori in regole if tipo == 'foglio'}
+    uscita, approvati = [], 0
+    for r in righe:
+        m = re.match(r'FOGLIO DIVERSO \S+ \((\w+)\)', r)
+        if not m or m.group(1) not in approvate:
+            uscita.append(r)
+            continue
+        in_piu, da_pagina = approvate[m.group(1)]
+        conti = re.search(r'pagine: principale (\d+); qui (\d+)', r)
+        riquadri = [(int(p), int(y)) for p, y in re.findall(r'pagina (\d+): \d+ pixel diversi nel riquadro \(\d+, (\d+),', r)]
+        buono = conti is not None and int(conti.group(2)) - int(conti.group(1)) == in_piu and \
+            'risposta e frasi' not in r and all(y >= 1100 for p, y in riquadri if 1 < p < da_pagina)
+        if buono:
+            approvati += 1
+            uscita.append(r.replace('FOGLIO DIVERSO', 'FOGLIO DIVERSO (approvato, regola «foglio»)', 1))
+        else:
+            uscita.append(r)
+    return uscita, approvati
 
 
 def applica_approvati(ra, rb, regole):
@@ -417,8 +445,12 @@ def main():
         n_f = d_f = 0
         # una cartella nuova a ogni giro (due giri insieme non si pestano i piedi); resta solo con dei fogli diversi
         cartella_fogli = tempfile.mkdtemp(prefix='confronto_rami-%s-fogli-' % NOME)
+        fogli_approvati = 0
         if not arg.senza_pdf:                # i fogli da stampare in PDF, con i due programmi ancora accesi
             r_f, n_f, d_f, mancanti = confronta_fogli(porte, viste, cartella_fogli, arg.fogli_per_tipo)
+            r_f, approvati_f = fogli_approvati_da(r_f, regole)
+            d_f -= approvati_f
+            fogli_approvati += approvati_f
             righe += r_f
             d_f += len(mancanti)             # un foglio mai incontrato non deve passare in silenzio
         if not os.listdir(cartella_fogli):
@@ -439,8 +471,10 @@ def main():
                   % (len(regole), approvate))
         print('resoconto: %s' % resoconto)
         if not arg.senza_pdf:
-            print('%d fogli da stampare confrontati in PDF, %d diversi o mancanti%s' % (
-                n_f, d_f, ' (immagini in %s)' % cartella_fogli if d_f else ''))
+            print('%d fogli da stampare confrontati in PDF, %d diversi o mancanti%s%s' % (
+                n_f, d_f, ' (immagini in %s)' % cartella_fogli if d_f else '',
+                '; %d diversi solo come approvato (regole «foglio»: immagini in %s)' % (fogli_approvati, cartella_fogli)
+                if fogli_approvati else ''))
         print('%d pagine confrontate, %d diverse' % (n, len(diverse)))
         return 1 if diverse or d_f else 0
     finally:

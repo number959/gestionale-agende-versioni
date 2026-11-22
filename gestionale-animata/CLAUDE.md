@@ -98,7 +98,10 @@ scorrimento di lato e la tendina «Stampa e scarica»), `prove_tendine_browser.p
 `prove_191_browser.py` (salva le impostazioni email della prova e poi rimette quelle di
 partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova),
 `prove_112_browser.py` (la pianificazione degli ambulatori: mette e toglie un turno, scarica i due Excel),
-`prove_tariffari_browser.py` (il prezzo del tariffario nella prenotazione, carica ed elimina un tariffario), nell'animata
+`prove_tariffari_browser.py` (il prezzo del tariffario nella prenotazione, carica ed elimina un tariffario),
+`prove_accessi_browser.py` (dalla 1.13: il giro della segreteria in *Aree e accessi*, accesso dalla rete acceso su una porta
+libera, mai la 5080, un utente con Agenda da modificare e Cassa da guardare, poi da un'altra scheda sull'indirizzo della
+rete: accesso, password nuova, nota salvata, «Solo guardare», Pazienti negata, Esci; alla fine tutto come prima), nell'animata
 `prove_animazioni.py` e `prove_icone_animate.py`, e per ultima `prove_16_browser.py`, che
 cambia l'indirizzo degli aggiornamenti. Le prove nel browser salvano dati: sempre su un
 gestionale di prova, mai su quello vero. Dalla tappa 1 della base prendono l'indirizzo solo da
@@ -135,7 +138,12 @@ sparisce o cambia la fa cadere, uno nuovo si aggiunge con `python prove_indirizz
 area), la matrice area × livello × pagina × metodo dalla rete e dal PC (le decisioni lette senza far girare le pagine),
 le pagine di ogni area con tutti gli indirizzi che i loro script chiedono, i cinque modi di arrivare dalla rete, il
 Sistema, il Modo schermo, sessioni, tentativi, messaggi e registro, password, scritture e letture fra aree, e le prese
-vere (portiere, ascolto acceso e spento, chiave fissa rifiutata); ogni prova ha il suo gemello.
+vere (portiere, ascolto acceso e spento, chiave fissa rifiutata), i limiti di waitress dei due server (14 MB: 413), la
+casella email e WhatsApp nel Sistema, la password della casella tolta quando cambia il server, gli indirizzi in numeri,
+la pagina e il registro letto dai file, e il programma vero (`app.principale`) in un processo a parte: rete accesa dalla
+pagina, richieste dall'indirizzo di questo PC fuori da 127.* (come un altro PC) e da 127.0.0.1, porta principale non
+raggiungibile, «solo guardare» che non salva, rete spenta che chiude davvero la porta, riavvio con la porta della rete
+occupata (il PC principale parte lo stesso); ogni prova ha il suo gemello.
 `prove_canarino.py` è la guardia del Modo schermo: un paziente inventato apposta (il «canarino»), con appuntamenti
 di oggi in ogni stato, un intervento, la lista d'attesa e il nome scritto in note, cose da fare e appunti, non deve
 comparire in nessuna pagina sotto `/riepilogo-live*`, con e senza schermo, per ogni struttura e periodo; i suoi gemelli
@@ -171,8 +179,9 @@ stampare (fino a 3 pagine di ognuno, prese dal giro) in PDF come con Ctrl+P, pix
 vuole `pdftoppm`; senza, foto in modo stampa che vedono meno; `--senza-pdf` per saltarli). Un foglio mai incontrato
 nel giro conta come diverso. Nella veste nuova si lancia dopo ogni passo: le differenze che restano devono essere
 solo quelle volute, una per una. Quelle approvate stanno in `strumenti/cambiamenti_approvati.txt` (uguale nelle due
-cartelle; regole «aggiunto» e «sostituisci» per chiave), che il lanciatore conta a parte; `--senza-approvati` le
-mostra tutte. Un cambiamento nuovo si approva scrivendo la regola nello stesso commit, con il perché.
+cartelle; regole «aggiunto» e «sostituisci» per chiave, «nuova» per una pagina che il principale non ha, «foglio» per
+un foglio da stampare con esattamente N pagine in più e, prima della pagina scritta, solo l'indice e il piede cambiati),
+che il lanciatore conta a parte; `--senza-approvati` le mostra tutte. Un cambiamento nuovo si approva scrivendo la regola nello stesso commit, con il perché.
 I passi della guida indicano un punto della pagina solo con `[data-guida="…"]` o con un id (mai una classe o un
 tag, che cambiano con la veste): lo controlla `prove_guida.py`, che vuole anche che il nome esista in un modello (scritto
 `data-guida="nome"` o, dalla tappa 1-bis, passato a un pezzo di `_pezzi.html` con `guida='nome'`).
@@ -330,7 +339,19 @@ temporanea.
   sul PC l'HTML resta identico. Sessioni della rete sul server (`Sessioni`, `sessioni-rete.json` accanto a
   `chiave-sessione`, nella cartella dei dati), chiave dei cookie casuale (mai più `gestionale-locale`), tentativi
   bloccati per PC e nome e per nome (`Tentativi`), password con `problema_password`, registro per giorno in
-  `accessi/`. Nella prova (`prova.py`) la presa della rete non si apre mai.
+  `accessi/` (la pagina mostra gli ultimi 7 giorni, letti dai file). Regole da non rompere: ogni pagina nuova (funzione
+  di Flask) ha la sua area nel censimento; il Sistema mai dalla rete, anche le sue parti dentro le pagine di un'area
+  (`SISTEMA_DENTRO`: la casella email e il token WhatsApp di `/invii`, con prove e registrazione del numero; nella
+  pagina dietro `{% if puo('sistema') %}`); il PC principale senza accesso e con le pagine di prima. I due server di
+  waitress hanno gli stessi limiti (`accessi.LIMITI_SERVER`: 13 MB, 20 collegamenti, 30 secondi) e non tolgono le
+  intestazioni dei portieri; la porta della rete si salva solo dopo un'accensione riuscita, `accessi.applica` si
+  richiama dopo un ripristino o una riparazione, all'avvio con la porta occupata si riprova (`RIPROVE_AVVIO`,
+  `PAUSA_AVVIO`) in un filo a parte: la rete non deve mai fermare l'avvio del PC principale. Dagli altri PC un
+  indirizzo in numeri va sempre bene sulla porta della rete (il DNS rebinding passa da un nome), un nome solo se è del
+  PC (`nomi_del_pc`, rifatti ogni minuto) o scritto in «Altri nomi». La password salvata della casella email si toglie
+  se cambiano server, porta, sicurezza o nome utente senza riscriverla (`invii.casella_cambiata`). Nella prova
+  (`prova.py`) l'accesso dalla rete si prova sulla 5085, mai sulla 5080 della clinica né sulle 5000-5009 e 5050-5059,
+  con un cookie suo (`prove_prova.py` lo controlla, anche con la prova avviata davvero).
 - Popup dell'aggiornamento (dalla 1.12.6): `aggiornamenti.popup_aggiornamento` decide, `_popup_aggiornamento.html` lo
   mostra (incluso in `base.html`); solo con `installato()`, mai nella dashboard (`live.*`), nelle stampe, nella
   guida e nella pagina degli aggiornamenti. Il pulsante è il POST di «Aggiorna adesso», nient'altro.

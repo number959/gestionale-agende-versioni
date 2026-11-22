@@ -950,9 +950,10 @@ def crea_server(porta, riserva=()):
     for i, p in enumerate(candidate):
         try:
             # le intestazioni di un portiere (X-Forwarded-For, Forwarded) restano: chi le porta arriva da un altro
-            # PC (accessi.dalla_rete); waitress altrimenti le toglie e il portiere sembrerebbe il PC principale
+            # PC (accessi.dalla_rete); waitress altrimenti le toglie e il portiere sembrerebbe il PC principale.
+            # I limiti (moduli fino a 13 MB, 20 collegamenti, 30 secondi di silenzio) sono gli stessi della rete
             return create_server(app, sockets=[presa_in_ascolto(p)], threads=FILI,
-                                 clear_untrusted_proxy_headers=False), p
+                                 clear_untrusted_proxy_headers=False, **accessi.LIMITI_SERVER), p
         except OSError as e:
             logging.warning("porta %d non utilizzabile: %s", p, e)
             if i == len(candidate) - 1:

@@ -390,11 +390,21 @@ def b_dominio():
     assert invii.svela(c['email_password']) == 'la mia password', 'spazi dentro la password tolti o spazi ai lati rimasti'
     assert c['email_accesso'] == '' and c['email_senza_password'] == '0'
     assert 'Email: pronte' in testo(C.get('/invii'))
-    # il server scritto a mano resta
+    # salvata di nuovo la stessa casella, senza riscrivere la password: la password resta
+    C.post('/invii', data=modulo(email_tipo='dominio', email_utente='segreteria@clinica-esempio.it',
+                                 email_server='mail.clinica-esempio.it', email_porta='465', email_sicurezza='ssl'))
+    assert invii.svela(salvate(S)['email_password']) == 'la mia password', 'la stessa casella ha perso la password'
+    # il server scritto a mano resta; senza riscrivere la password, quella salvata si toglie (1.13, correzione 3 della
+    # revisione degli accessi dalla rete: non deve partire verso un server diverso da quello per cui è stata scritta)
     C.post('/invii', data=modulo(email_tipo='dominio', email_utente='segreteria@clinica-esempio.it',
                                  email_server='server12.hosting.example', email_porta='465', email_sicurezza='ssl'))
     c = salvate(S)
-    assert c['email_server'] == 'server12.hosting.example' and invii.svela(c['email_password']) == 'la mia password', c
+    assert c['email_server'] == 'server12.hosting.example' and c['email_password'] == '', c
+    assert 'password salvata è stata tolta' in avvisi(C, 'avviso'), 'manca l\'avviso della password tolta'
+    C.post('/invii', data=modulo(email_tipo='dominio', email_utente='segreteria@clinica-esempio.it',
+                                 email_server='server12.hosting.example', email_porta='465', email_sicurezza='ssl',
+                                 email_password='la mia password'))
+    assert invii.svela(salvate(S)['email_password']) == 'la mia password', 'riscritta, la password non si salva'
 
 
 def b_aruba_e_gmail():

@@ -1799,6 +1799,79 @@ dell'errore del server (il disco pieno e il database occupato con il loro messag
 Per le prove: `GESTIONALE_PORTA` cambia la porta del programma (al PC della clinica non c'è: le
 prove non toccano mai la 5000).
 
+## Accesso dagli altri PC della rete
+
+Dalla 1.13, richiesta di Giovanni del 22/11/2026: «dammi la possibilità di scegliere quale modulo rendere disponibile
+sugli altri PC della rete in locale a quale utente e quale no». Tutto sta in `accessi.py`; la guida è *Far usare il
+programma dagli altri PC* (gruppo Configurazione).
+
+**Per chi lo usa.** È spento di partenza: il PC della segreteria apre il programma da http://127.0.0.1:5000 come
+sempre, senza password e con tutte le pagine, e con l'accesso spento le sue pagine sono quelle di prima, byte per byte.
+Si accende dal PC della segreteria, *Configura → Impostazioni → Aree e accessi* (dopo la tappa 2 sarà una linguetta di
+Configura): la spunta «Gli altri PC della rete possono aprire il programma», la porta (5080 di partenza) e Salva. Da
+quel momento il programma ascolta anche su tutte le schede di rete del PC, su quella porta, e la pagina dice
+l'indirizzo da aprire negli altri PC (`http://NOME-DEL-PC:5080/`, o con i numeri del PC). La prima volta Windows chiede se
+il programma può usare la rete: «Reti private» sì, «Reti pubbliche» no, «Consenti accesso» (serve un amministratore);
+la rete della clinica deve essere segnata «Privata» in Windows. Se la domanda non compare, la pagina dà il comando da
+scrivere nel Prompt dei comandi come amministratore:
+
+```
+netsh advfirewall firewall add rule name="Gestionale Agende (rete della clinica)" dir=in action=allow protocol=TCP localport=5080 profile=private
+netsh advfirewall firewall delete rule name="Gestionale Agende (rete della clinica)"
+```
+
+Poi gli utenti: uno per persona, con un nome e una password per il primo accesso (al primo accesso la persona ne
+sceglie una sua: almeno 10 caratteri, non fra quelle che si indovinano subito, meglio una frase di tre o quattro
+parole). Per ogni parte del programma (Agenda, Pazienti, Segreteria, Cassa, Sala operatoria, Turni, Ambulatori e
+dashboard, Statistiche e report, Dove si fa, Email e WhatsApp, Anagrafiche, Guida e aiuto): «non disponibile», «solo
+guardare» (si aprono le pagine e si scaricano i file, non si salva niente) o «guardare e modificare». Il Sistema
+(aggiornamenti, copie e ripristino, controllo del programma, impostazioni, la casella email e WhatsApp, la pagina degli
+accessi) resta sempre e solo sul PC della segreteria. Dall'altro PC si entra con nome e password; in alto si vede con
+quale nome si è entrati, con «La mia password» ed «Esci». Una parte non data risponde con una pagina in italiano che
+dice a chi chiedere. Nel riquadro di ogni utente: le parti, «Può entrare» (togliendo la spunta esce subito da tutti i
+PC), la password nuova se l'ha dimenticata, «Fai uscire», «Togli» (con la domanda). Chi sbaglia la password 5 volte da un
+PC aspetta un quarto d'ora; «Sblocca» in *Tentativi sbagliati*. In fondo gli ultimi accessi e salvataggi dagli altri PC
+degli ultimi 7 giorni.
+
+Il collegamento è in chiaro (http, non https): nome, password e dati passano senza protezione nella rete della clinica.
+Va bene solo nella rete interna del personale, mai in una Wi-Fi aperta ai pazienti o da fuori; la protezione https,
+con il portiere Caddy, è un passo successivo. Gli schermi della dashboard: con la spunta «Il Modo schermo… si apre senza
+password» aprono `http://NOME-DEL-PC:5080/riepilogo-live?schermo=1` senza Caddy; se Caddy resta, nel suo Caddyfile
+`127.0.0.1:5000` diventa `127.0.0.1:5080` (con l'accesso spento Caddy funziona come prima, verso la 5000).
+
+**Come funziona dentro.**
+- *Dalla rete* è una richiesta arrivata dalla presa della rete (`AscoltoRete`, un secondo server di waitress con fili
+  suoi, acceso e spento a programma aperto: `MarcaRete` segna ogni richiesta), con un'intestazione di un portiere
+  (X-Forwarded-For, Forwarded, X-Real-Ip, X-Forwarded-Host) o da un indirizzo non del PC. Per le intestazioni il server
+  principale non le toglie più (`clear_untrusted_proxy_headers=False`). I due server hanno gli stessi limiti
+  (`LIMITI_SERVER`: moduli fino a 13 MB, oltre 413 da waitress; 20 collegamenti; un collegamento fermo da 30 secondi si
+  chiude, mai uno con una richiesta in corso).
+- *La guardia* (`controlla_accesso`, prima di ogni richiesta): ogni pagina ha la sua area in `CENSIMENTO` (una che manca è
+  rifiutata come il Sistema, e la prova cade); il Sistema mai; le parti del Sistema dentro le pagine di un'area
+  (`SISTEMA_DENTRO`: i moduli della casella email e di WhatsApp di `/invii`) rispondono 403, e la pagina le nasconde
+  (`{% if puo('sistema') %}`); «solo guardare» lascia passare solo GET e HEAD. Il nome con cui si chiama il PC (Host):
+  uno dei suoi nomi (`nomi_del_pc`, rifatti ogni minuto), uno scritto in «Altri nomi», o un indirizzo in numeri sulla
+  porta della rete (il DNS rebinding passa sempre da un nome); l'origine dei moduli come sul PC.
+- *Utenti e sessioni*: fra le impostazioni (`rete_utenti`, JSON con l'impronta della password di werkzeug: nessuna
+  tabella nuova, lo schema resta il 12); le sessioni sul server (`sessioni-rete.json` accanto a `chiave-sessione`), così
+  «Esci», «Fai uscire», la password cambiata e l'utente spento chiudono davvero, e dopo un riavvio chi era entrato
+  resta dentro. La chiave dei cookie è casuale, una per installazione; la presa della rete non si accende con una
+  chiave corta o con quella fissa di prima.
+- *Accendere e spegnere*: la porta si salva solo se l'ascolto parte (una porta occupata lascia quella di prima e lo
+  dice: «già usata da un altro programma», o per Windows «riservata»); mai la 5000 né le 5001-5009. Dopo un ripristino
+  e dopo una riparazione `applica` rimette l'ascolto come dicono le impostazioni rimesse. All'avvio (`all_avvio`, da
+  `app.principale` dopo che il PC principale è in ascolto, dentro un try) con la porta ancora occupata si riprova ogni
+  mezzo minuto per cinque minuti in un filo a parte, poi lo scrive in *Controllo del programma*: la rete non ferma mai
+  l'avvio del PC principale.
+- *La casella email*: la password salvata vale solo per il server, la porta, la sicurezza e il nome utente per cui è
+  stata scritta; cambiato uno di questi senza riscriverla, si toglie con l'avviso (`invii.casella_cambiata`). Così
+  nessuno, nemmeno dal PC, la può mandare a un altro server cambiando solo il server.
+- *Il registro*: `accessi/accessi-AAAA-MM-GG.log` accanto al database, un file per giorno (più vecchi di 400 giorni si
+  cancellano all'avvio), senza caratteri di controllo e senza « | » nei nomi; entrate, uscite, errori di password,
+  ogni salvataggio, ogni rifiuto, e le schede, i documenti e gli Excel aperti.
+- *Nella prova* (`prova.py`) l'accesso dagli altri PC si prova sulla 5085, mai sulla 5080 della clinica né sulle porte
+  del programma vero e della prova, con un cookie suo; non si accende da solo all'avvio.
+
 ## Dove stanno i dati
 
 `%LOCALAPPDATA%\GestionaleAgende\agende.db`, insieme a `gestionale.log`. Il programma
@@ -2570,6 +2643,27 @@ Prima delle pagine nuove, i pezzi con cui si faranno, senza cambiare di un pixel
   principale, poi i due programmi uno alla volta sulla stessa cartella, con l'orologio fermo (nel programma e nel
   browser), 35 pagine a 1366×657 e intere, in chiaro e in scuro, più tendine aperte, fuoco della tastiera, messaggi a
   scomparsa e stampa; le foto diverse si rifanno sul principale per misurare il rumore.
+
+### L'accesso dagli altri PC (dalla 1.13)
+
+`prove_accessi.py` (senza browser): il censimento con una pagina finta senza area; la matrice area × livello × pagina ×
+metodo, dalla rete e dal PC; le pagine di ogni area e tutti gli indirizzi chiesti dai loro script; i cinque modi di
+arrivare dalla rete; Sistema, Modo schermo, sessioni, tentativi, messaggi e registro, password, scritture e letture fra
+aree; le prese vere (portiere, ascolto acceso, spento, riacceso, porta occupata, chiave fissa); i limiti dei due server
+(un modulo di 14 MB: 413 da waitress); la casella email e WhatsApp nel Sistema e la password tolta cambiando server; gli
+indirizzi in numeri; la pagina con il registro letto dai file; e il programma vero (`app.principale`) in un processo a
+parte, con `GESTIONALE_PORTA`: la rete accesa dalla pagina, le richieste dall'indirizzo di questo PC fuori da 127.* (come
+un altro PC) e da 127.0.0.1, la porta principale che dall'altro indirizzo non si raggiunge, l'accesso con la password da
+cambiare, Agenda che salva, Cassa «solo guardare» che no, Pazienti e Sistema negati, la rete spenta che chiude davvero
+la porta, il riavvio con la porta della rete occupata (il PC principale parte, la rete appena la porta si libera, chi
+era entrato è ancora dentro). Ogni prova ha il suo gemello, e ogni controllo nuovo è stato provato con un mutante su
+una copia del programma.
+
+`prove_accessi_browser.py` (nel browser, sul gestionale di prova): il giro della segreteria, da Impostazioni ad *Aree e
+accessi*, l'accesso acceso su una porta libera, un utente con Agenda da modificare e Cassa da guardare; da un'altra
+scheda sull'indirizzo della rete: password sbagliata, primo accesso, password nuova, la nota del giorno salvata, «Salva il
+listino» che risponde «Solo guardare», Pazienti negata con «Torna alle pagine disponibili», «Esci»; dal PC il registro, «Togli»
+con la domanda, l'accesso spento e la porta chiusa. Alla fine il gestionale di prova torna com'era.
 
 ## Difetti trovati e corretti
 
