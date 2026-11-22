@@ -2794,6 +2794,46 @@ def z_nv_copia_rimessa():
     return 'ripristino, riparazione e avvio: gli accessi restano quelli di adesso; la nota torna indietro; senza file rete spenta'
 
 
+def z_nv_file_accessi_rovinato():
+    """Verifica del secondo giro (22/11, attacco nuovo): accessi-rete.json rovinato (scritto a metà, vuoto, con un'altra
+    forma) quando si rimette una copia all'avvio. Non si sa com'erano gli accessi: la rete resta spenta (la copia l'aveva
+    accesa), il programma va avanti e il file torna leggibile, riscritto dal database. Senza questa prova un dal_file()
+    che non riconosce il file rovinato faceva vincere la copia (rete riaccesa con gli utenti di ieri) e nessuna prova
+    cadeva. Gemello: con il file buono restano gli accessi del file, anche l'utente aggiunto dopo la copia."""
+    import backup
+    ospiti(('Rovinato Esempietti', {'agenda': 'modifica'}))
+    imposta(rete_accesa='1', rete_porta=str(porta_libera()))       # mai la 5080, anche se la prova cade a metà
+    percorso_db = A.Sessione.motore.url.database
+    copia = backup.esegui(percorso_db, os.path.join(PROVVISORIA, 'copie-rovinato'))
+    ospiti(('Dopo Esempietti', {'agenda': 'guarda'}))
+    s = A.Sessione()
+    accessi.ricorda(s)
+    s.close()
+    file_rete = os.path.join(PROVVISORIA, accessi.FILE_RETE)
+    try:
+        backup.metti_al_posto(copia, percorso_db, A.Sessione.motore)
+        assert accessi.trova(utenti_salvati(), 'Dopo Esempietti') is None, 'gemello: la copia non ha l\'utente di dopo'
+        assert accessi.rimetti(A.Sessione, accessi.dal_file()) == 'rimessi', 'gemello: il file buono non è servito'
+        assert accessi.trova(utenti_salvati(), 'Dopo Esempietti') and leggi('rete_accesa') == '1', 'gemello'
+        buono = open(file_rete, encoding='utf-8').read()
+        for rovinato in (buono[:len(buono) // 2], '', '[1, 2]', json.dumps(dict(json.loads(buono), rete_utenti=[]))):
+            with open(file_rete, 'w', encoding='utf-8') as f:
+                f.write(rovinato)
+            backup.metti_al_posto(copia, percorso_db, A.Sessione.motore)
+            assert leggi('rete_accesa') == '1', 'gemello: la copia ha la rete accesa'
+            accessi.all_avvio(A.app, A.Sessione, PROVVISORIA, prove=0, copia_rimessa=True)
+            assert leggi('rete_accesa') == '' and not accessi.ascolto.acceso(), \
+                'file rovinato (%r): la copia ha riacceso la rete' % rovinato[:30]
+            s = A.Sessione()
+            try:
+                assert accessi.dal_file() == accessi.istantanea(s), 'il file non è stato riscritto dal database'
+            finally:
+                s.close()
+    finally:
+        accessi.ascolto.spegni()
+    return 'file rovinato in 4 modi: rete spenta e file riscritto; gemello: il file buono rimette gli accessi'
+
+
 def z_nv_firewall():
     """Problema 10 (medio): dopo «Annulla» o «No» Windows crea regole che BLOCCANO il programma, e una regola che blocca
     vince su quelle che permettono (documentazione di Microsoft): il comando «add rule ... action=allow» da solo non apriva

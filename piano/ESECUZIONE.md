@@ -126,3 +126,10 @@ Decisioni di questo giro (predefiniti decisi, Giovanni può cambiarli):
   bastano nome, nascita e telefono.
 - *Menu*: la voce «Ambulatori → Esportazioni in Excel» del menu porta ancora al 403 a chi non ha Statistiche e report (il menu
   non si tocca finché la tappa 2 non lo rifà, come deciso nel nucleo); le voci dentro le pagine degli Ambulatori sono tolte.
+Verifica del secondo giro (22/11, sera; ramo `accessi`): rifatto da capo il grave nell'eseguibile costruito in Wine (e il
+gemello: l'eseguibile di prima, 7e94a8a, dà ancora 500 dopo «Aree e accessi» e dopo il portiere), con «python app.py»,
+gli altri 13 problemi con i passi del revisore (tutti corretti), Statistiche e report con 4 utenti su 70 pagine ed Excel. Attacco
+nuovo: accessi-rete.json rovinato quando all'avvio si rimette una copia. Il programma lo regge (rete spenta), ma nessuna
+prova lo guardava: un `dal_file()` che non riconosce il file rovinato faceva vincere la copia (rete riaccesa con gli
+utenti di ieri) e tutte le prove restavano verdi. Aggiunta `z_nv_file_accessi_rovinato` (4 file rovinati, gemello con il
+file buono; due mutanti presi).
