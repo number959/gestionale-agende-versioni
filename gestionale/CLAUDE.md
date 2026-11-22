@@ -130,8 +130,11 @@ nuovo voluto si scrive con `python prove_live_json.py --scrivi`, nello stesso co
 `strumenti/confronta_rami.py` (non è nel giro di `tutte_le_prove.py`: vuole git) confronta il programma del ramo
 principale con quello della cartella, sugli stessi dati di prova copiati due volte: segue i collegamenti da tutte
 le pagine senza parametri (ogni tipo di pagina al massimo 4 volte) e confronta risposte, moduli e campi (anche
-nascosti), collegamenti, `data-tasto`, `data-guida`, testo, JSON e Excel cella per cella. Nella veste nuova si
-lancia dopo ogni passo: le differenze che restano devono essere solo quelle volute, una per una.
+nascosti), collegamenti, `data-tasto`, `data-guida`, testo, JSON e Excel cella per cella; poi i 9 fogli da
+stampare (fino a 3 pagine di ognuno, prese dal giro) in PDF come con Ctrl+P, pixel per pixel (`strumenti/fogli_pdf.py`,
+vuole `pdftoppm`; senza, foto in modo stampa che vedono meno; `--senza-pdf` per saltarli). Un foglio mai incontrato
+nel giro conta come diverso. Nella veste nuova si lancia dopo ogni passo: le differenze che restano devono essere
+solo quelle volute, una per una.
 I messaggi per l'utente (`flash()`) in `prove_14.py` e `prove_funzioni.py` si prendono da Flask quando il programma
 li fa (`prove_messaggi.py`, segnale `message_flashed`), non dall'HTML: ogni test_client va segnato con
 `prove_messaggi.segna()`, e con una pagina 200 `avvisi(C, r)` controlla anche che i messaggi di quella richiesta

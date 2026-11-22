@@ -14,8 +14,11 @@ risposta e rimando; i moduli come li manda il browser (indirizzo, metodo, campi 
 tendine, bottoni con il loro valore); collegamenti, data-tasto e data-guida; le righe di testo (non con
 --senza-testo); i JSON per intero; gli Excel cella per cella; gli altri file byte per byte. Una pagina diversa
 si chiede di nuovo una volta (l'ora può scattare fra le due richieste). Nessuna richiesta che cambia i dati:
-solo GET. Finisce con «N pagine confrontate, K diverse» e un resoconto in confronto_rami.txt (nella cartella
-temporanea, il percorso lo scrive alla fine)."""
+solo GET. Poi i 9 fogli da stampare (stampa del giorno, agenda dei medici, lista operatoria, promemoria…): di
+ognuno fino a --fogli-per-tipo pagine prese dal giro, stampate in PDF da Chromium come con Ctrl+P e confrontate
+pixel per pixel (strumenti/fogli_pdf.py; senza pdftoppm, foto in modo stampa; --senza-pdf per saltarli). Finisce
+con «N pagine confrontate, K diverse» e un resoconto in confronto_rami.txt (nella cartella temporanea, il
+percorso lo scrive alla fine)."""
 import argparse
 import hashlib
 import html
@@ -39,6 +42,8 @@ QUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))           # la
 RADICE = os.path.dirname(QUI)
 NOME = os.path.basename(QUI)                                                 # gestionale o gestionale-animata
 
+from fogli_pdf import AGGANCIO_MODELLI, confronta_fogli      # nella stessa cartella strumenti/
+
 ESEGUI = r'''
 import os, sys
 codice, db, porta = sys.argv[1], sys.argv[2], int(sys.argv[3])
@@ -46,7 +51,7 @@ sys.path.insert(0, codice); os.chdir(codice)
 import app as A
 from modelli import crea_sessione
 A.Sessione = crea_sessione('sqlite:///' + db); A._registro = None
-from waitress import serve
+'''.strip('\n') + '\n' + AGGANCIO_MODELLI + r'''from waitress import serve
 serve(A.app, host='127.0.0.1', port=porta, threads=4)
 '''
 
@@ -250,6 +255,8 @@ def main():
     par.add_argument('--per-forma', type=int, default=4, help='quante pagine dello stesso tipo (0 = tutte)')
     par.add_argument('--senza-testo', action='store_true')
     par.add_argument('--qui', default=QUI, help='la cartella da confrontare (di solito questa)')
+    par.add_argument('--senza-pdf', action='store_true', help='non confrontare i 9 fogli da stampare in PDF')
+    par.add_argument('--fogli-per-tipo', type=int, default=3, help='quante pagine di ogni foglio da stampare')
     arg = par.parse_args()
     tmp = tempfile.mkdtemp(prefix='confronta-rami-')
     processi, registri = [], []
@@ -299,17 +306,20 @@ def main():
         per_forma, saltati = {}, 0
         for x in coda:
             per_forma[forma(x)] = per_forma.get(forma(x), 0) + 1
-        n = 0
+        n, viste = 0, []                    # viste: (percorso, modelli che l'hanno fatta, byte) delle pagine 200
         while coda and n < arg.massimo:
             percorso = coda.pop(0)
             n += 1
             def due():
-                a = riassunto(*leggi(porte['principale'], percorso), not arg.senza_testo, cartelle['principale'])
+                sa, ia, ca = leggi(porte['principale'], percorso)
+                a = riassunto(sa, ia, ca, not arg.senza_testo, cartelle['principale'])
                 b = riassunto(*leggi(porte['qui'], percorso), not arg.senza_testo, cartelle['qui'])
-                return a[0], a[1], b[0]
-            ra, la, rb = due()
+                return a[0], a[1], b[0], (sa, ia.get('X-Modelli'), len(ca))
+            ra, la, rb, (sa, modelli, byte) = due()
+            if sa == 200:
+                viste.append((percorso, modelli, byte))
             if not uguali(ra, rb):                                   # l'ora può scattare fra le due richieste: una volta ancora
-                ra, la, rb = due()
+                ra, la, rb, _ = due()
             if not uguali(ra, rb):
                 diverse.append(percorso)
                 righe.append('DIVERSA %s\n  %s' % (percorso, '\n  '.join(differenze(ra, rb))))
@@ -323,6 +333,15 @@ def main():
                     continue
                 per_forma[f] = per_forma.get(f, 0) + 1
                 coda.append(nuovo)
+        n_f = d_f = 0
+        # una cartella nuova a ogni giro (due giri insieme non si pestano i piedi); resta solo con dei fogli diversi
+        cartella_fogli = tempfile.mkdtemp(prefix='confronto_rami-%s-fogli-' % NOME)
+        if not arg.senza_pdf:                # i fogli da stampare in PDF, con i due programmi ancora accesi
+            r_f, n_f, d_f, mancanti = confronta_fogli(porte, viste, cartella_fogli, arg.fogli_per_tipo)
+            righe += r_f
+            d_f += len(mancanti)             # un foglio mai incontrato non deve passare in silenzio
+        if not os.listdir(cartella_fogli):
+            os.rmdir(cartella_fogli)
         resoconto = os.path.join(tempfile.gettempdir(), 'confronto_rami-%s.txt' % NOME)
         with open(resoconto, 'w', encoding='utf-8') as f:
             f.write('\n'.join(righe) + '\n')
@@ -335,8 +354,11 @@ def main():
                   'seguirli tutti)' % (saltati, arg.per_forma))
         print('tipi di pagina: %d' % len(per_forma))
         print('resoconto: %s' % resoconto)
+        if not arg.senza_pdf:
+            print('%d fogli da stampare confrontati in PDF, %d diversi o mancanti%s' % (
+                n_f, d_f, ' (immagini in %s)' % cartella_fogli if d_f else ''))
         print('%d pagine confrontate, %d diverse' % (n, len(diverse)))
-        return 1 if diverse else 0
+        return 1 if diverse or d_f else 0
     finally:
         for p in processi:
             p.terminate()
