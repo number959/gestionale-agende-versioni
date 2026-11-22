@@ -281,6 +281,106 @@ def coppie_guida_tendine(br, err):
     ctx.close()
 
 
+def coppie_18_tariffari(br, err):
+    """Le coppie di prove_18_browser.py e prove_tariffari_browser.py (le domande), fatte come le fanno quelle
+    raccolte: «Strumenti» della settimana dei turni, «Copia la settimana prima» con la sua domanda (OK) e i
+    messaggi dopo, «Schema a rotazione…» con due celle scelte; «Elimina» di una persona (OK) e i messaggi dopo;
+    i messaggi dopo «Carica tariffario» e «Elimina il tariffario» di un tariffario senza apostrofo (OK). In una
+    scheda sua: un pezzo che non si trova si conta e il giro di prima arriva in fondo lo stesso. Alla fine i dati
+    di prova sono come prima: la settimana copiata è lontana e quella prima è vuota (niente da copiare)."""
+    import tempfile
+    from openpyxl import Workbook
+    from aiuti_browser import principale
+    ctx = br.new_context(viewport={'width': 1366, 'height': 768}, locale='it-IT')
+    ctx.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); } catch (e) {}")
+    pg = ctx.new_page()
+    pg.on('pageerror', lambda e: err.append(str(e)))
+    domande = prepara_domande(pg)
+    try:
+        # prove_18: la settimana dei turni, «Strumenti», «Copia la settimana prima» con OK, i messaggi
+        lun = OGGI - timedelta(days=OGGI.weekday()) + timedelta(days=7 * 41)
+        pg.goto(B + '/personale/turni/settimana/%s' % lun.isoformat())
+        strumenti = principale(pg).get_by_role('button', name=nome_voce('Strumenti'))
+        stesso(pg, '18 settimana: il pulsante Strumenti', '.gruppo-comandi .apri-gruppo', strumenti)
+        t = apri_comandi(pg, 'Strumenti')
+        stesso(pg, '18 settimana: la tendina di Strumenti', '.gruppo-comandi .tendina', t)
+        copia = t.get_by_role('menuitem', name=nome_voce('Copia la settimana prima'))
+        stesso(pg, '18 settimana: Copia la settimana prima', '[data-copia-settimana]', copia)
+        with pg.expect_navigation():
+            with rispondi(pg) as d:
+                copia.click()
+        ok('18 settimana: la copia fa la domanda a rispondi() (OK)',
+           (d.testo or '').startswith('Copiare qui i turni della settimana prima?'), d.testo)
+        stesso(pg, '18 settimana: la zona dei messaggi dopo la copia', '.avvisi', zona_messaggi(pg))
+        ok('18 settimana: messaggi() è il testo di .avvisi', messaggi(pg) == pg.locator('.avvisi').inner_text()
+           and 'la settimana prima' in messaggi(pg), messaggi(pg)[:150])
+        # prove_18: due celle scelte (due persone), poi «Strumenti» e «Schema a rotazione…»
+        pg.goto(B + '/personale/turni/settimana/%s' % (lun + timedelta(days=7)).isoformat())
+        righe = pg.locator('#griglia-turni tbody[data-ruolo="INFERMIERE"] tr.riga-persona')
+        righe.nth(0).locator('td.cella').nth(0).click()
+        pg.keyboard.press('Escape')
+        righe.nth(1).locator('td.cella').nth(6).click(modifiers=['Shift'])
+        pg.keyboard.press('Escape')
+        stesso(pg, '18 settimana, celle scelte: il pulsante Strumenti', '.gruppo-comandi .apri-gruppo', strumenti)
+        t = apri_comandi(pg, 'Strumenti')
+        schema = t.get_by_role('menuitem', name=nome_voce('Schema a rotazione…'))
+        stesso(pg, '18 settimana, celle scelte: Schema a rotazione…', '[data-apri-schema]', schema)
+        schema.click()
+        ok('18 settimana: lo schema si apre con le due persone scelte', pg.locator('#finestra-schema').is_visible()
+           and pg.locator('#finestra-schema input[name=persone]:checked').count() == 2,
+           pg.locator('#finestra-schema input[name=persone]:checked').count())
+        # prove_18: «Elimina» di una persona con l'apostrofo, OK, i messaggi
+        pg.goto(B + '/personale/persone/nuova?ruolo=OSS')
+        pg.fill('#cognome', "D'Esempio")
+        pg.fill('#nome', 'Carla')
+        with pg.expect_navigation():
+            pg.click('.modulo-persona button.primario')
+        with pg.expect_navigation():
+            pg.locator('table.elenco-persone tr', has_text="D'Esempio Carla").last.get_by_role('link', name='Modifica').click()
+        scheda = pg.url
+        elimina = pg.get_by_role('button', name='Elimina', exact=True)
+        stesso(pg, '18 persona: Elimina', '.elimina-persona button[type=submit]', elimina)
+        with pg.expect_navigation():
+            with rispondi(pg) as d:
+                elimina.click()
+        ok("18 persona: la domanda «Eliminare D'Esempio Carla?» a rispondi(), OK la elimina",
+           d.testo == "Eliminare D'Esempio Carla?" and pg.request.get(scheda).status == 404, d.testo)
+        stesso(pg, '18 persona: la zona dei messaggi dopo «Elimina»', '.avvisi', zona_messaggi(pg))
+        ok('18 persona: messaggi() è il testo di .avvisi («Persona eliminata»)',
+           messaggi(pg) == pg.locator('.avvisi').inner_text() and 'Persona eliminata' in messaggi(pg), messaggi(pg)[:150])
+        # prove_tariffari: «Carica tariffario» con un Excel inventato, i messaggi; «Elimina il tariffario» con OK
+        file = os.path.join(tempfile.mkdtemp(prefix='equivalenza_tariffari_'), 'tariffario-prova-guarino.xlsx')
+        wb = Workbook()
+        for r in (('TARIFFARIO DOTT. GUARINO', None), ('Prestazione', 'Prezzo (€)'), ('Visita diabetologica', 95),
+                  ('Visita di controllo', 65), ('Piano alimentare', 40)):
+            wb.active.append(list(r))
+        wb.save(file)
+        pg.goto(B + '/cassa/tariffari')
+        pg.set_input_files('input[name="file"]', file)
+        pg.click('button:has-text("Carica tariffario")')
+        pg.wait_for_selector('.tariffario-proposto')
+        with pg.expect_navigation():
+            pg.click('button:has-text("Salva i tariffari")')
+        stesso(pg, 'tariffari: la zona dei messaggi dopo «Salva i tariffari»', '.avvisi', zona_messaggi(pg))
+        ok('tariffari: messaggi() è il testo di .avvisi («Tariffari caricati»)', messaggi(pg) == pg.locator('.avvisi').inner_text()
+           and 'Tariffari caricati: Dott. Guarino' in messaggi(pg), messaggi(pg)[:150])
+        pg.locator('a', has_text='Dott. Guarino').first.click()
+        pg.wait_for_selector('.scheda-tariffario')
+        scheda = pg.url
+        elimina = pg.get_by_role('button', name='Elimina il tariffario')
+        stesso(pg, 'tariffari: Elimina il tariffario (nome senza apostrofo)', 'button:has-text("Elimina il tariffario")', elimina)
+        with pg.expect_navigation():
+            with rispondi(pg) as d:
+                elimina.click()
+        ok('tariffari: la domanda «Eliminare il tariffario «Dott. Guarino»?…» a rispondi(), OK lo elimina',
+           (d.testo or '').startswith('Eliminare il tariffario «Dott. Guarino»?') and pg.request.get(scheda).status == 404, d.testo)
+        stesso(pg, 'tariffari: la zona dei messaggi dopo «Elimina il tariffario»', '.avvisi', zona_messaggi(pg))
+    except Exception as e:  # noqa: BLE001
+        ok('coppie di prove_18 e prove_tariffari: arrivano in fondo', False, '%s: %s' % (type(e).__name__, str(e)[:400]))
+    ok('coppie di prove_18 e prove_tariffari: nessuna domanda inattesa', not domande.inattese, domande.inattese)
+    ctx.close()
+
+
 def giro(br):
     ctx = br.new_context(viewport={'width': 1366, 'height': 820}, locale='it-IT')
     ctx.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); "
@@ -554,6 +654,7 @@ def giro(br):
     g2.keyboard.press('Escape')
     ctx2.close()
     coppie_guida_tendine(br, err)
+    coppie_18_tariffari(br, err)
 
     ok('nessun errore JavaScript', not err, err[:3])
     ok('nessuna domanda inattesa', not domande.inattese, domande.inattese)

@@ -18,13 +18,20 @@ segreteria con le barre del browser) e a 1920x969. Non salva niente.
 Nella versione animata la tendina «Stampa e scarica» finiva sotto la nota del
 giorno, gli avvisi e la griglia: ogni riquadro che entra con un'animazione sta
 su un piano suo, e quelli dopo nella pagina coprivano la barra. Ora la barra ha
-un piano più alto (stile.css, .barra)."""
+un piano più alto (stile.css, .barra).
+
+Le tendine, la ricerca rapida, le notifiche e i tasti rapidi si cercano per ruolo e nome, come un lettore di
+schermo, con gli aiuti di aiuti_browser.py (tappa 1 della base); il controllo di cosa c'è sopra resta quello
+visivo (elementFromPoint), sui pezzi trovati così."""
 import os
 import sys
 from datetime import date, timedelta
 from urllib.parse import urlparse
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Error as ErrorePlaywright, sync_playwright
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from aiuti_browser import apri_comandi, apri_gruppo, cerca_rapido, menu, prepara_domande  # noqa: E402
 
 B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
 esiti = []
@@ -33,10 +40,11 @@ mar = oggi - timedelta(days=(oggi.weekday() - 1) % 7)       # i giorni dei dati 
 GIORNI = [('oggi', oggi), ('domani', oggi + timedelta(days=1)), ('con la sala operatoria', mar),
           ('con la nota del giorno', mar + timedelta(days=2)), ('chiuso (vigilia di Natale)', date(oggi.year, 12, 24)),
           ('festivo (8 dicembre)', date(oggi.year, 12, 8))]
-GRUPPI = ('menu-segreteria', 'menu-aiuto', 'menu-configura')
+GRUPPI = ('Segreteria', 'Aiuto', 'Configura')          # i gruppi del menu, per nome
+STAMPA = 'Stampa e scarica'                             # la tendina dei comandi della griglia
 
-VISIBILI = r"""(sel) => {
-  const voci = [...document.querySelectorAll(sel)].filter(e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden');
+VISIBILI = r"""(trovate) => {
+  const voci = trovate.filter(e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden');
   const male = [];
   const nome = (e) => (e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 32);
   const chi = (t) => t ? t.tagName.toLowerCase() + (t.className && typeof t.className === 'string' ? '.' + t.className.trim().split(/\s+/)[0] : '')
@@ -56,11 +64,17 @@ VISIBILI = r"""(sel) => {
 }"""
 
 
+def zona_notifiche(pg):
+    """La zona delle notifiche in alto a destra (role="region", nome Notifiche, in _menu.html)."""
+    return pg.get_by_role('region', name='Notifiche', exact=True)
+
+
 def fine_animazioni(pg):
-    """Le notifiche dell'animata entrano scorrendo da destra, una dopo l'altra."""
-    pg.wait_for_function("() => document.getAnimations().every(a => a.playState !== 'running' || !(a.effect && "
-                         "a.effect.target && a.effect.target.classList && a.effect.target.classList.contains('notifica')))",
-                         timeout=8000)
+    """Le notifiche dell'animata entrano scorrendo da destra, una dopo l'altra: si aspetta che sia ferma ogni
+    animazione dentro la zona delle notifiche."""
+    pg.wait_for_function("(zona) => document.getAnimations().every(a => a.playState !== 'running' || !(a.effect && "
+                         "a.effect.target && zona.contains(a.effect.target)))",
+                         arg=zona_notifiche(pg).element_handle(), timeout=8000)
 
 
 def ok(nome, condizione, dettaglio=''):
@@ -68,20 +82,42 @@ def ok(nome, condizione, dettaglio=''):
     print(('OK ' if condizione else 'KO ') + nome, '' if condizione else dettaglio)
 
 
-def controlla(pg, selettore, nome):
-    r = pg.evaluate(VISIBILI, selettore)
+def controlla(pg, voci, nome):
+    """voci: un Locator (le voci di una tendina, i risultati, le righe); None se la tendina non si è aperta (la
+    prova è già caduta in apri)."""
+    if voci is None:
+        return
+    r = voci.evaluate_all(VISIBILI)
     ok(nome + ' (%d voci)' % r['n'], r['n'] > 0 and not r['male'], r['male'][:4] or 'nessuna voce visibile')
 
 
-def apri_gruppo(pg, gruppo):
-    pg.click('[data-guida="%s"] .apri-gruppo' % gruppo)
+def apri(pg, nome, dove):
+    """Apre con un clic la tendina «Stampa e scarica» della pagina o un gruppo del menu (per nome) e torna le sue
+    voci; se non si apre la prova cade qui e la raccolta va avanti."""
+    try:
+        tendina = apri_comandi(pg, nome) if nome == STAMPA else apri_gruppo(pg, nome)
+    except (AssertionError, ErrorePlaywright) as e:
+        ok('%s: %s si apre' % (dove, nome), False, str(e)[:200])
+        return None
     pg.wait_for_timeout(350)                 # nell'animata la tendina entra in .18 s
+    return tendina.get_by_role('link')
 
 
 def chiudi(pg):
     pg.keyboard.press('Escape')
     pg.mouse.move(3, 3)
     pg.wait_for_timeout(150)
+
+
+def rapida(pg, testo, dove):
+    """I risultati della ricerca rapida del menu per testo (cerca_rapido di aiuti_browser.py)."""
+    try:
+        risultati = cerca_rapido(pg, testo)
+    except (AssertionError, ErrorePlaywright) as e:
+        ok('%s: la ricerca rapida risponde' % dove, False, str(e)[:200])
+        return None
+    pg.wait_for_timeout(300)
+    return risultati
 
 
 def scrivi(pg, campo, testo, attesa):
@@ -95,11 +131,13 @@ def scrivi(pg, campo, testo, attesa):
 with sync_playwright() as p:
     br = p.chromium.launch(executable_path=os.environ.get('CHROMIUM') or None)
     errori = []
+    domande = []
     for larghezza, altezza in ((1366, 657), (1920, 969)):
         ctx = br.new_context(viewport={'width': larghezza, 'height': altezza})
         ctx.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); "
                             "localStorage.setItem('guida-viste', '{\"*\":1}'); } catch (e) {}")
         pg = ctx.new_page()
+        domande.append(prepara_domande(pg))       # ogni domanda del browser passa da qui: nessuna è attesa
         pg.on('pageerror', lambda e: errori.append(str(e)))
         dim = '%dx%d' % (larghezza, altezza)
 
@@ -107,33 +145,36 @@ with sync_playwright() as p:
         for nome, g in GIORNI:
             pg.goto(B + '/giorno/%s?struttura=1' % g.isoformat())
             pg.wait_for_timeout(800)          # le animazioni d'entrata finite
-            apri_gruppo(pg, 'giorno-stampa')
-            controlla(pg, '[data-guida="giorno-stampa"] .tendina a', '%s, giorno %s: Stampa e scarica' % (dim, nome))
+            dove = '%s, giorno %s' % (dim, nome)
+            controlla(pg, apri(pg, STAMPA, dove), '%s: Stampa e scarica' % dove)
             for gruppo in GRUPPI:
-                apri_gruppo(pg, gruppo)
-                controlla(pg, '[data-guida="%s"] .tendina a' % gruppo, '%s, giorno %s: %s' % (dim, nome, gruppo))
+                controlla(pg, apri(pg, gruppo, dove), '%s: %s' % (dove, gruppo))
             chiudi(pg)
             if nome == 'oggi':
                 # appena aperta la pagina, mentre le animazioni d'entrata sono ancora in corso
                 pg.goto(B + '/giorno/%s?struttura=1' % g.isoformat())
-                pg.wait_for_selector('[data-guida="giorno-stampa"] .apri-gruppo')
-                apri_gruppo(pg, 'giorno-stampa')
-                controlla(pg, '[data-guida="giorno-stampa"] .tendina a', '%s, giorno appena aperto: Stampa e scarica' % dim)
+                controlla(pg, apri(pg, STAMPA, '%s, giorno appena aperto' % dim), '%s, giorno appena aperto: Stampa e scarica' % dim)
                 chiudi(pg)
-                if pg.locator('.notifiche .notifica').count():
+                # le notifiche arrivano 0,8 secondi dopo la pagina: si aspettano (prima si guardava subito e il
+                # controllo non partiva quasi mai); di ognuna il riquadro e il collegamento
+                notifiche = zona_notifiche(pg).get_by_role('status')
+                try:
+                    notifiche.first.wait_for(timeout=3000)
+                except ErrorePlaywright:
+                    pass
+                if notifiche.count():
                     fine_animazioni(pg)
-                    controlla(pg, '.notifiche .notifica p, .notifiche .notifica b, .notifiche .notifica strong',
-                              '%s: notifiche' % dim)
+                    controlla(pg, notifiche.or_(notifiche.get_by_role('link')), '%s: notifiche' % dim)
                 pg.keyboard.press('?')
                 pg.wait_for_timeout(300)
-                controlla(pg, '#aiuto-tasti tr', '%s: tasti rapidi' % dim)
+                controlla(pg, pg.get_by_role('dialog', name='Tasti rapidi', exact=True).get_by_role('row'), '%s: tasti rapidi' % dim)
                 pg.keyboard.press('Escape')
 
         # ---------------------------------------------- tutte le pagine del menu
         if larghezza == 1366:
             pg.goto(B + '/giorno/%s?struttura=1' % oggi.isoformat())
             indirizzi = []
-            for h in pg.eval_on_selector_all('.menu a[href]', 'as => as.map(a => a.getAttribute("href"))'):
+            for h in menu(pg).get_by_role('link', include_hidden=True).evaluate_all('as => as.map(a => a.getAttribute("href"))'):
                 if h and not h.startswith('#') and urlparse(h).path not in [urlparse(x).path for x in indirizzi]:
                     indirizzi.append(h)
             for extra in ('/appuntamento?data=%s&struttura=1' % mar.isoformat(), '/pazienti/nuovo', '/attesa/nuova'):
@@ -141,9 +182,9 @@ with sync_playwright() as p:
             for h in indirizzi:
                 pg.goto(B + h if h.startswith('/') else h)
                 pg.wait_for_timeout(600)
+                dove = '%s, %s' % (dim, urlparse(h).path)
                 for gruppo in GRUPPI:
-                    apri_gruppo(pg, gruppo)
-                    controlla(pg, '[data-guida="%s"] .tendina a' % gruppo, '%s, %s: %s' % (dim, urlparse(h).path, gruppo))
+                    controlla(pg, apri(pg, gruppo, dove), '%s: %s' % (dove, gruppo))
                 chiudi(pg)
             ok('%s: pagine del menu provate (%d)' % (dim, len(indirizzi)), len(indirizzi) >= 15, indirizzi)
 
@@ -151,28 +192,32 @@ with sync_playwright() as p:
         for pagina in ('/giorno/%s?struttura=1' % mar.isoformat(), '/pazienti'):
             pg.goto(B + pagina)
             pg.wait_for_timeout(600)
-            scrivi(pg, '#ricerca-rapida', 'Sep', '#risultati-rapidi a.voce-rapida')
-            controlla(pg, '#risultati-rapidi a.voce-rapida', '%s, %s: risultati della ricerca rapida' % (dim, pagina.split('?')[0]))
+            dove = '%s, %s' % (dim, pagina.split('?')[0])
+            controlla(pg, rapida(pg, 'Sep', dove), '%s: risultati della ricerca rapida' % dove)
             chiudi(pg)
+        # i suggerimenti sono il contenuto delle pagine (prenotazione, scheda, lista d'attesa), non la cornice:
+        # restano con i loro selettori fino alla tappa della loro area
         pg.goto(B + '/appuntamento?data=%s&struttura=1' % mar.isoformat())
         pg.wait_for_timeout(600)
         scrivi(pg, '#cerca_paziente', 'Sep', '#suggerimenti button')
-        controlla(pg, '#suggerimenti button', '%s, prenotazione: suggerimenti del paziente' % dim)
+        controlla(pg, pg.locator('#suggerimenti button'), '%s, prenotazione: suggerimenti del paziente' % dim)
         chiudi(pg)
         scrivi(pg, '#luogo_nascita_testo', 'nap', '#suggerimenti-luogo button')
-        controlla(pg, '#suggerimenti-luogo button', '%s, prenotazione: suggerimenti del luogo di nascita' % dim)
+        controlla(pg, pg.locator('#suggerimenti-luogo button'), '%s, prenotazione: suggerimenti del luogo di nascita' % dim)
         chiudi(pg)
         pg.goto(B + '/pazienti/nuovo')
         pg.wait_for_timeout(600)
         scrivi(pg, '#luogo_nascita_testo', 'san gi', '#suggerimenti-luogo button')
-        controlla(pg, '#suggerimenti-luogo button', '%s, scheda nuova: suggerimenti del luogo di nascita' % dim)
+        controlla(pg, pg.locator('#suggerimenti-luogo button'), '%s, scheda nuova: suggerimenti del luogo di nascita' % dim)
         chiudi(pg)
         pg.goto(B + '/attesa/nuova')
         pg.wait_for_timeout(600)
         scrivi(pg, '#cerca_paziente', 'Sep', '#suggerimenti button')
-        controlla(pg, '#suggerimenti button', '%s, lista d\'attesa: suggerimenti del paziente' % dim)
+        controlla(pg, pg.locator('#suggerimenti button'), '%s, lista d\'attesa: suggerimenti del paziente' % dim)
         ctx.close()
     ok('nessun errore JavaScript', not errori, errori[:3])
+    inattese = [x for d in domande for x in d.inattese]
+    ok('nessuna domanda del browser inattesa', not inattese, inattese)
     br.close()
 print('\n%d prove nel browser, %d superate' % (len(esiti), sum(esiti)))
 sys.exit(0 if all(esiti) else 1)
