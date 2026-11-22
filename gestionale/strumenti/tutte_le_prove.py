@@ -99,7 +99,8 @@ def main():
     temporanei = os.path.join(giro, 'temporanei')
     os.makedirs(temporanei)
     ambiente = dict(os.environ, TMPDIR=temporanei, TEMP=temporanei, TMP=temporanei,
-                    PYTHONIOENCODING='utf-8', PYTHONUTF8='1')
+                    PYTHONIOENCODING='utf-8', PYTHONUTF8='1',
+                    GESTIONALE_PROVE_RIGIDE=os.environ.get('GESTIONALE_PROVE_RIGIDE', '1'))
     print('Prove di %s con Python %s (registri in %s)\n' % (QUI, sys.version.split()[0], giro), flush=True)
     risultati = []
     inizio_tutto = time.monotonic()

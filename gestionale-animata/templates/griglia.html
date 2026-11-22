@@ -97,10 +97,10 @@
         {% elif cella.stato == 'occupata' %}{% set alta = cella.righe * (altezza_riga if misto else 36) %}
           <td class="occupata{{ ' bassa' if misto and alta < 37 }}" rowspan="{{ cella.righe }}">
             {% for a in cella.apps %}
-            <a class="voce stato-{{ a.stato|lower }}" style="border-left-color: {{ a.operatore.colore_sicuro }}"
+            <a class="voce stato-{{ a.stato|lower }}" style="border-left-color: {{ a.operatore.colore_sicuro if a.operatore else '' }}"
                href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}"
                title="{{ a.etichetta_stato }}{% if a.paziente and a.paziente.telefono %} · {{ a.paziente.telefono }}{% endif %}">
-              <span class="medico">{{ a.operatore.cognome }}{% if a.inizio.time() != cella.ora %} <b class="scarto">{{ a.inizio.strftime('%H:%M') }}</b>{% elif misto and not etichette[idx] %} <b class="ora-voce">{{ a.inizio.strftime('%H:%M') }}</b>{% endif %}
+              <span class="medico">{{ a.operatore.cognome if a.operatore else '' }}{% if a.inizio.time() != cella.ora %} <b class="scarto">{{ a.inizio.strftime('%H:%M') }}</b>{% elif misto and not etichette[idx] %} <b class="ora-voce">{{ a.inizio.strftime('%H:%M') }}</b>{% endif %}
                 {%- if a.stato == 'CONFERMATO' %} <i class="segno confermato" title="Confermato">✓</i>
                 {%- elif a.stato == 'ARRIVATO' %} <i class="segno arrivato" title="Arrivato">arrivato{% if a.arrivato_alle %} {{ a.arrivato_alle.strftime('%H:%M') }}{% endif %}</i>{% endif %}</span>
               {% if a.paziente %}<span class="paziente">{{ a.paziente.etichetta }}</span>{% endif %}

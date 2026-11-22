@@ -147,7 +147,7 @@
       <label for="operatore">Medico</label>
       <select id="operatore" name="operatore" required>
         {% for o in operatori %}
-        <option value="{{ o.id }}"{% if (modulo and o.id|string == modulo.operatore) or (not modulo and a and o.id == a.operatore_id) or (not modulo and not a and o.id == proposto) %} selected{% endif %}>{{ o.etichetta }}{% if o.specialita %} — {{ o.specialita }}{% endif %}</option>
+        <option value="{{ o.id }}"{% if (modulo and o.id|string == modulo.get('operatore')) or (not modulo and a and o.id == a.operatore_id) or (not modulo and not a and o.id == proposto) %} selected{% endif %}>{{ o.etichetta }}{% if o.specialita %} — {{ o.specialita }}{% endif %}</option>
         {% endfor %}
       </select>
     </div>
@@ -156,7 +156,7 @@
       <label for="prestazione">Prestazione</label>
       <select id="prestazione" name="prestazione" required>
         {% for pr in prestazioni %}
-        <option value="{{ pr.id }}" data-durata="{{ pr.durata_min }}"{% if (modulo and pr.id|string == modulo.prestazione) or (not modulo and a and pr.id == a.prestazione_id) or (not modulo and not a and pr.id == prestazione_proposta) %} selected{% endif %}>{{ pr.nome }} ({{ pr.durata_min }} min)</option>
+        <option value="{{ pr.id }}" data-durata="{{ pr.durata_min }}"{% if (modulo and pr.id|string == modulo.get('prestazione')) or (not modulo and a and pr.id == a.prestazione_id) or (not modulo and not a and pr.id == prestazione_proposta) %} selected{% endif %}>{{ pr.nome }} ({{ pr.durata_min }} min)</option>
         {% endfor %}
       </select>
     </div>
@@ -173,7 +173,7 @@
     <div class="campo meta">
       <label for="durata">Durata in minuti</label>
       <input type="number" id="durata" name="durata" min="5" step="5"
-             value="{% if modulo %}{{ modulo.durata }}{% elif a %}{{ a.durata_min }}{% elif durata_proposta %}{{ durata_proposta }}{% endif %}" placeholder="dalla prestazione">
+             value="{% if modulo %}{{ modulo.get('durata', '') }}{% elif a %}{{ a.durata_min }}{% elif durata_proposta %}{{ durata_proposta }}{% endif %}" placeholder="dalla prestazione">
     </div>
     <div class="campo meta">
       <label for="tipo">Tipo</label>
@@ -229,7 +229,7 @@
 
     <div class="campo">
       <label for="note">Note</label>
-      <textarea id="note" name="note" rows="2">{% if modulo %}{{ modulo.note }}{% elif a %}{{ a.note }}{% endif %}</textarea>
+      <textarea id="note" name="note" rows="2">{% if modulo %}{{ modulo.get('note', '') }}{% elif a %}{{ a.note }}{% endif %}</textarea>
     </div>
 
     {% if not a %}

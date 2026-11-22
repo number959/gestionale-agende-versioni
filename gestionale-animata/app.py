@@ -16,6 +16,8 @@ from decimal import Decimal, InvalidOperation
 
 from io import BytesIO
 
+import jinja2
+
 from flask import (Flask, render_template, request, redirect, url_for,
                    flash, send_file, abort, Response)
 from markupsafe import Markup
@@ -261,6 +263,26 @@ def marchio_di(sid=None):
 
 
 app.jinja_env.filters['euro'] = importo_in_testo
+
+
+class VariabileMancante(jinja2.Undefined):
+    """Solo prove e gestionale di prova (GESTIONALE_PROVE_RIGIDE=1, mai nell'eseguibile): una variabile che manca,
+    scritta nella pagina, scorsa con un {% for %} o contata con |length, ferma la pagina con un errore invece di
+    diventare testo vuoto. In un {% if %}, con «is defined», |default, == e «in» resta permessa: vale falso, come oggi.
+    (StrictUndefined di Jinja no: si ferma anche negli {% if %}.)"""
+    __slots__ = ()
+    __str__ = __iter__ = __len__ = jinja2.Undefined._fail_with_undefined_error
+
+    def __contains__(self, _):          # {% if 'x' in manca %}: falso, come oggi (senza, userebbe __iter__)
+        return False
+
+
+def variabili_rigide():
+    app.jinja_env.undefined = VariabileMancante
+
+
+if os.environ.get('GESTIONALE_PROVE_RIGIDE') == '1' and not getattr(sys, 'frozen', False):
+    variabili_rigide()
 
 
 @app.context_processor

@@ -20,9 +20,12 @@ import re
 import shutil
 import sys
 import tempfile
+import traceback
 from datetime import date
 from html.parser import HTMLParser
 from urllib.parse import parse_qsl, urljoin, urlsplit
+
+import jinja2
 
 from prove_dove import dove
 
@@ -64,6 +67,9 @@ class Guarda(HTMLParser):
         self.risorse = 0              # script, fogli di stile e immagini del programma
         self.collegamenti = []
         self.fonti = []               # src degli script e href dei <link>
+        self.main = 0                 # quanti <main>
+        self.menu_in_main = False     # un nav.menu dentro il <main>
+        self._in_main = 0
         self.griglie = []             # data-giorno di ogni table.griglia (None se non c'e')
         self._stile = False
         self.menu = 0                 # quanti nav.menu: lo stesso selettore del browser, della guida e di prove_senza_menu
@@ -86,6 +92,11 @@ class Guarda(HTMLParser):
             self.collegamenti.append(a['href'])
         if tag == 'style':
             self._stile = True
+        if tag == 'main':
+            self.main += 1
+            self._in_main += 1
+        if tag == 'nav' and 'menu' in a.get('class', '').split() and self._in_main:
+            self.menu_in_main = True
         if (tag == 'script' and a.get('src')) or (tag == 'link' and a.get('href')):
             self.fonti.append(a.get('src') or a.get('href'))
         if tag == 'table' and 'griglia' in a.get('class', '').split():
@@ -105,6 +116,8 @@ class Guarda(HTMLParser):
                 self.risorse += 1
 
     def handle_endtag(self, tag):
+        if tag == 'main' and self._in_main:
+            self._in_main -= 1
         if tag == 'form' and self.aperti:
             self.aperti -= 1
         if tag == 'style':
@@ -148,7 +161,13 @@ def giro():
     visti, per_forma, pagine = set(coda), collections.Counter(forma(x) for x in coda), {}
     while coda:
         p = coda.pop(0)
-        r = C.get(p)
+        try:
+            r = C.get(p)
+        except Exception as e:                       # con le variabili rigide la pagina cade: si dice dove
+            nel_modello = [f for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith('.html')]
+            CADUTE[p] = '%s · %s' % ('%s:%d' % (os.path.basename(nel_modello[-1].filename), nel_modello[-1].lineno)
+                                     if nel_modello else dove(e), e)
+            continue
         if r.status_code != 200 or 'text/html' not in (r.content_type or ''):
             continue
         g = pagine[p] = guarda(r.get_data(as_text=True))
@@ -163,7 +182,12 @@ def giro():
     return pagine
 
 
+CADUTE = {}
 PAGINE = giro()
+
+
+def p_nessuna_cade():
+    assert not CADUTE, 'pagine che cadono: %s' % sorted(CADUTE.items())[:5]
 
 
 def p_quante():
@@ -255,6 +279,40 @@ def g_vede_le_pagine():
     return '%d moduli, %d risorse del programma' % (moduli, risorse)
 
 
+def p_main():
+    """Ogni pagina fatta con base.html ha un <main> solo (dove comincia il contenuto, per i lettori di schermo), con
+    il menu fuori."""
+    con_base = {p: g for p, g in PAGINE.items() if '/static/gestionale.js' in g.fonti}
+    male = {p: (g.main, g.menu_in_main) for p, g in con_base.items() if g.main != 1 or g.menu_in_main}
+    assert len(con_base) >= 200, len(con_base)
+    assert not male, 'pagine con il <main> sbagliato (quanti, menu dentro): %s' % sorted(male.items())[:5]
+    return '%d pagine' % len(con_base)
+
+
+def g_main():
+    """Il gemello: il controllo conta i <main> e vede un menu messo dentro."""
+    assert guarda('<nav class="menu"></nav><main><p>x</p></main>').main == 1
+    due = guarda('<main></main><main><nav class="barra menu"></nav></main>')
+    assert due.main == 2 and due.menu_in_main, (due.main, due.menu_in_main)
+
+
+def g_variabili_rigide():
+    """Il gemello delle variabili rigide: nelle prove una variabile che manca, scritta, ferma la pagina; in un if no."""
+    env = A.app.jinja_env
+    assert env.undefined is A.VariabileMancante, 'le prove girano senza GESTIONALE_PROVE_RIGIDE=1'
+    for t in ('{{ manca }}', '{{ x.manca }}', '{% for y in manca %}{% endfor %}', '{{ manca|length }}',
+              '{{ manca ~ "a" }}'):
+        try:
+            env.from_string(t).render(x={})
+        except jinja2.UndefinedError:
+            continue
+        raise AssertionError('una variabile che manca non ferma la pagina: %s' % t)
+    # permessi: if, ==, in, |default, is defined, e l'if in linea senza else (Jinja usa il suo Undefined di base)
+    t = ("{% if manca %}a{% elif manca == 1 or 'b' in manca %}b{% endif %}{{ manca|default('c') }}"
+         "{{ 'd' if manca is defined else 'e' }}{{ 'f' if manca }}")
+    assert env.from_string(t).render() == 'ce', env.from_string(t).render()
+
+
 def righe_della_variante(g, animata):
     """Cosa non torna, in una pagina, con le righe della sola animata (lista vuota: tutto a posto)."""
     male = []
@@ -300,6 +358,7 @@ def g_variante():
 
 
 prova('il giro vede le pagine del programma', p_quante)
+prova('nessuna pagina cade (variabili che mancano comprese)', p_nessuna_cade)
 prova('nessun modulo dentro un altro modulo', p_annidati)
 prova('nessun id ripetuto nella stessa pagina', p_id)
 prova('niente caricato da internet nelle pagine', p_esterni)
@@ -309,6 +368,9 @@ prova('gemello: il controllo trova moduli annidati, id ripetuti e risorse da int
 prova('gemello: nelle pagine vere il controllo vede moduli, id e risorse', g_vede_le_pagine)
 prova('le righe della sola animata solo nell\'animata (modelli comuni)', p_variante)
 prova('gemello: con l\'altra variante le pagine cambiano', g_variante)
+prova('gemello: le variabili che mancano fermano la pagina, negli if no', g_variabili_rigide)
+prova('un <main> solo in ogni pagina con base.html, con il menu fuori', p_main)
+prova('gemello: il controllo del <main> conta e vede il menu dentro', g_main)
 
 shutil.rmtree(PROVVISORIA, ignore_errors=True)
 for esito, nome, dettaglio in esiti:

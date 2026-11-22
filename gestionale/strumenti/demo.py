@@ -33,6 +33,7 @@ parametri.add_argument('--porta', type=int, default=5001)
 ARG = parametri.parse_args()
 os.makedirs(ARG.dati, exist_ok=True)
 from datetime import date, datetime, time, timedelta  # noqa: E402
+os.environ.setdefault('GESTIONALE_PROVE_RIGIDE', '1')      # le variabili che mancano fermano la pagina (=0 per spegnerle)
 import seed  # noqa: E402
 import app as A  # noqa: E402
 from modelli import *  # noqa: E402,F401,F403

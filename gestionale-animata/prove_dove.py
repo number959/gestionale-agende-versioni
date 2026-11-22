@@ -5,6 +5,10 @@
 import os
 import traceback
 
+# Chi importa questo file è una raccolta di prove: le variabili che mancano nei modelli fermano la pagina invece di
+# diventare testo vuoto (app.VariabileMancante). GESTIONALE_PROVE_RIGIDE=0 per spegnerle.
+os.environ.setdefault('GESTIONALE_PROVE_RIGIDE', '1')
+
 
 AIUTI = {'prove_dove.py', 'prove_messaggi.py', 'prove_gemelli.py'}       # i loro messaggi d'errore dicono già la riga di chi li chiama
 
