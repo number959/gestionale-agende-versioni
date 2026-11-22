@@ -95,7 +95,11 @@ Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_matton
 da sé il catalogo dei pezzi su una porta libera e controlla i colori dei pezzi nuovi in chiaro e in scuro, i margini, lo
 scorrimento di lato e la tendina «Stampa e scarica»), `prove_tendine_browser.py` (dalla tappa 2 anche la cornice: menu,
 barra e linguette non coprono niente a 1366×657, 1024 e 683, ogni pagina del menu e delle linguette si raggiunge da lì,
-i tasti G, E, C e D, la cornice che sparisce in stampa),
+i tasti G, E, C e D, la cornice che sparisce in stampa), `prove_cornice_browser.py` (dalla tappa 2: tutte le pagine
+senza parametri di `indirizzi.txt` a 1366×657 con la cornice nuova, senza errori JavaScript, una voce e una linguetta
+accese, la cornice che sparisce in stampa, il menu che scorre per conto suo e non spinge la pagina di lato; ogni pagina
+raggiunta con soli clic dalla home, dal menu e dalle linguette, e lì accesa la voce cliccata; G, E, C e D da più pagine e
+dalla seconda struttura; il menu a sole icone sotto 1200 px, con i nomi per i lettori di schermo; non salva niente),
 `prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, `prove_19_browser.py`,
 `prove_191_browser.py` (salva le impostazioni email della prova e poi rimette quelle di
 partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova),
@@ -150,9 +154,10 @@ scuri, nessun colore scritto a mano nei file nuovi, lo strato in `base.html`, il
 rigide, le icone, `euro()`, `marchio.tema` e l'autoriparazione; ogni prova ha il gemello con il suo mutante.
 `prove_menu.py` (dalla tappa 2) prova il menu fatto da `menu.py` e la cornice che lo disegna: ogni voce, linguetta,
 voce della tendina Aiuto e collegamento nascosto si costruisce con `url_for`, e ogni voce ha un'icona di `_icone.html`;
-ogni pagina senza parametri accende una voce sola e al più una linguetta, le stesse in `menu.py` e nella cornice
-disegnata (`aria-current`); da una pagina della seconda struttura, in un giorno che non è oggi, ogni voce e linguetta
-porta ancora struttura e giorno, e ogni collegamento disegnato è una voce di `menu.py`; il primo `data-tasto` della
+ogni pagina senza parametri accende una voce sola e, se la sua voce ha le linguette, una linguetta sola, le stesse in
+`menu.py` e nella cornice disegnata (`aria-current`); da una pagina della seconda struttura, in un giorno che non è oggi,
+ogni voce e linguetta porta ancora struttura e giorno, ogni collegamento disegnato è una voce di `menu.py` e, letto solo
+dal disegno, porta la struttura (tranne Pazienti e Configura, `SENZA_STRUTTURA`); il primo `data-tasto` della
 pagina per G, E, C e D porta alla voce giusta; parole, indirizzi, tasti e `data-guida` sono quelli del menu del ramo
 principale, voce per voce (oracolo: `prove_menu_principale.html`, la copia ferma del suo `_menu.html`, che la prova
 confronta con git quando c'è; le sole parole nuove stanno in `PAROLE_NUOVE`, con il perché); `registra_voce` aggiunge la

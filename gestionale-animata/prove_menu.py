@@ -7,11 +7,12 @@ voce accesa in cima al contenuto. Qui:
 - ogni voce, linguetta, voce della tendina Aiuto e collegamento nascosto si costruisce con url_for: la funzione
   della pagina esiste e gli argomenti che porta bastano al suo indirizzo, e la sua icona c'è in _icone.html (e i
   moduli possono aggiungere voci con registra_voce, che rifiuta una sezione, una chiave o un tasto già presi);
-- ogni pagina senza parametri (indirizzi.txt) accende una voce sola e al più una linguetta, nell'elenco di menu.py e
-  nella cornice disegnata (aria-current), le stesse;
+- ogni pagina senza parametri (indirizzi.txt) accende una voce sola e, se la sua voce ha le linguette, una linguetta
+  sola (mai nessuna), nell'elenco di menu.py e nella cornice disegnata (aria-current), le stesse;
 - da una pagina della seconda struttura, in un giorno che non è oggi, ogni voce e ogni linguetta porta ancora
   struttura e giorno (un difetto così c'è stato: «Nuovo appuntamento» dalla seconda struttura proponeva la prima,
-  LEGGIMI.md, storico dei difetti), e ogni collegamento disegnato è una voce di menu.py;
+  LEGGIMI.md, storico dei difetti), e ogni collegamento disegnato è una voce di menu.py; nel disegno, anche senza
+  menu.py, ogni collegamento della cornice porta la struttura, tranne quelli di SENZA_STRUTTURA (come nel menu di prima);
 - i tasti G, E, C e D: il primo [data-tasto] della pagina (quello che gestionale.js clicca) porta dove deve;
 - le parole, gli indirizzi, i tasti e i data-guida delle voci sono quelli del menu di prima: l'oracolo è il menu del
   ramo principale, prove_menu_principale.html, una copia ferma del suo templates/_menu.html (byte per byte; se git e il
@@ -406,16 +407,19 @@ def accese_nell_elenco(menu):
 
 
 def problemi_una_voce(url, testo, menu):
+    """Una voce sola accesa e, se la voce accesa ha le linguette, una linguetta sola (dalla tappa 2 le linguette sono
+    vere: ogni pagina di Agenda, Segreteria, Ambulatori e Configura ne accende una), le stesse in menu.py e nel disegno."""
     problemi = []
     voci, linguette = accese_nell_elenco(menu)
+    una = 1 if menu['linguette'] else 0             # le linguette della voce accesa: se ci sono, una accesa
     if len(voci) != 1:
         problemi.append('%s: voci accese in menu.py %s' % (url, voci))
-    if len(linguette) > 1 or (linguette and linguette[0][0] not in voci):
+    if len(linguette) != una or (linguette and linguette[0][0] not in voci):
         problemi.append('%s: linguette accese in menu.py %s' % (url, linguette))
     voci_d, linguette_d = accese_nel_disegno(testo)
     attese_v = [str(v['parola']) for v in menu['voci'] if v['accesa']]
     attese_l = [str(x['parola']) for v in menu['voci'] for x in v['linguette'] if x['accesa']]
-    if voci_d != attese_v or linguette_d != attese_l or len(voci_d) != 1 or len(linguette_d) > 1:
+    if voci_d != attese_v or linguette_d != attese_l or len(voci_d) != 1 or len(linguette_d) != una:
         problemi.append('%s: nella cornice disegnata accese le voci %s e le linguette %s, in menu.py %s e %s'
                         % (url, voci_d, linguette_d, attese_v, attese_l))
     return problemi
@@ -452,10 +456,35 @@ def m_una_voce_sola():
     assert problemi_una_voce('gemello', VISTE['/conferme'][0], con_linguette), 'due linguette accese non si vedono'
     due = VISTE['/conferme'][0].replace('href="/da-confermare?', 'aria-current="page" href="/da-confermare?', 1)
     assert problemi_una_voce('gemello', due, VISTE['/conferme'][1]), 'due linguette accese nel disegno non si vedono'
-    return '%d pagine con il menu, ognuna con una voce accesa (%d senza menu o non 200)' % (con_menu, len(senza))
+    # e nessuna linguetta accesa in una pagina con le linguette (nell'elenco e nel disegno)
+    spente = copy.deepcopy(VISTE['/conferme'][1])
+    next(v for v in spente['voci'] if v['chiave'] == 'segreteria')['linguette'][0]['accesa'] = False
+    assert problemi_una_voce('gemello', VISTE['/conferme'][0], spente), 'nessuna linguetta accesa nell\'elenco passa'
+    nessuna = re.sub(r'(<a class="v-linguetta" href="/conferme[^"]*") aria-current="page"', r'\1', VISTE['/conferme'][0], count=1)
+    assert nessuna != VISTE['/conferme'][0] and problemi_una_voce('gemello', nessuna, VISTE['/conferme'][1]), \
+        'nessuna linguetta accesa nel disegno passa'
+    con_linguette = sum(1 for _, m, _ in VISTE.values() if m['linguette'])
+    assert con_linguette >= 25, con_linguette
+    return '%d pagine con il menu, ognuna con una voce accesa, %d con le linguette e una accesa (%d senza menu o non 200)' % (
+        con_menu, con_linguette, len(senza))
 
 
 # ---------------------------------------------------------------- 3. struttura e giorno
+# le voci e le linguette che non portano la struttura, come nel menu di prima: scritte qui, non prese da menu.py (se
+# una voce perde la struttura in menu.py, il disegno lo dice da solo, senza passare dall'oracolo del principale)
+SENZA_STRUTTURA = {'Pazienti', 'Configura', 'Anagrafiche', 'Strutture del gruppo', 'Email e WhatsApp',
+                   'Importa da Excel', 'Impostazioni', 'Aggiornamenti'}
+
+
+def senza_struttura_disegnati(testo, sid):
+    """I collegamenti disegnati del menu (anche il nascosto del tasto E) e delle linguette che non portano la struttura
+    sid, fuori da SENZA_STRUTTURA (la tendina Aiuto non la porta mai). Torna (problemi, quanti guardati)."""
+    c = leggi_cornice(testo)
+    cose = [x for x in c.voci + c.linguette if x['href'] and x['href'] != '#' and x['parola'] not in SENZA_STRUTTURA]
+    return ['«%s» %s' % (x['parola'], x['href']) for x in cose
+            if dict(parse_qsl(urlsplit(x['href']).query)).get('struttura') != str(sid)], len(cose)
+
+
 def problemi_struttura_giorno(menu, sid, giorno):
     problemi = []
     for tipo, chiave, x in tutte_le_voci(menu):
@@ -508,6 +537,11 @@ def m_struttura_e_giorno():
         # giorno è una voce di menu.py (nella cornice nuova le linguette di un'altra area non si disegnano: si arriva
         # dalla loro voce)
         problemi += ['%s: %s' % (url, p) for p in problemi_disegnati(testo, menu)]
+        # e nel disegno, senza menu.py: ogni collegamento della cornice porta la struttura, fuori da SENZA_STRUTTURA
+        manca, quanti = senza_struttura_disegnati(testo, 2)
+        problemi += ['%s: senza la struttura 2: %s' % (url, x) for x in manca]
+        if quanti < 10:
+            problemi.append('%s: solo %d collegamenti della cornice con la struttura' % (url, quanti))
         di_menu_py = {x['url'] for _, _, x in tutte_le_voci(menu)}
         for x in leggi_menu(principale).collegamenti:
             if ('struttura=2' in x['href'] or D in x['href'] or D[:7] in x['href']) and x['href'] not in di_menu_py:
@@ -538,6 +572,7 @@ def m_struttura_e_giorno():
     testo = VISTE[PAGINE_SECONDA[0]][0]
     guasto_t = testo.replace('href="/personale/turni?struttura=2"', 'href="/personale/turni"', 1)
     assert guasto_t != testo and problemi_disegnati(guasto_t, menu), 'una voce disegnata diversa da menu.py passa'
+    assert senza_struttura_disegnati(guasto_t, 2)[0] == ['«Turni» /personale/turni'], senza_struttura_disegnati(guasto_t, 2)
     senza_mese = re.sub(r'<a class="v-linguetta" href="/mese/[^"]*"[^>]*>.*?</a>', '', testo, count=1, flags=re.S)
     assert senza_mese != testo and problemi_disegnati(senza_mese, menu), 'una linguetta che manca nel disegno passa'
     return '%d pagine della seconda struttura del %s: %d voci con la struttura, %d con il giorno' % (
@@ -725,7 +760,7 @@ def m_tasti():
 prova('ogni voce, linguetta e collegamento si costruisce con url_for', m_url_for)
 prova('ogni voce del menu ha un\'icona che c\'è in _icone.html', m_icone)
 prova('registra_voce: una voce di un modulo, con condizione e linguette; i doppioni rifiutati', m_registra_voce)
-prova('ogni pagina senza parametri accende una voce sola e al più una linguetta', m_una_voce_sola)
+prova('ogni pagina senza parametri accende una voce sola e, se ha le linguette, una linguetta sola', m_una_voce_sola)
 prova('dalla seconda struttura, in un giorno che non è oggi, tutto porta struttura e giorno', m_struttura_e_giorno)
 prova('i tasti G, E, C e D portano alla pagina giusta', m_tasti)
 prova('parole, indirizzi, tasti e guide come nel menu del ramo principale, voce per voce', m_come_oggi)

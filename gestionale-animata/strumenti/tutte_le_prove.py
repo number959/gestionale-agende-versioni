@@ -36,7 +36,7 @@ SENZA_BROWSER = ['prove_indirizzi.py', 'prove_canarino.py', 'prove_pagine.py', '
                  'prove_112.py', 'prove_112_excel.py', 'prove_tariffari.py', 'campagna.py']
 # in quest'ordine: prima quelle che non cambiano niente, per ultima quella che cambia l'indirizzo degli aggiornamenti
 NEL_BROWSER = ['prove_guida_browser.py', 'prove_sicurezza_browser.py', 'prove_mattoni_browser.py', 'prove_animazioni.py', 'prove_icone_animate.py',
-               'prove_tendine_browser.py', 'prove_15_browser.py', 'prove_17_browser.py', 'prove_18_browser.py',
+               'prove_tendine_browser.py', 'prove_cornice_browser.py', 'prove_15_browser.py', 'prove_17_browser.py', 'prove_18_browser.py',
                'prove_19_browser.py', 'prove_191_browser.py', 'prove_110_browser.py', 'prove_112_browser.py',
                'prove_tariffari_browser.py',
                'prove_16_browser.py']

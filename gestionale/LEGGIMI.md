@@ -2383,33 +2383,45 @@ python prove_16.py           # 47 prove sulla 1.6: Aggiorna adesso da una cartel
                              # sistema, file delle versioni storpiati, Setup rovinati),
                              # installazione, esito al riavvio, novità, videoguide, installer e file delle versioni,
                              # indirizzo predefinito su GitHub e Rimetti (senza rete)
-python prove_15_browser.py http://127.0.0.1:5000   # 14 controlli nel browser sulle pagine della 1.5 e sui caratteri
-python prove_16_browser.py http://127.0.0.1:5001   # 19 controlli: finestra dei video, pagina Aggiornamenti che si
+python prove_15_browser.py http://127.0.0.1:5001   # 15 controlli nel browser sulle pagine della 1.5 e sui caratteri
+python prove_16_browser.py http://127.0.0.1:5001   # 21 controlli: finestra dei video, pagina Aggiornamenti che si
                              # ricarica da sola, pagina d'attesa, notifica, Rimetti l'indirizzo predefinito (cambia
                              # l'indirizzo degli aggiornamenti: su un gestionale di prova a parte)
-python prove_17_browser.py http://127.0.0.1:5001   # 16 controlli: codice fiscale mentre si scrive, calcolo,
+python prove_17_browser.py http://127.0.0.1:5001   # 18 controlli: codice fiscale mentre si scrive, calcolo,
                              # suggerimenti del luogo, prenotazione, pagina di controllo (salva pazienti di prova)
-python prove_tendine_browser.py http://127.0.0.1:5001   # 150 controlli: le tendine sopra la pagina e le notifiche, a 1366x657
-python prove_18_browser.py http://127.0.0.1:5001   # 59 controlli sui turni: griglia, tastiera (anche due codici scritti
+python prove_tendine_browser.py http://127.0.0.1:5001   # 283 controlli: le tendine sopra la pagina e le notifiche, a 1366x657;
+                             # dalla tappa 2 anche menu, barra e linguette che non coprono niente
+python prove_cornice_browser.py http://127.0.0.1:5001   # 385 controlli: la cornice nuova (tappa 2) sulle 53
+                             # pagine senza parametri a 1366x657, ogni pagina raggiunta con soli clic dalla home,
+                             # una voce e una linguetta accese, i tasti G E C D, la stampa, il menu che scorre
+                             # per conto suo, il menu a sole icone sotto 1200 px (non salva niente)
+python prove_18_browser.py http://127.0.0.1:5001   # 61 controlli sui turni: griglia, tastiera (anche due codici scritti
                              # di seguito senza aspettare), annulla e rifai, scelta del turno (dove si apre, mai
                              # coperta), schema, giorno a ore, schermo stretto, movimento ridotto, la domanda prima
                              # di eliminare una persona con l'apostrofo nel nome («Annulla» la lascia)
-python prove_19_browser.py http://127.0.0.1:5001   # 37 controlli su Dove si fa: ricerca mentre si scrive, frecce, scheda della
+python prove_19_browser.py http://127.0.0.1:5001   # 42 controlli su Dove si fa: ricerca mentre si scrive, frecce, scheda della
                              # struttura, messaggio cambiato, Copia, WhatsApp e Stampa, registro con Annulla, paziente,
                              # ricerca rapida, schermo stretto, tema scuro (segna pazienti indirizzati di prova)
-python prove_191_browser.py http://127.0.0.1:5001   # 22 controlli sull'email della 1.9.1: tipo di casella con server,
+python prove_191_browser.py http://127.0.0.1:5001   # 23 controlli sull'email della 1.9.1: tipo di casella con server,
                              # porta, sicurezza e istruzioni proposti, server che segue l'indirizzo, @gmail.com che passa
                              # a Gmail, tendina del tipo salvata con il modulo, schermo stretto (salva le impostazioni
                              # email della prova e poi rimette quelle di partenza)
-python prove_110_browser.py http://127.0.0.1:5001   # 20 controlli sulle fasce dei turni (il martedi della prova):
+python prove_110_browser.py http://127.0.0.1:5001   # 21 controlli sulle fasce dei turni (il martedi della prova):
                              # righe e celle alte quanto le loro fasce, ore nelle fasce libere, clic che apre il modulo
                              # a quell'ora, guida sullo schermo, agenda del medico, modulo del turno, tema scuro
-python prove_guida_browser.py http://127.0.0.1:5000   # 53 controlli nel browser, sui dati di prova
-python prove_sicurezza_browser.py http://127.0.0.1:5000   # 5 controlli: moduli mandati da un altro sito
+python prove_112_browser.py http://127.0.0.1:5001   # 81 controlli sugli ambulatori: matrice, «+» e «×» (mette e
+                             # toglie un turno di prova), i due Excel, programmazione, esportazioni, riepilogo live e
+                             # del periodo, la dashboard nel modo schermo
+python prove_tariffari_browser.py http://127.0.0.1:5001   # 16 controlli: il prezzo del tariffario nella
+                             # prenotazione, carica ed elimina un tariffario di prova
+python prove_mattoni_browser.py http://127.0.0.1:5001   # 7 prove sui mattoni della veste, sul catalogo dei pezzi
+                             # (lo avvia da sé su una porta libera: l'indirizzo non lo usa)
+python prove_guida_browser.py http://127.0.0.1:5001   # 62 controlli nel browser, sui dati di prova
+python prove_sicurezza_browser.py http://127.0.0.1:5001   # 10 controlli: moduli mandati da un altro sito
 python campagna.py           # 2550 casi generati, anche sulle pagine della 1.4, circa due minuti
 ```
 
-In tutto 973 prove più 2550 casi generati e 382 controlli nel browser, tutte verdi su Python 3.13 (alla 1.9 anche su 3.11 e 3.14).
+In tutto 1384 prove (36 raccolte) più 2550 casi generati e 1045 controlli nel browser (14 raccolte), tutte verdi su Python 3.13 il 22/11/2026 (alla 1.9 anche su 3.11 e 3.14).
 Vanno rilanciate dopo ogni modifica; ognuna crea un database usa e getta. Alcune delle più
 vecchie escono con codice 0 anche se una prova non va: conta la riga finale («0 da
 sistemare»), che è quella che legge `tutte_le_prove.py`.
@@ -2603,6 +2615,56 @@ la rifiuta), le linguette senza `aria-current` o fuori da `data-cornice`, una vo
 `aria-current`, il contatore senza numero, un'icona che non c'è, il logo della pagina nascosto fuori dalla cornice, un
 colore scritto a mano nella barra; nel browser la scheda di Dove si fa sotto il menu (come faceva `dove.js`), la cornice
 che resta in stampa, la barra in alto ferma sopra la pagina.
+
+Il quarto passo della tappa 2 sono le prove della cornice nuova, ognuna con il suo mutante preso.
+`prove_cornice_browser.py` (nel browser, subito dopo `prove_tendine_browser.py`; non salva niente) apre a 1366×657 tutte
+le pagine senza parametri di `indirizzi.txt` che rispondono con una pagina intera (53; i pezzi chiesti dalle pagine, i
+JSON e gli Excel li salta e li conta). Per ognuna controlla:
+
+- la cornice nuova al suo posto: il menu a sinistra, largo 248 px e alto quanto la finestra; la barra in alto, alta 62
+  px, con la ricerca; la pagina accanto e sotto. Solo la guida da stampare (`/aiuto/stampa`) resta senza cornice;
+- nessun errore JavaScript e nessun errore nella console;
+- una voce accesa e, se la pagina ha le linguette, una linguetta sola (e le linguette ci sono in tutte le pagine di
+  Agenda, Segreteria, Ambulatori e Configura);
+- il menu che scorre per conto suo: scorrendolo la pagina non si muove, l'ultima voce si raggiunge, Aiuto e Configura
+  restano in fondo; scorrendo la pagina il menu resta fermo; niente della cornice esce dal bordo destro e la pagina non
+  viene spinta di lato. *Nuova persona* dei Turni scorre di lato per il suo contenuto (la radio larga, come prima, da
+  sistemare nella tappa 7): la prova lo scrive come nota;
+- in stampa la cornice non si vede e la pagina comincia dal bordo, larga quanto il foglio.
+
+Poi, partendo dalla home e solo con clic, raggiunge ogni pagina: le 30 che stavano nel menu di prima (una lista scritta
+nella prova, non presa da `menu.py`) dal menu e dalle linguette, e dopo ogni clic controlla che nella pagina nuova sia
+accesa proprio la voce o la linguetta cliccata; le altre 28 con un clic in più dentro una di quelle pagine. Solo
+`/sposta/avvisi` si apre soltanto dopo uno spostamento, che salva: la prova la apre direttamente. I tasti G, E, C e D,
+premuti da cinque pagine (tre della seconda struttura, in un giorno che non è oggi), portano alla pagina giusta e lì
+accendono la voce e la linguetta giuste; dalla seconda struttura ogni voce e linguetta che porta la struttura la porta
+ancora. A 1199, 1024 e 683 px il menu è a sole icone (largo al più 80 px; i nomi non si vedono, ma si trovano per ruolo e
+nome e stanno nel title; al posto del logo le iniziali); a 1200 px è largo, con i nomi. Ogni pagina registra le domande
+del browser, e nessuna è attesa. I 18 gemelli guastano apposta la pagina (il menu tolto, due voci o due linguette accese,
+il menu in stampa, la colonna del menu vuota in stampa, il menu che non scorre o non resta fermo, l'ultima voce che non
+si raggiunge, un pezzo largo nel menu, la pagina spinta di lato, un errore JavaScript, una linguetta che porta altrove, il
+tasto G tolto, una voce senza la struttura, i nomi visibili nel menu stretto, una domanda inattesa, una pagina della
+Segreteria senza linguette) e il controllo lo vede. Nell'animata le misure si prendono quando la pagina ha finito di
+entrare: mentre entra, un pezzo spostato in giù allunga la pagina e in fondo il menu salirebbe di 10 px; il modo stampa fa
+ripartire le animazioni, per questo la stampa si guarda per ultima.
+
+`prove_menu.py` ora vuole una linguetta accesa (non più «al più una») in ogni pagina di una voce che ha le linguette, e
+legge la struttura anche solo dal disegno, senza `menu.py` (tranne Pazienti e Configura, scritti nella prova).
+
+Il 22/11/2026, quarto passo della tappa 2 (le prove), dalle due cartelle: tutte le prove senza browser verdi (36 raccolte,
+1384 prove e 2550 casi della campagna); nel browser 14 raccolte nella normale (1045 controlli) e 16 nell'animata (1110),
+tutte verdi (`prove_cornice_browser.py` 385 controlli in tutte e due; nell'animata `prove_110_browser.py` è caduta una
+volta, con il confronto fra i rami acceso insieme, sul «libero» che compare passando il mouse, ed è passata nei tre giri
+rifatti da sola); il confronto con il ramo principale dalle due cartelle con 607 pagine e nessuna diversa (196 solo per i
+cambiamenti approvati), la cornice senza differenze (457 parti approvate) e 49 fogli e pagine che si stampano in PDF,
+nessuno diverso. I sei mutanti, fatti su copie, sono presi (prima tutte verdi): Turni senza la struttura in `menu.py`
+(`prove_menu.py` 2 prove su 7, `prove_cornice_browser.py` 3 controlli), Statistiche sempre accesa in `_menu.html` (3 su 7;
+107 controlli), il tasto G tolto in `menu.py` (3 su 7; 5, e `prove_tendine_browser.py` 1), il menu rimesso in stampa in
+`veste.css` (52; `prove_tendine_browser.py` 4), il menu stretto solo sotto 1024 px invece che sotto 1200 (6, a 1199 e a
+1024 px), Lista d'attesa che porta alla Prima disponibilità (2 su 7; 3). Rifatti anche tre mutanti delle raccolte della
+tappa 1, che con la cornice nuova prendono ancora il difetto: il clic su una tendina che non la apre, ora Aiuto e
+«Stampa e scarica» (`prove_tendine_browser.py` 124 controlli, `prove_guida_browser.py` 3), Esc che non chiude la tendina
+Aiuto (`prove_guida_browser.py` 1), il menu nel modo schermo del riepilogo live (`prove_112_browser.py` 2).
 
 ### Il pacchetto di prova (dalla tappa 1 della base)
 
