@@ -1976,6 +1976,7 @@ la transazione si annulla e il database resta com'era. Il registro riporta ogni 
 | `templates/_icone.html`, `static/icone/LICENZE.txt` | Le icone (Lucide, licenza ISC) scritte dentro le pagine, con le licenze (anche Radix Colors, MIT, per i colori dei turni) |
 | `importa.py` | Importazione da Excel e CSV: riconoscimento, anteprima, esecuzione |
 | `marchio.py` | Controllo e pulizia del logo, colore proposto, contrasto |
+| `menu.py` | Il menu in un elenco (dalla tappa 2 della base): voci, linguette, tendina Aiuto e collegamento nascosto del tasto E, ognuno con la sua pagina, gli argomenti che porta (struttura, giorno, mese), parola, icona, sezioni che lo accendono, condizione, tasto e guida; `registra_voce` per i moduli. `templates/_menu.html` lo disegna |
 | `servizi.py` | Griglia (con le fasce dei turni), turni effettivi (assenze, chiusure, festivi), conflitti (fasce intere), disponibilità, statistiche, export in Excel |
 | `modelli.py` | Le tabelle del database e il suo aggiornamento da una versione all'altra |
 | `comune.py` | Le funzioni di servizio di tutte le pagine: numeri e date dall'indirizzo, ritorno sicuro, struttura scelta, JSON, Excel da scaricare, collegamenti email |
@@ -2562,6 +2563,40 @@ nessuna diversa; la cornice, confrontata una volta su 454 pagine, senza differen
 ordine), un colore cambiato solo in stampa su /mese (4 fogli diversi). I gemelli passano: la cornice di oggi segnata
 con `data-cornice` senza togliere niente, due collegamenti scambiati di posto (diversi solo con `--con-ordine`), lo
 stesso colore cambiato solo a schermo.
+
+### Il menu in un elenco: `menu.py` (tappa 2 della base)
+
+Dalla tappa 2 le voci del menu non sono più scritte a mano in `templates/_menu.html`: stanno in `menu.py`, con la
+pagina dove portano (la funzione per `url_for`), gli argomenti che portano dalla pagina aperta (struttura, giorno e
+mese, come prima), la parola, l'icona, le sezioni che le accendono, la condizione (la Sala solo se c'è una sala
+operatoria), `data-tasto` e `data-guida`. Con le voci ci sono le linguette di ogni area (Agenda: Giorno, Settimana,
+Mese, Elenco; Segreteria; Ambulatori; Configura) con la riga piccola di oggi, la tendina Aiuto e il collegamento
+nascosto del tasto E. I moduli aggiungeranno le loro voci con `registra_voce`, senza toccare i modelli: rifiuta una
+sezione, una chiave o un tasto già presi, così ogni pagina accende sempre una voce sola. Il primo passo non cambia niente
+di quello che si vede: il modello disegna il menu di oggi con le stesse voci (`menu.disegno_di_oggi`: Giorno, Settimana
+e Mese in fila, le altre nelle tendine, ogni tasto sul collegamento che porta alla stessa pagina), uguale byte per byte.
+
+`prove_menu.py` (nel giro senza browser) prova che ogni voce, linguetta e collegamento si costruisce con `url_for`; che
+ogni pagina senza parametri accende una voce sola e al più una linguetta, nell'elenco e nel menu disegnato (classe
+`attivo` e `aria-current` insieme); che da una pagina della seconda struttura, in un giorno che non è oggi, ogni voce e
+linguetta porta ancora struttura e giorno (un difetto così c'è stato: vedi «"Nuovo appuntamento" dalla seconda
+struttura» fra i difetti); che parole, indirizzi, tasti e guide sono quelli di oggi, voce per voce, contro il menu del
+ramo principale disegnato sulla stessa pagina (`prove_menu_principale.html`, la copia ferma del suo `_menu.html`); e che
+la voce di un modulo, aggiunta con `registra_voce`, compare da sola nel menu. Le sole parole nuove («Agenda» per la voce
+e «Elenco» per la quarta linguetta, dal piano e dalle tavole) sono scritte nella prova con il perché. `prove_guida.py`
+legge i `data-guida` delle voci anche da `menu.py`.
+
+Il 22/11/2026, secondo passo della tappa 2 (`menu.py`, senza cambiare l'aspetto), dalle due cartelle: tutte le prove
+senza browser (36 raccolte, `prove_menu.py` compresa) e nel browser (13 nella normale, 15 nell'animata) verdi; il
+confronto con il ramo principale con 607 pagine, nessuna diversa oltre ai cambiamenti approvati, anche con
+`--con-ordine`, la cornice senza differenze e 49 fogli e pagine che si stampano in PDF, nessuno diverso; le foto di 35
+pagine (172 foto) identiche a quelle del principale (nell'animata una sola diversa, uguale al rumore fra due foto del
+principale: `/riepilogo-live?schermo=1` in scuro, che il menu non lo ha); l'HTML di 447 pagine del giro uguale byte per
+byte a quello di prima. I 16 mutanti, fatti su copie, sono presi: una linguetta con l'argomento sbagliato, gli indirizzi
+scritti a mano invece che da `url_for`, due voci accese (nell'elenco e nel disegno), una linguetta «fuori» accesa, la
+classe `attivo` senza `aria-current`, Turni senza la struttura, il giorno che torna a oggi, la ricerca rapida senza la
+struttura, una parola, una riga piccola, i tasti C ed E tolti, un `data-guida` tolto da `menu.py` (lo prende
+`prove_guida.py`), la copia ferma del principale cambiata, `registra_voce` che accetta una sezione già presa.
 
 ### Il pacchetto di prova (dalla tappa 1 della base)
 

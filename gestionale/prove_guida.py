@@ -168,11 +168,18 @@ def nomi_guida(modelli):
 
 def gu_selettori_stabili():
     """I passi della guida indicano un punto della pagina solo con [data-guida="…"] o con un id (tappa 1 della base):
-    una classe o un tag cambiano con la veste nuova, un data-guida no. Ogni nome usato esiste in un modello."""
+    una classe o un tag cambiano con la veste nuova, un data-guida no. Ogni nome usato esiste in un modello, o (dalla
+    tappa 2) in una voce di menu.py, che _menu.html disegna con il suo data-guida."""
     import glob
     ammessi = re.compile(r'^(\[data-guida="[a-z0-9-]+"\]|#[A-Za-z0-9_-]+)$')
     modelli = ''.join(open(f, encoding='utf-8').read() for f in glob.glob(os.path.join(CARTELLA, 'templates', '*.html')))
-    nomi = nomi_guida(modelli)
+    voci_del_menu = open(os.path.join(CARTELLA, 'menu.py'), encoding='utf-8').read()
+    nomi = nomi_guida(modelli + voci_del_menu)
+    # gemello di menu.py: i nomi delle voci del menu li vede solo leggendo menu.py (nei modelli non sono scritti)
+    import menu as M
+    del_menu = {v['guida'] for v in M.VOCI if v['guida']} | {x['guida'] for g in M.LINGUETTE.values() for x in g['voci']
+                                                              if x['guida']}
+    assert 'menu-oggi' in del_menu and del_menu <= nomi and not del_menu & nomi_guida(modelli), del_menu
     con_punto = 0
     for a in guida.ARTICOLI:
         for i, p in enumerate(a['passi'], 1):

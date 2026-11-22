@@ -144,6 +144,13 @@ fogli delle pagine arrivano con gli `@import` dello strato, e il controllo li le
 `prove_mattoni.py` (dalla tappa 1-bis) prova i mattoni della veste nuova senza browser: contrasti dei gettoni, valori
 scuri, nessun colore scritto a mano nei file nuovi, lo strato in `base.html`, il prefisso `v-`, i pezzi con le variabili
 rigide, le icone, `euro()`, `marchio.tema` e l'autoriparazione; ogni prova ha il gemello con il suo mutante.
+`prove_menu.py` (dalla tappa 2) prova il menu fatto da `menu.py`: ogni voce, linguetta, voce della tendina Aiuto e
+collegamento nascosto si costruisce con `url_for`; ogni pagina senza parametri accende una voce sola e al più una
+linguetta, in `menu.py` e nel menu disegnato; da una pagina della seconda struttura, in un giorno che non è oggi, ogni
+voce e linguetta porta ancora struttura e giorno; parole, indirizzi, tasti e `data-guida` sono quelli del menu del ramo
+principale, voce per voce (oracolo: `prove_menu_principale.html`, la copia ferma del suo `_menu.html`, che la prova
+confronta con git quando c'è; le sole parole nuove stanno in `PAROLE_NUOVE`, con il perché); `registra_voce` aggiunge la
+voce di un modulo senza toccare i modelli. Ogni controllo ha il suo gemello.
 `prove_live_json.py` confronta `/riepilogo-live.json` e `/riepilogo-live/statistiche.json` con
 `riepilogo_live_atteso.json` (uguale nelle due cartelle) chiave per chiave, a ogni livello e anche nel tipo
 (1 non è 1.0), su un mondo di prova con soli nomi inventati e l'orologio fermo in sette momenti; un numero
@@ -183,7 +190,8 @@ cornice; una sostituzione che lascia vuoto un elemento lo toglie), che il lancia
 le mostra tutte. Un cambiamento nuovo si approva scrivendo la regola nello stesso commit, con il perché.
 I passi della guida indicano un punto della pagina solo con `[data-guida="…"]` o con un id (mai una classe o un
 tag, che cambiano con la veste): lo controlla `prove_guida.py`, che vuole anche che il nome esista in un modello (scritto
-`data-guida="nome"` o, dalla tappa 1-bis, passato a un pezzo di `_pezzi.html` con `guida='nome'`).
+`data-guida="nome"` o, dalla tappa 1-bis, passato a un pezzo di `_pezzi.html` con `guida='nome'`; dalla tappa 2
+anche in una voce di `menu.py`, con `guida='nome'`).
 I messaggi per l'utente (`flash()`) in `prove_14.py` e `prove_funzioni.py` si prendono da Flask quando il programma
 li fa (`prove_messaggi.py`, segnale `message_flashed`), non dall'HTML: ogni test_client va segnato con
 `prove_messaggi.segna()`, e con una pagina 200 `avvisi(C, r)` controlla anche che i messaggi di quella richiesta
@@ -392,6 +400,15 @@ temporanea.
   destinatario rifiutati); `spiega_accesso_rifiutato` dà il consiglio secondo il fornitore.
 - WhatsApp: «Registra il numero» (`invii.registra_numero`) manda il PIN a Meta e non lo
   salva mai, nemmeno nel registro; cambiando l'ID del numero `wa_registrato` si azzera.
+- Menu (dalla tappa 2 della base): voci, linguette, tendina Aiuto e collegamenti nascosti stanno solo in `menu.py`, con
+  per ogni voce la funzione della pagina (`endpoint`), gli argomenti che porta dalla pagina aperta (`struttura`,
+  `giorno`, `giorno_data`, `mese`), parola, icona, sezioni che la accendono, condizione (la Sala: `ci_sono_sale`),
+  `data-tasto`, `data-guida` e contatore; `templates/_menu.html` le disegna con `menu_della_pagina()` e non scrive voci
+  a mano. Una voce nuova (anche di un modulo) si aggiunge con `menu.registra_voce` / `registra_linguetta`, che
+  rifiutano una sezione, una chiave o un tasto già presi: ogni pagina accende una voce sola. Le parole si scrivono con
+  `menu.testo` (l'apostrofo resta com'è). Fino al passo dopo della tappa 2 il disegno è quello di oggi, byte per byte
+  (`menu.disegno_di_oggi`: Giorno, Settimana e Mese in fila, le altre in tendine, i tasti sul collegamento che porta
+  alla stessa pagina); `prove_menu.py` confronta le voci con il menu del ramo principale.
 - Icone: `templates/_icone.html` lo scrive `strumenti/genera_icone.py` (Lucide, licenza
   ISC; testi in `static/icone/LICENZE.txt` insieme a Radix Colors, MIT): niente icone da
   internet.

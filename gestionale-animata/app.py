@@ -57,6 +57,7 @@ import live
 import dovesifa
 import tariffari
 import autoripara
+import menu
 
 # i tipi dei file del programma non si chiedono a Windows: sul PC il registro puo'
 # dire "text/plain" per i .js o non conoscere i video, e il browser li rifiuterebbe
@@ -814,6 +815,8 @@ live.collega(app, ses, LUCCHETTO)
 dovesifa.collega(app, ses, LUCCHETTO)
 tariffari.collega(app, ses, LUCCHETTO)
 guida.collega(app)
+# le voci del menu e le linguette (dalla tappa 2 della base): l'elenco sta in menu.py, _menu.html le disegna
+menu.collega(app)
 # la coda dei messaggi lavora in un thread suo: le serve una sessione nuova ogni volta
 invii.collega(app, ses, LUCCHETTO, lambda: Sessione())
 # anche i controlli degli aggiornamenti
