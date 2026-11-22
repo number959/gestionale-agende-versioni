@@ -2505,12 +2505,14 @@ def i_thread():
     filo = invii.avvia(fabbrica, intervallo=30)
     assert filo.is_alive() and invii.avvia(fabbrica) is filo, 'un thread solo'
     prenota(C, I)                       # la prenotazione sveglia il thread
-    for _ in range(50):
-        if POSTA.messaggi:
+    # si aspetta anche che il thread abbia scritto «INVIATO»: l'email arriva al finto server un attimo prima del
+    # salvataggio, e con il computer carico quell'attimo si allunga (22/11/2026: caduta una volta così, IN_CORSO)
+    for _ in range(100):
+        if POSTA.messaggi and invii_tutti(S)[0]['stato'] == 'INVIATO':
             break
         orologio.sleep(0.1)
     assert len(POSTA.messaggi) == 1 and invii_tutti(S)[0]['stato'] == 'INVIATO', invii_tutti(S)
-    return 'partita in meno di 5 secondi'
+    return 'partita e segnata in meno di 10 secondi'
 
 
 prova('la prenotazione sveglia il thread e l\'email parte da sola', i_thread)
