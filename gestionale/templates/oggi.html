@@ -18,7 +18,7 @@
   </div>
 </div>
 <div class="contenuto">
-{% if q.allarme %}<div class="avvio errore-backup">{{ q.allarme }} <a href="{{ url_for('viste.impostazioni') }}#backup">Impostazioni</a></div>{% endif %}
+{% if q.allarme and puo('sistema') %}<div class="avvio errore-backup">{{ q.allarme }} <a href="{{ url_for('viste.impostazioni') }}#backup">Impostazioni</a></div>{% endif %}
 {% if q.nota %}<div class="avvio nota-oggi"><b>Nota del giorno:</b> {{ q.nota }}</div>{% endif %}
 <div class="cruscotto">
 
@@ -43,7 +43,7 @@
     {% if q.in_struttura %}<p class="nota-riga">In struttura adesso: {% for a in q.in_struttura %}{{ a.paziente.etichetta if a.paziente else a.operatore.cognome }} ({{ a.risorsa.nome }}){% if not loop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
   </section>
 
-  {% if q.chirurghi is not none %}
+  {% if q.chirurghi is not none and puo('sala') %}
   <section class="scheda-oggi">
     <h2>Sala operatoria <small><a href="{{ url_for('sala.giornata', iso=q.oggi.isoformat(), struttura=sid) }}">apri</a></small></h2>
     {% if q.interventi %}
@@ -64,7 +64,7 @@
   </section>
   {% endif %}
 
-  {% if q.personale is not none %}
+  {% if q.personale is not none and puo('turni') %}
   <section class="scheda-oggi in-servizio" data-guida="oggi-in-servizio">
     <h2>In servizio oggi <small><a href="{{ url_for('personale.giorno', iso=q.oggi.isoformat(), struttura=sid if strutture|length > 1 else none) }}">turni</a></small></h2>
     {% if q.personale %}
@@ -82,14 +82,14 @@
     {% else %}<p class="vuoto">Nessun turno di lavoro del personale oggi.</p>{% endif %}
   </section>
   {% endif %}
-
+{% if puo('segreteria') %}
   <section class="scheda-oggi">
     <h2>Da fare</h2>
     {% if q.cose %}
     <ul class="righe-oggi">
       {% for x in q.cose %}
       <li>{{ x.testo }}{% if x.paziente %} — <a href="{{ url_for('pazienti.scheda', pid=x.paziente_id) }}">{{ x.paziente.etichetta }}</a>{% endif %}{% if x.per_il < q.oggi %} <span class="nota-riga">dal {{ x.per_il.strftime('%d/%m') }}</span>{% endif %}
-        <form method="post" action="{{ url_for('segreteria.cosa_fatta', xid=x.id, azione='fatto') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit">Fatto</button></form></li>
+        {% if puo_cambiare('segreteria') %}<form method="post" action="{{ url_for('segreteria.cosa_fatta', xid=x.id, azione='fatto') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit">Fatto</button></form>{% endif %}</li>
       {% endfor %}
     </ul>
     {% else %}<p class="vuoto">Niente in scadenza.</p>{% endif %}
@@ -121,14 +121,14 @@
     {% if q.annullati %}<p class="nota-riga">Oggi {{ q.annullati|length }} disdett{{ 'o' if q.annullati|length == 1 else 'i' }} o non presentat{{ 'o' if q.annullati|length == 1 else 'i' }}: <a href="{{ url_for('segreteria.attesa', struttura=sid) }}">lista d'attesa</a>.</p>{% endif %}
     {% if not (q.prossimo > q.oggi) and not q.arretrati %}<p class="vuoto">Nessuna telefonata in sospeso.</p>{% endif %}
   </section>
-
+{% endif %}{% if puo('cassa') %}
   <section class="scheda-oggi">
     <h2>Cassa di oggi</h2>
     <p class="numero-grande">{{ q.incassato|euro }} €</p>
     <p class="nota-riga">{{ q.n_pagati }} pagament{{ 'o' if q.n_pagati == 1 else 'i' }}{% if q.da_incassare %} · {{ q.da_incassare|length }} arrivat{{ 'o' if q.da_incassare|length == 1 else 'i' }} ancora da incassare{% endif %}</p>
     <p><a href="{{ url_for('cassa.cassa_giorno', iso=q.oggi.isoformat(), struttura=sid) }}">Apri la cassa</a></p>
   </section>
-
+{% endif %}
 </div>
 </div>
 {% endblock %}

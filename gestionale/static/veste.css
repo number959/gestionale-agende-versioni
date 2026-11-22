@@ -499,3 +499,15 @@ table.v-tabella td small, table.v-tabella .v-testo-piccolo { display: block; }
   .v-barra-comandi, .v-linguette, .v-stampa { display: none; }
   .v-scheda, .v-striscia, .v-tabella-contenitore { box-shadow: none; }
 }
+
+/* ------------------------------------------------------------------ chi è entrato da un altro PC (1.13, accessi.py)
+   Nella barra in alto, dopo la ricerca, solo dagli altri PC (templates/_utente_rete.html dentro _barra.html): il
+   nome, «La mia password» ed «Esci» sulla stessa riga; se lo spazio non basta va a capo dentro il suo posto (la barra
+   resta su una riga e la pagina non scorre di lato). Fuori dalla barra (nessuna pagina oggi) resta una riga semplice. */
+.v-utente-rete {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-3) var(--v-spazio-4);
+  margin: 0; font-size: var(--v-car-m); line-height: var(--v-int-m);
+}
+.v-utente-rete form { display: inline; margin: 0; }
+.v-barra .v-utente-rete { flex: 0 1 auto; min-width: 0; color: var(--v-testo-medio); }
+.v-barra .v-utente-rete b { color: var(--v-testo); font-weight: var(--v-peso-forte); }

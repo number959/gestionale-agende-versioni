@@ -1799,6 +1799,154 @@ dell'errore del server (il disco pieno e il database occupato con il loro messag
 Per le prove: `GESTIONALE_PORTA` cambia la porta del programma (al PC della clinica non c'è: le
 prove non toccano mai la 5000).
 
+## Accesso dagli altri PC della rete
+
+Dalla 1.13, richiesta di Giovanni del 22/11/2026: «dammi la possibilità di scegliere quale modulo rendere disponibile
+sugli altri PC della rete in locale a quale utente e quale no». Tutto sta in `accessi.py`; la guida è *Far usare il
+programma dagli altri PC* (gruppo Configurazione).
+
+**Per chi lo usa.** È spento di partenza: il PC della segreteria apre il programma da http://127.0.0.1:5000 come
+sempre, senza password e con tutte le pagine, e con l'accesso spento le sue pagine sono quelle di prima, byte per byte.
+Si accende dal PC della segreteria, *Configura → Impostazioni → Aree e accessi* (dopo la tappa 2 sarà una linguetta di
+Configura): la spunta «Gli altri PC della rete possono aprire il programma», la porta (5080 di partenza) e Salva. Da
+quel momento il programma ascolta anche su tutte le schede di rete del PC, su quella porta, e la pagina dice
+l'indirizzo da aprire negli altri PC (`http://NOME-DEL-PC:5080/`, o con i numeri del PC). La prima volta Windows chiede se
+il programma può usare la rete: «Reti private» sì, «Reti pubbliche» no, «Consenti accesso» (serve un amministratore);
+la rete della clinica deve essere segnata «Privata» in Windows. Se la domanda non compare, la pagina dà il comando da
+scrivere nel Prompt dei comandi come amministratore:
+
+```
+netsh advfirewall firewall add rule name="Gestionale Agende (rete della clinica)" dir=in action=allow protocol=TCP localport=5080 profile=private
+netsh advfirewall firewall delete rule name="Gestionale Agende (rete della clinica)"
+```
+
+Poi gli utenti: uno per persona, con un nome e una password per il primo accesso (al primo accesso la persona ne
+sceglie una sua: almeno 10 caratteri, non fra quelle che si indovinano subito, meglio una frase di tre o quattro
+parole). Per ogni parte del programma (Agenda, Pazienti, Segreteria, Cassa, Sala operatoria, Turni, Ambulatori e
+dashboard, Statistiche e report, Dove si fa, Email e WhatsApp, Anagrafiche, Guida e aiuto): «non disponibile», «solo
+guardare» (si aprono le pagine e si scaricano i file, non si salva niente) o «guardare e modificare». Il Sistema
+(aggiornamenti, copie e ripristino, controllo del programma, impostazioni, la casella email e WhatsApp, la pagina degli
+accessi) resta sempre e solo sul PC della segreteria. Dall'altro PC si entra con nome e password; in alto si vede con
+quale nome si è entrati, con «La mia password» ed «Esci». Una parte non data risponde con una pagina in italiano che
+dice a chi chiedere. Nel riquadro di ogni utente: le parti, «Può entrare» (togliendo la spunta esce subito da tutti i
+PC), la password nuova se l'ha dimenticata, «Fai uscire», «Togli» (con la domanda). Chi sbaglia la password 5 volte da un
+PC aspetta un quarto d'ora; un PC che sbaglia 30 volte con nomi qualsiasi aspetta un quarto d'ora per tutti i nomi;
+«Sblocca» in *Tentativi sbagliati* (anche il PC). In fondo gli ultimi accessi e salvataggi dagli altri PC degli ultimi 7
+giorni. Un utente ha al massimo 5 sessioni aperte (entrando la sesta, si chiude la più vecchia) e la sessione vale solo
+dal PC da cui si è entrati: da un altro PC si rientra con nome e password. Dentro le parti, quello che è di un'altra
+parte resta di quella: senza la Cassa niente importi, convenzioni e incassi (stampa e Excel del giorno, elenco,
+chiusura); senza l'Agenda, in un'assenza o una chiusura solo il numero degli appuntamenti da spostare, senza nomi; la
+ricerca dei pazienti (con telefono, email, codice fiscale) a chi ha i Pazienti o può prenotare (Agenda, Segreteria o Dove
+si fa da modificare); con la sola Cassa si incassa anche con bonifico o con un importo scritto, dalla cassa del giorno;
+con la Segreteria da modificare, nelle Conferme, «Confermato», «Disdetto» e «Manda» il promemoria. In *Statistiche e
+report* ci sono anche nomi e telefoni dei pazienti, importi e incassi (riepilogo dei medici ed esportazioni): la pagina
+lo dice accanto alla parte.
+
+Il collegamento è in chiaro (http, non https): nome, password e dati passano senza protezione nella rete della clinica.
+Va bene solo nella rete interna del personale, mai in una Wi-Fi aperta ai pazienti o da fuori; la protezione https,
+con il portiere Caddy, è un passo successivo. Gli schermi della dashboard: con la spunta «Il Modo schermo… si apre senza
+password» aprono `http://NOME-DEL-PC:5080/riepilogo-live?schermo=1` senza Caddy; se Caddy resta, nel suo Caddyfile
+`127.0.0.1:5000` diventa `127.0.0.1:5080` (con l'accesso spento Caddy funziona come prima, verso la 5000).
+
+**Come funziona dentro.**
+- *Dalla rete* è una richiesta arrivata dalla presa della rete (`AscoltoRete`, un secondo server di waitress con fili
+  suoi, acceso e spento a programma aperto: `MarcaRete` segna ogni richiesta), con un'intestazione di un portiere
+  (X-Forwarded-For, Forwarded, X-Real-Ip, X-Forwarded-Host) o da un indirizzo non del PC. Per le intestazioni il server
+  principale non le toglie più (`clear_untrusted_proxy_headers=False`). I limiti di waitress: moduli fino a 13 MB (oltre
+  413 da waitress) su tutti e due i server; sul PC principale (`LIMITI_SERVER`) 20 collegamenti e un collegamento fermo
+  da 30 secondi si chiude (mai uno con una richiesta in corso); sulla presa della rete (`LIMITI_RETE`) 100 collegamenti,
+  10 secondi, e al massimo 12 aperti insieme dallo stesso indirizzo (`COLLEGAMENTI_PER_PC`, `canale_con_limite`: il
+  tredicesimo si chiude subito; gli indirizzi del PC stesso, cioè un portiere, non contano). Così un PC solo, senza
+  password, non tiene più occupati tutti i collegamenti con richieste mai finite.
+- *La guardia* (`controlla_accesso`, prima di ogni richiesta): ogni pagina ha la sua area in `CENSIMENTO` (una che manca è
+  rifiutata come il Sistema, e la prova cade); il Sistema mai; le parti del Sistema dentro le pagine di un'area
+  (`SISTEMA_DENTRO`: i moduli della casella email e di WhatsApp di `/invii`) rispondono 403, e la pagina le nasconde
+  (`{% if puo('sistema') %}`); «solo guardare» lascia passare solo GET e HEAD. Un modulo di una pagina può valere anche
+  per un'altra area (`ANCHE_PER`: «Manda» il promemoria di `/invii/appuntamento` anche per la Segreteria, solo quello), e
+  cambiare lo stato di un appuntamento vale per Agenda o Segreteria. La ricerca dei pazienti (`RICERCA_PAZIENTI`) senza i
+  Pazienti vuole Agenda, Segreteria o Dove si fa da modificare (`livello_ricerca_pazienti`); le pagine di chi guarda non
+  hanno il campo (`puo_cercare_pazienti()` nei modelli), e Dove si fa non mostra il paziente dell'indirizzo. Il nome con
+  cui si chiama il PC (Host):
+  uno dei suoi nomi (`nomi_del_pc`, rifatti ogni minuto), uno scritto in «Altri nomi», o un indirizzo in numeri sulla
+  porta della rete (il DNS rebinding passa sempre da un nome); l'origine dei moduli come sul PC.
+- *Utenti e sessioni*: fra le impostazioni (`rete_utenti`, JSON con l'impronta della password di werkzeug: nessuna
+  tabella nuova, lo schema resta il 12); le sessioni sul server (`sessioni-rete.json` accanto a `chiave-sessione`), così
+  «Esci», «Fai uscire», la password cambiata e l'utente spento chiudono davvero, e dopo un riavvio chi era entrato
+  resta dentro. Al massimo 5 sessioni per utente (`MASSIMO_SESSIONI`), il file riscritto al più ogni 3 secondi entrando
+  (`SALVA_SESSIONI_OGNI`, poi un filo a parte lo scrive); la sessione ricorda da quale PC si è entrati e da un altro si
+  chiude (nel registro «sessione usata da un altro PC»). La chiave dei cookie è casuale, una per installazione; la presa
+  della rete non si accende con una chiave corta o con quella fissa di prima.
+- *I tentativi* (`Tentativi`): 5 sbagliati per PC e nome, 30 per PC con nomi qualsiasi (`TENTATIVI_PC`), 20 per nome da
+  qualsiasi PC con l'attesa che raddoppia. Il tentativo si conta prima di provare la password, sotto un lucchetto
+  (`prenota`: tanti mandati insieme non ne fanno provare di più), le voci hanno un tetto e si sfoltiscono al più una volta
+  al minuto, `bloccati()` fa un passaggio solo; a un PC bloccato si risponde subito, senza leggere il database.
+- *Accendere e spegnere*: la porta si salva solo se l'ascolto parte (una porta occupata lascia quella di prima e lo
+  dice: «già usata da un altro programma», o per Windows «riservata»); mai la 5000 né le 5001-5009. Dopo un ripristino
+  e dopo una riparazione gli accessi restano quelli di prima (sotto, «Una copia rimessa…») e `applica` rimette l'ascolto
+  come dicono. All'avvio (`all_avvio`, da
+  `app.principale` dopo che il PC principale è in ascolto, dentro un try) con la porta ancora occupata si riprova ogni
+  mezzo minuto per cinque minuti in un filo a parte, poi lo scrive in *Controllo del programma*: la rete non ferma mai
+  l'avvio del PC principale.
+- *La casella email*: la password salvata vale solo per il server, la porta, la sicurezza e il nome utente per cui è
+  stata scritta; cambiato uno di questi senza riscriverla, si toglie con l'avviso (`invii.casella_cambiata`). Così
+  nessuno, nemmeno dal PC, la può mandare a un altro server cambiando solo il server.
+- *Il registro*: `accessi/accessi-AAAA-MM-GG.log` accanto al database, un file per giorno (più vecchi di 400 giorni si
+  cancellano all'avvio), senza caratteri di controllo e senza « | » nei nomi; entrate, uscite, errori di password,
+  ogni salvataggio, ogni rifiuto, e le schede, i documenti e gli Excel aperti. I tentativi sbagliati dallo stesso PC: al
+  massimo una riga al minuto, con quanti erano (`annota_sbagliato`); la pagina legge solo la coda dei file
+  (`coda_del_file`).
+- *I file Excel caricati* (Importa da Excel, tariffari, strutture del gruppo): prima di aprirli si guarda quanto diventano
+  scompattati (`comune.controlla_excel_compresso`: oltre 60 MB, o un pezzo grande compresso più di 100 volte, «file
+  troppo grande» o «non sembra un foglio normale»); Importa da Excel legge in sola lettura, tenendo solo le righe che
+  servono (`importa._leggi_foglio`, con il lettore dei fogli di openpyxl anche per le celle unite: dà le stesse righe di
+  prima, e `prove_accessi.py` le confronta con la lettura di prima, copiata nella prova). Prima un file di 189 KB con
+  milioni di celle portava il programma, uno solo anche per il PC della segreteria, oltre 1 GB di memoria.
+- *Nella prova* (`prova.py`) l'accesso dagli altri PC si prova sulla 5085, mai sulla 5080 della clinica né sulle porte
+  del programma vero e della prova, con un cookie suo; non si accende da solo all'avvio.
+- *Mai «import app» da un modulo del programma* (revisione del 22/11, grave): nell'eseguibile, e con «python app.py»,
+  app.py gira come «__main__». Il primo «from app import …» dentro accessi.py caricava una seconda copia di app.py, che
+  rifaceva tutti i collega() con Sessione=None: da quel momento ogni pagina rispondeva 500, anche sul PC della
+  segreteria (dopo la pagina «Aree e accessi», una richiesta del portiere o una da un altro PC). Le prove non lo vedevano
+  perché avviavano il programma con «import app». Ora `accessi.installa(app, ses, LUCCHETTO, lambda: Sessione)` riceve
+  quello che serve, come `viste.collega`; in più app.py, se gira come «__main__», si registra anche come «app»
+  (`sys.modules`). `prove_accessi.py` controlla i sorgenti (`a_nessun_modulo_importa_app`: nessun modulo raggiunto
+  dagli import di app.py, o di prova.py, importa il suo programma) e avvia il programma vero come «__main__»
+  (`y_come_l_eseguibile`, e `AVVIO_VERO` con `runpy.run_path(..., run_name='__main__')`).
+- *Una copia rimessa non riporta indietro gli accessi* (decisione del 22/11, piano/ESECUZIONE.md): utenti, password,
+  parti, accensione e porta sono impostazioni di sicurezza, non dati della clinica. Dopo il ripristino dalle
+  Impostazioni restano quelle di prima (`accessi.istantanea` prima, `accessi.rimetti` dopo, e il messaggio lo dice);
+  dopo una riparazione (il custode, *Controllo del programma*, l'avvio) quelle del file `accessi-rete.json` accanto al
+  database, fuori dalle copie, riscritto a ogni cambio (`accessi.ricorda`); senza il file la rete resta spenta finché la
+  segreteria non controlla. In ogni altro momento vale il database (all'avvio il file si riscrive da lì).
+- *Il firewall*: con «Annulla» o «No» alla domanda di Windows (e sempre se chi usa il PC non è amministratore) Windows
+  crea regole che bloccano il programma, e una regola che blocca vince su quelle che permettono (documentazione di
+  Microsoft): il solo «add rule … action=allow» non apriva niente. La pagina lo spiega e, in «Per l'assistenza», dà
+  `netsh advfirewall firewall delete rule name=all program="<percorso del programma>"` (toglie tutte le sue regole, anche
+  quelle che bloccano) e la regola per programma e porta, `profile=private,domain` (`accessi.comandi_firewall`, il
+  percorso da `sys.executable`). Sotto «Acceso» la pagina dice l'ultima richiesta arrivata da un altro PC, o che non ne è
+  arrivata nessuna (`AscoltoRete.ultimo_da_fuori`): con il firewall che blocca, prima diceva solo «Acceso». Il bottone che
+  fa la regola con il consenso di Windows (UAC) non c'è ancora: si fa quando si può provare su un Windows vero.
+- *Solo guardare*: nelle pagine che vanno alla rete ogni `<form method="post">` che l'utente non può salvare prende
+  `data-solo-guardare` (`accessi.segna_moduli`, in `dopo_la_risposta`), e `gestionale.js` ne spegne campi e bottoni con
+  la spiegazione e una riga in cima alla pagina; la guardia resta. Le caselle della checklist della Sala sono spente
+  con `not puo_cambiare('sala')`, e un 403 di uno script mostra il motivo che dà il programma.
+- *Le altre parti dentro le pagine (secondo giro)*: nella scheda del paziente cose da fare e lista d'attesa solo con la
+  Segreteria; la ricerca dei pazienti dà l'anagrafica intera solo a chi ha Pazienti o Agenda (agli altri nome, nascita
+  e telefono); prezzo di listino nella scheda della prestazione solo a chi può cambiare la Cassa, il tariffario del
+  medico solo con la Cassa; gli appunti da confermare nella griglia e nell'elenco del giorno solo con la Segreteria; nelle
+  tendine degli Ambulatori le esportazioni di Statistiche e report solo con quella parte. *Statistiche e report*
+  (predefinito deciso, Giovanni può cambiarlo): nomi, telefoni ed email dei pazienti solo a chi ha anche Pazienti o
+  Agenda, importi e incassi solo con la Cassa, nelle pagine e negli Excel (statistiche, riepilogo dei medici con la sua
+  email già scritta, esportazione del giorno: `servizi.esporta_giorno(con_pazienti=)`, `cruscotto.togli_colonne`), con
+  le colonne tolte e non vuote; sul PC tutto come prima.
+- *La pagina*: spegnere l'accesso fa uscire tutti (le sessioni restano solo nei riavvii); il riquadro rosso di una porta
+  solo se la rete deve essere accesa e non è in ascolto (l'errore della volta va nel messaggio); un nuovo utente
+  rifiutato torna con quello che si era scritto, tranne la password, e il motivo accanto al modulo; le password date
+  dalla segreteria si vedono mentre si scrivono; il rifiuto manda a *Configura → Impostazioni → Aree e accessi*
+  (`PERCORSO_PAGINA`: dopo l'unione con la tappa 2 diventa la linguetta); Caddy, i comandi del firewall e gli altri nomi
+  del PC stanno in riquadri chiusi «Per l'assistenza»; gli utenti sono chiusi, con le parti in una riga; la barra
+  «Entrato da un altro PC» ha il suo stile (`.v-utente-rete` in `veste.css`).
+
 ## Dove stanno i dati
 
 `%LOCALAPPDATA%\GestionaleAgende\agende.db`, insieme a `gestionale.log`. Il programma
@@ -2841,6 +2989,38 @@ Prima delle pagine nuove, i pezzi con cui si faranno, senza cambiare di un pixel
   browser), 35 pagine a 1366×657 e intere, in chiaro e in scuro, più tendine aperte, fuoco della tastiera, messaggi a
   scomparsa e stampa; le foto diverse si rifanno sul principale per misurare il rumore.
 
+### L'accesso dagli altri PC (dalla 1.13)
+
+`prove_accessi.py` (senza browser): il censimento con una pagina finta senza area; la matrice area × livello × pagina ×
+metodo, dalla rete e dal PC; le pagine di ogni area e tutti gli indirizzi chiesti dai loro script; i cinque modi di
+arrivare dalla rete; Sistema, Modo schermo, sessioni, tentativi, messaggi e registro, password, scritture e letture fra
+aree; le prese vere (portiere, ascolto acceso, spento, riacceso, porta occupata, chiave fissa); i limiti dei due server
+(un modulo di 14 MB: 413 da waitress); la casella email e WhatsApp nel Sistema e la password tolta cambiando server; gli
+indirizzi in numeri; la pagina con il registro letto dai file; e il programma vero (`app.principale`) in un processo a
+parte, con `GESTIONALE_PORTA`: la rete accesa dalla pagina, le richieste dall'indirizzo di questo PC fuori da 127.* (come
+un altro PC) e da 127.0.0.1, la porta principale che dall'altro indirizzo non si raggiunge, l'accesso con la password da
+cambiare, Agenda che salva, Cassa «solo guardare» che no, Pazienti e Sistema negati, la rete spenta che chiude davvero
+la porta, il riavvio con la porta della rete occupata (il PC principale parte, la rete appena la porta si libera, chi
+era entrato è ancora dentro). Ogni prova ha il suo gemello, e ogni controllo nuovo è stato provato con un mutante su
+una copia del programma.
+
+Le prove del secondo giro della revisione (22/11, i 14 problemi che il primo giro non aveva visto): `y_come_l_eseguibile`
+(il programma vero come «__main__»: dopo la pagina Aree e accessi, il portiere con la rete spenta e le richieste da un
+altro PC, Oggi, Pazienti, Cassa e Impostazioni rispondono 200; e la pagina dice l'ultima richiesta da un altro PC),
+`a_nessun_modulo_importa_app` e le `z_nv_…`: la scheda del paziente senza la Segreteria, la ricerca ridotta per ogni area
+e livello, prezzo e tariffario con la Cassa, la checklist spenta, le tendine degli Ambulatori, i moduli segnati
+confrontati con la guardia su tutte le pagine di ogni area, gli appunti del giorno, la copia rimessa (ripristino,
+riparazione, avvio), il firewall, lo spegnimento che fa uscire, il riquadro della porta, il nuovo utente rifiutato, il
+rifiuto e la pagina, e Statistiche e report (pagine ed Excel per quattro utenti e il PC).
+
+`prove_accessi_browser.py` (nel browser, sul gestionale di prova): il giro della segreteria, da Impostazioni ad *Aree e
+accessi*, l'accesso acceso su una porta libera, un utente con Agenda da modificare e Cassa da guardare; da un'altra
+scheda sull'indirizzo della rete: password sbagliata, primo accesso, password nuova, la nota del giorno salvata, «Salva il
+listino» spento con la riga «Solo guardare», le caselle della checklist della Sala spente, Pazienti negata con «Torna alle
+pagine disponibili», «Esci»; dal PC il registro, «Togli» con la domanda, l'accesso spento e la porta chiusa; prima, un
+utente rifiutato che torna con il nome e le parti scritte, e il motivo di un 403 della checklist nel messaggio. Alla fine il
+gestionale di prova torna com'era.
+
 ## Difetti trovati e corretti
 
 Primo giro:
@@ -3268,6 +3448,8 @@ falliscono, cioè il difetto c'era davvero.
 | Tre prove nel browser senza `CHROMIUM` (21/11/2026) | `prove_sicurezza_browser.py`, `prove_animazioni.py` (solo nell'animata) e `strumenti/prova_aggiorna_adesso.py` aprivano Chromium senza `executable_path=os.environ.get('CHROMIUM')`, a differenza di tutte le altre prove e degli strumenti delle guide: in una sessione nel cloud dove la libreria Playwright di Python cerca un Chromium più nuovo di quello installato si fermavano dopo un secondo | Aprono Chromium come le altre; senza `CHROMIUM` (su Windows e in `prove.yml`) tutto resta come prima |
 | La «cornice» di `prove_sicurezza_browser.py` che falliva a caso (21/11/2026) | Con le due cartelle provate insieme la prova a volte non vedeva la risposta 403 alla richiesta della cornice da un altro sito: il testo restava giusto, ma Playwright non vedeva né la richiesta né la risposta (6 giri su 14 sotto carico, con una copia della prova che registrava anche le richieste fallite). Chrome fa girare la cornice chiusa in una sandbox in un processo suo, e il modulo partiva appena la cornice era pronta, prima che Playwright la seguisse. Aspettare di più non bastava; e il primo modo di riprovare non serviva, perché riapriva lo stesso indirizzo con la stessa ancora e il browser restava nella stessa pagina, senza rifare l'attacco (lo ha trovato la revisione della 1.12.7). Un difetto della prova, non del programma | Il modulo della cornice parte dopo un secondo (14 giri su 14 sotto lo stesso carico), e senza il 403 visto la prova riprova fino a tre volte, ogni volta da un indirizzo nuovo, con lo stesso criterio di prima (testo uguale e risposta 403; se il testo cambia fallisce subito): con il primo tentativo perso apposta, il secondo rifà l'attacco e vede il 403. Con il controllo della provenienza tolto dal gestionale la prova è rossa, cornice compresa |
 | La prova del thread di `prove_15.py` che falliva a caso (22/11/2026) | `i_thread` aspettava che l'email arrivasse al finto server di posta e subito controllava che nel database fosse «INVIATO»; il thread scrive lo stato un attimo dopo l'invio, e con il computer carico (le due cartelle provate insieme, più altri lavori) l'ha trovata ancora «IN_CORSO» una volta. Un difetto della prova, non del programma | La prova aspetta, fino a 10 secondi, sia l'email sia lo stato scritto; 5 giri di fila con sei processi che occupano il computer, tutti verdi |
+| Accesso dagli altri PC, revisione dei tre revisori (22/11/2026, prima di consegnarlo) | Riprodotti uno per uno, prima di correggerli. Con le sole Anagrafiche, un'assenza o una chiusura mostravano nomi e telefoni degli appuntamenti da spostare (con una chiusura di un anno, tutti); con Agenda, Segreteria o Dove si fa anche solo da guardare la ricerca dei pazienti dava tutta l'anagrafica; senza la Cassa la stampa e l'Excel del giorno, l'elenco e la chiusura mostravano importi e convenzioni; dalla lista d'attesa e dagli appunti la Segreteria cambiava la scheda di un paziente; le Conferme davano 403 alla Segreteria; con la sola Cassa non si incassava con bonifico; chiunque sulla rete, provando nomi sempre nuovi, rendeva lenta per minuti la pagina «Aree e accessi» e riempiva il registro; un .xlsx di 189 KB portava il programma oltre 1 GB di memoria; un PC solo teneva occupati tutti i collegamenti della rete; il cookie valeva da qualsiasi PC; passavano password come «1234567890a» o «clinicaposillipo1»; 40 tentativi insieme ne facevano provare 8; le sessioni di un utente non avevano limite | Ognuna con la sua prova e il suo gemello in `prove_accessi.py` (le prove `z_…`) e un mutante che la fa cadere: lista solo con l'Agenda; ricerca senza i Pazienti solo a chi può prenotare (`RICERCA_PAZIENTI`); importi e convenzioni solo con la Cassa (`con_cassa` nell'Excel del giorno); `aggiorna=puo_cambiare('pazienti')` anche in lista d'attesa e appunti; stato per Agenda o Segreteria, promemoria anche per la Segreteria (`ANCHE_PER`); il modulo di incasso nella cassa del giorno; `Tentativi` con il limite per PC, il tetto alle voci, `bloccati()` in un passaggio, `prenota` sotto il lucchetto, la risposta subito a un PC bloccato; registro raggruppato e letto dal fondo; `controlla_excel_compresso` e Importa da Excel in sola lettura; 12 collegamenti per PC sulla rete; sessione legata al PC, al massimo 5 per utente; password con almeno 6 lettere, 4 diverse, non fatte solo di parole vietate. Statistiche e report: deciso nel secondo giro (riga sotto) |
+| Accesso dagli altri PC, secondo giro della revisione (22/11/2026, i 14 problemi che il primo giro non aveva visto) | Nell'eseguibile, e con «python app.py», dopo la pagina «Aree e accessi», una richiesta del portiere o una da un altro PC ogni pagina rispondeva 500, anche sul PC della segreteria (il primo «from app import» di accessi.py caricava una seconda copia di app.py). Poi: la copia di ieri rimessa riportava indietro utenti, password e rete senza dirlo; le istruzioni del firewall dopo «Annulla» non aprivano niente (Windows crea regole di blocco); chi aveva solo i Pazienti vedeva cose da fare e lista d'attesa; da Dove si fa la ricerca dava l'anagrafica intera; con le sole Anagrafiche si cambiava il prezzo di listino; la checklist si spuntava in «solo guardare» con un messaggio falso; voci di «Scarica» e bottoni per salvare che portavano al 403 perdendo quello che si era scritto; gli appunti della Segreteria nella griglia di chi ha solo l'Agenda; spegnere la rete non faceva uscire; l'errore rosso della porta occupata restava per sempre; un utente rifiutato faceva rifare tutto il modulo; il rifiuto mandava a un percorso che nel menu non c'è | `accessi.installa(app, ses, LUCCHETTO, fabbrica)` e app.py registrato come «app» quando gira come «__main__»; prova sui sorgenti e programma vero come «__main__»; gli accessi non tornano indietro con una copia (`accessi-rete.json`, `rimetti`); comandi del firewall per programma (togli tutte le sue regole, poi la regola per la porta) e l'ultima richiesta da un altro PC; ogni pezzo di un'altra parte dietro la sua (`puo`, `puo_cambiare`, ricerca ridotta); i moduli che non si possono salvare segnati e spenti (`segna_moduli`, `gestionale.js`); spegnere = tutti fuori; pagina con quello che si era scritto, «Per l'assistenza», utenti chiusi. Statistiche e report: pazienti con Pazienti o Agenda, importi con la Cassa (predefinito deciso). Ognuna con la sua prova `z_nv_…` (o `y_come_l_eseguibile`) e il suo gemello, e un mutante su una copia |
 | Il clic su «Stampa e scarica» coperto dalla tendina del menu (21/11/2026) | In `prove_112_browser.py`, nell'animata, una volta sola in tutti i giri del 21 novembre, la tendina «Ambulatori» del menu era aperta sopra il pulsante e il clic non arrivava (30 secondi e poi rosso). La causa l'ha trovata la revisione della 1.12.7, ed è della prova: nell'animata la tendina «Stampa e scarica» entra con un'animazione di 0,18 secondi, Playwright vede la voce «non ferma», fa scorrere la pagina per mostrarla e lascia il mouse in cima alla finestra; al clic dopo riporta la pagina in cima, il gruppo «Ambulatori» del menu finisce sotto il mouse fermo e apre la sua tendina sopra il pulsante. Nella normale, senza animazione, non succede | Prima di aprire «Stampa e scarica» la prova porta il mouse in un punto neutro della pagina, dove il menu non può finire, e controlla che nessuna tendina del menu sia aperta; se lo è, lo dice, con la tendina e il perché (mouse sopra, focus dentro o classe «aperto») |
 | Wine non partiva più nelle sessioni nel cloud (21/11/2026) | Wine 9.0 di Ubuntu si chiudeva appena partito, con «free(): invalid pointer», se la variabile `TMPDIR` era impostata, anche a `/tmp`: nella sessione del 21 novembre lo era, il 1° novembre no. `strumenti/wine/costruisci.sh` finiva con un `crea_exe.log` vuoto | `strumenti/wine/ambiente.sh` toglie `TMPDIR` prima di usare Wine, che allora usa `/tmp` da solo |
 

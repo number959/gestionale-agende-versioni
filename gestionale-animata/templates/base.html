@@ -59,7 +59,10 @@
     e la cornice intera c'è solo se il menu non è vuoto. Una pagina può svuotare anche «barra» e «linguette» (per
     rimettere le linguette nella sua testa). Ogni pezzo sta in un contenitore con data-cornice, anche la zona dei
     messaggi (strumenti/confronta_rami.py confronta la cornice a parte). In stampa la cornice sparisce e la pagina
-    resta quella di prima (veste.css, @media print). #}
+    resta quella di prima (veste.css, @media print).
+    Chi entra da un altro PC (1.13, accessi.py) ha il suo nome, «La mia password» ed «Esci» nella barra in alto
+    (_barra.html, _utente_rete.html): le pagine senza menu (l'accesso, la propria password, i fogli da stampare, il
+    Modo schermo) non hanno la cornice e nemmeno quella riga. #}
 {%- if false %}{% block menu %}{% include "_menu.html" %}{% endblock %}{% endif %}
 {%- set _menu = self.menu()|trim %}
 {%- if _menu %}

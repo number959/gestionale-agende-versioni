@@ -17,7 +17,9 @@ menu, la ricerca rapida con le prestazioni) e la pagina dell'email della 1.9.1 (
 casella, gestionale.js, la guida vecchia che porta a quella nuova), le fasce dei turni della 1.10
 (giorno, settimana e mese con il database aggiornato, la durata delle fasce nel modulo del turno,
 lo stile, la guida), l'autoriparazione della 1.11 (/salute, la pagina Controllo del programma con i
-tre lavori in sottofondo attivi; con CARTELLA_DATI anche gestionale.pid e il diario). L'invio delle
+tre lavori in sottofondo attivi; con CARTELLA_DATI anche gestionale.pid e il diario), e dalla 1.13 la pagina «Aree e
+accessi» e il Modo schermo dietro un portiere, dopo i quali le pagine di sempre devono rispondere (nell'eseguibile app.py
+gira come «__main__»: revisione del 22/11). L'invio delle
 email sul programma installato si prova con strumenti/prova_email_installato.py."""
 import json
 from datetime import date
@@ -266,6 +268,17 @@ controlla('autoriparazione: le tre righe dei lavori in sottofondo dicono «attiv
           re.findall(r'Lavoro in sottofondo: [^<]*</td><td>[^<]*', b.decode('utf-8', 'replace')))
 s, b, _ = get('/impostazioni')
 controlla('autoriparazione: il collegamento in Impostazioni', s == 200 and b'/autoriparazione' in b, s)
+# accesso dagli altri PC (1.13). Revisione del 22/11 (grave): nell'eseguibile app.py gira come «__main__», e il primo
+# «from app import» di accessi.py caricava una seconda copia del programma: dopo la pagina Aree e accessi, o una
+# richiesta del portiere, TUTTO rispondeva 500. Qui solo letture: la pagina, il Modo schermo dietro un portiere, e dopo
+# le pagine di sempre
+s, b, _ = get('/configura/accessi')
+controlla('Aree e accessi (1.13): la pagina', s == 200 and 'Accesso dagli altri PC' in testo(b), s)
+s, b, _ = get('/riepilogo-live?schermo=1&struttura=1', {'X-Forwarded-For': '192.168.1.50'})
+controlla('Aree e accessi (1.13): il Modo schermo dietro un portiere, con l\'accesso dalla rete spento', s == 200, s)
+dopo = [(p, get(p)[0]) for p in ('/oggi', '/pazienti', '/cassa/listino', '/impostazioni')]
+controlla('Aree e accessi (1.13): dopo la pagina e il portiere Oggi, Pazienti, Cassa e Impostazioni rispondono',
+          all(x == 200 for _, x in dopo), dopo)
 cartella_dati = os.environ.get('CARTELLA_DATI')
 if cartella_dati:
     try:

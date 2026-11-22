@@ -105,7 +105,10 @@ struttura nel menu con le proporzioni del suo file, anche quadrato o alto, sosti
 `prove_191_browser.py` (salva le impostazioni email della prova e poi rimette quelle di
 partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova),
 `prove_112_browser.py` (la pianificazione degli ambulatori: mette e toglie un turno, scarica i due Excel),
-`prove_tariffari_browser.py` (il prezzo del tariffario nella prenotazione, carica ed elimina un tariffario), nell'animata
+`prove_tariffari_browser.py` (il prezzo del tariffario nella prenotazione, carica ed elimina un tariffario),
+`prove_accessi_browser.py` (dalla 1.13: il giro della segreteria in *Aree e accessi*, accesso dalla rete acceso su una porta
+libera, mai la 5080, un utente con Agenda da modificare e Cassa da guardare, poi da un'altra scheda sull'indirizzo della
+rete: accesso, password nuova, nota salvata, «Solo guardare», Pazienti negata, Esci; alla fine tutto come prima), nell'animata
 `prove_animazioni.py` e `prove_icone_animate.py`, e per ultima `prove_16_browser.py`, che
 cambia l'indirizzo degli aggiornamenti. Le prove nel browser salvano dati: sempre su un
 gestionale di prova, mai su quello vero. Dalla tappa 1 della base prendono l'indirizzo solo da
@@ -140,6 +143,18 @@ Metti e Togli, la regola della stanza e il ritorno alla pagina di partenza) e
 invarianti), e dalla tappa 1 della base `prove_indirizzi.py`: l'elenco degli indirizzi in
 `indirizzi.txt` (uguale nelle due cartelle), con come risponde ogni pagina senza parametri; un indirizzo che
 sparisce o cambia la fa cadere, uno nuovo si aggiunge con `python prove_indirizzi.py --scrivi`, nello stesso commit.
+`prove_accessi.py` (dalla 1.13) prova l'accesso dagli altri PC: il censimento delle pagine (con una pagina finta senza
+area), la matrice area × livello × pagina × metodo dalla rete e dal PC (le decisioni lette senza far girare le pagine),
+le pagine di ogni area con tutti gli indirizzi che i loro script chiedono, i cinque modi di arrivare dalla rete, il
+Sistema, il Modo schermo, sessioni, tentativi, messaggi e registro, password, scritture e letture fra aree, e le prese
+vere (portiere, ascolto acceso e spento, chiave fissa rifiutata), i limiti di waitress dei due server (14 MB: 413), la
+casella email e WhatsApp nel Sistema, la password della casella tolta quando cambia il server, gli indirizzi in numeri,
+la pagina e il registro letto dai file, e il programma vero (`app.principale`) in un processo a parte: rete accesa dalla
+pagina, richieste dall'indirizzo di questo PC fuori da 127.* (come un altro PC) e da 127.0.0.1, porta principale non
+raggiungibile, «solo guardare» che non salva, rete spenta che chiude davvero la porta, riavvio con la porta della rete
+occupata (il PC principale parte lo stesso); ogni prova ha il suo gemello. Le prove `z_…` sono quelle della revisione del
+22/11 (assenze e chiusure, ricerca dei pazienti, Cassa, lista d'attesa, Conferme, incasso, tentativi con tanti nomi e
+mandati insieme, collegamenti per PC, cookie da un altro PC, sessioni per utente, Excel troppo compressi).
 `prove_canarino.py` è la guardia del Modo schermo: un paziente inventato apposta (il «canarino»), con appuntamenti
 di oggi in ogni stato, un intervento, la lista d'attesa e il nome scritto in note, cose da fare e appunti, non deve
 comparire in nessuna pagina sotto `/riepilogo-live*`, con e senza schermo, per ogni struttura e periodo; i suoi gemelli
@@ -206,8 +221,10 @@ Un foglio mai incontrato nel giro conta come diverso. Nella veste nuova si lanci
 restano devono essere solo quelle volute, una per una. Quelle approvate stanno in `strumenti/cambiamenti_approvati.txt`
 (uguale nelle due cartelle; regole «aggiunto» e «sostituisci» per chiave, anche `voci`, `cornici` e `accese` della
 cornice; una sostituzione che lascia vuoto un elemento lo toglie; dalla tappa 2 `chiave@cornice` vale solo nella
-cornice e `chiave@<forma di una pagina>` solo nella cornice di quelle pagine), che il lanciatore conta a parte; `--senza-approvati`
-le mostra tutte. Un cambiamento nuovo si approva scrivendo la regola nello stesso commit, con il perché.
+cornice e `chiave@<forma di una pagina>` solo nella cornice di quelle pagine; «nuova» per una pagina che il principale
+non ha, la cui cornice va solo nel catalogo di qui e si guarda solo con `accese_fuori_posto`; «foglio» per un foglio
+da stampare con esattamente N pagine in più e, prima della pagina scritta, solo l'indice e il piede cambiati), che il
+lanciatore conta a parte; `--senza-approvati` le mostra tutte. Un cambiamento nuovo si approva scrivendo la regola nello stesso commit, con il perché.
 I passi della guida indicano un punto della pagina solo con `[data-guida="…"]` o con un id (mai una classe o un
 tag, che cambiano con la veste): lo controlla `prove_guida.py`, che vuole anche che il nome esista in un modello (scritto
 `data-guida="nome"` o, dalla tappa 1-bis, passato a un pezzo di `_pezzi.html` con `guida='nome'`; dalla tappa 2
@@ -226,6 +243,15 @@ temporanea.
 
 ## Regole tecniche da non rompere
 
+- Mai `import app` o `from app import …` da un modulo del programma, nemmeno dentro una funzione (revisione del 22/11,
+  grave): nell'eseguibile, e con `python app.py`, app.py gira come «__main__», e quell'import carica una SECONDA copia di
+  app.py che rifà i `collega()` con `Sessione=None`: da lì tutto risponde 500, anche sul PC della segreteria. Quello che
+  serve del programma (sessione, `LUCCHETTO`, fabbrica delle sessioni, funzioni) arriva con `collega(...)`/`installa(...)`
+  da app.py, come in `viste.collega` e `accessi.installa(app, ses, LUCCHETTO, lambda: Sessione)`. In più app.py, se gira
+  come «__main__», si scrive in `sys.modules['app']` (solo una rete di sicurezza). `prove_accessi.py` lo controlla sui
+  sorgenti (`a_nessun_modulo_importa_app`, anche per prova.py) e avvia il programma vero come «__main__»
+  (`y_come_l_eseguibile`); `strumenti/prove_installato.py` apre «Aree e accessi» sull'eseguibile e poi le pagine di sempre.
+  Le prove e gli strumenti (demo.py, confronta_rami.py…) importano app: loro sono il «__main__».
 - Ogni salvataggio usa il lucchetto condiviso (`LUCCHETTO`); in `invii.py` il lucchetto
   si tiene solo per scrivere nella coda, mai durante l'invio, e la sessione non deve avere
   modifiche in sospeso fuori dal lucchetto.
@@ -347,6 +373,74 @@ temporanea.
   usano nomi e prezzi inventati. Il prezzo proposto nella prenotazione: convenzione, poi tariffario del medico
   (`prezzi_dei_medici`, chiave `medico:<id>` in `cassa.mappa_tariffe`), poi listino; un pacchetto non vale come prezzo
   della seduta. Un medico o una prestazione usati da un tariffario non si eliminano. `prove_tariffari.py`.
+- Accesso dagli altri PC della rete (dalla 1.13, `accessi.py`, richiesta di Giovanni del 22/11/2026): spento di partenza;
+  il PC principale resta su 127.0.0.1:5000 senza accesso e con tutte le pagine (con la rete spenta le sue pagine sono
+  quelle di prima, byte per byte). Acceso da *Configura → Aree e accessi* (`/configura/accessi`, per ora dalla pagina
+  Impostazioni), il programma ascolta anche su 0.0.0.0:<porta della rete> (5080) con un server suo (`AscoltoRete`,
+  fili e limiti suoi). «Dalla rete» = la presa della rete, un'intestazione di un portiere (X-Forwarded-For, Forwarded,
+  X-Real-Ip, X-Forwarded-Host: per questo `crea_server` ha `clear_untrusted_proxy_headers=False`) o un indirizzo non del
+  PC. Utenti, aree e livelli («solo guardare» = solo GET) fra le impostazioni (`rete_utenti`, JSON: id casuale,
+  impronta della password di werkzeug); nessuna tabella nuova. Ogni pagina (funzione di Flask) ha la sua area in
+  `accessi.CENSIMENTO`, uno solo: una pagina nuova va scritta lì (una che manca dalla rete è rifiutata come il
+  Sistema, e `prove_accessi.py` cade). Il Sistema (aggiornamenti, copie e ripristino, controllo del programma,
+  impostazioni, la pagina degli accessi) mai dalla rete. Ricerca dei pazienti, luoghi e codice fiscale servono a più
+  aree (`SERVIZIO_PAZIENTI`); la ricerca dei pazienti (`RICERCA_PAZIENTI`, dà tutta l'anagrafica) senza i Pazienti solo
+  con Agenda, Segreteria o Dove si fa da modificare (`livello_ricerca_pazienti`; nei modelli `puo_cercare_pazienti()`
+  intorno al campo «Cerca in anagrafica», e `dovesifa._paziente` non dà il paziente dell'indirizzo). Un modulo che vale
+  anche per un'altra area si scrive in `ANCHE_PER` (oggi: «Manda» il promemoria delle Conferme per la Segreteria). Una notifica nuova ha una chiave che comincia con un prefisso di `AREA_NOTIFICHE`; un
+  Excel o un documento nuovo va in `REGISTRA_LETTURE`. Nei modelli e nelle pagine `puo('area')` e
+  `puo_cambiare('area')` (sul PC sempre vero): la prenotazione cambia la scheda di un paziente che c'è già solo con
+  `puo_cambiare('pazienti')` (`pazienti.trova_o_crea(aggiorna=)`), importo e convenzione solo con la Cassa, lista
+  d'attesa e appunti solo con la Segreteria. I `{% if puo(...) %}` si scrivono al posto di una riga vuota, così
+  sul PC l'HTML resta identico (o dentro una riga, come `{% if puo('cassa') %}<a …>…</a>{% endif %}`). Quello che è di
+  un'altra area resta di quella anche dentro le pagine e i file (revisione del 22/11): importi, convenzioni e incassi
+  solo con la Cassa (stampa del giorno senza la colonna Importo, `servizi.esporta_giorno(con_cassa=)` senza CONVENZIONE
+  e IMPORTO, elenco del giorno, «da incassare» della chiusura); nomi e telefoni degli appuntamenti da spostare di
+  un'assenza o di una chiusura solo con l'Agenda (`anagrafiche.elenco_da_spostare`); lista d'attesa e appunti cambiano la
+  scheda di un paziente solo con `puo_cambiare('pazienti')`, come la prenotazione. Sessioni della rete sul server (`Sessioni`, `sessioni-rete.json` accanto a
+  `chiave-sessione`, nella cartella dei dati), chiave dei cookie casuale (mai più `gestionale-locale`), tentativi
+  bloccati per PC e nome, per PC con nomi qualsiasi (`TENTATIVI_PC`) e per nome (`Tentativi`: il tentativo si conta prima
+  di provare la password con `prenota`; voci con un tetto, sfoltite al più una volta al minuto; `bloccati()` in un
+  passaggio; a un PC bloccato `controlla_accesso` risponde senza leggere il database), sessioni legate al PC da cui si è
+  entrati e al massimo `MASSIMO_SESSIONI` per utente, password con `problema_password` (anche almeno 6 lettere, 4 diverse,
+  non fatte solo di parole di `VIETATE`), registro per giorno in `accessi/` (i tentativi sbagliati dallo stesso PC al
+  massimo una riga al minuto, `annota_sbagliato`; la pagina mostra gli ultimi 7 giorni, letti dalla coda dei file). Regole da non rompere: ogni pagina nuova (funzione
+  di Flask) ha la sua area nel censimento; il Sistema mai dalla rete, anche le sue parti dentro le pagine di un'area
+  (`SISTEMA_DENTRO`: la casella email e il token WhatsApp di `/invii`, con prove e registrazione del numero; nella
+  pagina dietro `{% if puo('sistema') %}`); il PC principale senza accesso e con le pagine di prima. I due server di
+  waitress: sul PC `accessi.LIMITI_SERVER` (13 MB, 20 collegamenti, 30 secondi), sulla rete `LIMITI_RETE` (13 MB, 100
+  collegamenti, 10 secondi) con al massimo `COLLEGAMENTI_PER_PC` (12) aperti insieme dallo stesso indirizzo
+  (`canale_con_limite`; non contano gli indirizzi 127.*, cioè i portieri), e tutti e due non tolgono le intestazioni dei
+  portieri. Un file Excel caricato (Importa da Excel, tariffari, strutture del gruppo) passa prima da
+  `comune.controlla_excel_compresso` (troppo grande scompattato, o troppo compresso: rifiutato), e Importa da Excel lo
+  legge in sola lettura (`importa._leggi_foglio`, con il lettore dei fogli di openpyxl: attenzione aggiornando openpyxl;
+  `prove_accessi.py` confronta le righe con la lettura di prima, copiata nella prova); la porta della rete si salva solo dopo un'accensione riuscita, `accessi.applica` si
+  richiama dopo un ripristino o una riparazione, all'avvio con la porta occupata si riprova (`RIPROVE_AVVIO`,
+  `PAUSA_AVVIO`) in un filo a parte: la rete non deve mai fermare l'avvio del PC principale. Dagli altri PC un
+  indirizzo in numeri va sempre bene sulla porta della rete (il DNS rebinding passa da un nome), un nome solo se è del
+  PC (`nomi_del_pc`, rifatti ogni minuto) o scritto in «Altri nomi». La password salvata della casella email si toglie
+  se cambiano server, porta, sicurezza o nome utente senza riscriverla (`invii.casella_cambiata`). Nella prova
+  (`prova.py`) l'accesso dalla rete si prova sulla 5085, mai sulla 5080 della clinica né sulle 5000-5009 e 5050-5059,
+  con un cookie suo (`prove_prova.py` lo controlla, anche con la prova avviata davvero).
+  Secondo giro della revisione (22/11): una copia rimessa non riporta indietro gli accessi (`CHIAVI_RETE` lette prima del
+  ripristino, o da `accessi-rete.json` accanto al database dopo una riparazione e all'avvio: `istantanea`, `ricorda`,
+  `dal_file`, `rimetti`; ogni salvataggio degli accessi chiama `ricorda`); senza il file la rete resta spenta. Spegnere
+  l'accesso dalla pagina fa uscire tutti (`sessioni.svuota`). Il riquadro rosso della porta solo con la rete accesa e non in
+  ascolto (`AscoltoRete.errore`; l'errore della volta è `errore_cambio`). Firewall: `comandi_firewall` toglie tutte le
+  regole del programma (Windows crea regole di BLOCCO dopo «Annulla»/«No») e mette quella per programma e porta,
+  `profile=private,domain`; la pagina dice l'ultima richiesta arrivata da un altro PC (`ultimo_da_fuori`). «Solo
+  guardare»: `segna_moduli` (in `dopo_la_risposta`, solo dalla rete) mette `data-solo-guardare` su ogni `<form
+  method="post">` che l'utente non può salvare, e `gestionale.js` lo spegne; una pagina nuova non deve fare niente, ma un
+  modulo che salva con `fetch` deve mostrare il motivo del 403 (il JSON `errore`). Pezzi di un'altra parte: cose da fare
+  e lista d'attesa nella scheda del paziente con la Segreteria, appunti del giorno con la Segreteria
+  (`segreteria.appunti_del_giorno`), ricerca dei pazienti intera solo con Pazienti o Agenda (agli altri nome, nascita e
+  telefono), prezzo di listino con `puo_cambiare('cassa')`, tariffario del medico con la Cassa. Statistiche e report
+  (predefinito deciso, piano/ESECUZIONE.md): nomi, telefoni, email e note dei pazienti solo con Pazienti o Agenda
+  (`cruscotto.con_pazienti`, `servizi.esporta_giorno(con_pazienti=)`), importi e incassi solo con la Cassa, colonne tolte
+  (`cruscotto.togli_colonne`), sul PC tutto come prima. Il rifiuto e la pagina d'attesa dicono `PERCORSO_PAGINA`
+  («Configura → Impostazioni → Aree e accessi»: all'unione con la tappa 2 la linguetta). Nella pagina le cose da
+  tecnico stanno in `<details class="per-assistenza">`, gli utenti in `<details>` chiusi (aperto quello appena salvato,
+  `?aperto=`).
 - Popup dell'aggiornamento (dalla 1.12.6): `aggiornamenti.popup_aggiornamento` decide, `_popup_aggiornamento.html` lo
   mostra (incluso in `base.html`); solo con `installato()`, mai nella dashboard (`live.*`), nelle stampe, nella
   guida e nella pagina degli aggiornamenti. Il pulsante è il POST di «Aggiorna adesso», nient'altro.

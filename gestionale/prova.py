@@ -16,6 +16,8 @@ Le pagine sono quelle del programma, senza nessun cambio: in piu' c'e' solo una 
   nome e chiave uguali a quelli del programma vero (app.py) i messaggi «Salvato» della prova comparirebbero
   nel programma vero e al contrario;
 - il nome del programma per /salute e' suo: il programma vero non scambia mai la prova per se stesso;
+- l'accesso dagli altri PC si prova sulla porta 5085, mai sulla 5080 della clinica né sulle 5000-5009, con un cookie
+  suo; non si accende da solo all'avvio (solo dalla pagina Aree e accessi);
 - niente email, WhatsApp o registrazione del numero (le funzioni che vanno su internet dicono di no),
   nessun thread degli invii, delle copie o degli aggiornamenti, nessun custode e nessun riavvio da solo;
   «Backup ora», «Ripristina» e la cartella dei backup dicono di no; il controllo degli aggiornamenti non ha
@@ -51,7 +53,10 @@ NOME_VERO = 'GestionaleAgende'                    # la cartella del programma de
 PORTA = 5050
 RISERVA = tuple(range(5051, 5060))
 PORTE_DEL_PROGRAMMA_VERO = range(5000, 5010)      # app.py 5000, autoripara.PORTE_DI_RISERVA 5001-5009
+PORTA_RETE_CLINICA = 5080                          # l'accesso dagli altri PC del programma vero (accessi.PORTA_RETE)
+PORTA_RETE = 5085                                  # quello della prova: mai la porta della clinica
 COOKIE = 'gestionale_prova'
+COOKIE_RETE = 'gestionale_prova_rete'
 PROGRAMMA = 'Gestionale Agende (prova)'
 FILE_DB = 'prova.db'
 FILE_REGISTRO = 'prova.log'
@@ -179,6 +184,21 @@ def chiudi_le_porte(cartella, db):
     # le importazioni lavorano in %TEMP%\gestionale-importazioni, la stessa cartella del programma vero
     # (importa.cartella_lavoro, che li' cancella i file di ieri): qui nella cartella della prova
     importa.tempfile = types.SimpleNamespace(gettempdir=lambda: cartella)
+
+    # l'accesso dagli altri PC (1.13, accessi.py) si può provare anche nella prova, ma mai sulla porta della clinica
+    # (5080) né su quelle del programma vero o della prova: la porta di partenza è la 5085, il cookie è suo (i cookie
+    # non guardano la porta: con lo stesso nome la prova e il programma vero si caccerebbero fuori a vicenda)
+    import accessi
+    accessi.PORTA_RETE = PORTA_RETE
+    accessi.COOKIE_RETE = COOKIE_RETE
+    presa_vera = accessi.presa_della_rete
+
+    def presa_della_prova(porta):
+        if porta == PORTA_RETE_CLINICA or porta in PORTE_DEL_PROGRAMMA_VERO or porta == PORTA or porta in RISERVA:
+            raise OSError('versione di prova: la porta %d è del programma della clinica o della prova; per gli altri PC '
+                          'la prova usa la %d' % (porta, PORTA_RETE))
+        return presa_vera(porta)
+    accessi.presa_della_rete = presa_della_prova
 
     autoripara.PROGRAMMA = PROGRAMMA                    # /salute e il secondo clic: solo la prova riconosce la prova
     autoripara.riavvia_programma = lambda *_, **__: False

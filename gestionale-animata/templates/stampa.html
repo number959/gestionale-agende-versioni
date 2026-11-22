@@ -42,7 +42,7 @@
     {% endif %}
     {% if gr.apps %}
     <table class="tabella-stampa">
-      <thead><tr><th class="c-ora">Ora</th>{% if per == 'ora' %}<th class="c-stanza">Stanza</th>{% endif %}<th>Paziente</th>{% if 'nascita' in c %}<th class="c-nascita">Nascita</th>{% endif %}{% if 'telefono' in c %}<th class="c-telefono">Telefono</th>{% endif %}{% if 'prestazione' in c %}<th>Prestazione</th>{% endif %}{% if 'medico' in c %}<th>Medico</th>{% endif %}{% if 'tipo' in c %}<th>Tipo · convenzione</th>{% endif %}{% if 'importo' in c %}<th class="c-importo">Importo</th>{% endif %}{% for e in gr.extra %}<th>{{ e }}</th>{% endfor %}{% if 'note' in c %}<th class="c-note">Note</th>{% endif %}{% if tutti %}<th>Stato</th>{% endif %}{% if 'spunta' in c %}<th class="c-spunta">Arrivato · pagato</th>{% endif %}</tr></thead>
+      <thead><tr><th class="c-ora">Ora</th>{% if per == 'ora' %}<th class="c-stanza">Stanza</th>{% endif %}<th>Paziente</th>{% if 'nascita' in c %}<th class="c-nascita">Nascita</th>{% endif %}{% if 'telefono' in c %}<th class="c-telefono">Telefono</th>{% endif %}{% if 'prestazione' in c %}<th>Prestazione</th>{% endif %}{% if 'medico' in c %}<th>Medico</th>{% endif %}{% if 'tipo' in c %}<th>Tipo{% if puo('cassa') %} · convenzione{% endif %}</th>{% endif %}{% if 'importo' in c %}<th class="c-importo">Importo</th>{% endif %}{% for e in gr.extra %}<th>{{ e }}</th>{% endfor %}{% if 'note' in c %}<th class="c-note">Note</th>{% endif %}{% if tutti %}<th>Stato</th>{% endif %}{% if 'spunta' in c %}<th class="c-spunta">Arrivato · pagato</th>{% endif %}</tr></thead>
       <tbody>
       {% for a in gr.apps %}
         <tr class="stato-{{ a.stato|lower }}">
@@ -53,7 +53,7 @@
           {% if 'telefono' in c %}<td class="c-telefono">{% if a.paziente %}{{ a.paziente.telefono or '' }}{% if a.paziente.telefono2 %}<br>{{ a.paziente.telefono2 }}{% endif %}{% endif %}</td>{% endif %}
           {% if 'prestazione' in c %}<td>{{ a.prestazione.nome if a.prestazione else '' }}</td>{% endif %}
           {% if 'medico' in c %}<td>{{ a.operatore.etichetta }}</td>{% endif %}
-          {% if 'tipo' in c %}<td>{{ a.etichetta_tipo }}{% if a.etichetta_tipo and a.convenzione %} · {% endif %}{{ a.convenzione or '' }}</td>{% endif %}
+          {% if 'tipo' in c %}<td>{{ a.etichetta_tipo }}{% if puo('cassa') %}{% if a.etichetta_tipo and a.convenzione %} · {% endif %}{{ a.convenzione or '' }}{% endif %}</td>{% endif %}
           {% if 'importo' in c %}<td class="c-importo">{{ a.importo_testo }}</td>{% endif %}
           {% for e in gr.extra %}<td>{{ a.valori_extra.get(e, '') }}</td>{% endfor %}
           {% if 'note' in c %}<td class="c-note">{{ a.note or '' }}</td>{% endif %}

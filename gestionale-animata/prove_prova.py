@@ -25,6 +25,7 @@ aggiornamenti o custode, e la cartella vera finta identica a prima (impronta di 
 """
 import ast
 import hashlib
+import http.client
 import json
 import os
 import re
@@ -163,6 +164,7 @@ import comune  # noqa: E402
 import importa  # noqa: E402
 import invii  # noqa: E402
 import viste  # noqa: E402
+import accessi  # noqa: E402
 
 # l'elenco delle sostituzioni, scritto qui apposta (non preso da prova.py): (modulo, nome)
 SOLLEVANO = {(invii, 'manda_email'): invii.ErroreInvio, (invii, 'manda_whatsapp'): invii.ErroreInvio,
@@ -179,8 +181,13 @@ DANNO = {(aggiornamenti, 'installato'): False, (autoripara, 'riavvia_programma')
 # backup.esegui: le importazioni vogliono prima una copia; nella prova si fa, solo del database della prova e solo
 # nella sua cartella (lo controlla p_sostituzioni)
 COPIA_NELLA_PROVA = (backup, 'esegui')
+# accessi.presa_della_rete (la presa su 0.0.0.0 per gli altri PC, 1.13): nella prova si apre, ma mai sulla porta della
+# clinica (5080) ne' sulle 5000-5009 del programma vero o sulle 5050-5059 della prova; la sua porta e' la 5085
+PRESA_NELLA_PROVA = (accessi, 'presa_della_rete')
+PORTE_MAI_NELLA_PROVA = [5080] + list(range(5000, 5010)) + list(range(5050, 5060))
 # le chiamate che vanno in rete o lanciano programmi (vedi g_guardia): sostituite, o ammesse con il perche'
-SOSTITUITE = {'%s.%s' % (m.__name__, n) for m, n in list(SOLLEVANO) + NON_FANNO_NIENTE + list(DANNO) + [COPIA_NELLA_PROVA]}
+SOSTITUITE = {'%s.%s' % (m.__name__, n) for m, n in list(SOLLEVANO) + NON_FANNO_NIENTE + list(DANNO) +
+              [COPIA_NELLA_PROVA, PRESA_NELLA_PROVA]}
 AMMESSE = {
     'app.porta_in_uso': 'si collega solo a 127.0.0.1',
     'app.presa_in_ascolto': 'il server della prova, solo su 127.0.0.1',
@@ -196,7 +203,9 @@ AMMESSE = {
     'prova.principale': 'apre il browser sulla pagina della prova gia\' aperta',
     'prova.avvio_non_riuscito': 'apre nel browser la pagina dell\'errore, scritta nella cartella della prova',
 }
-ORIGINALI = {(m, n): getattr(m, n) for m, n in list(SOLLEVANO) + NON_FANNO_NIENTE + list(DANNO) + [COPIA_NELLA_PROVA]}
+ORIGINALI = {(m, n): getattr(m, n) for m, n in list(SOLLEVANO) + NON_FANNO_NIENTE + list(DANNO) +
+             [COPIA_NELLA_PROVA, PRESA_NELLA_PROVA]}
+PORTA_RETE_VERA, COOKIE_RETE_VERO = accessi.PORTA_RETE, accessi.COOKIE_RETE
 PDB_VERO = modelli.percorso_db
 try:
     prova.chiudi_le_porte(CART, DB)
@@ -236,6 +245,26 @@ def p_sostituzioni():
         pass
     else:
         raise AssertionError('backup.esegui copia anche un database che non e\' quello della prova')
+    # gli altri PC: la presa si apre, ma mai sulle porte della clinica e del programma vero; porta e cookie suoi
+    assert accessi.presa_della_rete is not ORIGINALI[PRESA_NELLA_PROVA], 'accessi.presa_della_rete non e\' sostituita'
+    for porta in PORTE_MAI_NELLA_PROVA:
+        try:
+            accessi.presa_della_rete(porta).close()
+        except OSError as e:
+            assert 'versione di prova' in str(e) and '5085' in str(e), 'porta %d: %s' % (porta, e)
+        else:
+            raise AssertionError('nella prova la presa degli altri PC si apre sulla porta %d' % porta)
+    with socket.socket() as x:
+        x.bind(('127.0.0.1', 0))
+        libera = x.getsockname()[1]
+    accessi.presa_della_rete(libera).close()            # gemello: una porta qualsiasi si apre
+    assert (PORTA_RETE_VERA, accessi.PORTA_RETE) == (5080, 5085), (PORTA_RETE_VERA, accessi.PORTA_RETE)
+    assert accessi.COOKIE_RETE != COOKIE_RETE_VERO and accessi.COOKIE_RETE.startswith('gestionale_prova')
+    s = modelli.crea_sessione('sqlite:///' + os.path.join(PROVVISORIA, 'porta-della-rete.db'))()
+    try:
+        assert accessi.configurazione(s)['porta'] == 5085, 'la porta di partenza nella prova non e\' la 5085'
+    finally:
+        s.close()
     assert aggiornamenti.INDIRIZZO_PREDEFINITO == '' and aggiornamenti.predefinito() == ''
     assert autoripara.PROGRAMMA == 'Gestionale Agende (prova)', 'nome del programma per /salute: %s' % autoripara.PROGRAMMA
     con_percorso = [m for m in list(sys.modules.values()) if callable(getattr(m, 'percorso_db', None))
@@ -470,7 +499,8 @@ prova_('cornice anche sugli errori, WhatsApp, telefono ed email spenti, dati di 
 GUARDIA = r'''
 import json, os, socket, sys, threading
 REGISTRO, SORGENTI, ARGOMENTI = sys.argv[1], sys.argv[2], sys.argv[3:]
-LOCALI = ('127.0.0.1', 'localhost', '::1', '0.0.0.0', '', 'None')
+# il nome di questo PC lo risolve il PC stesso (la pagina Aree e accessi mostra i suoi indirizzi: accessi.nomi_del_pc)
+LOCALI = ('127.0.0.1', 'localhost', '::1', '0.0.0.0', '', 'None', socket.gethostname(), socket.gethostname().lower())
 def scrivi(voce):
     with open(REGISTRO, 'a', encoding='utf-8') as f:
         f.write(json.dumps(voce) + '\n')
@@ -503,12 +533,12 @@ prova.principale(ARGOMENTI)
 '''
 
 
-def porta_libera():
+def porta_libera(dove='127.0.0.1'):
     while True:
         with socket.socket() as s:
-            s.bind(('127.0.0.1', 0))
+            s.bind((dove, 0))
             p = s.getsockname()[1]
-        if not 5000 <= p < 5060:
+        if not 5000 <= p < 5090:
             return p
 
 
@@ -647,6 +677,30 @@ def p_avvio_vero():
         assert os.path.isdir(lavoro) and any(n.endswith('.dat') for n in os.listdir(lavoro)), \
             'il file importato non e\' nella cartella della prova (risposta %d)' % codice
         assert not os.path.exists(os.path.join(TEMP_FINTA, 'gestionale-importazioni')), 'importazione in %TEMP%'
+        # gli altri PC (1.13): nella prova la porta di partenza e' la 5085; la 5080 della clinica si rifiuta, una porta
+        # qualsiasi si apre (e da li' si e' «dalla rete»: la pagina di accesso), e spegnendo si chiude
+        codice, t = chiedi('/configura/accessi')
+        assert codice == 200 and 'value="5085"' in t and ':5085/' in t and ':5080/' not in t, 'porta della rete nella prova'
+        _, t = chiedi('/configura/accessi', {'azione': 'rete', 'accesa': '1', 'porta': '5080'})
+        assert 'non è partito' in t and 'versione di prova' in t, 'la porta 5080 della clinica accettata nella prova'
+        for _ in range(3):                       # una porta libera adesso può prenderla un altro programma subito dopo
+            rete = porta_libera('0.0.0.0')      # libera su tutte le schede, come la vuole la presa della rete
+            _, t = chiedi('/configura/accessi', {'azione': 'rete', 'accesa': '1', 'porta': str(rete)})
+            if 'già usata' not in t:
+                break
+        assert 'Accesso dagli altri PC acceso' in t, re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', t.split('<main', 1)[-1]))[:500]
+        h = http.client.HTTPConnection('127.0.0.1', rete, timeout=30)
+        h.request('GET', '/oggi', headers={'Host': '127.0.0.1:%d' % rete})
+        r = h.getresponse()
+        assert r.status == 302 and '/accesso' in (r.getheader('Location') or ''), ('dalla porta della rete', r.status)
+        h.close()
+        _, t = chiedi('/configura/accessi', {'azione': 'rete', 'porta': str(rete)})
+        assert 'spento' in t, re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', t.split('<main', 1)[-1]))[:500]
+        try:
+            socket.create_connection(('127.0.0.1', rete), timeout=5).close()
+            raise AssertionError('la porta della rete della prova resta aperta dopo lo spegnimento')
+        except OSError:
+            pass
         # il secondo avvio apre solo la pagina della prima
         p2, registro2 = avvia(2, '--senza-browser', '--porta', str(PORTA))
         try:

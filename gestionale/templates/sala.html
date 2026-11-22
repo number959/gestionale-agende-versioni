@@ -57,7 +57,7 @@
         <form method="post" action="{{ url_for('sala.checklist', aid=a.id) }}" class="checklist" data-guida="sala-checklist" data-auto="1">
           <input type="hidden" name="torna" value="{{ torna }}">
           {% for v in voci %}
-          <label title="{{ ('fatto il ' ~ c.spunte[v]) if v in c.spunte else 'da fare' }}"><input type="checkbox" name="spunte" value="{{ v }}"{% if v in c.spunte %} checked{% endif %}> {{ v }}</label>
+          <label title="{{ ('fatto il ' ~ c.spunte[v]) if v in c.spunte else 'da fare' }}"><input type="checkbox" name="spunte" value="{{ v }}"{% if v in c.spunte %} checked{% endif %}{% if not puo_cambiare('sala') %} disabled{% endif %}> {{ v }}</label>
           {% endfor %}
           <span class="conto-checklist {{ 'completa' if c.completa else 'incompleta' }}">{{ c.fatte }}/{{ c.totale }}</span>
           <noscript><button class="bottone piccolo" type="submit">Salva</button></noscript>

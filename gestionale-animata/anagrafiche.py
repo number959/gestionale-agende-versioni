@@ -299,9 +299,11 @@ def medico(oid=None):
 
 
 def riquadro_tariffario(s, o):
-    """Sotto la scheda del medico (1.12.6): il suo tariffario e se e' attivo."""
+    """Sotto la scheda del medico (1.12.6): il suo tariffario e se e' attivo. Dagli altri PC (accessi.py) solo a chi ha
+    la Cassa (revisione del 22/11: con le sole Anagrafiche si leggevano i tariffari)."""
+    import accessi
     import tariffari
-    return tariffari.del_medico(s, o)
+    return tariffari.del_medico(s, o) if accessi.puo('cassa') else None
 
 
 def email_del_medico(s, o):
@@ -434,12 +436,13 @@ def prestazione(pid=None):
             campo('preparazione', 'Indicazioni per il paziente', tipo='textarea', massimo=1000,
                   valore=dati.get('preparazione') if dati else (p.preparazione if p else ''),
                   aiuto='Finiscono sul promemoria stampato e nei messaggi. Esempio: digiuno da 6 ore.'),
-            # 1.12.6: il prezzo anche qui, dove lo si cerca (lo stesso della pagina Listino)
+            # 1.12.6: il prezzo anche qui, dove lo si cerca (lo stesso della pagina Listino). Dagli altri PC
+            # (accessi.py) solo a chi può cambiare la Cassa: il prezzo è suo (revisione del 22/11)
             campo('tariffa', 'Prezzo di listino (€)', massimo=12,
                   valore=dati.get('tariffa') if dati else (p.tariffa_testo if p else ''),
                   aiuto='Si propone da solo nella prenotazione, se il medico non ha un suo tariffario (Cassa → Tariffari). '
                         'Vuoto: nessun prezzo. Esempio: 80 o 1.250,50.'),
-        ]
+        ][:None if accessi_cassa() else -1]
 
     if request.method == 'POST':
         with _lucchetto:
@@ -466,7 +469,7 @@ def prestazione(pid=None):
             preparazione = m.testo('preparazione', 'Indicazioni per il paziente', 1000) \
                 if 'preparazione' in request.form else None
             tariffa = None
-            if 'tariffa' in request.form:
+            if 'tariffa' in request.form and accessi_cassa():
                 import tariffari
                 scritto = (request.form.get('tariffa') or '').strip()
                 tariffa = tariffari.leggi_importo(scritto) if scritto else ''
@@ -967,8 +970,16 @@ def appuntamenti_da_spostare(s, dal, al, operatore_id=None, struttura_id=None):
 
 
 def elenco_da_spostare(apps):
+    """Il riquadro «Appuntamenti da spostare» di un'assenza o di una chiusura. Dagli altri PC (accessi.py) nomi,
+    telefoni e collegamenti solo a chi ha l'Agenda: con le sole Anagrafiche resta il numero (revisione: con una
+    chiusura di un anno si leggevano nomi e telefoni di tutti gli appuntamenti futuri)."""
     if not apps:
         return None
+    import accessi
+    if not accessi.puo('agenda'):
+        return {'titolo': 'Appuntamenti da spostare (%d)' % len(apps), 'righe': [],
+                'nota': '%d appuntament%s ancora in agenda in questi giorni: li vede e li sposta chi ha l\'Agenda.'
+                        % (len(apps), 'o è' if len(apps) == 1 else 'i sono')}
     righe = []
     for a in apps:
         testo = '%s %s - %s - %s' % (a.inizio.strftime('%d/%m %H:%M'), a.risorsa.nome,
@@ -978,6 +989,17 @@ def elenco_da_spostare(apps):
                       'telefono': a.paziente.telefono if a.paziente else ''})
     return {'titolo': 'Appuntamenti da spostare (%d)' % len(apps), 'righe': righe,
             'nota': 'Sono ancora in agenda: vanno avvisati i pazienti e spostati o disdetti.'}
+
+
+def accessi_agenda():
+    import accessi
+    return accessi.puo('agenda')
+
+
+def accessi_cassa():
+    """Il prezzo di listino nella scheda della prestazione: dagli altri PC solo a chi può cambiare la Cassa."""
+    import accessi
+    return accessi.puo_cambiare('cassa')
 
 
 def _leggi_periodo(m):
@@ -1023,7 +1045,7 @@ def assenza(xid=None):
     def mostra(errori=None):
         extra = elenco_da_spostare(appuntamenti_da_spostare(s, x.dal, x.al, operatore_id=x.operatore_id)) \
             if x is not None and not errori else None
-        if extra:
+        if extra and extra['righe']:
             extra['azione'] = {'testo': 'Spostali tutti insieme',
                                'url': url_for('segreteria.sposta_blocco', medico=x.operatore_id,
                                               dal=x.dal.isoformat(), al=x.al.isoformat())}
@@ -1055,8 +1077,8 @@ def assenza(xid=None):
             s.commit()
             apps = appuntamenti_da_spostare(s, dal, al, operatore_id=x.operatore_id)
             if apps:
-                flash('Assenza salvata. Ci sono %d appuntamenti di %s da spostare: sono elencati qui sotto.'
-                      % (len(apps), medico.etichetta), 'avviso')
+                flash('Assenza salvata. Ci sono %d appuntamenti di %s da spostare%s.'
+                      % (len(apps), medico.etichetta, ': sono elencati qui sotto' if accessi_agenda() else ''), 'avviso')
                 return redirect(url_for('anagrafiche.assenza', xid=x.id))
             flash('Assenza salvata: %s.' % medico.etichetta, 'ok')
             return redirect(url_for('anagrafiche.elenco'))
@@ -1117,8 +1139,8 @@ def chiusura(xid=None):
             s.commit()
             apps = appuntamenti_da_spostare(s, dal, al, struttura_id=x.struttura_id)
             if apps:
-                flash('Chiusura salvata. Ci sono %d appuntamenti in quei giorni: sono elencati qui sotto.'
-                      % len(apps), 'avviso')
+                flash('Chiusura salvata. Ci sono %d appuntamenti in quei giorni%s.'
+                      % (len(apps), ': sono elencati qui sotto' if accessi_agenda() else ''), 'avviso')
                 return redirect(url_for('anagrafiche.chiusura', xid=x.id))
             flash('Chiusura salvata.', 'ok')
             return redirect(url_for('anagrafiche.elenco'))

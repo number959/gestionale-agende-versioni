@@ -2,7 +2,9 @@
     (struttura › voce › linguetta, menu.percorso), la ricerca rapida di prima (stessi id, stesso indirizzo dei pezzi
     chiesti mentre si scrive, stessa etichetta: gestionale.js la trova per id) e il posto della campanella, che arriva
     nella tappa 3 (fino ad allora le notifiche restano quelle di prima, in basso a destra). Tutto dentro
-    data-cornice="barra". I segni › fra i pezzi del percorso li disegna veste.css: non sono testo della pagina. -#}
+    data-cornice="barra". I segni › fra i pezzi del percorso li disegna veste.css: non sono testo della pagina.
+    Dagli altri PC (1.13, accessi.py) dopo la ricerca c'è chi è entrato, con «La mia password» ed «Esci»
+    (_utente_rete.html); sul PC della segreteria utente_rete non c'è e la barra resta quella di prima. -#}
 {%- from "_icone.html" import icona -%}
 {%- set _m = menu_della_pagina() -%}
 {%- set _pezzi = percorso_della_pagina(_m, request.endpoint, marchio_di(_m.sid).nome) %}
@@ -15,5 +17,8 @@
            data-indirizzo="{{ url_for('segreteria.cerca_tutto', struttura=_m.sid) }}">
     <div class="risultati-rapidi" id="risultati-rapidi" hidden></div>
   </div>
+  {%- if utente_rete %}
+  {% include "_utente_rete.html" %}
+  {%- endif %}
   <span class="v-posto-campanella" aria-hidden="true"></span>
 </header>

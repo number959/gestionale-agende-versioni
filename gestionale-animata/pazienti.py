@@ -20,6 +20,7 @@ from sqlalchemy import select, func, update
 from modelli import (Paziente, Appuntamento, Attivita, Attesa, Documento, Appunto, Invio, Indirizzato, STATI_ATTIVI,
                      CANALI, PROVENIENZE, ETICHETTA_PROVENIENZA)
 import servizi
+import accessi
 import codice_fiscale as CF
 from comune import json_sicuro
 
@@ -392,7 +393,7 @@ def _altra_persona(p, nome, data_nascita, codice_fiscale, cf_calcolato):
 
 
 def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_nascita=None,
-                 codice_fiscale='', indirizzo='', sesso='', luogo_nascita='', cf_calcolato=False):
+                 codice_fiscale='', indirizzo='', sesso='', luogo_nascita='', cf_calcolato=False, aggiorna=True):
     """Il paziente dell'appuntamento.
 
     - scelto dall'elenco (paziente_id) e con lo stesso cognome: e' lui, e
@@ -407,7 +408,11 @@ def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_n
     I valori arrivano gia' controllati (codice fiscale valido, data
     plausibile). Un codice fiscale calcolato dai dati (cf_calcolato) non
     prende mai il posto di quello gia' nella scheda: quello vero puo'
-    essere diverso (omocodia)."""
+    essere diverso (omocodia).
+
+    Con aggiorna=False (dagli altri PC, chi non puo' modificare i Pazienti: accessi.py) la scheda di un paziente
+    che c'e' gia' resta com'e': niente aggiornato, niente completato; una scheda nuova si crea lo stesso, con
+    appena_creato=True."""
     cognome, nome = (cognome or '').strip(), (nome or '').strip()
     sesso, luogo_nascita = (sesso or '').strip().upper(), (luogo_nascita or '').strip().upper()
     telefono, email = (telefono or '').strip(), (email or '').strip()
@@ -416,6 +421,8 @@ def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_n
     p = s.get(Paziente, paziente_id) if paziente_id else None
     if p is not None and (not cognome or semplifica(cognome) == semplifica(p.cognome)) and \
             not _altra_persona(p, nome, data_nascita, codice_fiscale, cf_calcolato):
+        if not aggiorna:
+            return p
         if nome and not p.nome:
             p.nome = nome
         if telefono and telefono_confronto(telefono) not in (telefono_confronto(p.telefono),
@@ -441,6 +448,8 @@ def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_n
         return None
 
     def completa(c):
+        if not aggiorna:
+            return c
         for campo, valore in (('nome', nome), ('email', email), ('data_nascita', data_nascita),
                               ('codice_fiscale', codice_fiscale), ('indirizzo', indirizzo), ('sesso', sesso),
                               ('luogo_nascita', luogo_nascita)):
@@ -456,7 +465,7 @@ def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_n
             if semplifica(r.cognome) == c_s:
                 c = completa(s.get(Paziente, r.id))
                 # il numero nuovo non si perde: va nel secondo telefono, se e' libero
-                if telefono and not c.telefono2 and telefono_confronto(telefono) not in (
+                if aggiorna and telefono and not c.telefono2 and telefono_confronto(telefono) not in (
                         telefono_confronto(c.telefono), ''):
                     if c.telefono:
                         c.telefono2 = telefono
@@ -489,6 +498,7 @@ def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_n
                  codice_fiscale=codice_fiscale, indirizzo=indirizzo, sesso=sesso, luogo_nascita=luogo_nascita)
     s.add(p)
     s.flush()
+    p.appena_creato = True
     return p
 
 
@@ -568,6 +578,14 @@ def cerca_json():
         return json_sicuro([])
     uscita = []
     adesso = datetime.now()
+    # dagli altri PC (accessi.py) l'anagrafica intera solo a chi ha Pazienti o Agenda (la prenotazione la mostra);
+    # a chi la chiede da Dove si fa o dalla Segreteria bastano nome, nascita e telefono (revisione del 22/11: con due
+    # lettere alla volta si leggevano codici fiscali, indirizzi, email e appuntamenti di tutti)
+    if not (accessi.puo('pazienti') or accessi.puo('agenda')):
+        return json_sicuro([{'id': p.id, 'cognome': p.cognome or '', 'nome': p.nome or '', 'telefono': p.telefono or '',
+                             'nascita': p.data_nascita.strftime('%d/%m/%Y') if p.data_nascita else '',
+                             'nascita_iso': p.data_nascita.isoformat() if p.data_nascita else ''}
+                            for p in cerca(s, q, limite=8)])
     for p in cerca(s, q, limite=8):
         prossimo = s.scalars(select(Appuntamento).where(
             Appuntamento.paziente_id == p.id, Appuntamento.inizio >= adesso,
@@ -843,9 +861,12 @@ def _mostra(s, p, campi, possibili):
     if p is not None:
         documenti = s.scalars(select(Documento).where(Documento.paziente_id == p.id)
                               .order_by(Documento.caricato_il.desc(), Documento.id.desc())).all()
-        cose = s.scalars(select(Attivita).where(Attivita.paziente_id == p.id, Attivita.fatto_il == None)
-                         .order_by(Attivita.per_il)).all()
-        attese = s.scalars(select(Attesa).where(Attesa.paziente_id == p.id, Attesa.chiusa_il == None)).all()
+        # dagli altri PC (accessi.py) cose da fare e lista d'attesa sono della Segreteria (revisione del 22/11: chi
+        # aveva solo i Pazienti le leggeva nella scheda)
+        if accessi.puo('segreteria'):
+            cose = s.scalars(select(Attivita).where(Attivita.paziente_id == p.id, Attivita.fatto_il == None)
+                             .order_by(Attivita.per_il)).all()
+            attese = s.scalars(select(Attesa).where(Attesa.paziente_id == p.id, Attesa.chiusa_il == None)).all()
     return render_template('paziente.html', p=p, campi=campi, possibili=possibili,
                            appuntamenti=apps, riepilogo=riepilogo(apps), canali=CANALI,
                            provenienze=PROVENIENZE, documenti=documenti, cose=cose, attese=attese,

@@ -241,18 +241,19 @@ def main():
     a_ = prova(chiaro)
     controlla('SSL sulla porta senza SSL: «scegliere STARTTLS»', 'non usa SSL' in a_ and 'STARTTLS' in a_, a_)
 
+    # (dalla 1.13 la password salvata si toglie se cambiano server, porta, sicurezza o utente: si riscrive a ogni porta)
     # certificato che il PC non conosce
-    salva(email_tipo='altro', email_porta=str(ignoto.porta), email_sicurezza='starttls')
+    salva(email_tipo='altro', email_porta=str(ignoto.porta), email_sicurezza='starttls', email_password='Una password lunga')
     a_ = prova(ignoto)
     controlla('certificato sconosciuto: connessione protetta non riuscita, si riprova',
               'connessione protetta non riuscita' in a_ and 'certificato' in a_ and ignoto.messaggi == [], a_)
 
     # invii protetti riusciti (il programma deve fidarsi di DIR/certificato.pem)
-    salva(email_tipo='dominio', email_porta=str(ssl_465.porta), email_sicurezza='ssl')
+    salva(email_tipo='dominio', email_porta=str(ssl_465.porta), email_sicurezza='ssl', email_password='Una password lunga')
     a_ = prova(ssl_465)
     controlla('SSL diretto (come la porta 465): arrivata', 'Prova mandata' in a_ and len(ssl_465.messaggi) == 1 and
               ssl_465.messaggi[0]['tls'], a_ or 'il programma si fida del certificato? (SSL_CERT_FILE)')
-    salva(email_tipo='altro', email_porta=str(starttls.porta), email_sicurezza='starttls')
+    salva(email_tipo='altro', email_porta=str(starttls.porta), email_sicurezza='starttls', email_password='Una password lunga')
     a_ = prova(starttls)
     controlla('STARTTLS (come la porta 587): arrivata', 'Prova mandata' in a_ and len(starttls.messaggi) == 1 and
               starttls.messaggi[0]['tls'], a_)

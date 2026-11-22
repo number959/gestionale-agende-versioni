@@ -5,8 +5,15 @@ import logging
 import mimetypes
 import os
 import re
+import secrets
 import socket
 import sys
+# Nell'eseguibile (e con «python app.py», come AVVIA.bat senza l'eseguibile) questo file gira come «__main__». Un
+# «import app» da un altro modulo ne caricherebbe una SECONDA copia, che rifà tutti i collega() con Sessione=None: da lì
+# ogni pagina risponderebbe 500 (revisione del 22/11, accessi.py). I moduli non importano mai app (ricevono quello che
+# serve con collega/installa; prove_accessi.py lo controlla), e in più, per sicurezza, «app» è questo stesso modulo.
+if __name__ == '__main__':
+    sys.modules.setdefault('app', sys.modules['__main__'])
 import threading
 import webbrowser
 from datetime import datetime, date, time, timedelta
@@ -58,6 +65,7 @@ import dovesifa
 import tariffari
 import autoripara
 import menu
+import accessi
 
 # i tipi dei file del programma non si chiedono a Windows: sul PC il registro puo'
 # dire "text/plain" per i .js o non conoscere i video, e il browser li rifiuterebbe
@@ -69,7 +77,9 @@ BASE = cartella_risorse()
 app = Flask(__name__,
             template_folder=os.path.join(BASE, "templates"),
             static_folder=os.path.join(BASE, "static"))
-app.secret_key = 'gestionale-locale'
+# la chiave che firma i cookie: casuale già qui (1.13, accesso dagli altri PC); all'avvio vero quella della cartella
+# dei dati (accessi.chiave_sessione). Fino alla 1.12 era 'gestionale-locale', uguale in ogni installazione
+app.secret_key = secrets.token_bytes(32)
 
 
 class Identificativo(IntegerConverter):
@@ -127,7 +137,9 @@ def stessa_origine(indirizzo):
 
 @app.before_request
 def solo_dal_gestionale():
-    if not NOMI_LOCALI.fullmatch(request.host or ''):
+    # dagli altri PC della rete il nome lo controlla accessi.controlla_accesso (quelli di questo PC); l'origine dei
+    # moduli si controlla qui sotto per tutti
+    if not NOMI_LOCALI.fullmatch(request.host or '') and not accessi.dalla_rete():
         return Response('Indirizzo non valido: il gestionale si apre da http://127.0.0.1:5000.',
                         status=400, mimetype='text/plain')
     if request.method in ('GET', 'HEAD', 'OPTIONS'):
@@ -164,6 +176,8 @@ def mai_in_una_cornice(risposta):
 @app.before_request
 def segna_inizio():
     # per /salute: un gestionale con tutti i fili fermi su una pagina e' bloccato
+    if request.environ.get('gestionale.presa_rete'):
+        return                          # fili dell'ascolto della rete: non sono quelli del PC principale
     _in_corso[threading.get_ident()] = (monotonic(), request.path)
 
 
@@ -289,7 +303,10 @@ if os.environ.get('GESTIONALE_PROVE_RIGIDE') == '1' and not getattr(sys, 'frozen
 @app.context_processor
 def funzioni_modelli():
     def da_confermare():
-        # il numero accanto a "Da confermare" nel menu; senza database, niente numero
+        # il numero accanto a "Da confermare" nel menu; senza database, niente numero (dagli altri PC: solo a chi
+        # ha la Segreteria, accessi.py)
+        if not accessi.puo('segreteria'):
+            return 0
         try:
             return segreteria.quanti_appunti(ses())
         except Exception:
@@ -570,7 +587,8 @@ def appuntamento(aid=None):
     rid = intero(request.args.get('risorsa'), a.risorsa_id if a else 0)
     sid = struttura_di(s, a, rid, request.args.get('struttura'))
     # da un appunto da confermare: il modulo arriva gia' compilato
-    appunto = s.get(Appunto, intero(request.args.get('appunto'))) if a is None and request.args.get('appunto') else None
+    appunto = s.get(Appunto, intero(request.args.get('appunto'))) if a is None and request.args.get('appunto') \
+        and accessi.puo('segreteria') else None
     if appunto is not None and appunto.aperto:
         return mostra_modulo(s, a, g, ora, rid, sid, segreteria.modulo_da_appunto(appunto))
     return mostra_modulo(s, a, g, ora, rid, sid, None)
@@ -594,17 +612,22 @@ def mostra_modulo(s, a, g, ora, rid, sid, modulo):
                            prestazione_proposta=prestazione_proposta,
                            durata_proposta=intero(request.args.get('durata')) if modulo is None else 0,
                            collegamenti=pazienti.collegamenti_paziente(a.paziente) if a and a.paziente else {},
-                           tariffe=json.dumps(cassa.mappa_tariffe(s), ensure_ascii=False),
+                           # dagli altri PC ogni pezzo solo a chi ha la sua area (accessi.py): prezzi e incasso
+                           # (Cassa), checklist (Sala), lista d'attesa (Segreteria), messaggi (Email e WhatsApp)
+                           tariffe=json.dumps(cassa.mappa_tariffe(s) if accessi.puo('cassa') else {},
+                                              ensure_ascii=False),
                            moduli=documenti.moduli_per(s, a) if a is not None else [],
-                           documenti=documenti.documenti_di(s, paziente_a.id) if paziente_a else [],
+                           documenti=documenti.documenti_di(s, paziente_a.id) if paziente_a and accessi.puo('pazienti')
+                           else [],
                            serie=serie, metodi=METODI_PAGAMENTO, provenienze=PROVENIENZE, degenze=DEGENZE,
-                           checklist=sala.stato_checklist(a, sala.voci_checklist(s)) if a is not None else None,
+                           checklist=sala.stato_checklist(a, sala.voci_checklist(s)) if a is not None
+                           and accessi.puo('sala') else None,
                            voci_checklist=sala.voci_checklist(s) if a is not None else [],
                            attesa=intero(request.values.get('attesa')),
                            appunto=intero(request.values.get('appunto')),
                            candidati_attesa=segreteria.candidati_attesa(s, a) if a is not None and a.stato == 'DISDETTO'
-                           and a.inizio > datetime.now() else [],
-                           messaggi=invii.pannello(s, a) if a is not None else None,
+                           and a.inizio > datetime.now() and accessi.puo('segreteria') else [],
+                           messaggi=invii.pannello(s, a) if a is not None and accessi.puo('comunicazioni') else None,
                            sezione='giorno', data_menu=g.isoformat(), **elenchi(a, sid))
 
 
@@ -653,7 +676,7 @@ def cambia_stato(aid):
         invii.sveglia()
     messaggio = ' '.join(['%s: %s.' % (chi, ETICHETTA_STATO[nuovo].lower())] + notizie + avvisi)
     # una fascia futura che si libera: chi e' in lista d'attesa per quella?
-    if nuovo == 'DISDETTO' and a.inizio > datetime.now():
+    if nuovo == 'DISDETTO' and a.inizio > datetime.now() and accessi.puo('segreteria'):
         candidati = segreteria.candidati_attesa(s, a)
         if candidati:
             flash(Markup('%s <a href="%s">%d in lista d\'attesa per questa fascia: chi chiamare</a>.') % (
@@ -685,11 +708,16 @@ def salva(s, a, aid, rid, oid, pid, inizio, fine, sid_form, nuovi=None, extra=No
           dati_paziente=None):
     avviso = servizi.fuori_turno(s, rid, oid, inizio, fine)
     dp = dati_paziente or {}
+    # dagli altri PC (accessi.py) la prenotazione cambia la scheda di un paziente che c'e' gia' solo a chi puo'
+    # modificare i Pazienti, e importo e convenzione solo a chi puo' modificare la Cassa; sul PC sempre
     paz = pazienti.trova_o_crea(
         s, intero(request.form.get('paziente_id')), request.form.get('paziente'),
         request.form.get('nome_paziente'), request.form.get('telefono'),
         request.form.get('email_paziente'), dp.get('data_nascita'), dp.get('codice_fiscale', ''),
-        dp.get('indirizzo', ''), dp.get('sesso', ''), dp.get('luogo_nascita', ''), dp.get('cf_calcolato', False))
+        dp.get('indirizzo', ''), dp.get('sesso', ''), dp.get('luogo_nascita', ''), dp.get('cf_calcolato', False),
+        aggiorna=accessi.puo_cambiare('pazienti'))
+    if not accessi.puo_cambiare('cassa'):
+        nuovi = {k: v for k, v in (nuovi or {}).items() if k not in ('importo_cent', 'convenzione')}
 
     if not a:
         a = Appuntamento()
@@ -712,11 +740,13 @@ def salva(s, a, aid, rid, oid, pid, inizio, fine, sid_form, nuovi=None, extra=No
             if x:
                 avvisi.append(x)
         if nuovo and paz is not None and request.form.get('provenienza') in dict(PROVENIENZE) \
-                and not paz.provenienza:
+                and not paz.provenienza and (accessi.puo_cambiare('pazienti') or getattr(paz, 'appena_creato', False)):
             paz.provenienza = request.form.get('provenienza')
-        if nuovo and segreteria.chiudi_attesa_prenotata(s, intero(request.form.get('attesa')), a):
+        if nuovo and accessi.puo_cambiare('segreteria') and \
+                segreteria.chiudi_attesa_prenotata(s, intero(request.form.get('attesa')), a):
             avvisi.append('Tolto dalla lista d\'attesa.')
-        if nuovo and segreteria.chiudi_appunto_prenotato(s, intero(request.form.get('appunto')), a):
+        if nuovo and accessi.puo_cambiare('segreteria') and \
+                segreteria.chiudi_appunto_prenotato(s, intero(request.form.get('appunto')), a):
             avvisi.append('Tolto dai da confermare.')
         if ripetizione:
             create, saltate = segreteria.crea_serie(s, a, *ripetizione)
@@ -836,7 +866,8 @@ def esporta(iso):
     # altrimenti bastano un byte nullo o 500 lettere per far cadere il server
     nome = 'planning-%s.xlsx' % g.isoformat()
     dati = BytesIO()
-    servizi.esporta_giorno(s, g, sid, dati)
+    # dagli altri PC (accessi.py) convenzione e importo solo a chi ha la Cassa
+    servizi.esporta_giorno(s, g, sid, dati, con_cassa=accessi.puo('cassa'))
     return scarica_excel(dati, nome)
 
 
@@ -897,6 +928,10 @@ def autoriparazione():
                            eventi=autoripara.eventi()[:30], sid=None, sezione='impostazioni')
 
 
+# l'accesso dagli altri PC della rete (1.13): dopo tutte le pagine, perche' il censimento le trovi tutte
+accessi.installa(app, ses, LUCCHETTO, lambda: Sessione)
+
+
 def porta_in_uso(porta):
     with socket.socket() as s:
         s.settimeout(0.4)
@@ -924,7 +959,11 @@ def crea_server(porta, riserva=()):
     candidate = [porta] + [x for x in riserva if x != porta]
     for i, p in enumerate(candidate):
         try:
-            return create_server(app, sockets=[presa_in_ascolto(p)], threads=FILI), p
+            # le intestazioni di un portiere (X-Forwarded-For, Forwarded) restano: chi le porta arriva da un altro
+            # PC (accessi.dalla_rete); waitress altrimenti le toglie e il portiere sembrerebbe il PC principale.
+            # I limiti (moduli fino a 13 MB, 20 collegamenti, 30 secondi di silenzio) sono gli stessi della rete
+            return create_server(app, sockets=[presa_in_ascolto(p)], threads=FILI,
+                                 clear_untrusted_proxy_headers=False, **accessi.LIMITI_SERVER), p
         except OSError as e:
             logging.warning("porta %d non utilizzabile: %s", p, e)
             if i == len(candidate) - 1:
@@ -977,6 +1016,16 @@ def dopo_riparazione():
         servizi.dopo_aggiornamento(s, aggiunte)
     finally:
         s.close()
+    try:
+        # una copia rimessa non riporta indietro gli accessi dagli altri PC (accessi.rimetti): quelli dell'ultimo cambio,
+        # dal file accanto al database (il database era rovinato); poi l'ascolto della rete come dicono
+        esito = accessi.rimetti(Sessione, accessi.dal_file())
+        if esito:
+            autoripara.annota(accessi.TESTO_RIMESSI if esito == 'rimessi' else
+                              accessi.TESTO_SPENTA % accessi.PERCORSO_PAGINA, 'ok' if esito == 'rimessi' else 'attenzione')
+        accessi.applica(app, Sessione)
+    except Exception:
+        logging.exception('accessi dopo la riparazione')
 
 
 def avvia_lavori():
@@ -1068,7 +1117,7 @@ def principale():
         _lucchetto_istanza = ingresso['lucchetto']   # resta aperto finche' il programma gira
         porta = ingresso['porta']
         # il database si controlla (e se serve si ripara) prima di aprirlo
-        autoripara.all_avvio(percorso_db())
+        riparato = autoripara.all_avvio(percorso_db())
         Sessione = crea_sessione()
         if Sessione.versione_precedente is not None and Sessione.versione_precedente > VERSIONE_SCHEMA:
             # un database di una versione piu' nuova (il programma rimesso indietro): funziona, ma va detto
@@ -1110,8 +1159,14 @@ def principale():
         autoripara.imposta_riavvio(comando_riavvio(), occupato=lambda: bool(aggiornamenti.stato.get('partito')),
                                    ferme=richieste_ferme, risorse=risorse_presenti, fili=FILI)
         avvia_lavori()
+        app.secret_key = accessi.chiave_sessione(cartella)
 
         def pronto(p):
+            try:
+                # una copia rimessa all'avvio non riporta indietro gli accessi dagli altri PC (accessi.rimetti)
+                accessi.all_avvio(app, Sessione, cartella, copia_rimessa=riparato is not None)
+            except Exception:
+                logging.exception('accessi: avvio')
             autoripara.stato['porta'] = p
             autoripara.scrivi_pid(cartella, p, 'in servizio')
             if p != porta:

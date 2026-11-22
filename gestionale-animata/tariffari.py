@@ -162,6 +162,11 @@ def leggi_tariffari(dati, nome_file=''):
     non si apre o non ha nessun tariffario."""
     if not dati:
         raise ErroreTariffario('Il file è vuoto.')
+    from comune import controlla_excel_compresso
+    try:
+        controlla_excel_compresso(dati)
+    except ValueError as e:
+        raise ErroreTariffario(str(e))
     try:
         import openpyxl
         libro = openpyxl.load_workbook(BytesIO(dati), read_only=True, data_only=True)

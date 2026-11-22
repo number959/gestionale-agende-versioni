@@ -430,6 +430,11 @@ def leggi_approvati(percorso):
                 regole.append(('aggiunto', parti[1], re.compile(parti[2]), None))
             elif parti[0] == 'sostituisci' and len(parti) >= 5:
                 regole.append(('sostituisci', parti[1], re.compile(parti[2]), parti[3]))
+            elif parti[0] == 'nuova' and parti[1:2] == ['indirizzo'] and len(parti) >= 4:
+                regole.append(('nuova', parti[1], re.compile(parti[2]), None))
+            elif parti[0] == 'foglio' and len(parti) >= 5 and parti[2].isdigit() and parti[3].isdigit():
+                # un foglio da stampare che cambia: quante pagine in più e da quale pagina può cambiare il contenuto
+                regole.append(('foglio', parti[1], None, (int(parti[2]), int(parti[3]))))
             else:
                 sys.exit('cambiamenti_approvati.txt, riga %d: non la capisco: %r' % (n, riga))
     return regole
@@ -483,6 +488,38 @@ def togli_aggiunti(principale, qui, rx, con_ordine=False):
     for op, _, _, j1, j2 in difflib.SequenceMatcher(None, principale, qui, autojunk=False).get_opcodes():
         tieni += [x for x in qui[j1:j2] if op == 'equal' or not (isinstance(x, str) and rx.search(x))]
     return tieni
+
+
+def pagina_nuova(percorso, ra, regole):
+    """Una pagina che nel principale non c'è (404) e che una regola «nuova» approva (per l'indirizzo, senza i
+    parametri): non è una differenza."""
+    return ra.get('stato') == 404 and any(tipo == 'nuova' and rx.search(urlsplit(percorso).path)
+                                          for tipo, _, rx, _ in regole)
+
+
+def fogli_approvati_da(righe, regole):
+    """Le righe dei fogli da stampare con quelli approvati da una regola «foglio» (nome, pagine in più, da quale
+    pagina): approvato solo se il numero delle pagine cambia esattamente di quanto scritto, e se fra la seconda pagina
+    e quella scritta le pagine differiscono solo nel piede (il numero «Pagina N di M», in basso: sopra i 1100 punti
+    dall'alto niente). La prima pagina (l'indice) può cambiare. Torna (righe, quanti approvati)."""
+    approvate = {chiave: valori for tipo, chiave, _, valori in regole if tipo == 'foglio'}
+    uscita, approvati = [], 0
+    for r in righe:
+        m = re.match(r'FOGLIO DIVERSO \S+ \((\w+)\)', r)
+        if not m or m.group(1) not in approvate:
+            uscita.append(r)
+            continue
+        in_piu, da_pagina = approvate[m.group(1)]
+        conti = re.search(r'pagine: principale (\d+); qui (\d+)', r)
+        riquadri = [(int(p), int(y)) for p, y in re.findall(r'pagina (\d+): \d+ pixel diversi nel riquadro \(\d+, (\d+),', r)]
+        buono = conti is not None and int(conti.group(2)) - int(conti.group(1)) == in_piu and \
+            'risposta e frasi' not in r and all(y >= 1100 for p, y in riquadri if 1 < p < da_pagina)
+        if buono:
+            approvati += 1
+            uscita.append(r.replace('FOGLIO DIVERSO', 'FOGLIO DIVERSO (approvato, regola «foglio»)', 1))
+        else:
+            uscita.append(r)
+    return uscita, approvati
 
 
 def applica_approvati(ra, rb, regole, con_ordine=False):
@@ -698,16 +735,28 @@ def main():
             ra, la, rb, (sa, modelli, byte), cc = due()
             if sa == 200:
                 viste.append((percorso, modelli, byte))
-            if not uguali(*applica_approvati(ra, rb, regole, con_ordine)):  # l'ora può scattare fra le due richieste: una volta ancora
+            if pagina_nuova(percorso, ra, regole):
+                approvate += 1
+            elif not uguali(*applica_approvati(ra, rb, regole, con_ordine)):  # l'ora può scattare fra le due richieste: una volta ancora
                 ra, la, rb, _, cc = due()
-            if not uguali(ra, rb) and uguali(*applica_approvati(ra, rb, regole, con_ordine)):
+            nuova = pagina_nuova(percorso, ra, regole)
+            if nuova:
+                pass
+            elif not uguali(ra, rb) and uguali(*applica_approvati(ra, rb, regole, con_ordine)):
                 approvate += 1
             elif not uguali(ra, rb):
                 ra, rb = applica_approvati(ra, rb, regole, con_ordine)
                 diverse.append(percorso)
                 righe.append('DIVERSA %s\n  %s' % (percorso, '\n  '.join(differenze(ra, rb))))
             vuota = {'voci': [], 'segni': [], 'testo': [], 'cornici': [], 'accese': [], 'indirizzi': {}, 'messaggi': []}
-            if cc[0] is not None or cc[1] is not None:     # la cornice delle due pagine, da confrontare alla fine
+            if nuova and cc[1] is not None:
+                # una pagina nuova (regola «nuova»): nel principale non c'è, e nemmeno la sua cornice. La sua cornice va
+                # solo nel catalogo di qui (una voce che c'è solo lì resta una differenza) e, pagina per pagina, si
+                # guarda solo che abbia una voce sola accesa e al più una linguetta (accese_fuori_posto)
+                cornici.append((percorso, cc[1], cc[1]))
+                for k in CATALOGO:
+                    catalogo['qui'][k].update(cc[1].get(k, ()))
+            elif cc[0] is not None or cc[1] is not None:     # la cornice delle due pagine, da confrontare alla fine
                 cornici.append((percorso, cc[0] or vuota, cc[1] or vuota))
                 for lato, c in zip(('principale', 'qui'), cc):
                     for k in CATALOGO:
@@ -727,8 +776,12 @@ def main():
         n_f = d_f = 0
         # una cartella nuova a ogni giro (due giri insieme non si pestano i piedi); resta solo con dei fogli diversi
         cartella_fogli = tempfile.mkdtemp(prefix='confronto_rami-%s-fogli-' % NOME)
+        fogli_approvati = 0
         if not arg.senza_pdf:                # i fogli da stampare in PDF, con i due programmi ancora accesi
             r_f, n_f, d_f, mancanti = confronta_fogli(porte, viste, cartella_fogli, arg.fogli_per_tipo)
+            r_f, approvati_f = fogli_approvati_da(r_f, regole)
+            d_f -= approvati_f
+            fogli_approvati += approvati_f
             righe += r_f
             d_f += len(mancanti)             # un foglio mai incontrato non deve passare in silenzio
         if not os.listdir(cartella_fogli):
@@ -751,8 +804,10 @@ def main():
                   'solo per la cornice): %d' % (len(tutte_le_regole), len(tutte_le_regole) - len(regole), approvate))
         print('resoconto: %s' % resoconto)
         if not arg.senza_pdf:
-            print('%d fogli e pagine che si stampano confrontati in PDF, %d diversi o mancanti%s' % (
-                n_f, d_f, ' (immagini in %s)' % cartella_fogli if d_f else ''))
+            print('%d fogli e pagine che si stampano confrontati in PDF, %d diversi o mancanti%s%s' % (
+                n_f, d_f, ' (immagini in %s)' % cartella_fogli if d_f else '',
+                '; %d diversi solo come approvato (regole «foglio»: immagini in %s)' % (fogli_approvati, cartella_fogli)
+                if fogli_approvati else ''))
         print('%s: %d differenze%s' % (testa_c, d_c, ', %d parti diverse solo per i cambiamenti approvati' % approvate_c
                                        if tutte_le_regole else ''))
         print('%d pagine confrontate, %d diverse' % (n, len(diverse)))

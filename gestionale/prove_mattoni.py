@@ -293,8 +293,10 @@ TENUTE = {'primario', 'gruppo-comandi', 'apri-gruppo', 'tendina', 'aperto', 'num
 # Turni, alto quanto la finestra meno il menu in alto di prima (sotto la barra nuova finiva oltre il bordo)
 DALLA_CORNICE = {'marchio', 'giro-invito', 'scorri-turni'}
 NUOVI = {'veste.css', 'gettoni.css', '_pezzi.html',
-         '_menu.html', '_barra.html', '_linguette.html'}        # dalla tappa 2 i modelli della cornice, fatti con i pezzi v-
-CORNICE = ('_menu.html', '_barra.html', '_linguette.html', '_notifiche.html')
+         '_menu.html', '_barra.html', '_linguette.html',        # dalla tappa 2 i modelli della cornice, fatti con i pezzi v-
+         # 1.13, accesso dagli altri PC: la riga di chi è entrato (v-utente-rete) è nuova, non una pagina di oggi
+         '_utente_rete.html'}
+CORNICE = ('_menu.html', '_barra.html', '_linguette.html', '_notifiche.html', '_utente_rete.html')
 
 
 def classi_vecchie():

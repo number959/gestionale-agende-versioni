@@ -35,22 +35,22 @@
     <div><b>{{ c.get('PRENOTATO', 0) + c.get('CONFERMATO', 0) }}</b> prenotati o confermati</div>
     <div><b>{{ c.get('NON_PRESENTATO', 0) }}</b> non presentati</div>
     <div><b>{{ c.get('DISDETTO', 0) }}</b> disdetti</div>
-    {% if f.previsto %}<div><b>{{ f.previsto|euro }} €</b> importi previsti</div>{% endif %}
-    {% if f.incassato %}<div><b>{{ f.incassato|euro }} €</b> incassati</div>{% endif %}
+    {% if f.previsto and puo('cassa') %}<div><b>{{ f.previsto|euro }} €</b> importi previsti</div>{% endif %}
+    {% if f.incassato and puo('cassa') %}<div><b>{{ f.incassato|euro }} €</b> incassati</div>{% endif %}
   </div>
   {% if f.prestazioni %}<p class="per-prestazione">{% for nome, n in f.prestazioni %}{{ nome }}: <b>{{ n }}</b>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
   <table class="tabella-stampa">
-    <thead><tr><th>Giorno</th><th class="c-ora">Ora</th><th>Stanza</th><th>Paziente</th><th>Prestazione</th><th>Convenzione</th><th class="c-importo">Importo</th><th>Stato</th></tr></thead>
+    <thead><tr><th>Giorno</th><th class="c-ora">Ora</th><th>Stanza</th>{% if con_pazienti %}<th>Paziente</th>{% endif %}<th>Prestazione</th>{% if puo('cassa') %}<th>Convenzione</th><th class="c-importo">Importo</th>{% endif %}<th>Stato</th></tr></thead>
     <tbody>
     {% for a in f.apps %}
       <tr class="stato-{{ a.stato|lower }}">
         <td>{{ a.inizio.strftime('%d/%m') }}</td>
         <td class="c-ora">{{ a.inizio.strftime('%H:%M') }}</td>
         <td>{{ a.risorsa.nome }}{% if piu_strutture and not st %} <small>{{ a.risorsa.struttura.nome }}</small>{% endif %}</td>
-        <td class="c-paziente">{{ a.paziente.etichetta if a.paziente else '' }}</td>
+        {% if con_pazienti %}<td class="c-paziente">{{ a.paziente.etichetta if a.paziente else '' }}</td>{% endif %}
         <td>{{ a.prestazione.nome if a.prestazione else '' }}</td>
-        <td>{{ a.convenzione or '' }}</td>
-        <td class="c-importo">{{ a.importo_testo }}{% if a.pagato %}<br><small>pagati {{ a.pagato_testo }}</small>{% endif %}</td>
+        {% if puo('cassa') %}<td>{{ a.convenzione or '' }}</td>
+        <td class="c-importo">{{ a.importo_testo }}{% if a.pagato %}<br><small>pagati {{ a.pagato_testo }}</small>{% endif %}</td>{% endif %}
         <td>{{ etichette[a.stato] }}</td>
       </tr>
     {% endfor %}
