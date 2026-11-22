@@ -92,7 +92,7 @@ Windows recenti, mai usarlo; l'elenco delle radici di Windows c'è sempre; una p
 
 Senza `--solo` e con `--browser` le lancia tutte, anche quelle nel browser (Playwright con
 Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_mattoni_browser.py` (dalla tappa 1-bis: avvia
-da sé il catalogo dei pezzi su una porta libera e controlla i colori dei pezzi nuovi in chiaro e in scuro, lo
+da sé il catalogo dei pezzi su una porta libera e controlla i colori dei pezzi nuovi in chiaro e in scuro, i margini, lo
 scorrimento di lato e la tendina «Stampa e scarica»), `prove_tendine_browser.py`,
 `prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, `prove_19_browser.py`,
 `prove_191_browser.py` (salva le impostazioni email della prova e poi rimette quelle di

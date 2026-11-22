@@ -71,6 +71,14 @@ def apri(tema, larghezza=1366, mutante=None):
             assert nuovo != corpo, 'il mutante dello strato non si applica'
             route.fulfill(response=r, body=nuovo)
         ctx.route(re.compile(r'.*/catalogo-pezzi(\?.*)?$'), senza_strato)
+    if mutante == 'margini':
+        def senza_margini(route):
+            r = route.fetch()
+            corpo = r.text()
+            nuovo = corpo.replace('  margin: 0;                         /* anche quando la barra è il modulo di oggi', '  /* ')
+            assert nuovo != corpo, 'il mutante dei margini non si applica'
+            route.fulfill(response=r, body=nuovo)
+        ctx.route(re.compile(r'.*/static/veste\.css$'), senza_margini)
     if mutante == 'sopra':
         def senza_sopra(route):
             r = route.fetch()
@@ -148,6 +156,35 @@ def gemello_colori():
     assert 'a.v-bottone color' in messaggio or 'select background-color' in messaggio, messaggio
 
 
+# i pezzi che tengono una classe di oggi (per JavaScript, animata e prove): stile.css darebbe loro i suoi margini
+MARGINI = [('table.v-tabella.elenco', 'margin-bottom'), ('p.v-vuoto.vuoto', 'margin-bottom'),
+           ('form.ricerca.v-barra-comandi', 'margin-bottom'), ('ul.v-striscia.numeri', 'margin-bottom'),
+           ('ul.v-striscia.numeri .v-striscia-numero', 'margin-right')]
+
+
+def controlla_margini(mutante=None):
+    ctx, p = apri('chiaro', mutante=mutante)
+    try:
+        male = []
+        for sel, prop in MARGINI:
+            assert p.locator(sel).count(), 'nel catalogo non c\'è %s' % sel
+            visto = p.evaluate('([s, k]) => getComputedStyle(document.querySelector(s)).getPropertyValue(k)', [sel, prop])
+            if visto != '0px':
+                male.append('%s %s: %s' % (sel, prop, visto))
+        assert not male, 'margini delle classi di oggi non azzerati: %s' % male
+        return len(MARGINI)
+    finally:
+        ctx.close()
+
+
+def b_margini():
+    return '%d pezzi' % controlla_margini()
+
+
+def gemello_margini():
+    assert 'form.ricerca' in cade(controlla_margini, 'margini')
+
+
 def b_larghezze():
     righe = []
     for tema in ('chiaro', 'scuro'):
@@ -195,6 +232,8 @@ def gemello_tendina():
 
 prova('in chiaro e in scuro campo, tendina, bottoni e collegamenti nuovi prendono i colori dei gettoni', b_colori)
 prova('gemello: senza lo strato, in scuro i fogli di oggi vincono sui pezzi nuovi', gemello_colori)
+prova('i pezzi che tengono una classe di oggi (elenco, vuoto, ricerca, numeri) non ne prendono i margini', b_margini)
+prova('gemello: senza il margine zero della barra, form.ricerca riprende i suoi 18 px', gemello_margini)
 prova('niente scorrimento di lato né errori JavaScript a 1366, 1024 e 683 px, in chiaro e in scuro', b_larghezze)
 prova('«Stampa e scarica» si apre con il clic e niente la copre, nemmeno la barra dopo', b_tendina)
 prova('gemello: senza la regola che porta sopra la barra aperta, la barra dopo copre la tendina', gemello_tendina)

@@ -98,6 +98,11 @@
       <button type="button" role="menuitem">{{ icona('printer') }}<b>Stampa</b><small>il mese come si vede</small></button>
     {% endcall %}
   {% endcall %}
+  <form class="ricerca v-barra-comandi" action="#" onsubmit="return false;">
+    <span class="cat-nota">Una barra che è il modulo di oggi (form.ricerca: i suoi margini di oggi sono azzerati):</span>
+    <span class="v-campo cat-cerca"><input type="search" name="q" aria-label="Cerca nel catalogo" placeholder="cognome, nome o telefono"></span>
+    <button type="submit" class="v-bottone v-principale primario">{{ icona('search') }}Cerca</button>
+  </form>
   <div class="cat-fila">
     <button type="button" class="v-bottone">Normale</button>
     <button type="button" class="v-bottone v-principale primario">Principale</button>
@@ -189,6 +194,7 @@
   .cat-due { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--v-spazio-7); align-items: start; }
   .cat-colonna { display: flex; flex-direction: column; gap: var(--v-spazio-5); }
   .cat-nota { color: var(--v-testo-tenue); font-size: var(--v-car-m); }
+  .cat-cerca { flex: 1 1 220px; }
   @media (max-width: 760px) { #catalogo { padding: var(--v-spazio-6); } }
 </style>
 {% endblock %}

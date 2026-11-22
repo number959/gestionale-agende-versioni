@@ -2586,8 +2586,10 @@ Prima delle pagine nuove, i pezzi con cui si faranno, senza cambiare di un pixel
   variabili rigide; le icone; `euro()` su 3009 importi; `marchio.tema`; l'autoriparazione (`risorse_presenti` controlla
   anche `gettoni.css` e `veste.css`, e `prove_installato.py` li chiede). `prove_mattoni_browser.py` (nel giro nel
   browser) avvia da sé il catalogo e vuole i colori dei gettoni su campo, tendina, bottoni e collegamenti in chiaro e in
-  scuro, niente scorrimento di lato e la tendina «Stampa e scarica» mai coperta; i suoi gemelli tolgono lo strato e la
-  regola che porta sopra la barra aperta. `prove_pagine.py` legge i fogli anche negli `@import`. `prove_guida.py`
+  scuro, i margini delle classi di oggi tenute dai pezzi azzerati (`elenco`, `vuoto`, `ricerca`, `numeri`), niente
+  scorrimento di lato e la tendina «Stampa e scarica» mai coperta, anche da una seconda barra (il primo giro di foto del
+  catalogo l'aveva trovata coperta); i suoi gemelli tolgono lo strato, il margine zero della barra e la regola che porta
+  sopra la barra aperta. `prove_pagine.py` legge i fogli anche negli `@import`. `prove_guida.py`
   accetta i nomi passati ai pezzi (`guida='nome'`).
 - **Le foto prima e dopo**: `python strumenti/foto_pagine.py --principale <ramo o commit>`: il database di `demo.py` del
   principale, poi i due programmi uno alla volta sulla stessa cartella, con l'orologio fermo (nel programma e nel
