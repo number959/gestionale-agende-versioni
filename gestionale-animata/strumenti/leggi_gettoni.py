@@ -40,6 +40,8 @@ COPPIE = [
     ('primario-testo', 'superficie', 'bottone sotto il mouse'), ('collegamento', 'fondo', 'collegamenti nella pagina'),
     ('collegamento', 'superficie', 'collegamenti nelle schede'), ('testo', 'primario-tinta', 'voce della tendina sotto il mouse'),
     ('testo-medio', 'primario-tinta', 'riga piccola della voce sotto il mouse'),
+    # la cornice (tappa 2): voci del menu, voce accesa e sotto il mouse, percorso e ricerca della barra in alto
+    ('testo-medio', 'superficie-tenue', 'voci del menu'), ('primario-testo', 'superficie-tenue', 'voce del menu accesa, iniziali'),
 ]
 
 # i colori della struttura su cui si provano le coppie: il predefinito, quello delle tavole, quelli delle prove, alcuni

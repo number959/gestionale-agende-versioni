@@ -5,11 +5,11 @@ inventato di strumenti/catalogo_prova.py):
 - il tasto D, la pagina senza ricerca (branche, strutture, ultimi indirizzati);
 - la ricerca mentre si scrive, senza ricaricare la pagina, con l'indirizzo che
   la segue; branche, correzioni, frecce dal campo ai risultati;
-- la scheda della struttura: si apre dal risultato, sotto il menu, la pagina le
-  lascia posto, Esc la chiude e si torna al risultato; il messaggio cambiato
+- la scheda della struttura: si apre dal risultato, dentro la finestra (sotto la
+  barra in alto; scorrendo la pagina sale in cima), la pagina le lascia posto, Esc la chiude e si torna al risultato; il messaggio cambiato
   va anche nei collegamenti di WhatsApp ed email; Copia; Segna come indirizzato
   con Annulla; WhatsApp e Stampa si segnano da sole, una volta sola;
-- il paziente scelto dalla pagina; la ricerca rapida del menu;
+- il paziente scelto dalla pagina; la ricerca rapida della barra in alto;
 - schermo stretto, tema scuro, nessun errore JavaScript.
 La cornice (il menu, la ricerca rapida, le domande del browser) si cerca per
 ruolo e nome con gli aiuti di aiuti_browser.py, come un lettore di schermo
@@ -25,7 +25,7 @@ from urllib.parse import unquote
 from playwright.sync_api import Error as ErrorePlaywright, sync_playwright
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from aiuti_browser import menu, prepara_domande  # noqa: E402
+from aiuti_browser import barra_in_alto, menu, prepara_domande, zona_ricerca  # noqa: E402
 
 from aiuti_browser import indirizzo_di_prova  # noqa: E402
 B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
@@ -35,6 +35,17 @@ esiti = []
 def ok(n, c, d=''):
     esiti.append(bool(c))
     print(('OK ' if c else 'KO ') + n, '' if c else d)
+
+
+def dentro_la_finestra(scheda, barra, finestra):
+    """La scheda di Dove si fa è dove deve stare (tappa 2): comincia subito sotto la barra in alto, o in cima alla
+    finestra se la barra è già scorsa via; finisce dentro la finestra; arriva al bordo destro."""
+    if not scheda:
+        return False
+    sotto = max(0, barra['y'] + barra['height']) if barra else 0
+    return (abs(scheda['y'] - sotto) <= 1 and scheda['height'] > 100 and
+            scheda['y'] + scheda['height'] <= finestra['height'] + 1 and
+            abs(scheda['x'] + scheda['width'] - finestra['width']) <= 1)
 
 
 with sync_playwright() as p:
@@ -79,7 +90,10 @@ with sync_playwright() as p:
     ok('senza ricerca: branche, strutture e ultimi indirizzati',
        pg.locator('.branche-dove a').count() >= 15 and pg.locator('a.sede-grande').count() == 6 and
        pg.locator('.recenti-dove li').count() >= 3)
-    ok('il menu resta su una riga', menu(pg).bounding_box()['height'] < 40, menu(pg).bounding_box())
+    # dalla tappa 2 il menu sta a sinistra: largo al massimo 248 px e la pagina non scorre di lato per lui
+    m = menu(pg).bounding_box()
+    ok('il menu sta a sinistra e la pagina non scorre di lato', m['x'] < 248 and m['x'] + m['width'] <= 248 and
+       pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), m)
 
     # ------------------------------------------------ la ricerca mentre si scrive
     pg.evaluate('window.__stessa = 1')
@@ -124,6 +138,10 @@ with sync_playwright() as p:
     pg.wait_for_timeout(500)
     pg.locator('a.sede-grande', has_text='Centro Nord').click()
     pg.wait_for_selector('#scheda-dove:not([hidden]) .branche-scheda')
+    pg.wait_for_function("() => document.getAnimations().every(a => a.playState !== 'running')")
+    ok('la scheda è dentro la finestra appena aperta (sotto la barra in alto)',
+       dentro_la_finestra(pg.locator('#scheda-dove').bounding_box(), barra_in_alto(pg).bounding_box(), pg.viewport_size),
+       (pg.locator('#scheda-dove').bounding_box(), barra_in_alto(pg).bounding_box()))
     n_branche = pg.locator('.branche-scheda li').count()
     pg.locator('.branche-scheda a', has_text='Cardiologia').click()
     pg.wait_for_timeout(600)
@@ -153,10 +171,28 @@ with sync_playwright() as p:
     ok('la struttura scelta si vede fra i risultati', 'scelta' in (chip.get_attribute('class') or ''))
     ok('l\'indirizzo ricorda la scheda aperta', 'gruppo=' in pg.url and 'voce=' in pg.url, pg.url)
     r = sc.bounding_box()
-    barra = menu(pg).bounding_box()
-    sotto = barra['y'] + barra['height']
-    ok('la scheda comincia sotto il menu e arriva al bordo destro', abs(r['y'] - sotto) <= 1 and
-       abs(r['x'] + r['width'] - 1366) <= 1, (r, sotto))
+    finestra = pg.viewport_size
+    ok('la scheda è dentro la finestra: sotto la barra in alto, fino al bordo destro',
+       dentro_la_finestra(r, barra_in_alto(pg).bounding_box(), finestra), (r, barra_in_alto(pg).bounding_box()))
+    # scorrendo la pagina la barra in alto se ne va e la scheda sale in cima, sempre dentro (la pagina si allunga
+    # apposta: con pochi risultati non scorrerebbe)
+    pg.evaluate("document.body.style.minHeight = '3000px'; window.scrollTo(0, 400)")
+    pg.wait_for_timeout(300)
+    ok('scorrendo la pagina la scheda sale in cima e resta dentro la finestra',
+       pg.evaluate('window.scrollY') > 0 and dentro_la_finestra(sc.bounding_box(), barra_in_alto(pg).bounding_box(), finestra)
+       and sc.bounding_box()['y'] < r['y'], (pg.evaluate('window.scrollY'), sc.bounding_box()))
+    pg.evaluate("window.scrollTo(0, 0); document.body.style.minHeight = ''")
+    pg.wait_for_timeout(300)
+    # il gemello: la scheda messa dove la metteva dove.js fino alla tappa 1 (sotto il menu, che ora è alto quanto la
+    # finestra) non passa il controllo; poi dove.js la rimette a posto da solo (scroll)
+    sotto_il_menu = menu(pg).bounding_box()
+    sc.evaluate('(s, y) => { s.style.top = y + "px"; }', round(sotto_il_menu['y'] + sotto_il_menu['height']))
+    ok('gemello: la scheda sotto il menu (dove.js di prima) non è dentro la finestra',
+       not dentro_la_finestra(sc.bounding_box(), barra_in_alto(pg).bounding_box(), finestra), sc.bounding_box())
+    pg.evaluate("window.dispatchEvent(new Event('scroll'))")
+    pg.wait_for_timeout(100)
+    ok('…e dove.js la rimette sotto la barra', dentro_la_finestra(sc.bounding_box(), barra_in_alto(pg).bounding_box(), finestra),
+       sc.bounding_box())
     pag = pg.locator('#pagina-dove').bounding_box()
     ok('la pagina lascia posto alla scheda (i risultati non finiscono sotto)', pag['x'] + pag['width'] <= r['x'] + 1,
        (pag, r))
@@ -232,13 +268,13 @@ with sync_playwright() as p:
        pg.locator('#messaggio-dove').input_value().startswith('Gentile Maria Cuomo,') and
        pg.locator('[data-azione="whatsapp"]').get_attribute('href').startswith('https://wa.me/39347'))
 
-    # ------------------------------------------------ la ricerca rapida del menu
+    # ------------------------------------------------ la ricerca rapida (dalla tappa 2 nella barra in alto)
     # il tasto / porta nel campo (resta: prova la scorciatoia), poi si scrive come una persona; i risultati sono i
     # collegamenti della zona di ricerca del menu: per «holter» solo prestazioni, la prima e' Holter ECG
     pg.goto(B + '/oggi')
     pg.keyboard.press('/')
     pg.keyboard.type('holter')
-    zona = menu(pg).get_by_role('search')
+    zona = zona_ricerca(pg)
     rapidi = zona.get_by_role('link')
     try:
         rapidi.or_(zona.get_by_text('Nessun risultato.')).first.wait_for(timeout=5000)

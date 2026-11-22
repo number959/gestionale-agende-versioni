@@ -22,17 +22,16 @@ porta a un'altra voce (l'Elenco del giorno sta nell'Agenda): nella veste nuova l
 I moduli (dalla 1.14) aggiungono voci e linguette con registra_voce() e registra_linguetta(), senza toccare i modelli.
 costruisci() fa le voci per la pagina aperta, con gli indirizzi scritti da url_for; nei modelli è menu_della_pagina().
 
-Fino al passo dopo della tappa 2 il disegno resta quello di oggi, byte per byte (disegno_di_oggi): il menu in alto
-con le tendine. Le stesse voci, messe come oggi:
-- l'Agenda si mostra con le sue linguette in fila (Giorno, Settimana, Mese); la sua quarta, l'Elenco, oggi sta
-  nella tendina Segreteria come «Elenco del giorno» (oggi=False qui sotto);
-- le voci con linguette (Ambulatori, Segreteria, Configura) e la tendina Aiuto sono tendine, con le linguette dentro;
-  quelle del gruppo «aiuto» stanno a destra, dopo la ricerca;
-- il tasto e la guida di una voce vanno sul collegamento che porta alla stessa pagina (G su Giorno, C su
-  Conferme); la guida di una tendina va sulla tendina; il tasto di un collegamento nascosto va sul collegamento
-  visibile che porta alla stessa pagina (E su Elenco del giorno);
-- una tendina è accesa se è accesa la sua voce o una delle sue linguette (anche una «fuori»: oggi l'Elenco del
-  giorno accende la tendina Segreteria).
+Il disegno (dalla tappa 2, la cornice della veste nuova): templates/_menu.html fa il menu a sinistra (le voci con
+la loro icona, la tendina Aiuto, il collegamento nascosto del tasto E), _barra.html la barra in alto (percorso,
+ricerca rapida, posto della campanella) e _linguette.html le linguette della voce accesa, in cima al contenuto. Ogni
+pezzo sta in un contenitore con data-cornice (strumenti/confronta_rami.py lo confronta a parte). «oggi» di voci e
+linguette dice come le disegnava il menu di prima (in alto, con le tendine): serve solo all'oracolo di prove_menu.py,
+che confronta le voci con il menu del ramo principale:
+- 'in_fila': le sue linguette stavano in fila nel menu (l'Agenda: Giorno, Settimana, Mese);
+- una voce con linguette (Ambulatori, Segreteria, Configura) o con una tendina (Aiuto) era una tendina;
+- oggi=False su una linguetta: nel menu di prima non c'era lì (l'Elenco stava nella tendina Segreteria come
+  «Elenco del giorno»).
 """
 from datetime import date
 
@@ -82,8 +81,9 @@ def registra_voce(gruppo, chiave, endpoint, parola, argomenti=(), icona=None, se
                   tasto=None, guida=None, contatore=None, titolo_contatore=None, tendina=None, oggi=None, dopo=None):
     """Aggiunge una voce al menu (alla fine del suo gruppo, o dopo la voce «dopo»). Torna la voce.
     Due voci non possono avere la stessa chiave, una sezione in comune o lo stesso tasto. «tendina»: le voci di una
-    tendina che non porta a una pagina (Aiuto). «oggi»: come la disegna il menu di oggi, 'in_fila' (le sue linguette
-    in fila, come l'Agenda); senza, una tendina se ha linguette, altrimenti un collegamento."""
+    tendina che non porta a una pagina (Aiuto). «oggi»: come la disegnava il menu di prima della tappa 2 (per l'oracolo
+    di prove_menu.py), 'in_fila' (le sue linguette in fila, come l'Agenda); senza, una tendina se ha linguette,
+    altrimenti un collegamento."""
     if gruppo not in dict(GRUPPI):
         raise ValueError('gruppo sconosciuto: %s' % gruppo)
     if any(v['chiave'] == chiave for v in VOCI):
@@ -145,7 +145,7 @@ def _sotto_esportazioni(vale):
 
 registra_voce('agende', 'oggi', 'cruscotto.oggi', 'Oggi', ('struttura',), icona='sun', sezioni={'oggi'},
               guida='menu-oggi')
-# l'Agenda: oggi le sue linguette stanno in fila nel menu (Giorno, Settimana, Mese)
+# l'Agenda: nel menu di prima le sue linguette stavano in fila (Giorno, Settimana, Mese)
 registra_voce('agende', 'agenda', 'giorno', 'Agenda', ('giorno', 'struttura'), icona='calendar',
               sezioni={'giorno', 'settimana', 'mese', 'elenco'}, tasto='g', guida='menu-giorno', oggi='in_fila')
 registra_voce('agende', 'sala', 'sala.giornata', 'Sala', ('giorno', 'struttura'), icona='activity', sezioni={'sala'},
@@ -167,14 +167,14 @@ registra_voce('aree', 'cassa', 'cassa.cassa_giorno', 'Cassa', ('giorno', 'strutt
               sezioni={'cassa'})
 registra_voce('aree', 'statistiche', 'viste.statistiche', 'Statistiche', ('struttura',), icona='chart-no-axes-column',
               sezioni={'statistiche'})
-# Aiuto resta una tendina, con le voci di oggi (AIUTO)
+# Aiuto resta una tendina, con le voci di prima (AIUTO)
 registra_voce('aiuto', 'aiuto', None, 'Aiuto', icona='circle-question-mark', sezioni={'aiuto'}, guida='menu-aiuto',
               tendina=AIUTO)
 registra_voce('aiuto', 'configura', 'anagrafiche.elenco', 'Configura', icona='sliders-horizontal',
               sezioni={'anagrafiche', 'gruppo', 'invii', 'importa', 'impostazioni', 'aggiornamenti'},
               guida='menu-configura')
 
-# la tendina Aiuto di oggi: «Guida di questa pagina» resta nascosta finché guida.js non la mostra
+# la tendina Aiuto: «Guida di questa pagina» resta nascosta finché guida.js non la mostra
 AIUTO.extend([
     dict(endpoint=None, classe='avvia-guida', azione_guida='pagina', nascosta=True, parola='Guida di questa pagina',
          sotto='un giro sullo schermo, passo per passo'),
@@ -188,12 +188,12 @@ AIUTO.extend([
 NASCOSTI.append(dict(endpoint='viste.elenco_giorno', argomenti=('giorno', 'struttura'), parola='Elenco del giorno',
                      tasto='e'))
 
-# le linguette: oggi le tendine (e Giorno, Settimana, Mese in fila), con le stesse parole e gli stessi indirizzi
+# le linguette: prima le tendine del menu (e Giorno, Settimana, Mese in fila), con le stesse parole e gli stessi indirizzi
 registra_linguetta('agenda', 'giorno', 'Giorno', ('giorno', 'struttura'), sezioni={'giorno'},
                    etichetta='Viste dell\'agenda')
 registra_linguetta('agenda', 'viste.settimana', 'Settimana', ('giorno', 'struttura'), sezioni={'settimana'})
 registra_linguetta('agenda', 'viste.mese', 'Mese', ('mese', 'struttura'), sezioni={'mese'}, guida='menu-mese')
-# oggi=False: oggi l'Elenco sta nella tendina Segreteria («Elenco del giorno», qui sotto)
+# oggi=False: prima l'Elenco stava nella tendina Segreteria («Elenco del giorno», qui sotto)
 registra_linguetta('agenda', 'viste.elenco_giorno', 'Elenco', ('giorno', 'struttura'), sezioni={'elenco'}, oggi=False)
 
 registra_linguetta('segreteria', 'viste.conferme', 'Conferme', ('struttura',), sezioni={'conferme'},
@@ -267,8 +267,8 @@ def costruisci(sezione, sid, data, funzioni=None):
     """Le voci del menu per una pagina: sezione, struttura (sid) e giorno (data, «AAAA-MM-GG») della pagina; funzioni:
     le funzioni dei modelli che condizioni e contatori nominano (ci_sono_sale, n_da_confermare), di solito il contesto
     del modello. Torna un dizionario: voci (solo quelle la cui condizione è vera, con indirizzo, accesa, linguette…),
-    gruppi, accese e accesa (la voce accesa, se è una sola), linguette (quelle della voce accesa), nascosti, oggi (il
-    disegno di oggi). Le parole sono testo semplice: le scrive testo()."""
+    gruppi, accese e accesa (la voce accesa, se è una sola), linguette ed etichetta_linguette (quelle della voce accesa),
+    nascosti. Le parole sono testo semplice: le scrive testo()."""
     funzioni = funzioni if funzioni is not None else {}
     sez = sezione or ''
     contatori = {}
@@ -317,55 +317,52 @@ def costruisci(sezione, sid, data, funzioni=None):
                 accesa=accese[0] if len(accese) == 1 else None, accese=accese,
                 nascosti=[fatta(x, accesa=False) for x in NASCOSTI])
     menu['linguette'] = menu['accesa']['linguette'] if menu['accesa'] else []
-    menu['oggi'] = disegno_di_oggi(menu)
+    menu['etichetta_linguette'] = testo(menu['accesa']['etichetta_linguette']) if menu['accesa'] else None
+    # per il pezzo linguette di _pezzi.html: la riga piccola delle tendine di prima diventa il title; la linguetta che
+    # porta in un'altra area ha la freccina (arrow-up-right) e non si accende
+    menu['linguette_del_pezzo'] = [dict(testo=x['parola'], indirizzo=x['url'], accesa=x['accesa'], tasto=x['tasto'],
+                                        guida=x['guida'], titolo=x['sotto'], conta=x['contatore'],
+                                        icona='arrow-up-right' if x['fuori'] else None) for x in menu['linguette']]
     return menu
 
 
-def disegno_di_oggi(menu):
-    """Il menu di oggi (in alto, con le tendine) fatto con le stesse voci: una lista di pezzi, in ordine, che
-    _menu.html scrive così com'è. Le regole sono in testa al file."""
-    nascosti = {x['url']: x for x in menu['nascosti']}
+def iniziali(nome):
+    """Le iniziali della struttura per il menu stretto (al posto del logo): le prime lettere delle prime due parole
+    che non sono articoli o preposizioni («Clinica Posillipo» → «CP», «Villa dei Fiori» → «VF»)."""
+    piccole = {'di', 'del', 'della', 'dei', 'degli', 'delle', 'da', 'la', 'il', 'lo', 'le', 'gli', 'e', 'a', 'in', 'al'}
+    parole = [p for p in str(nome or '').replace('.', ' ').replace("'", ' ').split() if p[:1].isalnum()]
+    scelte = [p for p in parole if p.lower() not in piccole] or parole
+    return ''.join(p[0] for p in scelte[:2]).upper()
 
-    def collegamento(x, tasto=None, guida=None):
-        c = dict(x)
-        c['tasto'] = tasto or x.get('tasto') or (nascosti[x['url']]['tasto'] if x['url'] in nascosti else None)
-        c['guida'] = guida or x.get('guida')
-        c['accesa'] = menu['sezione'] in x['sezioni']          # oggi si accende anche una linguetta «fuori»
-        return c
 
-    pezzi = []
-    for g, _, voci in menu['gruppi']:
-        if g == 'aree':
-            pezzi.append(dict(tipo='separatore'))
-        elif g == 'aiuto':
-            pezzi += [dict(tipo='spinta'), dict(tipo='ricerca')]
-        for v in voci:
-            if v['oggi'] == 'in_fila':
-                for x in v['linguette']:
-                    if not x['oggi']:
-                        continue
-                    stessa = x['url'] == v['url']
-                    pezzi.append(dict(tipo='voce', voce=collegamento(x, tasto=v['tasto'] if stessa else None,
-                                                                     guida=v['guida'] if stessa else None)))
-            elif v['oggi'] == 'tendina':
-                dentro = [collegamento(x, tasto=v['tasto'] if x['url'] == v['url'] else None)
-                          for x in v['linguette'] if x['oggi']] + [dict(x) for x in v['tendina']]
-                pezzi.append(dict(tipo='tendina', voce=v, voci=dentro, a_destra=g == 'aiuto',
-                                  accesa=v['accesa'] or any(x['accesa'] for x in dentro)))
-            else:
-                pezzi.append(dict(tipo='voce', voce=collegamento(v)))
+def percorso(menu, endpoint, nome_struttura):
+    """Il percorso della barra in alto: struttura › voce › linguetta. La struttura solo per le voci che la portano
+    (non Pazienti, Configura, Aiuto: come nelle tavole); la linguetta solo se è proprio la sua pagina (sull'appuntamento
+    la linguetta Giorno resta accesa, ma il percorso si ferma all'Agenda)."""
+    voce = menu['accesa']
+    if voce is None:
+        return []
+    pezzi = [nome_struttura] if 'struttura' in voce['argomenti'] and nome_struttura else []
+    pezzi.append(voce['parola'])
+    pezzi += [x['parola'] for x in voce['linguette'] if x['accesa'] and x['endpoint'] == endpoint]
     return pezzi
 
 
 @pass_context
 def menu_della_pagina(ctx):
-    """Per _menu.html: le voci della pagina che si sta disegnando, dal suo contesto (sezione, sid, data_menu, e le
-    funzioni ci_sono_sale e n_da_confermare), con le stesse regole che il modello aveva nelle sue prime righe."""
+    """Per _menu.html, _barra.html e _linguette.html: le voci della pagina che si sta disegnando, dal suo contesto
+    (sezione, sid, data_menu, e le funzioni ci_sono_sale e n_da_confermare), con le stesse regole che il modello del
+    menu aveva nelle sue prime righe fino alla tappa 2. Fatte una volta per pagina (e per sezione, struttura e giorno)."""
     data = ctx.get('data_menu') or ctx.get('oggi_iso') or date.today().isoformat()
-    menu = costruisci(ctx.get('sezione'), ctx.get('sid') or None, data, ctx)
-    contesto.menu_della_pagina = menu          # per le prove (prove_menu.py): l'ultimo menu fatto in questa richiesta
-    return menu
+    chiave = (ctx.get('sezione'), ctx.get('sid') or None, data)
+    fatti = contesto.setdefault('menu_fatti', {})
+    if chiave not in fatti:                   # una volta per pagina: menu, barra e linguette lo chiedono tutti e tre
+        fatti[chiave] = costruisci(chiave[0], chiave[1], data, ctx)
+    contesto.menu_della_pagina = fatti[chiave]   # per le prove (prove_menu.py): l'ultimo menu fatto in questa richiesta
+    return fatti[chiave]
 
 
 def collega(app):
     app.add_template_global(menu_della_pagina, 'menu_della_pagina')
+    app.add_template_global(iniziali, 'iniziali_struttura')
+    app.add_template_global(percorso, 'percorso_della_pagina')

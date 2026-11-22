@@ -1,44 +1,75 @@
-{#- navigazione fra le pagine: la struttura e il giorno che si stanno guardando
-    passano da una pagina all'altra -#}
-{#- Dalla tappa 2 della base le voci, le tendine (domani linguette) e i tasti stanno in menu.py: qui solo il disegno.
-    menu_della_pagina() le fa per questa pagina (sezione, struttura e giorno, come prima le righe in testa a questo
-    modello), con gli indirizzi scritti da url_for. Il disegno è ancora quello di oggi, identico (menu.disegno_di_oggi):
-    le pagine di tutti i giorni in vista, le altre in tre gruppi, che si aprono passandoci sopra o con un clic (anche
-    da tastiera). La classe attivo colora la pagina aperta e il suo gruppo; aria-current (page sulla voce, true sul
-    pulsante del gruppo, con la stessa condizione della classe) lo dice a chi usa un lettore di schermo e alle prove nel
-    browser, che cercano i pezzi per ruolo e nome (aiuti_browser.py), come i nomi delle tendine, delle notifiche
-    e dei tasti rapidi. Non cambiano l'aspetto: nei fogli di stile nessuna regola li usa. -#}
+{#- Il menu a sinistra (tappa 2 della base, la cornice della veste nuova; tavole Nefro-*): logo della struttura, le voci
+    in tre gruppi (Agende, Aree e in fondo Aiuto e Configura), la tendina Aiuto, il collegamento nascosto del tasto E.
+    Voci, linguette e tasti stanno in menu.py: qui solo il disegno. menu_della_pagina() le fa per questa pagina
+    (sezione, struttura e giorno), con gli indirizzi scritti da url_for, una volta sola: _barra.html e _linguette.html
+    chiedono lo stesso menu. La struttura e il giorno che si stanno guardando passano da una pagina all'altra.
+    Regole:
+    - tutto sta in contenitori con data-cornice (qui «menu», «campanella», «tasti»): confronta_rami.py li confronta a
+      parte, e un pezzo fuori finirebbe nel confronto di ogni pagina;
+    - resta un solo <nav class="menu" aria-label="Pagine"> (la guida, guida.js e le prove lo cercano), senza altri <nav>
+      dentro: i gruppi sono <div>;
+    - la voce della pagina aperta ha aria-current="page" (la Aiuto, che è una tendina, aria-current="true" sul suo
+      pulsante): lo dice ai lettori di schermo e alle prove, e veste.css la colora da lì (niente classe attivo);
+    - data-tasto è il primo attributo del collegamento (prove_19.py e strumenti/prove_installato.py cercano
+      «<a data-tasto="d" href=»); il nome di ogni voce resta nel testo, anche nel menu stretto a sole icone (lì
+      veste.css lo nasconde agli occhi, e il title lo mostra sotto il mouse);
+    - il numero accanto a Segreteria tiene la classe «contatore» di prima: nell'animata rimbalza (animazioni.css).
+    #notifiche e #aiuto-tasti restano quelli di prima (la campanella vera arriva nella tappa 3). -#}
+{%- from "_icone.html" import icona -%}
+{#- una voce: un collegamento, o il pulsante della tendina (Aiuto) con le sue voci, come prima (le stesse parole, la riga
+    piccola in <small>, gli stessi data-azione-guida) -#}
+{%- macro voce_del_menu(v) -%}
+{%- if v.tendina %}
+      <div class="gruppo v-gruppo"{% if v.guida %} data-guida="{{ v.guida }}"{% endif %}>
+        <button type="button" class="apri-gruppo v-voce" aria-haspopup="true" aria-expanded="false" title="{{ v.parola }}"{% if v.accesa %} aria-current="true"{% endif %}>
+          {{- icona(v.icona) }}<span class="v-voce-nome">{{ v.parola }}</span></button>
+        <div class="tendina" role="menu" aria-label="{{ v.parola }}">
+        {%- for x in v.tendina %}
+          <a href="{{ x.url }}"{% if x.classe %} class="{{ x.classe }}"{% endif %}{% if x.azione_guida %} data-azione-guida="{{ x.azione_guida }}"{% endif %}{% if x.nascosta %} hidden{% endif %}><b>{{ x.parola }}</b><small>{{ x.sotto }}</small></a>
+        {%- endfor %}
+        </div>
+      </div>
+{%- else %}
+      <a{% if v.tasto %} data-tasto="{{ v.tasto }}"{% endif %} href="{{ v.url }}" class="v-voce" title="{{ v.parola }}"{% if v.accesa %} aria-current="page"{% endif %}{% if v.guida %} data-guida="{{ v.guida }}"{% endif %}>
+        {{- icona(v.icona) }}<span class="v-voce-nome">{{ v.parola }}</span>
+        {%- if v.contatore %}<span class="v-conta contatore" title="{{ v.contatore }} {{ v.titolo_contatore }}">{{ v.contatore }}</span>{% endif -%}
+      </a>
+{%- endif %}
+{%- endmacro -%}
 {%- set _m = menu_della_pagina() -%}
-{%- set _sid = _m.sid %}
-<nav class="menu" aria-label="Pagine">
-{%- for p in _m.oggi %}
-{%- if p.tipo == 'voce' %}{% set v = p.voce %}
-  <a{% if v.tasto %} data-tasto="{{ v.tasto }}"{% endif %} href="{{ v.url }}"{% if v.accesa %} class="attivo" aria-current="page"{% endif %}{% if v.guida %} data-guida="{{ v.guida }}"{% endif %}>{{ v.parola }}</a>
-{%- elif p.tipo == 'separatore' %}
-  <span class="separatore"></span>
-{%- elif p.tipo == 'spinta' %}
-  <span class="spinta"></span>
-{%- elif p.tipo == 'ricerca' %}
-  <div class="ricerca-rapida" role="search" data-guida="menu-cerca">
-    <input type="search" id="ricerca-rapida" placeholder="Cerca (tasto /)" autocomplete="off"
-           aria-label="Cerca un paziente, un medico, un giorno o una prestazione"
-           data-indirizzo="{{ url_for('segreteria.cerca_tutto', struttura=_sid) }}">
-    <div class="risultati-rapidi" id="risultati-rapidi" hidden></div>
+{%- set _sid = _m.sid -%}
+{%- set _marchio = marchio_di(_sid) %}
+<div class="v-lato" data-cornice="menu">
+  <div class="v-marchio" data-iniziali="{{ iniziali_struttura(_marchio.nome) }}">
+    {%- if _marchio.logo_url %}
+    <img class="v-marchio-logo" src="{{ _marchio.logo_url }}" alt="{{ _marchio.nome }}">
+    <span class="v-marchio-sotto"><b>Agende</b> <span>{{ _marchio.nome }}</span></span>
+    {%- else %}
+    <span class="v-marchio-nome">{{ _marchio.nome }}</span>
+    <span class="v-marchio-sotto"><b>Agende</b></span>
+    {%- endif %}
   </div>
-{%- elif p.tipo == 'tendina' %}{% set v = p.voce %}
-  <div class="gruppo{% if p.a_destra %} a-destra{% endif %}{% if p.accesa %} attivo{% endif %}"{% if v.guida %} data-guida="{{ v.guida }}"{% endif %}>
-    <button type="button" class="apri-gruppo" aria-haspopup="true" aria-expanded="false"{% if p.accesa %} aria-current="true"{% endif %}>{{ v.parola }}{% if v.contatore %}<span class="contatore" title="{{ v.contatore }} {{ v.titolo_contatore }}">{{ v.contatore }}</span>{% endif %}<span class="freccia" aria-hidden="true"></span></button>
-    <div class="tendina" role="menu" aria-label="{{ v.parola }}">
-    {%- for x in p.voci %}
-      <a{% if x.tasto %} data-tasto="{{ x.tasto }}"{% endif %} href="{{ x.url }}"{% if x.classe %} class="{{ x.classe }}"{% endif %}{% if x.azione_guida %} data-azione-guida="{{ x.azione_guida }}"{% endif %}{% if x.nascosta %} hidden{% endif %}{% if x.accesa %} class="attivo" aria-current="page"{% endif %}{% if x.guida %} data-guida="{{ x.guida }}"{% endif %}><b>{{ x.parola }}{% if x.contatore %}<span class="contatore">{{ x.contatore }}</span>{% endif %}</b><small>{{ x.sotto }}</small></a>
+  <nav class="menu v-menu" aria-label="Pagine">
+    <div class="v-menu-scorre">
+    {%- for g, titolo, voci in _m.gruppi if g != 'aiuto' and voci %}
+      <div class="v-menu-gruppo">
+        {%- if titolo %}<span class="v-menu-titolo">{{ titolo }}</span>{% endif %}
+        {%- for v in voci %}{{ voce_del_menu(v) }}{% endfor %}
+      </div>
     {%- endfor %}
     </div>
-  </div>
-{%- endif %}
-{%- endfor %}
-</nav>
-<div id="notifiche" class="notifiche" role="region" aria-label="Notifiche" aria-live="polite" data-indirizzo="{{ url_for('segreteria.notifiche', struttura=_sid) }}"></div>
-<div id="aiuto-tasti" class="aiuto-tasti" role="dialog" aria-label="Tasti rapidi" hidden>
+    <div class="v-menu-fondo">
+    {%- for g, titolo, voci in _m.gruppi if g == 'aiuto' %}
+      {%- for v in voci %}{{ voce_del_menu(v) }}{% endfor %}
+    {%- endfor %}
+    </div>
+    {%- for x in _m.nascosti %}
+    <a{% if x.tasto %} data-tasto="{{ x.tasto }}"{% endif %} href="{{ x.url }}" hidden>{{ x.parola }}</a>
+    {%- endfor %}
+  </nav>
+</div>
+<div id="notifiche" class="notifiche" data-cornice="campanella" role="region" aria-label="Notifiche" aria-live="polite" data-indirizzo="{{ url_for('segreteria.notifiche', struttura=_sid) }}"></div>
+<div id="aiuto-tasti" class="aiuto-tasti" data-cornice="tasti" role="dialog" aria-label="Tasti rapidi" hidden>
   <h2>Tasti rapidi</h2>
   <table>
     <tr><th>/</th><td>cerca un paziente, un medico, un giorno ("domani", "lunedì", "24/9") o dove si fa una prestazione</td></tr>

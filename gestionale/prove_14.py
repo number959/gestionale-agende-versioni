@@ -1636,7 +1636,8 @@ def ap_dal_file_alla_prenotazione():
     # la giornata lo mostra, il menu lo conta
     t = html(C.get('/giorno/%s?struttura=1' % MAR.isoformat()))
     assert 'Da confermare per questo giorno (1)' in t and 'appunto=%d' % xid in t
-    assert re.search(r'Da confermare<span class="contatore">1</span>', t)
+    from prove_cornice import contatore_della_voce
+    assert contatore_della_voce(t, 'menu-segreteria') == 1, contatore_della_voce(t, 'menu-segreteria')
     # Prenota: il modulo gia' compilato
     t = html(C.get('/appuntamento?appunto=%d&data=%s&ora=10:00&risorsa=%d&struttura=1' % (xid, MAR.isoformat(), I['Sala endoscopia'])))
     assert 'value="Caruso"' in t and 'value="%d"' % pid in t and 'name="appunto" value="%d"' % xid in t
@@ -1657,7 +1658,8 @@ def ap_dal_file_alla_prenotazione():
     aid = a.id
     s.close()
     t = html(C.get('/giorno/%s?struttura=1' % MAR.isoformat()))
-    assert 'Da confermare per questo giorno' not in t and 'class="contatore"' not in t
+    assert 'Da confermare per questo giorno' not in t and contatore_della_voce(t, 'menu-segreteria') is None
+    assert 'data-guida="menu-segreteria"' in t          # il gemello: la voce c'è, senza numero
     # eliminato l'appuntamento, l'appunto resta chiuso ma senza legame
     C.post('/appuntamento/%d' % aid, data={'azione': 'elimina', 'struttura': '1'})
     s = S()

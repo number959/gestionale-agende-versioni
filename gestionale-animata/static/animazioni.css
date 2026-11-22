@@ -46,14 +46,11 @@
   box-shadow: 0 0 8px rgba(255, 255, 255, .7); }
 .caricamento.in-corso { animation: a-caricamento 2.4s var(--curva-uscita) forwards; }
 
-/* ------------------------------------------------------------------ menu */
-.anim .menu a { position: relative; border-bottom-color: transparent !important; transition: background-color .15s, opacity .15s; }
-.anim .menu a::after { content: ''; position: absolute; left: 6px; right: 6px; bottom: 0; height: 3px; background: #FFFFFF;
-  transform: scaleX(0); transform-origin: center; transition: transform .25s var(--curva-uscita); }
-.anim .menu a:hover::after { transform: scaleX(.5); }
-.anim .menu a.attivo::after { transform: scaleX(1); }
-.anim .menu .tendina a::after { display: none; }
-.anim .menu .gruppo .apri-gruppo { transition: background-color .15s, opacity .15s; }
+/* ------------------------------------------------------------------ menu (dalla tappa 2 della base, a sinistra)
+   Nel menu in alto di prima la voce aveva una riga bianca che si allargava sotto: nel menu a sinistra, chiaro, non si
+   vedrebbe più, e la voce accesa ha già il suo fondo. Restano il fondo che cambia piano, la tendina che scende e il
+   numero che rimbalza (il contatore tiene la classe di prima, anche nella voce Segreteria nuova) */
+.anim .menu a, .anim .menu .gruppo .apri-gruppo { transition: background-color .15s, color .15s; }
 .anim .menu .tendina, .anim .gruppo-comandi .tendina { animation: a-scende .18s var(--curva-uscita) both; }
 .anim .scheda-guida { animation: a-sale .3s var(--curva-uscita) both; animation-delay: calc(var(--i, 0) * 35ms);
   transition: transform .15s var(--curva-uscita), box-shadow .15s, background-color .15s; }

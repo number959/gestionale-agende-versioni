@@ -12,6 +12,14 @@ tutti e due zero. In più vai_dal_menu su ogni voce del menu (arriva dove porta 
 Annulla, e i nomi messi dalla tappa 1 (aria-current, aria-label delle tendine, zona dei messaggi, notifiche, tasti
 rapidi, avvisi dei turni, videoguida). Finisce con «N confronti, N uguali».
 
+Dalla tappa 2 (la cornice nuova: menu a sinistra con le voci, linguette, ricerca nella barra in alto) le coppie della
+cornice di prima non hanno più senso: i selettori vecchi (nav.menu > a, .gruppo.attivo, le tendine Segreteria,
+Ambulatori e Configura) non trovano più niente, perché quei pezzi non ci sono più. Lo strumento se ne accorge da sé
+(CORNICE_DI_PRIMA: la pagina non ha data-cornice) e con la cornice nuova le salta, dicendolo in una riga; restano le
+coppie delle parti di pagina (Stampa e scarica, Altre esportazioni, la «×», i messaggi, le domande, le notifiche, i
+tasti rapidi, la guida) e quelle della cornice che valgono ancora (il menu per nome, la tendina Aiuto, tutti i
+collegamenti del menu, il campo della ricerca, vai_dal_menu con le voci e le linguette).
+
 Un selettore nuovo si aggiunge qui con il suo vecchio, si fa girare, e solo dopo si cambia la raccolta. Cambia i
 dati della prova (un tariffario e una persona creati ed eliminati, un turno messo e annullato): solo su un
 gestionale di prova, mai su quello vero."""
@@ -24,8 +32,8 @@ from playwright.sync_api import sync_playwright
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from aiuti_browser import (GRUPPI, apri_comandi, apri_gruppo, cerca_rapido, gruppo, gruppo_attivo,  # noqa: E402
-                           menu, messaggi, nella_zona, nome_voce, prepara_domande, rispondi, tendina_aperta,
-                           vai_dal_menu, voce_attiva, zona_messaggi)
+                           linguetta_accesa, menu, messaggi, nella_zona, nome_voce, prepara_domande, rispondi,
+                           tendina_aperta, vai_dal_menu, voce_attiva, zona_messaggi, zona_ricerca)
 
 if len(sys.argv) < 2 or sys.argv[1].rstrip('/').endswith(':5000'):
     sys.exit('uso: python strumenti/equivalenza_selettori.py http://127.0.0.1:<porta di un gestionale DI PROVA>\n'
@@ -34,6 +42,16 @@ B = sys.argv[1].rstrip('/')
 OGGI = date.today()
 LUN = OGGI - timedelta(days=OGGI.weekday()) + timedelta(days=7)
 esiti = []
+CORNICE_DI_PRIMA = [True]      # la cornice di prima della tappa 2 (senza data-cornice): lo decide giro() alla prima pagina
+
+
+def saltate(cosa):
+    print('-- saltate (cornice nuova, tappa 2): %s' % cosa)
+
+
+def ricerca(pg):
+    """La zona della ricerca rapida: nel menu fino alla tappa 2, poi nella barra in alto."""
+    return menu(pg).get_by_role('search') if CORNICE_DI_PRIMA[0] else zona_ricerca(pg)
 
 
 def ok(n, c, d=''):
@@ -95,19 +113,22 @@ def coppie_112(pg, err):
     pg.wait_for_timeout(150)
     ok('112: nessuna tendina del menu aperta, per stile e per ruolo', pg.evaluate(aperte_vecchio) == tendina_aperta(pg).count() == 0,
        (pg.evaluate(aperte_vecchio), tendina_aperta(pg).count()))
-    t = apri_gruppo(pg, 'Ambulatori')
-    ok('112: una tendina del menu aperta, per stile e per ruolo', pg.evaluate(aperte_vecchio) == tendina_aperta(pg).count() == 1,
-       (pg.evaluate(aperte_vecchio), tendina_aperta(pg).count()))
-    stesso(pg, '112: la tendina aperta del menu', pg.locator('nav.menu .gruppo .tendina').filter(visible=True), tendina_aperta(pg))
-    stesso(pg, '112: le voci del gruppo attivo (come le legge la raccolta)', 'nav.menu .gruppo.attivo .tendina a', t.get_by_role('link'), 'lista')
-    pg.keyboard.press('Escape')
-    pg.mouse.move(2, 500)
-    pg.wait_for_timeout(150)
-    ok('112: dopo Esc nessuna tendina, per stile e per ruolo', pg.evaluate(aperte_vecchio) == tendina_aperta(pg).count() == 0,
-       (pg.evaluate(aperte_vecchio), tendina_aperta(pg).count()))
-    stesso(pg, '112 matrice: il gruppo attivo', 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, 'Ambulatori'))
-    ok('112 matrice: gruppo_attivo() è Ambulatori', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
-    si_vede_attivo('matrice')
+    if CORNICE_DI_PRIMA[0]:
+        t = apri_gruppo(pg, 'Ambulatori')
+        ok('112: una tendina del menu aperta, per stile e per ruolo', pg.evaluate(aperte_vecchio) == tendina_aperta(pg).count() == 1,
+           (pg.evaluate(aperte_vecchio), tendina_aperta(pg).count()))
+        stesso(pg, '112: la tendina aperta del menu', pg.locator('nav.menu .gruppo .tendina').filter(visible=True), tendina_aperta(pg))
+        stesso(pg, '112: le voci del gruppo attivo (come le legge la raccolta)', 'nav.menu .gruppo.attivo .tendina a', t.get_by_role('link'), 'lista')
+        pg.keyboard.press('Escape')
+        pg.mouse.move(2, 500)
+        pg.wait_for_timeout(150)
+        ok('112: dopo Esc nessuna tendina, per stile e per ruolo', pg.evaluate(aperte_vecchio) == tendina_aperta(pg).count() == 0,
+           (pg.evaluate(aperte_vecchio), tendina_aperta(pg).count()))
+        stesso(pg, '112 matrice: il gruppo attivo', 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, 'Ambulatori'))
+        ok('112 matrice: gruppo_attivo() è Ambulatori', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
+        si_vede_attivo('matrice')
+    else:
+        saltate('112: la tendina e il gruppo Ambulatori del menu (ora una voce con le linguette)')
     # «Metti» Galasso in una cella libera, poi la «×»: Annulla lascia il turno, OK lo toglie
     cella = pg.locator('#matrice-ambulatori td.libera:has(details.metti)').first
     chiave = cella.get_attribute('data-cella')
@@ -142,9 +163,10 @@ def coppie_112(pg, err):
 
     pg.goto(B + '/ambulatori/mese/%s?struttura=1' % LUN.strftime('%Y-%m'))
     pg.wait_for_selector('#programmazione-ambulatori')
-    stesso(pg, '112 mese: il gruppo attivo', 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, 'Ambulatori'))
-    ok('112 mese: gruppo_attivo() è Ambulatori', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
-    si_vede_attivo('mese')
+    if CORNICE_DI_PRIMA[0]:
+        stesso(pg, '112 mese: il gruppo attivo', 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, 'Ambulatori'))
+        ok('112 mese: gruppo_attivo() è Ambulatori', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
+        si_vede_attivo('mese')
     t = apri_comandi(pg, 'Altre esportazioni')
     stesso(pg, '112 mese: Altre esportazioni (voci)', '[data-guida="programmazione-altre"] .tendina a', t.get_by_role('link'), 'lista')
     pg.set_viewport_size({'width': 390, 'height': 844})
@@ -155,12 +177,14 @@ def coppie_112(pg, err):
     stesso(pg, '112 mese sul telefono: Altre esportazioni (tendina)', '[data-guida="programmazione-altre"] .tendina', t)
     pg.set_viewport_size({'width': 1366, 'height': 820})
     pg.goto(B + '/esportazioni?struttura=1&data=%s' % OGGI.isoformat())
-    stesso(pg, '112 esportazioni: il gruppo attivo', 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, 'Ambulatori'))
-    si_vede_attivo('esportazioni')
+    if CORNICE_DI_PRIMA[0]:
+        stesso(pg, '112 esportazioni: il gruppo attivo', 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, 'Ambulatori'))
+        si_vede_attivo('esportazioni')
     pg.goto(B + '/ambulatori/riepilogo?struttura=1&periodo=oggi')
-    stesso(pg, '112 riepilogo del periodo: il gruppo attivo', 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, 'Ambulatori'))
-    ok('112 riepilogo del periodo: gruppo_attivo() è Ambulatori', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
-    si_vede_attivo('riepilogo del periodo')
+    if CORNICE_DI_PRIMA[0]:
+        stesso(pg, '112 riepilogo del periodo: il gruppo attivo', 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, 'Ambulatori'))
+        ok('112 riepilogo del periodo: gruppo_attivo() è Ambulatori', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
+        si_vede_attivo('riepilogo del periodo')
 
     p2 = pg.context.new_page()
     p2.on('pageerror', lambda e: err.append(str(e)))
@@ -228,22 +252,33 @@ def coppie_guida_tendine(br, err):
         ok('tendine: le notifiche (.notifica) sono i riquadri nella zona (fine_animazioni)', zona.evaluate(figli))
         # prove_guida: clic, Esc, passandoci sopra, «Stampa e scarica», clic fuori
         pg.mouse.move(700, 700)
-        gruppo(pg, 'Segreteria').click()
-        pg.wait_for_timeout(150)
-        stesso(pg, 'guida: Segreteria aperta al clic', '[data-guida="menu-segreteria"] .tendina', tendina_aperta(pg), visibili=True)
-        stesso(pg, '   la sua voce «Conferme»', '[data-guida="menu-segreteria"] .tendina a[data-tasto="c"]',
-               tendina_aperta(pg).get_by_role('link', name=nome_voce('Conferme')))
-        pg.keyboard.press('Escape')
-        pg.mouse.move(700, 700)
-        pg.wait_for_timeout(150)
-        stesso(pg, 'guida: dopo Esc nessuna tendina', '[data-guida="menu-segreteria"] .tendina', tendina_aperta(pg), 'nessuno', visibili=True)
-        gruppo(pg, 'Configura').hover()
-        pg.wait_for_timeout(150)
-        stesso(pg, 'guida: Configura aperta passandoci sopra', '[data-guida="menu-configura"] .tendina', tendina_aperta(pg), visibili=True)
-        stesso(pg, '   la sua voce «Anagrafiche»', pg.locator('[data-guida="menu-configura"] .tendina a', has=pg.locator('b', has_text='Anagrafiche')),
-               tendina_aperta(pg).get_by_role('link', name=nome_voce('Anagrafiche')))
-        pg.mouse.move(700, 700)
-        pg.wait_for_timeout(150)
+        if CORNICE_DI_PRIMA[0]:
+            gruppo(pg, 'Segreteria').click()
+            pg.wait_for_timeout(150)
+            stesso(pg, 'guida: Segreteria aperta al clic', '[data-guida="menu-segreteria"] .tendina', tendina_aperta(pg), visibili=True)
+            stesso(pg, '   la sua voce «Conferme»', '[data-guida="menu-segreteria"] .tendina a[data-tasto="c"]',
+                   tendina_aperta(pg).get_by_role('link', name=nome_voce('Conferme')))
+            pg.keyboard.press('Escape')
+            pg.mouse.move(700, 700)
+            pg.wait_for_timeout(150)
+            stesso(pg, 'guida: dopo Esc nessuna tendina', '[data-guida="menu-segreteria"] .tendina', tendina_aperta(pg), 'nessuno', visibili=True)
+            gruppo(pg, 'Configura').hover()
+            pg.wait_for_timeout(150)
+            stesso(pg, 'guida: Configura aperta passandoci sopra', '[data-guida="menu-configura"] .tendina', tendina_aperta(pg), visibili=True)
+            stesso(pg, '   la sua voce «Anagrafiche»', pg.locator('[data-guida="menu-configura"] .tendina a', has=pg.locator('b', has_text='Anagrafiche')),
+                   tendina_aperta(pg).get_by_role('link', name=nome_voce('Anagrafiche')))
+            pg.mouse.move(700, 700)
+            pg.wait_for_timeout(150)
+        else:
+            gruppo(pg, 'Aiuto').click()
+            pg.wait_for_timeout(150)
+            stesso(pg, 'guida: Aiuto aperta al clic', '[data-guida="menu-aiuto"] .tendina', tendina_aperta(pg), visibili=True)
+            stesso(pg, '   la sua voce «Novità»', pg.locator('[data-guida="menu-aiuto"] .tendina a', has=pg.locator('b', has_text='Novità')),
+                   tendina_aperta(pg).get_by_role('link', name=nome_voce('Novità')))
+            pg.keyboard.press('Escape')
+            pg.mouse.move(700, 700)
+            pg.wait_for_timeout(150)
+            stesso(pg, 'guida: dopo Esc nessuna tendina', '[data-guida="menu-aiuto"] .tendina', tendina_aperta(pg), 'nessuno', visibili=True)
         stesso(pg, 'guida: Stampa e scarica (il pulsante nella pagina)', '[data-guida="giorno-stampa"] .apri-gruppo',
                principale(pg).get_by_role('button', name=nome_voce('Stampa e scarica')))
         t = apri_comandi(pg, 'Stampa e scarica')
@@ -258,7 +293,7 @@ def coppie_guida_tendine(br, err):
         giorni = [('oggi', OGGI), ('domani', OGGI + timedelta(days=1)), ('con la sala operatoria', mar),
                   ('con la nota del giorno', mar + timedelta(days=2)), ('chiuso', date(OGGI.year, 12, 24)),
                   ('festivo', date(OGGI.year, 12, 8))]
-        tre = ('Segreteria', 'Aiuto', 'Configura')
+        tre = ('Segreteria', 'Aiuto', 'Configura') if CORNICE_DI_PRIMA[0] else GRUPPI
 
         def voci_dei_gruppi(dove):
             for g in tre:
@@ -296,7 +331,7 @@ def coppie_guida_tendine(br, err):
         for pagina in ('/giorno/%s?struttura=1' % mar.isoformat(), '/pazienti'):
             pg.goto(B + pagina)
             corta = pagina.split('?')[0]
-            stesso(pg, 'tendine, %s: il campo della ricerca rapida' % corta, '#ricerca-rapida', menu(pg).get_by_role('search').get_by_role('searchbox'))
+            stesso(pg, 'tendine, %s: il campo della ricerca rapida' % corta, '#ricerca-rapida', ricerca(pg).get_by_role('searchbox'))
             r = cerca_rapido(pg, 'Sep')
             pg.wait_for_timeout(300)
             stesso(pg, '   i risultati di «Sep»', '#risultati-rapidi a.voce-rapida', r, 'lista')
@@ -453,7 +488,7 @@ def coppie_altre(br, err):
         # prove_19: la ricerca rapida col tasto /, poi «holter» (solo prestazioni)
         pg.goto(B + '/oggi')
         pg.keyboard.press('/')
-        zona = menu(pg).get_by_role('search')
+        zona = ricerca(pg)
         campo = zona.get_by_role('searchbox')
         stesso(pg, '19 ricerca rapida: il campo', '#ricerca-rapida', campo)
         ok('19 ricerca rapida: il tasto / porta nel campo trovato per ruolo', campo.evaluate('c => c === document.activeElement'))
@@ -542,6 +577,8 @@ def giro(br):
     # ======================================================== il menu (pagina Giorno)
     pg.goto(B + '/giorno/%s?struttura=1' % OGGI.isoformat())
     pg.wait_for_timeout(500)
+    CORNICE_DI_PRIMA[0] = pg.locator('[data-cornice]').count() == 0
+    print('-- cornice %s' % ('di prima (senza data-cornice)' if CORNICE_DI_PRIMA[0] else 'nuova (tappa 2): le coppie della cornice di prima si saltano'))
     stesso(pg, 'la barra del menu', 'nav.menu', menu(pg))
     stesso(pg, 'la barra del menu (querySelector(".menu"))', pg.locator('.menu').first, menu(pg))
     ok('«.menu» trova solo la barra', pg.locator('.menu').count() == 1, pg.locator('.menu').count())
@@ -565,19 +602,23 @@ def giro(br):
         pg.keyboard.press('Escape')
         pg.mouse.move(2, 500)
         pg.wait_for_timeout(150)
-    for testo in ('Oggi', 'Giorno', 'Settimana', 'Mese', 'Sala', 'Pazienti', 'Turni', 'Dove si fa', 'Cassa', 'Statistiche'):
-        stesso(pg, 'voce in vista «%s»' % testo, pg.locator('nav.menu > a', has_text=re.compile('^' + testo + '$')),
-               menu(pg).get_by_role('link', name=nome_voce(testo)))
+    if CORNICE_DI_PRIMA[0]:
+        for testo in ('Oggi', 'Giorno', 'Settimana', 'Mese', 'Sala', 'Pazienti', 'Turni', 'Dove si fa', 'Cassa', 'Statistiche'):
+            stesso(pg, 'voce in vista «%s»' % testo, pg.locator('nav.menu > a', has_text=re.compile('^' + testo + '$')),
+                   menu(pg).get_by_role('link', name=nome_voce(testo)))
+    else:
+        saltate('le voci in vista del menu in alto (nav.menu > a)')
     stesso(pg, 'tutti i collegamenti del menu (anche nelle tendine chiuse)', '.menu a[href]',
            menu(pg).get_by_role('link', include_hidden=True), 'lista')
     # passandoci sopra (prima il fuoco fuori dal menu: dopo Esc il gruppo resta «chiuso» finché il fuoco è dentro)
     pg.mouse.click(700, 760)
-    pg.hover('[data-guida="menu-configura"]')
+    sopra = 'Configura' if CORNICE_DI_PRIMA[0] else 'Aiuto'     # dalla tappa 2 l'unica tendina del menu è Aiuto
+    pg.hover('[data-guida="menu-%s"]' % sopra.lower())
     pg.wait_for_timeout(200)
-    stesso(pg, 'Configura aperta passandoci sopra', '[data-guida="menu-configura"] .tendina', tendina_aperta(pg), visibili=True)
-    stesso(pg, '   per nome', '[data-guida="menu-configura"] .tendina', menu(pg).get_by_role('menu', name='Configura', exact=True),
+    stesso(pg, '%s aperta passandoci sopra' % sopra, '[data-guida="menu-%s"] .tendina' % sopra.lower(), tendina_aperta(pg), visibili=True)
+    stesso(pg, '   per nome', '[data-guida="menu-%s"] .tendina' % sopra.lower(), menu(pg).get_by_role('menu', name=sopra, exact=True),
            visibili=True)
-    ok('   passandoci sopra aria-expanded resta "false" (lo cambia solo il clic)', gruppo(pg, 'Configura').get_attribute('aria-expanded') == 'false')
+    ok('   passandoci sopra aria-expanded resta "false" (lo cambia solo il clic)', gruppo(pg, sopra).get_attribute('aria-expanded') == 'false')
     pg.mouse.move(2, 500)
     pg.wait_for_timeout(200)
     ok('chiusa: nessuna tendina del menu per ruolo', tendina_aperta(pg).count() == 0, tendina_aperta(pg).count())
@@ -592,7 +633,7 @@ def giro(br):
     ok('clic fuori: nessuna tendina per ruolo', pg.get_by_role('menu').count() == 0)
 
     # ======================================================== ricerca rapida e tasti rapidi
-    cerca = menu(pg).get_by_role('search').get_by_role('searchbox')
+    cerca = ricerca(pg).get_by_role('searchbox')
     stesso(pg, 'campo della ricerca rapida', '#ricerca-rapida', cerca)
     stesso(pg, 'campo della ricerca rapida (per nome)', '#ricerca-rapida', pg.get_by_role('searchbox', name='Cerca un paziente'))
     risultati = cerca_rapido(pg, 'Sep')
@@ -632,7 +673,7 @@ def giro(br):
               ('/ambulatori/settimana/%s?struttura=1' % LUN.isoformat(), 'Pianificazione della settimana', 'Ambulatori'),
               ('/esportazioni', 'Esportazioni in Excel', 'Ambulatori'), ('/conferme', 'Conferme', 'Segreteria'),
               ('/impostazioni', 'Impostazioni', 'Configura'), ('/aiuto/novita', None, 'Aiuto')]
-    for indirizzo, voce, g in pagine:
+    for indirizzo, voce, g in (pagine if CORNICE_DI_PRIMA[0] else []):
         pg.goto(B + indirizzo)
         corto = indirizzo.split('?')[0]
         if voce:
@@ -647,16 +688,45 @@ def giro(br):
                'uno' if g else 'nessuno')
         ok('   gruppo_attivo() è %s' % g, gruppo_attivo(pg) == g, gruppo_attivo(pg))
 
+    if not CORNICE_DI_PRIMA[0]:
+        saltate('la voce e il gruppo accesi con la classe attivo (nav.menu a.attivo, .gruppo.attivo): la cornice nuova ha '
+                'solo aria-current, che controlla prove_menu.py')
+        # con la cornice nuova: voce_attiva() e voce_accesa() trovano la voce con aria-current, linguetta_accesa() la linguetta
+        for indirizzo, voce, linguetta in (('/oggi', 'Oggi', None), ('/giorno/%s?struttura=1' % OGGI.isoformat(), 'Agenda', 'Giorno'),
+                                           ('/pazienti', 'Pazienti', None), ('/conferme', 'Segreteria', 'Conferme'),
+                                           ('/impostazioni', 'Configura', 'Impostazioni'), ('/aiuto/novita', 'Aiuto', None)):
+            pg.goto(B + indirizzo)
+            stesso(pg, '%s: la voce accesa' % indirizzo.split('?')[0], 'nav.menu [aria-current]', voce_attiva(pg))
+            ok('   ed è «%s», con la linguetta «%s»' % (voce, linguetta), gruppo_attivo(pg) == voce and linguetta_accesa(pg) == linguetta,
+               (gruppo_attivo(pg), linguetta_accesa(pg)))
+
     # ======================================================== vai_dal_menu: ogni voce porta dove porta il suo href
     pg.goto(B + '/giorno/%s?struttura=1' % OGGI.isoformat())
     voci = [('Pazienti', None), ('Turni', None), ('Dove si fa', None), ('Cassa', None), ('Statistiche', None),
             ('Oggi', None), ('Settimana', None), ('Mese', None), ('Sala', None), ('Giorno', None)]
+    if not CORNICE_DI_PRIMA[0]:             # dalla tappa 2: le voci del menu, poi le linguette (dalla loro voce)
+        voci = [('Pazienti', None), ('Turni', None), ('Dove si fa', None), ('Cassa', None), ('Statistiche', None),
+                ('Oggi', None), ('Agenda', None), ('Sala', None), ('Ambulatori', None), ('Segreteria', None),
+                ('Configura', None), ('Settimana', None), ('Mese', None), ('Elenco', None),
+                ('Segreteria', 'Da confermare'), ('Segreteria', 'Lista d\'attesa'), ('Ambulatori', 'Riepilogo del periodo'),
+                ('Configura', 'Impostazioni')]
     for g in GRUPPI:
         for a in pg.locator('[data-guida="menu-%s"] .tendina a' % g.lower()).all():
             if (a.get_attribute('href') or '#') != '#':
                 voci.append((g, testo_b(a)))
     for g, v in voci:
-        atteso = (pg.locator('nav.menu > a', has_text=re.compile('^' + g + '$')) if v is None else
+        if not CORNICE_DI_PRIMA[0] and (v is not None and g not in GRUPPI or g in ('Settimana', 'Mese', 'Elenco')):
+            # una linguetta: si arriva con vai_dal_menu e la linguetta accesa è quella chiesta
+            try:
+                vai_dal_menu(pg, g, v)
+                ok('vai_dal_menu(%r%s): accesa la linguetta' % (g, '' if v is None else ', %r' % v),
+                   linguetta_accesa(pg) == (v or g), linguetta_accesa(pg))
+            except Exception as e:  # noqa: BLE001
+                ok('vai_dal_menu(%r, %r)' % (g, v), False, str(e)[:200])
+            pg.goto(B + '/giorno/%s?struttura=1' % OGGI.isoformat())
+            continue
+        atteso = (pg.locator('nav.menu > a', has_text=re.compile('^' + g + '$')) if v is None and CORNICE_DI_PRIMA[0] else
+                  menu(pg).get_by_role('link', name=nome_voce(g)) if v is None else
                   pg.locator('nav.menu .tendina a', has=pg.locator('b', has_text=v))).first.get_attribute('href')
         try:
             arrivo = vai_dal_menu(pg, g, v)
@@ -677,11 +747,12 @@ def giro(br):
         stesso(pg, 'matrice: voce «%s»' % nuovo, pg.locator('.gruppo-comandi .tendina a', has_text=vecchio),
                t.get_by_role('link', name=nome_voce(nuovo)))
     pg.mouse.click(5, 760)
-    pg.mouse.move(2, 500)
-    t = apri_gruppo(pg, 'Ambulatori')
-    stesso(pg, 'menu: le voci del gruppo attivo', 'nav.menu .gruppo.attivo .tendina a', t.get_by_role('link'), 'lista', visibili=True)
-    pg.keyboard.press('Escape')
-    pg.mouse.click(5, 760)
+    if CORNICE_DI_PRIMA[0]:
+        pg.mouse.move(2, 500)
+        t = apri_gruppo(pg, 'Ambulatori')
+        stesso(pg, 'menu: le voci del gruppo attivo', 'nav.menu .gruppo.attivo .tendina a', t.get_by_role('link'), 'lista', visibili=True)
+        pg.keyboard.press('Escape')
+        pg.mouse.click(5, 760)
     cella = pg.locator('#matrice-ambulatori td.occupata:has(form.togli-turno)').first
     chiave = cella.get_attribute('data-cella')
     stesso(pg, 'la «×» di una cella (aria-label «Togli …»)', 'td[data-cella="%s"] form.togli-turno button' % chiave,

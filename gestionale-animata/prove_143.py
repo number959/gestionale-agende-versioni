@@ -557,7 +557,8 @@ def og_avvio():
     assert r.status_code == 302 and r.headers['Location'].endswith('/oggi'), r.headers.get('Location')
     r = C.get('/oggi')
     assert r.status_code == 200 and 'Adesso e nelle prossime due ore' in html(r)
-    assert re.search(r'class="attivo"[^>]*>Oggi</a>', html(r)), 'Oggi non evidenziato nel menu'
+    from prove_cornice import voce_accesa
+    assert voce_accesa(html(r), 'menu-oggi'), 'Oggi non acceso nel menu'
     # senza strutture: la pagina che spiega cosa manca
     s = S()
     s.get(Struttura, 1).attiva = False
@@ -874,7 +875,7 @@ def ro_senza_sale():
     I = ids(S)
     nuovo_app(S, I['Sala A'], I['Lippi'], MAR, 9)
     con_sala = html(C.get('/giorno/%s?struttura=1' % MAR))
-    manca(t, '>Sala</a>', dove_ce=con_sala, perche='senza sale niente voce Sala nel menu')
+    manca(t, 'data-guida="menu-sala"', dove_ce=con_sala, perche='senza sale niente voce Sala nel menu')
     manca(t, 'sala-giorno', dove_ce=con_sala, perche='senza sale niente riga della sala nella giornata')
     manca(oggi, 'Sala operatoria', dove_ce=testo(C.get('/oggi')), perche='senza sale niente sala operatoria in Oggi')
 

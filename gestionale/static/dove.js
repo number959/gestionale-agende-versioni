@@ -172,11 +172,12 @@
     apertoDa = null;
   }
 
-  // la scheda comincia sotto il menu; scorrendo la pagina sale fino in cima
-  var menu = document.querySelector('.menu');
+  // la scheda comincia sotto la barra in alto (dalla tappa 2 della base il menu sta a sinistra, alto quanto la
+  // finestra: sotto il menu la scheda finirebbe fuori dallo schermo); scorrendo la pagina sale fino in cima
+  var barra = document.querySelector('[data-cornice="barra"]');
   function posizionaScheda() {
     if (!scheda || scheda.hidden) { return; }
-    var sotto = menu ? Math.max(0, Math.round(menu.getBoundingClientRect().bottom)) : 0;
+    var sotto = barra ? Math.max(0, Math.round(barra.getBoundingClientRect().bottom)) : 0;
     scheda.style.top = sotto + 'px';
   }
   window.addEventListener('scroll', posizionaScheda, { passive: true });

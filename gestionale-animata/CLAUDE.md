@@ -93,7 +93,9 @@ Windows recenti, mai usarlo; l'elenco delle radici di Windows c'è sempre; una p
 Senza `--solo` e con `--browser` le lancia tutte, anche quelle nel browser (Playwright con
 Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_mattoni_browser.py` (dalla tappa 1-bis: avvia
 da sé il catalogo dei pezzi su una porta libera e controlla i colori dei pezzi nuovi in chiaro e in scuro, i margini, lo
-scorrimento di lato e la tendina «Stampa e scarica»), `prove_tendine_browser.py`,
+scorrimento di lato e la tendina «Stampa e scarica»), `prove_tendine_browser.py` (dalla tappa 2 anche la cornice: menu,
+barra e linguette non coprono niente a 1366×657, 1024 e 683, ogni pagina del menu e delle linguette si raggiunge da lì,
+i tasti G, E, C e D, la cornice che sparisce in stampa),
 `prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, `prove_19_browser.py`,
 `prove_191_browser.py` (salva le impostazioni email della prova e poi rimette quelle di
 partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova),
@@ -103,9 +105,11 @@ partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova),
 cambia l'indirizzo degli aggiornamenti. Le prove nel browser salvano dati: sempre su un
 gestionale di prova, mai su quello vero. Dalla tappa 1 della base prendono l'indirizzo solo da
 `aiuti_browser.indirizzo_di_prova(sys.argv)`, che si ferma senza indirizzo o con la porta 5000; `tutte_le_prove.py`
-rifiuta `--browser` sulla 5000 e non lancia una raccolta nel browser che non passa da lì. Menu, tendine, ricerca
-rapida, messaggi e domande del browser si cercano per ruolo e nome con gli aiuti di `aiuti_browser.py` (mai per
-classe); un selettore vecchio si toglie solo dopo che `strumenti/equivalenza_selettori.py` ha visto che il nuovo
+rifiuta `--browser` sulla 5000 e non lancia una raccolta nel browser che non passa da lì. Menu, linguette, tendine,
+ricerca rapida, messaggi e domande del browser si cercano per ruolo e nome con gli aiuti di `aiuti_browser.py` (mai per
+classe: `vai_dal_menu(pg, 'Segreteria', 'Da confermare')` passa dalla voce e dalla linguetta, `voce_accesa`,
+`linguetta_accesa`, `zona_ricerca`); se il menu cambia, si cambia lì, non in ogni raccolta. Senza browser la cornice
+nell'HTML si legge con `prove_cornice.py` (`voce_accesa`, `linguetta_accesa`, `contatore_della_voce`, `CON_MENU`); un selettore vecchio si toglie solo dopo che `strumenti/equivalenza_selettori.py` ha visto che il nuovo
 trova lo stesso elemento. Ogni pagina aperta chiama subito `prepara_domande(pg)`, e ogni domanda voluta passa da
 `with rispondi(pg, si=...)`: una domanda che nessuno aspettava fa cadere la prova.
 
@@ -144,10 +148,12 @@ fogli delle pagine arrivano con gli `@import` dello strato, e il controllo li le
 `prove_mattoni.py` (dalla tappa 1-bis) prova i mattoni della veste nuova senza browser: contrasti dei gettoni, valori
 scuri, nessun colore scritto a mano nei file nuovi, lo strato in `base.html`, il prefisso `v-`, i pezzi con le variabili
 rigide, le icone, `euro()`, `marchio.tema` e l'autoriparazione; ogni prova ha il gemello con il suo mutante.
-`prove_menu.py` (dalla tappa 2) prova il menu fatto da `menu.py`: ogni voce, linguetta, voce della tendina Aiuto e
-collegamento nascosto si costruisce con `url_for`; ogni pagina senza parametri accende una voce sola e al più una
-linguetta, in `menu.py` e nel menu disegnato; da una pagina della seconda struttura, in un giorno che non è oggi, ogni
-voce e linguetta porta ancora struttura e giorno; parole, indirizzi, tasti e `data-guida` sono quelli del menu del ramo
+`prove_menu.py` (dalla tappa 2) prova il menu fatto da `menu.py` e la cornice che lo disegna: ogni voce, linguetta,
+voce della tendina Aiuto e collegamento nascosto si costruisce con `url_for`, e ogni voce ha un'icona di `_icone.html`;
+ogni pagina senza parametri accende una voce sola e al più una linguetta, le stesse in `menu.py` e nella cornice
+disegnata (`aria-current`); da una pagina della seconda struttura, in un giorno che non è oggi, ogni voce e linguetta
+porta ancora struttura e giorno, e ogni collegamento disegnato è una voce di `menu.py`; il primo `data-tasto` della
+pagina per G, E, C e D porta alla voce giusta; parole, indirizzi, tasti e `data-guida` sono quelli del menu del ramo
 principale, voce per voce (oracolo: `prove_menu_principale.html`, la copia ferma del suo `_menu.html`, che la prova
 confronta con git quando c'è; le sole parole nuove stanno in `PAROLE_NUOVE`, con il perché); `registra_voce` aggiunge la
 voce di un modulo senza toccare i modelli. Ogni controllo ha il suo gemello.
@@ -186,7 +192,8 @@ in stampa restano identiche a oggi: fino a 3 pagine di ognuno, prese dal giro, i
 Un foglio mai incontrato nel giro conta come diverso. Nella veste nuova si lancia dopo ogni passo: le differenze che
 restano devono essere solo quelle volute, una per una. Quelle approvate stanno in `strumenti/cambiamenti_approvati.txt`
 (uguale nelle due cartelle; regole «aggiunto» e «sostituisci» per chiave, anche `voci`, `cornici` e `accese` della
-cornice; una sostituzione che lascia vuoto un elemento lo toglie), che il lanciatore conta a parte; `--senza-approvati`
+cornice; una sostituzione che lascia vuoto un elemento lo toglie; dalla tappa 2 `chiave@cornice` vale solo nella
+cornice e `chiave@<forma di una pagina>` solo nella cornice di quelle pagine), che il lanciatore conta a parte; `--senza-approvati`
 le mostra tutte. Un cambiamento nuovo si approva scrivendo la regola nello stesso commit, con il perché.
 I passi della guida indicano un punto della pagina solo con `[data-guida="…"]` o con un id (mai una classe o un
 tag, che cambiano con la veste): lo controlla `prove_guida.py`, che vuole anche che il nome esista in un modello (scritto
@@ -400,15 +407,31 @@ temporanea.
   destinatario rifiutati); `spiega_accesso_rifiutato` dà il consiglio secondo il fornitore.
 - WhatsApp: «Registra il numero» (`invii.registra_numero`) manda il PIN a Meta e non lo
   salva mai, nemmeno nel registro; cambiando l'ID del numero `wa_registrato` si azzera.
-- Menu (dalla tappa 2 della base): voci, linguette, tendina Aiuto e collegamenti nascosti stanno solo in `menu.py`, con
-  per ogni voce la funzione della pagina (`endpoint`), gli argomenti che porta dalla pagina aperta (`struttura`,
-  `giorno`, `giorno_data`, `mese`), parola, icona, sezioni che la accendono, condizione (la Sala: `ci_sono_sale`),
-  `data-tasto`, `data-guida` e contatore; `templates/_menu.html` le disegna con `menu_della_pagina()` e non scrive voci
-  a mano. Una voce nuova (anche di un modulo) si aggiunge con `menu.registra_voce` / `registra_linguetta`, che
-  rifiutano una sezione, una chiave o un tasto già presi: ogni pagina accende una voce sola. Le parole si scrivono con
-  `menu.testo` (l'apostrofo resta com'è). Fino al passo dopo della tappa 2 il disegno è quello di oggi, byte per byte
-  (`menu.disegno_di_oggi`: Giorno, Settimana e Mese in fila, le altre in tendine, i tasti sul collegamento che porta
-  alla stessa pagina); `prove_menu.py` confronta le voci con il menu del ramo principale.
+- Menu e cornice (dalla tappa 2 della base): voci, linguette, tendina Aiuto e collegamenti nascosti stanno solo in
+  `menu.py`, con per ogni voce la funzione della pagina (`endpoint`), gli argomenti che porta dalla pagina aperta
+  (`struttura`, `giorno`, `giorno_data`, `mese`), parola, icona (un nome di `_icone.html`; una nuova con
+  `strumenti/genera_icone.py`), sezioni che la accendono, condizione (la Sala: `ci_sono_sale`), `data-tasto`,
+  `data-guida` e contatore. Una voce nuova (anche di un modulo) si aggiunge con `menu.registra_voce(gruppo, chiave,
+  endpoint, parola, argomenti, icona=…, sezioni=…)` e le sue pagine con `menu.registra_linguetta(chiave, endpoint,
+  parola, argomenti, sezioni=…, sotto=…)`: rifiutano una sezione, una chiave o un tasto già presi (ogni pagina accende una
+  voce sola) e una linguetta che si accenderebbe fuori dalla sua voce; nessun modello si tocca. Le parole si scrivono con
+  `menu.testo` (l'apostrofo resta com'è). Il disegno è la cornice della veste nuova (tavole Nefro-*): `_menu.html` il
+  menu a sinistra (248 px; sotto 1200 px solo icone e le iniziali della struttura al posto del logo; sotto 600 px una
+  riga in alto), con un solo `<nav class="menu …" aria-label="Pagine">` (la guida e le prove lo cercano; dentro nessun
+  altro `<nav>`) e il collegamento nascosto del tasto E; `_barra.html` la barra in alto (percorso, ricerca rapida con
+  gli stessi id, posto della campanella); `_linguette.html` le linguette della voce accesa, fatte con il pezzo di
+  `_pezzi.html` (la riga piccola di prima nel title). Tutti chiedono lo stesso `menu_della_pagina()`, fatto una volta
+  per pagina. La voce e la linguetta accese hanno `aria-current` (niente classe `attivo`); `data-tasto` resta il primo
+  attributo del collegamento (`prove_19.py`, `strumenti/prove_installato.py`). Regola `data-cornice`: ogni pezzo della
+  cornice sta in un contenitore con `data-cornice="<tipo>"` (`menu`, `barra`, `linguette`, `campanella`, `messaggi`,
+  `tasti`), altrimenti `confronta_rami.py` lo conta nel confronto di ogni pagina; `base.html` legge il blocco `menu` una
+  volta (`self.menu()`) e mette la cornice solo se non è vuoto: le 11 pagine senza menu svuotano solo quel blocco, e una
+  pagina può svuotare `barra`, `linguette` o `messaggi`. In stampa la cornice sparisce (`veste.css`, `@media print`, e
+  la griglia solo a schermo): le 8 pagine che si stampano e i 9 fogli restano identici in PDF. Le regole del menu di
+  prima (`.menu` di `stile.css` e `tema-scuro.css`, dallo strato) arrivano ancora sul nav: `veste.css` riscrive ogni
+  proprietà che cambiano, e la tendina Aiuto si apre ancora con le loro regole (mai `display` sulla tendina in
+  `veste.css`). `dove.js` mette la scheda sotto la barra in alto (`[data-cornice="barra"]`), non sotto il menu.
+  `prove_menu.py` confronta le voci con il menu del ramo principale (`prove_menu_principale.html`).
 - Icone: `templates/_icone.html` lo scrive `strumenti/genera_icone.py` (Lucide, licenza
   ISC; testi in `static/icone/LICENZE.txt` insieme a Radix Colors, MIT): niente icone da
   internet.
@@ -456,7 +479,10 @@ temporanea.
   le pagine nuove usano solo `var(--v-…)`, mai un colore scritto (nemmeno con un nome, come `teal`). Le varianti del colore della struttura per la veste
   (`tinta`, `bordo`, `profondo`, `testo`) le calcola `marchio.varianti_veste` dentro `marchio.tema`, senza cambiare le
   cinque di sempre (`prove_mattoni.py` ne tiene una copia ferma). Le classi nuove hanno il prefisso `v-` e nessuna è già
-  usata dalle pagine di oggi; ogni selettore di `veste.css` prende solo un pezzo `v-` (un `.v-` dentro `:not()`, o in
+  usata dalle pagine di oggi (i modelli della cornice, `_menu.html`, `_barra.html`, `_linguette.html`, contano come
+nuovi; in `base.html` solo `v-cornice`); due classi di oggi, `marchio` e `giro-invito`, la cornice le nasconde o le
+sposta e possono stare in `veste.css` solo dopo un pezzo `v-` (`prove_mattoni.py`, `DALLA_CORNICE`); ogni selettore di
+`veste.css` prende solo un pezzo `v-` (un `.v-` dentro `:not()`, o in
   una sola delle scelte di `:is()` e `:where()`, non basta: `a:not(.v-bottone)` prenderebbe i collegamenti di oggi); i pezzi comuni stanno in `templates/_pezzi.html` (macro con `{% call %}`: il pezzo dà il
   contenitore, moduli, campi e bottoni restano scritti nella pagina) e tengono gli agganci di oggi (`primario`,
   `gruppo-comandi`, `apri-gruppo`, `tendina`, `ul.numeri` per l'animata). Un pezzo che tiene una classe di oggi riscrive in

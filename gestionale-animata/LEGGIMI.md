@@ -1976,7 +1976,7 @@ la transazione si annulla e il database resta com'era. Il registro riporta ogni 
 | `templates/_icone.html`, `static/icone/LICENZE.txt` | Le icone (Lucide, licenza ISC) scritte dentro le pagine, con le licenze (anche Radix Colors, MIT, per i colori dei turni) |
 | `importa.py` | Importazione da Excel e CSV: riconoscimento, anteprima, esecuzione |
 | `marchio.py` | Controllo e pulizia del logo, colore proposto, contrasto |
-| `menu.py` | Il menu in un elenco (dalla tappa 2 della base): voci, linguette, tendina Aiuto e collegamento nascosto del tasto E, ognuno con la sua pagina, gli argomenti che porta (struttura, giorno, mese), parola, icona, sezioni che lo accendono, condizione, tasto e guida; `registra_voce` per i moduli. `templates/_menu.html` lo disegna |
+| `menu.py` | Il menu in un elenco (dalla tappa 2 della base): voci, linguette, tendina Aiuto e collegamento nascosto del tasto E, ognuno con la sua pagina, gli argomenti che porta (struttura, giorno, mese), parola, icona, sezioni che lo accendono, condizione, tasto e guida; `registra_voce` e `registra_linguetta` per i moduli. Lo disegna la cornice: `templates/_menu.html` (il menu a sinistra), `_barra.html` (la barra in alto) e `_linguette.html` (le linguette, con il pezzo di `_pezzi.html`), messi da `base.html` in contenitori con `data-cornice` |
 | `servizi.py` | Griglia (con le fasce dei turni), turni effettivi (assenze, chiusure, festivi), conflitti (fasce intere), disponibilità, statistiche, export in Excel |
 | `modelli.py` | Le tabelle del database e il suo aggiornamento da una versione all'altra |
 | `comune.py` | Le funzioni di servizio di tutte le pagine: numeri e date dall'indirizzo, ritorno sicuro, struttura scelta, JSON, Excel da scaricare, collegamenti email |
@@ -2574,7 +2574,7 @@ Mese, Elenco; Segreteria; Ambulatori; Configura) con la riga piccola di oggi, la
 nascosto del tasto E. I moduli aggiungeranno le loro voci con `registra_voce`, senza toccare i modelli: rifiuta una
 sezione, una chiave o un tasto già presi, così ogni pagina accende sempre una voce sola. Il primo passo non cambia niente
 di quello che si vede: il modello disegna il menu di oggi con le stesse voci (`menu.disegno_di_oggi`: Giorno, Settimana
-e Mese in fila, le altre nelle tendine, ogni tasto sul collegamento che porta alla stessa pagina), uguale byte per byte.
+e Mese in fila, le altre nelle tendine, ogni tasto sul collegamento che porta alla stessa pagina), uguale byte per byte. Il terzo passo (qui sotto) lo ha tolto: le stesse voci, disegnate nella cornice nuova.
 
 `prove_menu.py` (nel giro senza browser) prova che ogni voce, linguetta e collegamento si costruisce con `url_for`; che
 ogni pagina senza parametri accende una voce sola e al più una linguetta, nell'elenco e nel menu disegnato (classe
@@ -2597,6 +2597,77 @@ scritti a mano invece che da `url_for`, due voci accese (nell'elenco e nel diseg
 classe `attivo` senza `aria-current`, Turni senza la struttura, il giorno che torna a oggi, la ricerca rapida senza la
 struttura, una parola, una riga piccola, i tasti C ed E tolti, un `data-guida` tolto da `menu.py` (lo prende
 `prove_guida.py`), la copia ferma del principale cambiata, `registra_voce` che accetta una sezione già presa.
+
+### La cornice nuova: menu a sinistra, barra in alto, linguette (tappa 2 della base)
+
+Dal terzo passo della tappa 2 le pagine di oggi stanno dentro la cornice delle tavole Nefro-*: il menu a sinistra, la
+barra in alto e le linguette dell'area in cima al contenuto. Le pagine non cambiano: stessi indirizzi, moduli, campi,
+bottoni e dati; cambia solo quello che hanno intorno.
+
+- **Il menu** (`templates/_menu.html`, da `menu.py`): largo 248 px, con il logo della struttura (o il suo nome se non
+  ha logo) e sotto «Agende» con il nome; le voci con la loro icona di Lucide (dieci nuove in `_icone.html`, da
+  `strumenti/genera_icone.py`), alte 40 px, in tre gruppi: «Agende» (Oggi, Agenda, Sala), «Aree» (Pazienti, Turni,
+  Ambulatori, Dove si fa, Segreteria con il numero da confermare, Cassa, Statistiche) e in fondo Aiuto (che resta una
+  tendina, con le quattro voci di prima, e si apre a destra del menu) e Configura. Resta fermo mentre la pagina scorre;
+  a 1366×657 non ci sta tutto e scorre per conto suo la parte delle voci, mentre Aiuto e Configura restano in fondo.
+  Sotto 1200 px solo le icone (72 px; il nome resta per i lettori di schermo e compare sotto il mouse) e al posto del
+  logo le iniziali della struttura; sotto 600 px (il telefono) il menu torna in alto, su una riga di icone. Resta un
+  solo `<nav class="menu" aria-label="Pagine">`, che serve alla guida.
+- **La barra in alto** (`_barra.html`, alta 62 px): il percorso (struttura › voce › linguetta; la struttura solo per
+  le aree che ne hanno una; i segni › li disegna il foglio di stile), la ricerca rapida di prima (stesso campo, stessi
+  pezzi chiesti mentre si scrive, stesso tasto /) e il posto della campanella, che arriva nella tappa 3: fino ad allora
+  le notifiche restano quelle di prima, in basso a destra.
+- **Le linguette** (`_linguette.html`, con il pezzo linguette di `_pezzi.html`): Agenda (Giorno · Settimana · Mese ·
+  Elenco), Segreteria, Ambulatori e Configura passano dalle tendine alle linguette, con gli stessi indirizzi; la riga
+  piccola di prima è il suggerimento sotto il mouse. Nella Segreteria l'Elenco del giorno ha la freccina: si apre
+  nell'Agenda (e lì accende l'Agenda, non più la Segreteria). Per ora `base.html` le mette in cima al contenuto, nel
+  blocco `linguette`; nelle tappe 4-9 ogni area le sposta sotto il suo titolo, come nelle tavole.
+- **I tasti**: G sull'Agenda, C sulla Segreteria (porta alle Conferme), D su Dove si fa, E su un collegamento nascosto
+  della cornice (l'Elenco del giorno); gli altri restano nelle pagine.
+- **Colori**: quelli della struttura con le varianti di `marchio.tema` (la voce accesa sul suo fondo tenue si legge
+  con ogni colore: `prove_mattoni.py` lo prova su 444 colori, in chiaro e in scuro); nessun colore scritto a mano nei
+  file nuovi; tema scuro dai gettoni. Il logo della pagina (in cima a 34 pagine) a schermo si nasconde, perché c'è già
+  nel menu; in stampa resta. «Prima volta qui?» della guida si sposta accanto al menu.
+- **In stampa** la cornice sparisce e la pagina comincia dal bordo, come prima (la griglia della cornice vale solo a
+  schermo).
+- **Dove si fa**: la scheda della struttura comincia sotto la barra in alto (prima sotto il menu, che ora è alto quanto
+  la finestra: sarebbe finita fuori dallo schermo); scorrendo la pagina sale in cima.
+- **Animata**: la riga bianca sotto le voci del menu in alto non c'è più (nel menu chiaro a sinistra non si vedrebbe);
+  restano il fondo che cambia piano, la tendina che scende e il numero che rimbalza.
+
+Le regole del menu di prima (`.menu` di `stile.css` e `tema-scuro.css`) arrivano ancora sul nav, che tiene la classe
+`menu`: `veste.css` le riscrive tutte, proprietà per proprietà; la tendina Aiuto si apre ancora con le loro regole.
+
+Le prove: `prove_menu.py` legge anche la cornice disegnata (le voci e le linguette accese sono le stesse di `menu.py`,
+ogni collegamento è una voce di `menu.py`, le icone ci sono, il primo `data-tasto` di G, E, C e D porta dove deve);
+`prove_tendine_browser.py` controlla che menu, barra e linguette non coprano niente della pagina e che niente copra le
+loro voci, a 1366×657, 1024 e 683, in cima e in fondo alla pagina, su tutte le pagine del menu e delle linguette, che
+i quattro tasti portino alla pagina giusta e che in stampa la cornice sparisca; `prove_19_browser.py` che la scheda di
+Dove si fa sia dentro la finestra; `prove_guida_browser.py` la tendina Aiuto e il tasto C. Ognuna con il suo gemello.
+Le prove nel browser trovano menu, voci e linguette con gli aiuti di `aiuti_browser.py` (`vai_dal_menu` passa dalla voce
+e dalla linguetta), quelle senza browser con `prove_cornice.py`. In `strumenti/equivalenza_selettori.py` le coppie della
+cornice di prima (le tendine Segreteria, Ambulatori e Configura, la classe `attivo`) non hanno più senso: con la cornice
+nuova lo strumento le salta da sé, lo dice, e resta verde sulle parti di pagina. Il lanciatore confronta la cornice a
+parte: i cambiamenti voluti (le voci che diventano linguette, la ricerca nella barra, «Agende», «Aree», il percorso, le
+voci accese) sono in `strumenti/cambiamenti_approvati.txt`, con il perché; dalla tappa 2 una regola può valere solo per
+la cornice (`chiave@cornice`) o solo per un tipo di pagina (`accese@/giorno/N-N-N/elenco?struttura`).
+
+Il 22/11/2026, terzo passo della tappa 2 (la cornice nuova), dalle due cartelle: tutte le prove senza browser (36
+raccolte) verdi; nel browser 13 raccolte nella normale e 15 nell'animata, tutte verdi (`prove_tendine_browser.py` 283
+controlli, `prove_guida_browser.py` 62, `prove_112_browser.py` 81, `prove_19_browser.py` 42); il confronto con il ramo
+principale dalle due cartelle con 607 pagine e nessuna diversa (anche con `--con-ordine`), la cornice senza differenze fuori dai cambiamenti
+approvati (457 parti approvate, 30 regole di cui 24 solo per la cornice) e 49 fogli e pagine che si stampano in PDF,
+nessuno diverso; `strumenti/equivalenza_selettori.py` 215 confronti, 215 uguali; le foto di 31 pagine (tutte quelle
+del menu e delle linguette) a 1366×657, 1024 e 683, in chiaro e in scuro, nelle due varianti (372 foto), senza errori
+JavaScript. Le prove senza browser che leggevano il menu di prima nell'HTML (`prove_14.py`, `prove_143.py`,
+`prove_15.py`, `prove_16.py`, `prove_19.py`, `prove_112.py`, `prove_guida.py`, `strumenti/prove_installato.py`) ora lo
+leggono con `prove_cornice.py`: due controlli «non c'è» sarebbero passati da soli (cercavano `<nav class="menu">` e
+`>Sala</a>`, che la cornice nuova non scrive più), e i loro gemelli se ne sono accorti. I 13 mutanti, fatti su copie,
+sono presi: il collegamento nascosto del tasto E tolto, una linguetta accesa anche in un'altra pagina (`registra_linguetta`
+la rifiuta), le linguette senza `aria-current` o fuori da `data-cornice`, una voce che torna a oggi, la voce accesa senza
+`aria-current`, il contatore senza numero, un'icona che non c'è, il logo della pagina nascosto fuori dalla cornice, un
+colore scritto a mano nella barra; nel browser la scheda di Dove si fa sotto il menu (come faceva `dove.js`), la cornice
+che resta in stampa, la barra in alto ferma sopra la pagina.
 
 ### Il pacchetto di prova (dalla tappa 1 della base)
 

@@ -1252,10 +1252,11 @@ area('pagine, menu e sicurezza')
 def p_pagine_e_menu():
     S, C, dove = mondo()
     t = html(C.get('/aggiornamenti'))
-    menu = t.split('<nav class="menu"')[1].split('</nav>')[0]
-    assert 'Aggiornamenti' in menu and 'Novità' in menu, 'voci del menu'
-    assert re.search(r'class="gruppo[^"]*attivo"[^>]*data-guida="menu-configura"', t), 'Configura non evidenziato'
-    assert re.search(r'class="gruppo[^"]*attivo"[^>]*data-guida="menu-aiuto"', html(C.get('/aiuto/novita')))
+    # dalla tappa 2: Novità nella tendina Aiuto del menu, Aggiornamenti la linguetta accesa di Configura
+    from prove_cornice import linguetta_accesa, menu_html, voce_accesa
+    assert 'Novità' in menu_html(t) and linguetta_accesa(t) == 'Aggiornamenti', 'voci del menu e linguetta'
+    assert voce_accesa(t, 'menu-configura') and not voce_accesa(t, 'menu-aiuto'), 'Configura non accesa'
+    assert voce_accesa(html(C.get('/aiuto/novita')), 'menu-aiuto')
     t = html(C.get('/aiuto'))
     assert 'href="/aiuto/novita"' in t and 'href="/aggiornamenti"' in t, 'collegamenti in Aiuto'
     assert C.get('/aiuto/novita').status_code == 200

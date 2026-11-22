@@ -31,8 +31,20 @@ import time
 from contextlib import contextmanager
 
 NOME_MENU = 'Pagine'            # aria-label di <nav class="menu"> in _menu.html
-GRUPPI = ('Ambulatori', 'Segreteria', 'Aiuto', 'Configura')       # i gruppi del menu, con la loro tendina
+GRUPPI = ('Aiuto',)             # dalla tappa 2 l'unica voce del menu con una tendina (le altre sono collegamenti)
 ZONA = 'Messaggi'               # la zona dei messaggi del programma in base.html: role="status" aria-label="Messaggi"
+# dalla tappa 2 le pagine di un'area sono linguette della sua voce (prima: le tendine del menu, e Giorno, Settimana e
+# Mese in fila). Per la linguetta, la voce del menu da cui si arriva: vai_dal_menu(pg, 'Settimana') passa dall'Agenda
+VOCE_DELLA_LINGUETTA = {
+    'Giorno': 'Agenda', 'Settimana': 'Agenda', 'Mese': 'Agenda', 'Elenco': 'Agenda',
+    'Conferme': 'Segreteria', 'Da confermare': 'Segreteria', 'Chiusura della giornata': 'Segreteria',
+    'Da fare': 'Segreteria', "Lista d'attesa": 'Segreteria', 'Prima disponibilità': 'Segreteria',
+    'Elenco del giorno': 'Segreteria',
+    'Pianificazione della settimana': 'Ambulatori', 'Programmazione del mese': 'Ambulatori',
+    'Riepilogo live': 'Ambulatori', 'Riepilogo del periodo': 'Ambulatori', 'Esportazioni in Excel': 'Ambulatori',
+    'Anagrafiche': 'Configura', 'Strutture del gruppo': 'Configura', 'Email e WhatsApp': 'Configura',
+    'Importa da Excel': 'Configura', 'Impostazioni': 'Configura', 'Aggiornamenti': 'Configura',
+}
 
 
 def indirizzo_di_prova(argv):
@@ -50,9 +62,9 @@ def indirizzo_di_prova(argv):
 
 
 def nome_voce(testo):
-    """Il nome di una voce del menu comincia con le parole in grassetto e continua con la spiegazione in piccolo
-    («Conferme telefonate per il prossimo giorno»), quello di un gruppo può avere il contatore («Segreteria 3»):
-    si confronta l'inizio, fino a uno spazio o alla fine. «Conferme» non trova «Da confermare»."""
+    """Il nome di una voce del menu comincia con la sua parola e può continuare: con la spiegazione in piccolo nella
+    tendina Aiuto («Come fare… tutte le guide, con immagini e video»), con il contatore («Segreteria 3», «Da
+    confermare 3»): si confronta l'inizio, fino a uno spazio o alla fine. «Conferme» non trova «Da confermare»."""
     return re.compile(r'^\s*' + re.escape(testo) + r'(?=\s|$)', re.IGNORECASE)
 
 
@@ -64,14 +76,14 @@ def _uno(loc, cosa):
     return loc
 
 
-# --------------------------------------------------------------- il menu
+# --------------------------------------------------------------- il menu, le linguette, la barra in alto
 def menu(pg):
-    """La barra del menu (il landmark «navigation» di nome Pagine)."""
+    """Il menu a sinistra (il landmark «navigation» di nome Pagine)."""
     return pg.get_by_role('navigation', name=NOME_MENU, exact=True)
 
 
 def gruppo(pg, nome):
-    """Il pulsante di un gruppo del menu: Ambulatori, Segreteria, Aiuto, Configura."""
+    """Il pulsante di una voce del menu con la tendina: dalla tappa 2 solo Aiuto."""
     return menu(pg).get_by_role('button', name=nome_voce(nome))
 
 
@@ -81,8 +93,8 @@ def tendina_aperta(pg):
 
 
 def apri_gruppo(pg, nome):
-    """Apre un gruppo del menu con un clic, come una persona, e torna la sua tendina: quella con il nome del gruppo
-    (aria-label in _menu.html). wait_for vuole una tendina sola aperta: con due aperte la prova cade."""
+    """Apre la tendina di una voce del menu (Aiuto) con un clic, come una persona, e la torna: quella con il nome della
+    voce (aria-label in _menu.html). wait_for vuole una tendina sola aperta: con due aperte la prova cade."""
     b = _uno(gruppo(pg, nome), 'il pulsante «%s» del menu' % nome)
     if b.get_attribute('aria-expanded') != 'true':
         b.click()
@@ -90,42 +102,93 @@ def apri_gruppo(pg, nome):
     return _uno(menu(pg).get_by_role('menu', name=nome, exact=True), 'la tendina «%s» del menu' % nome)
 
 
-def voce_del_menu(pg, gruppo_o_voce, voce=None):
-    """Il collegamento di una pagina del menu: voce_del_menu(pg, 'Pazienti') o voce_del_menu(pg, 'Segreteria',
-    'Conferme'). Per una voce dentro un gruppo il gruppo si apre."""
-    if voce is None:
-        link = menu(pg).get_by_role('link', name=nome_voce(gruppo_o_voce))
-        return _uno(link, 'la voce «%s» del menu' % gruppo_o_voce)
-    link = apri_gruppo(pg, gruppo_o_voce).get_by_role('link', name=nome_voce(voce))
-    return _uno(link, 'la voce «%s» del gruppo «%s»' % (voce, gruppo_o_voce))
+# i nomi delle file di linguette (aria-label del <nav> fatto dal pezzo linguette, da menu.py: l'etichetta della prima
+# linguetta di ogni voce)
+NOMI_LINGUETTE = re.compile(r"^(Viste dell'agenda|Pagine di (Segreteria|Ambulatori|Configura))$")
 
 
-def vai_dal_menu(pg, gruppo_o_voce, voce=None, attesa=10000):
-    """Va a una pagina dal menu, come una persona, e torna l'indirizzo della pagina nuova:
-        vai_dal_menu(pg, 'Pazienti')                     # una voce sempre in vista
-        vai_dal_menu(pg, 'Segreteria', 'Da confermare')  # una voce di un gruppo
-    Prima il mouse in un punto neutro: lasciato in cima alla finestra apre da solo il gruppo che ci sta sotto
-    (prove_112_browser.py, apri_stampa_e_scarica, 21/11/2026). Per le voci che non cambiano pagina («Tasti
-    rapidi», «Guida di questa pagina») voce_del_menu(...).click()."""
-    pg.mouse.move(2, 500)
-    link = voce_del_menu(pg, gruppo_o_voce, voce)
+def linguette(pg):
+    """Le linguette della pagina (le pagine della sua area, in cima al contenuto): il landmark «navigation» con il nome
+    della sua fila (Viste dell'agenda, Pagine di Segreteria, Pagine di Ambulatori, Pagine di Configura)."""
+    return pg.get_by_role('navigation', name=NOMI_LINGUETTE)
+
+
+def linguetta(pg, nome):
+    """Il collegamento di una linguetta della pagina, per nome («Settimana», «Da confermare»)."""
+    return _uno(linguette(pg).get_by_role('link', name=nome_voce(nome)), 'la linguetta «%s»' % nome)
+
+
+def voce_del_menu(pg, voce, linguetta_=None):
+    """Il collegamento di una pagina: voce_del_menu(pg, 'Pazienti') è la voce del menu; voce_del_menu(pg, 'Aiuto',
+    'Novità') una voce della tendina Aiuto (la tendina si apre); voce_del_menu(pg, 'Segreteria', 'Conferme') la
+    linguetta della pagina aperta, che deve essere della stessa area (vai_dal_menu ci arriva da sola)."""
+    if linguetta_ is None:
+        link = menu(pg).get_by_role('link', name=nome_voce(voce))
+        return _uno(link, 'la voce «%s» del menu' % voce)
+    if voce in GRUPPI:
+        link = apri_gruppo(pg, voce).get_by_role('link', name=nome_voce(linguetta_))
+        return _uno(link, 'la voce «%s» della tendina «%s»' % (linguetta_, voce))
+    return linguetta(pg, linguetta_)
+
+
+def _naviga(pg, link, attesa):
+    pg.mouse.move(700, 500)
     with pg.expect_navigation(timeout=attesa):
         link.click()
+
+
+def vai_dal_menu(pg, voce, linguetta_=None, attesa=10000):
+    """Va a una pagina come una persona, dal menu e dalle linguette, e torna l'indirizzo della pagina nuova:
+        vai_dal_menu(pg, 'Pazienti')                     # una voce del menu
+        vai_dal_menu(pg, 'Segreteria', 'Da confermare')  # la voce, poi la sua linguetta (se non è già accesa)
+        vai_dal_menu(pg, 'Settimana')                    # una linguetta da sola: prima la sua voce (l'Agenda)
+        vai_dal_menu(pg, 'Aiuto', 'Novità')              # una voce della tendina Aiuto
+    Per le voci che non cambiano pagina («Tasti rapidi», «Guida di questa pagina») voce_del_menu(...).click()."""
+    if linguetta_ is None and voce in VOCE_DELLA_LINGUETTA:
+        voce, linguetta_ = VOCE_DELLA_LINGUETTA[voce], voce
+    if voce in GRUPPI:
+        _naviga(pg, voce_del_menu(pg, voce, linguetta_), attesa)
+        return pg.url
+    v = voce_del_menu(pg, voce)
+    if v.get_attribute('aria-current') != 'page' or linguetta_ is None:
+        _naviga(pg, v, attesa)
+    if linguetta_ is not None:
+        l = linguetta(pg, linguetta_)
+        if l.get_attribute('aria-current') != 'page':
+            _naviga(pg, l, attesa)
     return pg.url
 
 
 def voce_attiva(pg):
-    """La voce del menu della pagina aperta (aria-current="page"), anche dentro una tendina chiusa."""
-    return menu(pg).locator('[aria-current="page"]')
+    """La voce del menu della pagina aperta (aria-current="page"; per la tendina Aiuto aria-current="true")."""
+    return menu(pg).locator('[aria-current="page"], [aria-current="true"]')
 
 
-def gruppo_attivo(pg):
-    """Il nome del gruppo del menu che contiene la pagina aperta, None se la pagina non è in un gruppo: è quello con
-    aria-current="true" sul pulsante, messo con la stessa condizione che lo colora (_menu.html). Se fossero più
-    d'uno, i nomi separati da virgole (e la prova che ne aspetta uno cade)."""
-    attivi = [g for g in GRUPPI if _uno(gruppo(pg, g), 'il pulsante «%s» del menu' % g).get_attribute('aria-current') == 'true']
-    altri = menu(pg).locator('button[aria-current="true"]').count() - len(attivi)
-    return ', '.join(attivi + ['%d altri' % altri] * bool(altri)) or None
+def voce_accesa(pg):
+    """Il nome della voce del menu accesa (None se nessuna; i nomi separati da virgole se più d'una): dalla tappa 2 al
+    posto di gruppo_attivo, che resta per le raccolte e dice la stessa cosa."""
+    nomi = [re.sub(r'\s+\d+$', '', ' '.join(x.split())) for x in voce_attiva(pg).all_inner_texts()]
+    return ', '.join(nomi) or None
+
+
+gruppo_attivo = voce_accesa
+
+
+def linguetta_accesa(pg):
+    """Il nome della linguetta accesa della pagina (aria-current="page"), None se non ce n'è."""
+    nomi = [re.sub(r'\s+\d+$', '', ' '.join(x.split()))
+            for x in linguette(pg).locator('[aria-current="page"]').all_inner_texts()]
+    return ', '.join(nomi) or None
+
+
+def barra_in_alto(pg):
+    """La barra in alto (il landmark «banner»: percorso, ricerca rapida, posto della campanella)."""
+    return pg.get_by_role('banner')
+
+
+def zona_ricerca(pg):
+    """La ricerca rapida (role="search" nella barra in alto; fino alla tappa 2 stava nel menu)."""
+    return barra_in_alto(pg).get_by_role('search')
 
 
 # --------------------------------------------------------------- comandi e ricerca della pagina
@@ -148,9 +211,9 @@ def apri_comandi(pg, nome):
 
 
 def cerca_rapido(pg, testo, attesa=5000):
-    """Scrive nella ricerca rapida del menu, come una persona, e torna i risultati (i collegamenti sotto il campo;
+    """Scrive nella ricerca rapida della barra in alto, come una persona, e torna i risultati (i collegamenti sotto il campo;
     nessuno se il programma risponde «Nessun risultato.»)."""
-    zona = menu(pg).get_by_role('search')
+    zona = zona_ricerca(pg)
     campo = _uno(zona.get_by_role('searchbox'), 'il campo della ricerca rapida')
     campo.click()
     campo.fill('')

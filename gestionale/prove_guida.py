@@ -123,23 +123,45 @@ def gu_indice_ricerca_stampa():
     assert t.count('class="articolo-stampa"') == len(guida.ARTICOLI)
 
 
+from prove_cornice import voce_accesa  # noqa: E402
+
+
 def gu_menu():
+    """Dalla tappa 2 il menu a sinistra ha le voci delle aree; le pagine di un'area sono linguette, in cima alla pagina
+    della voce (prima: le tendine del menu, e Giorno, Settimana e Mese in fila)."""
     S, C = mondo()
     t = html(C.get('/giorno/%s?struttura=1' % date.today().isoformat()))
-    menu = t.split('<nav class="menu"')[1].split('</nav>')[0]
-    for voce in ('Oggi', 'Giorno', 'Settimana', 'Mese', 'Sala', 'Pazienti', 'Segreteria', 'Conferme', 'Da confermare',
-                 'Chiusura della giornata', 'Da fare', "Lista d'attesa", 'Prima disponibilità', 'Elenco del giorno',
-                 'Cassa', 'Statistiche', 'Aiuto', 'Come fare…', 'Novità', 'Configura', 'Anagrafiche', 'Importa da Excel',
-                 'Impostazioni', 'Aggiornamenti'):
+    menu = t.split('<nav class="menu')[1].split('</nav>')[0]
+    for voce in ('Oggi', 'Agenda', 'Sala', 'Pazienti', 'Turni', 'Ambulatori', 'Dove si fa', 'Segreteria', 'Cassa',
+                 'Statistiche', 'Aiuto', 'Come fare…', 'Novità', 'Configura', 'Elenco del giorno'):
         assert voce in menu, 'manca nel menu: ' + voce
-    for tasto in ('g', 'e', 'c'):
+    for tasto in ('g', 'e', 'c', 'd'):
         assert 'data-tasto="%s"' % tasto in menu, 'tasto rapido perso: ' + tasto
-    # la voce di gruppo si evidenzia nelle sue pagine
+    # tutte le pagine di prima: dal menu o dalle linguette della pagina della voce
+    oggi = date.today().isoformat()
+    for pagina, voci in (('/giorno/%s?struttura=1' % oggi, ('Giorno', 'Settimana', 'Mese', 'Elenco')),
+                         ('/conferme', ('Conferme', 'Da confermare', 'Chiusura della giornata', 'Da fare', "Lista d'attesa",
+                                        'Prima disponibilità', 'Elenco del giorno')),
+                         ('/ambulatori/settimana/%s?struttura=1' % oggi, ('Pianificazione della settimana',
+                                                                          'Programmazione del mese', 'Riepilogo live',
+                                                                          'Riepilogo del periodo', 'Esportazioni in Excel')),
+                         ('/anagrafiche', ('Anagrafiche', 'Strutture del gruppo', 'Email e WhatsApp', 'Importa da Excel',
+                                           'Impostazioni', 'Aggiornamenti'))):
+        t = html(C.get(pagina))
+        assert 'data-cornice="linguette"' in t, '%s: senza linguette' % pagina
+        linguette = t.split('data-cornice="linguette"')[1].split('</nav>')[0].replace('&#39;', "'")
+        for voce in voci:
+            assert re.search(r'class="v-linguetta"[^>]*>%s(<| )' % re.escape(voce), linguette), '%s: manca la linguetta %s' % (pagina, voce)
+    # la voce si accende nelle sue pagine
     for u, gruppo in (('/conferme', 'menu-segreteria'), ('/cose-da-fare', 'menu-segreteria'), ('/anagrafiche', 'menu-configura'),
                       ('/impostazioni', 'menu-configura'), ('/importa', 'menu-configura'), ('/aiuto', 'menu-aiuto'),
-                      ('/aggiornamenti', 'menu-configura'), ('/aiuto/novita', 'menu-aiuto')):
+                      ('/aggiornamenti', 'menu-configura'), ('/aiuto/novita', 'menu-aiuto'),
+                      ('/giorno/%s/elenco?struttura=1' % oggi, 'menu-giorno')):
         t = html(C.get(u))
-        assert re.search(r'class="gruppo[^"]*attivo"[^>]*data-guida="%s"' % gruppo, t), '%s: gruppo non evidenziato' % u
+        assert voce_accesa(t, gruppo), '%s: voce non accesa' % u
+    # gemello: lo stesso controllo vede una voce spenta e una pagina senza la linguetta
+    t = html(C.get('/conferme'))
+    assert not voce_accesa(t, 'menu-configura') and not voce_accesa(t.replace(' aria-current="page"', ''), 'menu-segreteria')
     # la barra del giorno: Stampa e scarica raccoglie le stampe
     t = html(C.get('/giorno/%s?struttura=1' % date.today().isoformat()))
     blocco = t.split('data-guida="giorno-stampa"')[1].split('</div>\n    </div>')[0]
@@ -202,7 +224,7 @@ def gu_selettori_stabili():
 
 prova('ogni articolo: pagina, immagine, passi per lo schermo, Mostrami che porta alla pagina giusta', gu_articoli)
 prova('indice, ricerca nella guida (anche sporca), pagine inesistenti, versione da stampare', gu_indice_ricerca_stampa)
-prova('menu a gruppi: tutte le pagine di prima, tasti rapidi, gruppo evidenziato, guide della pagina', gu_menu)
+prova('menu e linguette: tutte le pagine di prima, tasti rapidi, voce accesa, guide della pagina', gu_menu)
 prova('i passi indicano i punti solo con data-guida o un id, nomi che esistono', gu_selettori_stabili)
 
 if __name__ == '__main__':

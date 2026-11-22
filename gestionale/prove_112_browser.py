@@ -11,7 +11,7 @@ avviato con i dati di prova (strumenti/demo.py):
 - «Stampa e scarica»: i quattro collegamenti, la matrice in Excel scaricata
   con il suo nome;
 - la programmazione del mese: la tabella e l'Excel scaricato con il suo nome;
-- il gruppo Ambulatori del menu e' segnato attivo in tutte e due le pagine;
+- la voce Ambulatori del menu e' segnata accesa in tutte e due le pagine, con le sue linguette (dalla tappa 2);
 - dalla 1.12.2 il riepilogo live: la frase, i quattro gruppi che sommano al
   totale, una riga per stanza con turni e visite come nel JSON, la linea di
   adesso, le notifiche nascoste, il telefono senza scorrimento laterale e il
@@ -31,8 +31,8 @@ from datetime import date, timedelta
 
 from playwright.sync_api import expect, sync_playwright
 
-from aiuti_browser import (GRUPPI, NOME_MENU, apri_comandi, apri_gruppo, gruppo, gruppo_attivo, menu, messaggi, nome_voce,
-                           prepara_domande, rispondi, tendina_aperta)
+from aiuti_browser import (NOME_MENU, apri_comandi, linguetta_accesa, linguette, menu, messaggi, nome_voce, prepara_domande,
+                           rispondi, tendina_aperta, voce_accesa)
 
 from aiuti_browser import indirizzo_di_prova  # noqa: E402
 B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
@@ -78,22 +78,24 @@ def menu_anche_nascosto():
     return pg.get_by_role('navigation', name=NOME_MENU, exact=True, include_hidden=True)
 
 
-# l'aspetto del pulsante di un gruppo del menu: quello che cambia fra il gruppo attivo e gli altri
+# l'aspetto di una voce del menu: quello che cambia fra la voce accesa e le altre
 ASPETTO = ("b => { const s = getComputedStyle(b); return [s.color, s.backgroundColor, s.opacity, s.fontWeight,"
            " s.borderBottomColor, s.boxShadow, s.textDecorationLine].join(' | '); }")
 
 
 def gruppo_segnato():
-    """Il gruppo attivo del menu (gruppo_attivo: aria-current, per chi usa un lettore di schermo), ma solo se si vede
-    anche: il suo pulsante deve avere un aspetto diverso da quello di ogni altro gruppo. Prima la prova guardava la
-    classe «attivo», che lo colora: aria-current da solo non vedrebbe un menu che non lo colora più."""
-    nome = gruppo_attivo(pg)
-    if nome not in GRUPPI:
+    """La voce accesa del menu (voce_accesa: aria-current, per chi usa un lettore di schermo), ma solo se si vede
+    anche: deve avere un aspetto diverso da quello di ogni altra voce. Dalla tappa 2 Ambulatori è una voce del menu a
+    sinistra, non più un gruppo con la tendina; aria-current da solo non vedrebbe un menu che non la colora più."""
+    nome = voce_accesa(pg)
+    voci = menu(pg).get_by_role('link')
+    nomi = [re.sub(r'\s+\d+$', '', ' '.join(x.split())) for x in voci.all_inner_texts()]
+    if nome not in nomi:
         return nome
-    pg.mouse.move(2, 500)                    # niente mouse sopra i gruppi: passandoci sopra cambiano aspetto
+    pg.mouse.move(700, 500)                  # niente mouse sopra le voci: passandoci sopra cambiano aspetto
     pg.wait_for_timeout(300)                 # nell'animata il cambio dura .15 secondi
-    aspetto = {g: gruppo(pg, g).evaluate(ASPETTO) for g in GRUPPI}
-    come = [g for g in GRUPPI if g != nome and aspetto[g] == aspetto[nome]]
+    aspetto = voci.evaluate_all('vs => vs.map(%s)' % ASPETTO)
+    come = [n for n, a in zip(nomi, aspetto) if n != nome and a == aspetto[nomi.index(nome)]]
     return nome if not come else '%s, ma si vede come %s' % (nome, ', '.join(come))
 
 
@@ -132,12 +134,13 @@ with sync_playwright() as p:
     pomeriggi = riga.locator('td').evaluate_all("tds => tds.filter((td, i) => i % 2 === 1).map(td => td.className)")
     ok('i pomeriggi di Ambulatorio 1 liberi', len(pomeriggi) == 6 and all('libera' in x for x in pomeriggi), pomeriggi)
     attivo = gruppo_segnato()
-    ok('il menu: il gruppo Ambulatori è segnato attivo', attivo == 'Ambulatori', attivo or 'nessun gruppo attivo')
-    pg.mouse.move(2, 500)
-    voci = apri_gruppo(pg, 'Ambulatori').get_by_role('link').all_inner_texts()
-    ok('nel gruppo: Pianificazione della settimana, Programmazione del mese, Riepilogo live, Riepilogo del periodo, Esportazioni',
+    ok('il menu: la voce Ambulatori è segnata accesa', attivo == 'Ambulatori', attivo or 'nessuna voce accesa')
+    voci = linguette(pg).get_by_role('link').all_inner_texts()
+    ok('le linguette: Pianificazione della settimana, Programmazione del mese, Riepilogo live, Riepilogo del periodo, '
+       'Esportazioni; accesa la prima',
        len(voci) == 5 and 'Pianificazione' in voci[0] and 'Programmazione' in voci[1] and 'Riepilogo live' in voci[2] and
-       'Riepilogo del periodo' in voci[3] and 'Esportazioni in Excel' in voci[4], voci)
+       'Riepilogo del periodo' in voci[3] and 'Esportazioni in Excel' in voci[4] and
+       linguetta_accesa(pg) == 'Pianificazione della settimana', (voci, linguetta_accesa(pg)))
     pg.keyboard.press('Escape')              # la tendina si chiude; il mouse via dal menu
     pg.mouse.move(2, 500)
 
@@ -230,7 +233,7 @@ with sync_playwright() as p:
        righe.count() > 6 and corpo.count('Lippiello') >= 6 and 'Ambulatorio 1' in corpo, (righe.count(), corpo.count('Lippiello')))
     ok('le date del mese sono numeri separati da virgole', any(',' in x for x in pg.locator('#programmazione-ambulatori tr td:nth-child(4)').all_inner_texts()))
     attivo = gruppo_segnato()
-    ok('anche qui il gruppo Ambulatori è attivo', attivo == 'Ambulatori', attivo)
+    ok('anche qui la voce Ambulatori è accesa', attivo == 'Ambulatori', attivo)
     with pg.expect_download() as scaricato:
         pg.locator('a.bottone.primario', has_text='Scarica in Excel').click()
     ok('la programmazione in Excel si scarica con il nome del mese',
@@ -277,7 +280,7 @@ with sync_playwright() as p:
     ok('esportazioni: cambiando la data cambiano i pulsanti',
        ((OGGI + timedelta(days=40)).isoformat() + '.xlsx') in (pulsanti.first.get_attribute('href') or ''), pulsanti.first.get_attribute('href'))
     attivo = gruppo_segnato()
-    ok('esportazioni: il gruppo Ambulatori è attivo', attivo == 'Ambulatori', attivo)
+    ok('esportazioni: la voce Ambulatori è accesa', attivo == 'Ambulatori', attivo)
     pg.set_viewport_size({'width': 390, 'height': 800})
     largo = pg.evaluate('document.documentElement.scrollWidth')
     ok('esportazioni: sul telefono niente scorrimento laterale', largo <= 392, largo)
@@ -365,7 +368,7 @@ with sync_playwright() as p:
        scarico.value.suggested_filename == 'riepilogo-ambulatori-%s.xlsx' % (OGGI - timedelta(days=1)).isoformat(),
        scarico.value.suggested_filename)
     attivo = gruppo_segnato()
-    ok('riepilogo del periodo: il gruppo Ambulatori è attivo', attivo == 'Ambulatori', attivo)
+    ok('riepilogo del periodo: la voce Ambulatori è accesa', attivo == 'Ambulatori', attivo)
     pg.set_viewport_size({'width': 390, 'height': 844})
     pg.wait_for_timeout(300)
     ok('riepilogo del periodo: sul telefono la pagina non scorre di lato (scorrono le tabelle)',

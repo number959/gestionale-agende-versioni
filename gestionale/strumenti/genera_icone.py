@@ -29,6 +29,10 @@ ICONE = [
     'upload', 'history', 'user', 'map', 'send',
     # veste nuova (1.13, tappa 1-bis): la freccia delle tendine e la tessera del codice fiscale
     'chevron-down', 'id-card',
+    # la cornice (tappa 2): le voci del menu a sinistra (Agenda, Sala, Ambulatori, Cassa, Statistiche, Aiuto,
+    # Configura), il posto della campanella e la freccina dell'Elenco del giorno, che si apre nell'Agenda
+    'calendar', 'activity', 'door-closed', 'euro', 'chart-no-axes-column', 'circle-question-mark',
+    'sliders-horizontal', 'bell', 'arrow-up-right',
 ]
 
 

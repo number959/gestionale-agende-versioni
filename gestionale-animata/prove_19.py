@@ -952,8 +952,10 @@ def p_menu_e_altre():
     """Il menu, la ricerca rapida, la scheda del paziente, le statistiche."""
     S, C = mondo()
     corpo = html(C.get('/oggi'))
-    assert re.search(r'<a data-tasto="d" href="/dove-si-fa/[^"]*"[^>]*>Dove si fa</a>', corpo), 'menu'
-    assert 'Strutture del gruppo' in corpo and '<th>D</th>' in corpo
+    # dalla tappa 2 la voce ha l'icona prima della parola, e Strutture del gruppo è una linguetta di Configura
+    assert re.search(r'<a data-tasto="d" href="/dove-si-fa/[^"]*"[^>]*>(<svg.*?</svg>)?<span[^>]*>Dove si fa</span></a>',
+                     corpo, re.S), 'menu'
+    assert '<th>D</th>' in corpo and 'Strutture del gruppo' in html(C.get('/anagrafiche'))
     d = json.loads(html(C.get('/cerca-tutto.json?q=holter')))
     assert d['prestazioni'] == [], d                    # senza database: niente, e nessun errore
     importa_file(S, CP.libro())

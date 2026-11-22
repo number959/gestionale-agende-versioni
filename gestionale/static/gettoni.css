@@ -22,6 +22,7 @@
   --v-superficie-tenue: #F8FAFD;   /* menu laterale */
   --v-incasso: #EEF2F8;            /* contenitore delle linguette, intestazione delle tabelle, riga del totale */
   --v-chiuso: #ECEFF3;             /* caselle chiuse e fuori turno, pillola Disdetto (Colori «Fuori turno e disdetto») */
+  --v-fondo-logo: #FFFFFF;         /* dietro il logo della struttura nel menu: chiaro anche nel tema scuro (tappa 2) */
 
   /* ---- testo */
   --v-testo: #12244A;              /* principale (Colori «Inchiostro») */
@@ -130,6 +131,7 @@
     --v-superficie-tenue: #181F27;
     --v-incasso: #222B35;
     --v-chiuso: #222B35;
+    --v-fondo-logo: #F4F5F3;       /* i loghi sono pensati per il fondo chiaro: come .marchio img del tema scuro di oggi */
     --v-testo: #E1E7ED;
     --v-testo-medio: #C3CDD7;
     --v-testo-tenue: #9AA8B4;

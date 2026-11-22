@@ -433,6 +433,19 @@ def leggi_approvati(percorso):
     return regole
 
 
+def regole_per(regole, ambito=None):
+    """Le regole che valgono in un posto. La chiave di una regola può dire dove vale (dalla tappa 2): «testo@cornice»
+    solo nella cornice (catalogo e pagina per pagina), «accese@/giorno/N-N-N/elenco?struttura» solo nella cornice delle
+    pagine di quella forma; senza @ dappertutto. ambito: None per le pagine, 'cornice' per il catalogo della cornice,
+    la forma di una pagina per la sua cornice. Torna le regole con la chiave senza @."""
+    scelte = []
+    for tipo, chiave, rx, al_posto in regole:
+        base, _, dove = chiave.partition('@')
+        if not dove or (ambito is not None and dove in ('cornice', ambito)):
+            scelte.append((tipo, base, rx, al_posto))
+    return scelte
+
+
 def _sostituisci(x, rx, al_posto, in_cima=True):
     """re.sub in ogni testo, anche dentro i moduli. Un elemento dell'elenco che diventa vuoto è tolto (solo al primo
     livello: un campo vuoto di un modulo resta)."""
@@ -522,7 +535,7 @@ def confronta_cornice(catalogo, pagine, regole):
     righe, n, approvate = [], 0, 0
     ra = {k: sorted(catalogo['principale'][k]) for k in CATALOGO}
     rb = {k: sorted(catalogo['qui'][k]) for k in CATALOGO}
-    xa, xb = applica_approvati(ra, rb, regole)
+    xa, xb = applica_approvati(ra, rb, regole_per(regole, 'cornice'))
     for k in CATALOGO:
         if uguali(ra[k], rb[k]):
             continue
@@ -544,7 +557,7 @@ def confronta_cornice(catalogo, pagine, regole):
         pa = {k: ca[k] for k in PER_PAGINA}
         pb = {k: cb[k] for k in PER_PAGINA}
         if not uguali(pa, pb):
-            pa2, pb2 = applica_approvati(pa, pb, regole)
+            pa2, pb2 = applica_approvati(pa, pb, regole_per(regole, forma(percorso)))
             if uguali(pa2, pb2):
                 approvate += 1
             for k in PER_PAGINA:
@@ -631,7 +644,8 @@ def main():
         per_forma, saltati = {}, 0
         for x in coda:
             per_forma[forma(x)] = per_forma.get(forma(x), 0) + 1
-        regole = [] if arg.senza_approvati else leggi_approvati(os.path.join(QUI, 'strumenti', 'cambiamenti_approvati.txt'))
+        tutte_le_regole = [] if arg.senza_approvati else leggi_approvati(os.path.join(QUI, 'strumenti', 'cambiamenti_approvati.txt'))
+        regole = regole_per(tutte_le_regole)          # quelle delle pagine; la cornice prende le sue (confronta_cornice)
         approvate = 0                       # pagine diverse solo per cambiamenti approvati
         n, viste = 0, []                    # viste: (percorso, modelli che l'hanno fatta, byte) delle pagine 200
         catalogo = {lato: {k: set() for k in CATALOGO} for lato in ('principale', 'qui')}
@@ -672,7 +686,7 @@ def main():
                     continue
                 per_forma[f] = per_forma.get(f, 0) + 1
                 coda.append(nuovo)
-        righe_c, d_c, approvate_c, testa_c = confronta_cornice(catalogo, cornici, regole)
+        righe_c, d_c, approvate_c, testa_c = confronta_cornice(catalogo, cornici, tutte_le_regole)
         righe = righe_c + righe
         n_f = d_f = 0
         # una cartella nuova a ogni giro (due giri insieme non si pestano i piedi); resta solo con dei fogli diversi
@@ -696,15 +710,15 @@ def main():
         print('tipi di pagina: %d' % len(per_forma))
         print('confronto %s' % ('con l\'ordine (--con-ordine)' if con_ordine else
                                 'senza ordine: collegamenti, segni, testo, moduli e campi come insiemi con le quantità'))
-        if regole:
-            print('pagine diverse solo per i cambiamenti approvati (strumenti/cambiamenti_approvati.txt, %d regole): %d'
-                  % (len(regole), approvate))
+        if tutte_le_regole:
+            print('pagine diverse solo per i cambiamenti approvati (strumenti/cambiamenti_approvati.txt, %d regole, %d '
+                  'solo per la cornice): %d' % (len(tutte_le_regole), len(tutte_le_regole) - len(regole), approvate))
         print('resoconto: %s' % resoconto)
         if not arg.senza_pdf:
             print('%d fogli e pagine che si stampano confrontati in PDF, %d diversi o mancanti%s' % (
                 n_f, d_f, ' (immagini in %s)' % cartella_fogli if d_f else ''))
         print('%s: %d differenze%s' % (testa_c, d_c, ', %d parti diverse solo per i cambiamenti approvati' % approvate_c
-                                       if regole else ''))
+                                       if tutte_le_regole else ''))
         print('%d pagine confrontate, %d diverse' % (n, len(diverse)))
         return 1 if diverse or d_f or d_c else 0
     finally:

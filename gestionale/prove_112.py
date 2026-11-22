@@ -52,6 +52,12 @@ from modelli import (crea_sessione, Struttura, Risorsa, Operatore, Turno, Assenz
                      Modifica)
 from prove_dove import dove  # noqa: E402
 from prove_gemelli import manca  # noqa: E402
+from prove_cornice import CON_MENU, linguetta_accesa, voce_accesa  # noqa: E402
+
+
+def ambulatori_acceso(t):
+    return voce_accesa(t, 'menu-ambulatori')
+
 
 A.app.config['TESTING'] = True
 esiti, _area, _n = [], [''], [0]
@@ -756,7 +762,7 @@ def b_esportazioni():
         for parte in ('ambulatori', 'sala', 'tutto'):
             assert '/esportazioni/%s/%s/2026-12-09.xlsx?struttura=1' % (periodo, parte) in t, (periodo, parte)
     assert 'mercoledì 9 dicembre 2026' in t and '<small>dal 7 al 13 dicembre 2026</small>' in t and '<small>dicembre 2026</small>' in t
-    assert 'Esportazioni in Excel</b>' in t and 'class="gruppo attivo" data-guida="menu-ambulatori"' in t
+    assert linguetta_accesa(t) == 'Esportazioni in Excel' and ambulatori_acceso(t)
     # i collegamenti dalle altre pagine
     assert '/esportazioni?data=2026-12-07&amp;struttura=1' in testo(C.get('/giorno/2026-12-07?struttura=1'))
     t = testo(C.get('/ambulatori/settimana/2026-12-07?struttura=1'))
@@ -1227,8 +1233,8 @@ def d_settimana():
         # il modulo del «+» (stanza e poi giorno); quello della «x» ha prima il turno
         ha = ('name="risorsa" value="%d"><input type="hidden" name="data" value="%s"' % (I['Ambulatorio 2'], g.isoformat())) in t3
         assert ha == (g >= OGGI), (g, ha)
-    # il menu: il gruppo Ambulatori e' segnato attivo
-    assert 'Ambulatori<span class="freccia"' in t and 'class="gruppo attivo" data-guida="menu-ambulatori"' in t
+    # il menu: la voce Ambulatori e' accesa, con la sua linguetta (dalla tappa 2)
+    assert ambulatori_acceso(t) and linguetta_accesa(t) == 'Pianificazione della settimana', linguetta_accesa(t)
     # stampa e scarica
     assert ('/ambulatori/settimana/2026-12-07.xlsx?struttura=1' in t and 'tipo=1' in t
             and '/ambulatori/mese/2026-12?struttura=1' in t), t[t.find('Stampa e scarica'):][:600]
@@ -1243,7 +1249,7 @@ def d_mese():
     assert 'id="programmazione-ambulatori"' in t and 'Programmazione ambulatori · dicembre 2026' in t
     assert 'Cardiologia' in t and 'Dermatologia' in t and 'Senza specialità' in t
     assert 'non il 7 (assente: ferie)' in t and 'un giorno solo' in t and '14, 21, 28' in t
-    assert 'class="gruppo attivo" data-guida="menu-ambulatori"' in t
+    assert ambulatori_acceso(t)
     assert '/ambulatori/mese/2026-12.xlsx?struttura=1' in t
     assert 'Calendario del mese' in t and 'chiusa: manutenzione' in t and 'chiusa: immacolata concezione' in t
     assert 'nessun medico in turno' in t
@@ -1970,11 +1976,11 @@ def l_pagina_e_json():
     S, I, C, live = _mondo_live()
     r = C.get('/riepilogo-live?struttura=1')
     t = testo(r)
-    assert r.status_code == 200 and 'Riepilogo live' in t and 'id="riepilogo-live"' in t and 'nav class="menu"' in t
+    assert r.status_code == 200 and 'Riepilogo live' in t and 'id="riepilogo-live"' in t and CON_MENU.search(t)
     assert 'Ambulatorio 1' in t and 'Le stanze adesso' in t and 'Mezze giornate libere' in t and 'Visite ora per ora' in t
-    assert 'class="gruppo attivo" data-guida="menu-ambulatori"' in t and 'Riepilogo live</b>' in t
+    assert ambulatori_acceso(t) and linguetta_accesa(t) == 'Riepilogo live'
     t = testo(C.get('/riepilogo-live?struttura=1&schermo=1'))
-    assert 'class="pagina-live schermo"' in t and 'nav class="menu"' not in t and 'Torna alla pagina normale' in t
+    assert 'class="pagina-live schermo"' in t and not CON_MENU.search(t) and 'data-cornice' not in t and 'Torna alla pagina normale' in t
     r = C.get('/riepilogo-live.json?struttura=1')
     assert r.status_code == 200 and r.headers['Cache-Control'] == 'no-store'
     d = json.loads(r.data.decode('utf-8'))
@@ -2229,7 +2235,7 @@ def p_periodo():
     assert wb1.sheetnames == ['Riepilogo', 'Stanze', 'Medici'], wb1.sheetnames
     # il menu: quattro voci nel gruppo Ambulatori, l'ultima attiva su questa pagina
     t = testo(C.get('/ambulatori/riepilogo?struttura=1'))
-    assert 'Riepilogo del periodo</b>' in t and 'class="gruppo attivo" data-guida="menu-ambulatori"' in t
+    assert linguetta_accesa(t) == 'Riepilogo del periodo' and ambulatori_acceso(t)
 
 
 prova('riepilogo del periodo (1.12.2): stanze, medici e giorni contro gli insiemi di minuti, testi, pagine, Excel, JSON', p_periodo)
@@ -2647,14 +2653,14 @@ def p_periodo_sala():
     # gemello: senza il modo schermo la stessa pagina ha il menu, con la sua voce «Statistiche»
     manca(ts, 'Statistiche', dove_ce=lambda: testo(C.get('/riepilogo-live/statistiche?%s&parte=sala' % q)),
           perche='il nome della pagina nella dashboard non è «Statistiche»')
-    assert 'Le sale' in ts and '<nav class="menu"' not in ts and 'pagina-live' in ts
+    assert 'Le sale' in ts and not CON_MENU.search(ts) and 'data-cornice' not in ts and 'pagina-live' in ts
     import re
     fuori = [h for h in re.findall(r'href="([^"]+)"', ts) if not h.startswith('/riepilogo-live') and not h.startswith('/static/')]
     assert not fuori, fuori
     assert 'riepilogo.xlsx' not in ts, 'niente Excel nella dashboard'
     tsn = testo(C.get('/riepilogo-live/statistiche?%s' % q))
     # senza il modo schermo (sul PC della clinica) c'e' il menu, e restano l'Excel e la stampa
-    assert '<nav class="menu"' in tsn and 'Le stanze' in tsn and '/ambulatori/riepilogo.xlsx?' in tsn and 'window.print()' in tsn
+    assert CON_MENU.search(tsn) and 'Le stanze' in tsn and '/ambulatori/riepilogo.xlsx?' in tsn and 'window.print()' in tsn
     js = C.get('/riepilogo-live/statistiche.json?%s&parte=sala' % q).get_json()
     # (il JSON e' calcolato all'ora vera, non a quella ferma della prova: si confrontano i conti che non ne dipendono)
     assert js['parte'] == 'sala' and js['totale']['totale'] == 6 and js['totale']['minuti_turno'] == r['totale']['minuti_turno'] \

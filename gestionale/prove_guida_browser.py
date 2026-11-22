@@ -1,4 +1,4 @@
-"""Prove nel browser della guida sullo schermo e del menu a gruppi, su un
+"""Prove nel browser della guida sullo schermo e del menu, su un
 gestionale gia' avviato con i dati di prova:
     python prove_guida_browser.py http://127.0.0.1:5001
 Non usarla sul database vero (non modifica niente, ma e' pensata per i dati di prova).
@@ -25,8 +25,11 @@ with sync_playwright() as p:
     # primo avvio: l'invito al giro su Oggi
     pg.goto(B + '/oggi'); pg.wait_for_timeout(700)
     ok('primo avvio: invito al giro', pg.locator('.giro-invito').count() == 1)
-    alt = menu(pg).evaluate('n => [n.offsetHeight, n.scrollWidth, innerWidth]')
-    ok('menu su una riga a 1366 pixel', alt[0] < 45 and alt[1] <= alt[2], alt)
+    # dalla tappa 2 il menu sta a sinistra (prova d'aspetto: prima «menu su una riga a 1366 pixel»): largo 248, fermo
+    # in cima, e la pagina non scorre di lato
+    alt = menu(pg).evaluate('n => { const r = n.getBoundingClientRect(); return [r.left, r.right, r.top, '
+                            'document.documentElement.scrollWidth, innerWidth]; }')
+    ok('menu a sinistra a 1366 pixel', alt[0] >= 0 and alt[1] <= 248 and alt[2] < 140 and alt[3] <= alt[4], alt)
     pg.click('.giro-invito button.primario'); pg.wait_for_timeout(600)
     ok('il giro parte', pg.locator('.giro-fumetto').count() == 1)
     # gemello di «Esc chiude» (piu' sotto): durante il giro body.giro-in-corso c'è
@@ -51,17 +54,21 @@ with sync_playwright() as p:
     pg.keyboard.press('Escape')
     # tendine, per ruolo e nome: aperta vuol dire che si vede e che il pulsante lo dice (aria-expanded, quello che
     # sente chi usa un lettore di schermo); col mouse sopra la tendina si vede anche se il clic non fa niente
-    segreteria = gruppo(pg, 'Segreteria')
-    segreteria.click(); pg.wait_for_timeout(150)
+    # dalla tappa 2 nel menu resta una tendina sola, Aiuto (Segreteria e Configura sono voci con le loro linguette)
+    aiuto = gruppo(pg, 'Aiuto')
+    aiuto.click(); pg.wait_for_timeout(150)
     aperte = tendina_aperta(pg)
-    ok('Segreteria si apre al clic', aperte.count() == 1 and aperte.get_by_role('link', name=nome_voce('Conferme')).is_visible()
-       and segreteria.get_attribute('aria-expanded') == 'true',
-       {'tendine aperte': aperte.count(), 'aria-expanded': segreteria.get_attribute('aria-expanded')})
+    ok('Aiuto si apre al clic', aperte.count() == 1 and aperte.get_by_role('link', name=nome_voce('Come fare…')).is_visible()
+       and aiuto.get_attribute('aria-expanded') == 'true',
+       {'tendine aperte': aperte.count(), 'aria-expanded': aiuto.get_attribute('aria-expanded')})
     pg.keyboard.press('Escape'); pg.mouse.move(700, 700); pg.wait_for_timeout(150)
-    ok('Esc chiude la tendina', aperte.count() == 0 and segreteria.get_attribute('aria-expanded') == 'false',
-       {'tendine aperte': aperte.count(), 'aria-expanded': segreteria.get_attribute('aria-expanded')})
-    gruppo(pg, 'Configura').hover(); pg.wait_for_timeout(150)
-    ok('Configura si apre passandoci sopra', aperte.get_by_role('link', name=nome_voce('Anagrafiche')).is_visible(),
+    ok('Esc chiude la tendina', aperte.count() == 0 and aiuto.get_attribute('aria-expanded') == 'false',
+       {'tendine aperte': aperte.count(), 'aria-expanded': aiuto.get_attribute('aria-expanded')})
+    # chiusa con Esc resta chiusa finché mouse e fuoco non escono dal gruppo (gestionale.js): il fuoco esce, poi il mouse
+    # torna sopra (prima si provava su un altro gruppo, Configura, che dalla tappa 2 è una voce)
+    pg.evaluate('document.activeElement && document.activeElement.blur()'); pg.wait_for_timeout(100)
+    aiuto.hover(); pg.wait_for_timeout(150)
+    ok('Aiuto si apre passandoci sopra', aperte.get_by_role('link', name=nome_voce('Novità')).is_visible(),
        {'tendine aperte': aperte.count()})
     pg.mouse.move(700, 700); pg.wait_for_timeout(150)
     stampa = None
@@ -75,14 +82,14 @@ with sync_playwright() as p:
     pg.mouse.click(700, 760); pg.wait_for_timeout(150)
     ok('clic fuori: si chiude', stampa is None or stampa.count() == 0)
     pg.keyboard.press('c'); pg.wait_for_timeout(800)
-    ok('tasto C: conferme anche dal menu a gruppi', '/conferme' in pg.url, pg.url)
+    ok('tasto C: le conferme, dalla voce Segreteria del menu', '/conferme' in pg.url, pg.url)
     # ogni guida sullo schermo, dall'articolo fino alla fine
     for a in guida.ARTICOLI:
         if not any('sel' in x for x in a['passi']):
             continue
         # il mouse lontano dal menu: nell'animata la pagina entra muovendosi, e Playwright
         # puo' rifare il clic portando il pulsante in cima alla finestra; il mouse resterebbe
-        # li', sopra un gruppo del menu (dalla 1.8 Segreteria), che si apre e copre la pagina dopo
+        # li', sopra un gruppo del menu (fino alla tappa 2 Segreteria), che si apre e copre la pagina dopo
         pg.mouse.move(700, 700)
         pg.goto(B + '/aiuto/' + a['slug']); pg.wait_for_timeout(200)
         link = pg.locator('[data-guida-mostra]')

@@ -168,15 +168,18 @@ def controlla_colori(file_):
 
 
 def g_colori():
-    controlla_colori({'static/veste.css': VESTE, 'templates/_pezzi.html': PEZZI,
-                      'strumenti/catalogo_pezzi.html': CATALOGO, 'templates/base.html (testa)': testa_nuova(BASE)})
-    return '4 file'
+    file_ = {'static/veste.css': VESTE, 'templates/_pezzi.html': PEZZI,
+             'strumenti/catalogo_pezzi.html': CATALOGO, 'templates/base.html (testa)': testa_nuova(BASE)}
+    file_.update({'templates/' + n: leggi('templates/' + n) for n in CORNICE})      # dalla tappa 2, la cornice
+    controlla_colori(file_)
+    return '%d file' % len(file_)
 
 
 def gemello_colori():
     cade(controlla_colori, {'veste.css': VESTE + '\n.v-x { border-color: #123456; }'})
     cade(controlla_colori, {'_pezzi.html': PEZZI + '<span style="color: red">x</span>'})
     cade(controlla_colori, {'catalogo': CATALOGO + '<i style="background: rgb(1, 2, 3)"></i>'})
+    cade(controlla_colori, {'_menu.html': leggi('templates/_menu.html') + '<span style="color: #1C4184">x</span>'})
     controlla_colori({'commenti.css': '/* #FFFFFF nei commenti va bene */ .v-x { color: var(--v-testo); }'})
     # i colori con un nome qualsiasi del CSS, non solo i dodici più comuni; nel testo della pagina una parola resta parola
     assert 'Teal' in cade(controlla_colori, {'veste.css': VESTE + '\n.v-x { border-color: Teal; }'})
@@ -256,7 +259,13 @@ def gemello_strato():
 
 # ================================================================ prefisso: i nomi nuovi non pestano quelli vecchi
 TENUTE = {'primario', 'gruppo-comandi', 'apri-gruppo', 'tendina', 'aperto', 'numeri', 'allarme'}   # agganci del JavaScript di oggi
-NUOVI = {'veste.css', 'gettoni.css', '_pezzi.html'}
+# dalla tappa 2: due classi delle pagine di oggi che la cornice nasconde o sposta, solo dentro la cornice (in un selettore
+# che comincia da un pezzo v-, «.v-cornice .marchio»): il logo della pagina (c'è già nel menu; resta in stampa) e
+# «Prima volta qui?» della guida, che in basso a sinistra coprirebbe Aiuto e Configura
+DALLA_CORNICE = {'marchio', 'giro-invito'}
+NUOVI = {'veste.css', 'gettoni.css', '_pezzi.html',
+         '_menu.html', '_barra.html', '_linguette.html'}        # dalla tappa 2 i modelli della cornice, fatti con i pezzi v-
+CORNICE = ('_menu.html', '_barra.html', '_linguette.html')
 
 
 def classi_vecchie():
@@ -269,7 +278,9 @@ def classi_vecchie():
         for f in glob.glob(os.path.join(cartella, 'templates', '*.html')):
             if os.path.basename(f) not in NUOVI:
                 for m in re.finditer(r'class="([^"]*)"', open(f, encoding='utf-8').read()):
-                    classi |= {c for c in re.split(r'\s+', re.sub(r'\{[{%].*?[}%]\}', ' ', m.group(1))) if c}
+                    nuove_di_base = os.path.basename(f) == 'base.html'     # dalla tappa 2 la griglia della cornice (v-cornice)
+                    classi |= {c for c in re.split(r'\s+', re.sub(r'\{[{%].*?[}%]\}', ' ', m.group(1)))
+                               if c and not (nuove_di_base and c.startswith('v-'))}
         for f in glob.glob(os.path.join(cartella, 'static', '*.js')):
             t = open(f, encoding='utf-8').read()
             classi |= set(re.findall(r"classList\.(?:add|remove|toggle|contains)\('([\w-]+)'", t))
@@ -300,8 +311,15 @@ def tocca_un_pezzo(sel):
 def controlla_prefisso(veste, vecchie):
     css = L.senza_commenti(veste)
     usate = set(re.findall(r'\.([a-zA-Z_][\w-]*)', re.sub(r'url\([^)]*\)|\d*\.\d+', '', css)))
-    senza = sorted(c for c in usate if not c.startswith('v-') and c not in TENUTE)
+    senza = sorted(c for c in usate if not c.startswith('v-') and c not in TENUTE | DALLA_CORNICE)
     assert not senza, 'classi senza il prefisso v-: %s' % senza
+    # quelle della cornice solo dopo un pezzo v- (dentro la cornice), mai da sole
+    for regola in re.findall(r'([^{}]+)\{', re.sub(r'@[\w-]+[^{;]*\{', '{', css)):
+        for sel in re.split(r',(?![^(]*\))', regola):
+            for c in DALLA_CORNICE:
+                m = re.search(r'\.%s(?![\w-])' % re.escape(c), sel)
+                if m:
+                    assert '.v-' in sel[:m.start()], 'la classe di oggi «%s» fuori dalla cornice: %r' % (c, sel.strip())
     pestate = sorted(c for c in usate if c.startswith('v-') and c in vecchie)
     assert not pestate, 'classi v- già usate dalle pagine di oggi: %s' % pestate
     vecchie_v = sorted(c for c in vecchie if c.startswith('v-'))
@@ -322,6 +340,9 @@ def p_prefisso():
 def gemello_prefisso():
     vecchie = classi_vecchie()
     assert 'senza il prefisso' in cade(controlla_prefisso, VESTE + '\n.voce { color: var(--v-testo); }', vecchie)
+    # le due classi di oggi che la cornice nasconde o sposta: mai da sole o prima del pezzo v-
+    assert 'fuori dalla cornice' in cade(controlla_prefisso, VESTE + '\n.marchio { display: none; }', vecchie)
+    assert 'fuori dalla cornice' in cade(controlla_prefisso, VESTE + '\n.giro-invito .v-x { left: 0; }', vecchie)
     assert 'senza un pezzo v-' in cade(controlla_prefisso, VESTE + '\nbody { margin: 0; }', vecchie)
     assert 'già usate' in cade(controlla_prefisso, VESTE, vecchie | {'v-scheda'})
     # un .v- dentro :not() o in una sola scelta di :where() non basta: la regola prenderebbe i collegamenti di oggi

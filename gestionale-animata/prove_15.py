@@ -2204,7 +2204,9 @@ def g_pagina_iniziale():
     for parola in ('Email: da configurare', 'Promemoria: spenti', 'WhatsApp automatico: da configurare',
                    'myaccount.google.com/apppasswords', 'promemoria_appuntamento', 'Nessun messaggio ancora'):
         assert parola in t_, parola
-    assert 'Email e WhatsApp' in testo(C.get('/mese/%s' % MAR.strftime('%Y-%m'))), 'manca la voce nel menu'
+    # dalla tappa 2 Email e WhatsApp è una linguetta di Configura: nel menu di ogni pagina c'è la voce Configura, e
+    # nelle pagine di Configura la linguetta
+    assert 'data-guida="menu-configura"' in html(C.get('/mese/%s' % MAR.strftime('%Y-%m'))), 'manca la voce nel menu'
     assert 'Email e WhatsApp' in testo(C.get('/impostazioni'))
 
 

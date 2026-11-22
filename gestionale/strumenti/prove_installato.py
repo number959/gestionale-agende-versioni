@@ -96,14 +96,14 @@ controlla('Riepilogo del periodo della sala (1.12.6): la pagina',
 s, b, _ = get('/riepilogo-live/statistiche?struttura=1&periodo=settimana&schermo=1')
 pagina_st = b.decode('utf-8', 'replace')
 controlla('Riepilogo del periodo nella dashboard (1.12.6): la pagina senza menu e senza Excel',
-          s == 200 and 'class="frase-live' in pagina_st and '<nav class="menu"' not in pagina_st and 'riepilogo.xlsx' not in pagina_st
+          s == 200 and 'class="frase-live' in pagina_st and not re.search(r'<nav class="menu[ "]', pagina_st) and 'riepilogo.xlsx' not in pagina_st
           and '<h1 class="giorno">Riepilogo del periodo' in pagina_st, s)
 # gemello: lo stesso indirizzo senza ?schermo=1 ha il menu e il collegamento all'Excel (solo lettura)
 s, b, _ = get('/riepilogo-live/statistiche?struttura=1&periodo=settimana')
 pagina_st = b.decode('utf-8', 'replace')
 controlla('Riepilogo del periodo nella dashboard (gemello): senza il modo schermo il menu e l\'Excel ci sono',
-          s == 200 and '<nav class="menu"' in pagina_st and 'riepilogo.xlsx' in pagina_st,
-          (s, '<nav class="menu"' in pagina_st, 'riepilogo.xlsx' in pagina_st))
+          s == 200 and re.search(r'<nav class="menu[ "]', pagina_st) is not None and 'riepilogo.xlsx' in pagina_st,
+          (s, re.search(r'<nav class="menu[ "]', pagina_st) is not None, 'riepilogo.xlsx' in pagina_st))
 s, b, _ = get('/cassa/tariffari')
 controlla('Tariffari dei medici (1.12.6): la pagina con il controllo dei medici e «Carica tariffario»',
           s == 200 and 'Controllo dei medici' in testo(b) and 'Carica tariffario' in testo(b), s)

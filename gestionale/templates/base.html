@@ -50,20 +50,38 @@
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='icona.png') }}">
 </head>
 <body{% block classe_body %}{% endblock %} data-pagina="{{ request.endpoint or '' }}" data-aiuto="{{ url_for('guida.indice') }}" data-guide="{{ guide_della_pagina() if guide_della_pagina is defined else '[]' }}">
-{% block menu %}{% include "_menu.html" %}{% endblock %}
-{#- il contenuto della pagina: messaggi e corpo (il menu sopra, il popup e gli script fuori) #}
+{#- La cornice (dalla tappa 2 della base): il menu a sinistra (_menu.html, con le notifiche e i tasti rapidi), la barra in
+    alto (_barra.html) e le linguette in cima al contenuto (_linguette.html), in una griglia (.v-cornice, veste.css).
+    Le 11 pagine senza menu (i fogli da stampare, la dashboard nel modo schermo) svuotano solo il blocco «menu», come
+    prima: qui il blocco si legge una volta (self.menu(), scritto prima dentro un «if false» perché non esca due volte)
+    e la cornice intera c'è solo se il menu non è vuoto. Una pagina può svuotare anche «barra» e «linguette» (per
+    rimettere le linguette nella sua testa). Ogni pezzo sta in un contenitore con data-cornice, anche la zona dei
+    messaggi (strumenti/confronta_rami.py confronta la cornice a parte). In stampa la cornice sparisce e la pagina
+    resta quella di prima (veste.css, @media print). #}
+{%- if false %}{% block menu %}{% include "_menu.html" %}{% endblock %}{% endif %}
+{%- set _menu = self.menu()|trim %}
+{%- if _menu %}
+<div class="v-cornice">
+{{ _menu }}
+{% block barra %}{% include "_barra.html" %}{% endblock %}
+{% block linguette %}{% include "_linguette.html" %}{% endblock %}
+{%- endif %}
+{#- il contenuto della pagina: messaggi e corpo (la cornice intorno, il popup e gli script fuori) #}
 <main id="principale">
-{% with messaggi = get_flashed_messages(with_categories=true) %}
+{% block messaggi %}{% with messaggi = get_flashed_messages(with_categories=true) %}
   {% if messaggi %}
-  <div class="avvisi" role="status" aria-label="Messaggi">
+  <div class="avvisi" data-cornice="messaggi" role="status" aria-label="Messaggi">
     {% for categoria, testo in messaggi %}
       <div class="avviso {% if categoria == 'errore' %}errore{% elif categoria == 'avviso' %}avviso-giallo{% endif %}">{{ testo }}</div>
     {% endfor %}
   </div>
   {% endif %}
-{% endwith %}
+{% endwith %}{% endblock %}
 {% block corpo %}{% endblock %}
 </main>
+{%- if _menu %}
+</div>
+{%- endif %}
 {% include "_popup_aggiornamento.html" %}
 <script src="{{ url_for('static', filename='gestionale.js') }}"></script>
 {%- if variante == 'animata' %}

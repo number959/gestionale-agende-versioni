@@ -286,8 +286,194 @@ table.v-tabella td small, table.v-tabella .v-testo-piccolo { display: block; }
 .v-riquadro-errore { background: var(--v-rosso-fondo); border-color: var(--v-rosso-riga); color: var(--v-rosso-forte); }
 .v-riquadro-ok { background: var(--v-ok-fondo); border-color: var(--v-ok-fondo); color: var(--v-ok-testo); }
 
+/* ------------------------------------------------------------------ la cornice (tappa 2): menu a sinistra, barra in
+   alto, linguette in cima al contenuto (base.html, _menu.html, _barra.html, _linguette.html; tavole Nefro-*).
+   Solo sullo schermo: in stampa la cornice sparisce e la pagina resta quella di prima (in fondo, @media print).
+   Le pagine di oggi stanno dentro <main> così come sono, con i loro margini e il loro fondo.
+   - Larghezze: da 1200 px il menu è largo 248 px, con il nome delle voci; sotto 1200 px solo le icone (72 px; il nome
+     resta per i lettori di schermo e nel title) e al posto del logo le iniziali della struttura; sotto 600 px (il
+     telefono) il menu torna in alto, su una riga di icone, e la pagina ha tutta la larghezza.
+   - Il menu resta fermo mentre la pagina scorre (sticky, alto quanto la finestra): se non ci sta (1366×657), scorre
+     per conto suo la parte delle voci; Aiuto e Configura restano in fondo, e la tendina Aiuto si apre a destra, fuori
+     dalla parte che scorre (dentro sarebbe tagliata).
+   - Il nav tiene la classe «menu» (la guida e le prove lo cercano), e con lei arrivano dallo strato le regole del menu
+     di prima (fondo blu, opacità, bordo sotto, 13 px, a capo; nel tema scuro il testo bianco): qui ogni proprietà che
+     quelle cambiano è riscritta, sul nav, sulle voci, sulla tendina e sul contatore. La tendina si apre ancora con le
+     regole di prima (passandoci sopra, con il fuoco, con .aperto di gestionale.js): qui mai «display» sulla tendina.
+   - Piani: la barra della pagina di oggi (.barra) è a 40 e 41; la barra in alto a 42, con i risultati della ricerca;
+     il menu a 45, con la tendina Aiuto sopra la pagina; i tasti rapidi a 70 e la guida da 900 restano sopra. */
+@media screen {
+  .v-cornice {
+    display: grid; grid-template-columns: 248px minmax(0, 1fr); grid-template-rows: auto auto 1fr;
+    min-height: 100vh;
+  }
+  .v-cornice > main { grid-column: 2; grid-row: 3; min-width: 0; }
+  /* il logo della pagina di oggi (.marchio nella sua barra): c'è già nel menu; resta in stampa */
+  .v-cornice .marchio { display: none; }
+  /* «Prima volta qui?» in basso a sinistra coprirebbe Aiuto e Configura: si sposta accanto al menu */
+  .v-cornice ~ .giro-invito { left: calc(248px + var(--v-spazio-6)); }
+
+  .v-lato {
+    grid-column: 1; grid-row: 1 / 4; align-self: start;
+    position: sticky; top: 0; z-index: 45;
+    box-sizing: border-box; height: 100vh; min-width: 0;
+    display: flex; flex-direction: column; gap: var(--v-spazio-3);
+    padding: 22px 14px var(--v-spazio-6);
+    background: var(--v-superficie-tenue); border-right: 1px solid var(--v-riga);
+    color: var(--v-testo-medio);
+    font: var(--v-car-n)/var(--v-int-n) var(--v-corpo); letter-spacing: var(--v-lettere);
+  }
+  .v-marchio { flex: none; display: flex; flex-direction: column; gap: var(--v-spazio-4); padding: var(--v-spazio-2) 2px var(--v-spazio-6); min-width: 0; }
+  /* il logo su un fondo chiaro anche nel tema scuro (--v-fondo-logo): i loghi sono fatti per il fondo bianco */
+  .v-marchio-logo {
+    display: block; width: auto; height: auto; max-width: 216px; max-height: 36px;
+    padding: 3px 6px; margin-left: -6px; border-radius: var(--v-raggio-1); background: var(--v-fondo-logo);
+  }
+  .v-marchio-nome {
+    font-family: var(--v-titoli); font-weight: var(--v-peso-titolo);
+    font-size: var(--v-car-t3); line-height: var(--v-int-t3); color: var(--v-testo);
+    overflow-wrap: anywhere;
+  }
+  .v-marchio-sotto {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--v-spazio-3); padding-left: var(--v-spazio-2);
+    font-size: var(--v-car-s); line-height: var(--v-int-s); color: var(--v-testo-tenue);
+  }
+  .v-marchio-sotto b {
+    font-family: var(--v-titoli); font-weight: var(--v-peso-titolo); font-size: var(--v-car-l); color: var(--v-testo);
+  }
+
+  /* il nav: tutte le proprietà del .menu di prima (stile.css, tema-scuro.css) riscritte */
+  .v-menu {
+    flex: 1 1 auto; min-height: 0;
+    display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0;
+    margin: 0; padding: 0; background: transparent; font-size: inherit;
+  }
+  .v-menu-scorre { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--v-spazio-5); }
+  .v-menu-gruppo { display: flex; flex-direction: column; gap: var(--v-spazio-1); }
+  .v-menu-titolo { padding: var(--v-spazio-3) var(--v-spazio-5) var(--v-spazio-1); font-size: var(--v-car-s); line-height: var(--v-int-s); color: var(--v-testo-tenue); }
+  .v-menu-fondo {
+    flex: none; display: flex; flex-direction: column; gap: var(--v-spazio-1);
+    padding-top: var(--v-spazio-5); margin-top: var(--v-spazio-2); border-top: 1px solid var(--v-riga);
+  }
+  /* la voce (collegamento o pulsante della tendina): riscrive .menu a, .menu .apri-gruppo e html.scuro .menu a */
+  .v-voce {
+    position: relative; box-sizing: border-box;
+    display: flex; align-items: center; gap: var(--v-spazio-5);
+    width: 100%; height: var(--v-alto); margin: 0; padding: 0 var(--v-spazio-5);
+    border: 0; border-radius: var(--v-raggio-3);
+    background: transparent; color: var(--v-testo-medio); opacity: 1;
+    font: inherit; font-weight: var(--v-peso-medio); text-align: left; text-decoration: none; white-space: nowrap;
+    cursor: pointer;
+  }
+  .v-voce svg { flex: none; width: 20px; height: 20px; }
+  .v-voce-nome { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .v-voce:hover { background: var(--v-incasso); color: var(--v-testo); }
+  .v-voce[aria-current] { background: var(--v-primario-tinta); color: var(--v-primario-testo); font-weight: var(--v-peso-forte); }
+  .v-voce:focus-visible { outline: 2px solid var(--v-fuoco); outline-offset: -2px; }
+  /* il numero accanto a Segreteria (tiene la classe contatore di prima per l'animata: qui riscritta) */
+  .v-menu .v-conta { flex: none; margin: 0 0 0 auto; text-align: center; }
+  /* la tendina Aiuto: si apre a destra del menu, in su dal fondo; mai «display» qui (lo decidono le regole di prima) */
+  .v-gruppo { position: relative; display: block; }
+  .v-gruppo > .tendina {
+    top: auto; bottom: 0; left: 100%; right: auto; z-index: 50;
+    min-width: 300px; margin: 0; padding: var(--v-spazio-3);
+    background: var(--v-superficie); color: var(--v-testo);
+    border: 1px solid var(--v-riga); border-radius: var(--v-raggio-3);
+    box-shadow: var(--v-ombra-3);
+  }
+  .v-gruppo > .tendina a {
+    display: block; margin: 0; padding: var(--v-spazio-4) var(--v-spazio-5);
+    border: 0; border-radius: var(--v-raggio-2); box-shadow: none;
+    background: transparent; color: var(--v-testo); opacity: 1; text-decoration: none; white-space: normal;
+  }
+  .v-gruppo > .tendina a b { display: block; margin: 0; font-size: var(--v-car-n); font-weight: var(--v-peso-forte); }
+  .v-gruppo > .tendina a small { display: block; margin: 0; font-size: var(--v-car-s); line-height: var(--v-int-s); color: var(--v-testo-tenue); }
+  .v-gruppo > .tendina a:is(:hover, :focus) { background: var(--v-primario-tinta); color: var(--v-testo); outline: none; }
+  .v-gruppo > .tendina a:is(:hover, :focus) small { color: var(--v-testo-medio); }
+
+  /* la barra in alto: 18 px sopra, 44 di ricerca = 62, come nelle tavole. A sinistra i 18 px delle pagine di oggi
+     (.barra), che arrivano ai 36 delle tavole quando ogni area ha la sua testa nuova (tappe 4-9) */
+  .v-barra {
+    grid-column: 2; grid-row: 1; position: relative; z-index: 42; min-width: 0;
+    display: flex; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-5) 14px;
+    margin: 0; padding: 18px 18px 0;
+    color: var(--v-testo-tenue);
+    font: var(--v-car-n)/var(--v-int-n) var(--v-corpo); letter-spacing: var(--v-lettere);
+  }
+  .v-percorso {
+    flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-4);
+    margin: 0; font-size: var(--v-car-m); line-height: var(--v-int-m); color: var(--v-testo-tenue);
+  }
+  .v-percorso span + span::before { content: '›'; margin-right: var(--v-spazio-4); color: var(--v-testo-tenue); }
+  .v-percorso span:last-child { color: var(--v-testo); font-weight: var(--v-peso-forte); }
+  .v-cerca {
+    position: relative; flex: 0 1 320px; min-width: 0; box-sizing: border-box;
+    display: flex; align-items: center; gap: 10px;
+    height: var(--v-alto-grande); margin: 0 0 0 auto; padding: 0 14px;
+    background: var(--v-superficie); color: var(--v-testo-tenue);
+    border: 1px solid var(--v-riga); border-radius: var(--v-raggio-3);
+  }
+  .v-cerca:focus-within { border-color: var(--v-fuoco); box-shadow: 0 0 0 1px var(--v-fuoco); }
+  .v-cerca > svg { flex: none; width: 18px; height: 18px; }
+  .v-cerca input {
+    flex: 1 1 auto; min-width: 0; width: 100%; margin: 0; padding: 0;
+    border: 0; outline: 0; background: transparent; color: var(--v-testo);
+    font: inherit; font-size: var(--v-car-n);
+  }
+  .v-cerca input::placeholder { color: var(--v-testo-tenue); opacity: 1; }
+  .v-posto-campanella { flex: none; width: var(--v-alto-grande); height: var(--v-alto-grande); }
+
+  /* le linguette in cima al contenuto (il pezzo di _pezzi.html), allineate alle pagine di oggi */
+  .v-linguette-cornice { grid-column: 2; grid-row: 2; display: flex; min-width: 0; padding: 14px 18px 0; letter-spacing: var(--v-lettere); }
+  .v-linguette-cornice .v-linguetta:focus-visible { outline: 2px solid var(--v-fuoco); outline-offset: 2px; }
+}
+
+/* sotto 1200 px: solo le icone, il nome per i lettori di schermo e nel title; le iniziali al posto del logo */
+@media screen and (max-width: 1199px) {
+  .v-cornice { grid-template-columns: 72px minmax(0, 1fr); }
+  .v-cornice ~ .giro-invito { left: calc(72px + var(--v-spazio-6)); }
+  .v-lato { padding: var(--v-spazio-6) var(--v-spazio-5); }
+  .v-marchio { align-items: center; padding: 0 0 var(--v-spazio-4); }
+  .v-marchio > * { display: none; }
+  .v-marchio::before {
+    content: attr(data-iniziali);
+    display: flex; align-items: center; justify-content: center;
+    width: var(--v-alto-grande); height: var(--v-alto-grande); border-radius: var(--v-raggio-3);
+    background: var(--v-primario-tinta); color: var(--v-primario-testo);
+    font-family: var(--v-titoli); font-weight: var(--v-peso-titolo); font-size: var(--v-car-l);
+  }
+  .v-menu-titolo { display: none; }
+  .v-menu-scorre { gap: var(--v-spazio-4); }
+  .v-menu-gruppo + .v-menu-gruppo { padding-top: var(--v-spazio-4); border-top: 1px solid var(--v-riga); }
+  .v-voce { justify-content: center; gap: 0; padding: 0; }
+  .v-voce-nome {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
+  .v-menu .v-conta { position: absolute; top: -2px; right: -4px; min-width: 18px; height: 18px; padding: 0 var(--v-spazio-2); }
+}
+
+/* sotto 600 px (il telefono): il menu in alto, una riga di icone che va a capo; la pagina ha tutta la larghezza */
+@media screen and (max-width: 599px) {
+  .v-cornice { display: block; }
+  .v-cornice ~ .giro-invito { left: var(--v-spazio-6); }
+  .v-lato {
+    position: static; height: auto; flex-direction: row; align-items: center;
+    padding: var(--v-spazio-3) var(--v-spazio-4); border-right: 0; border-bottom: 1px solid var(--v-riga);
+  }
+  .v-marchio { display: none; }
+  .v-menu { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-1); }
+  .v-menu-scorre, .v-menu-gruppo, .v-menu-fondo { display: contents; }   /* tutte le voci in una riga che va a capo */
+  .v-voce { width: var(--v-alto); }
+  .v-gruppo > .tendina { top: 100%; bottom: auto; left: auto; right: 0; }
+  .v-barra { padding: var(--v-spazio-4) var(--v-spazio-5) 0; }
+  .v-cerca { flex: 1 1 100%; margin: 0; }
+  .v-posto-campanella { display: none; }
+  .v-linguette-cornice { padding: var(--v-spazio-4) var(--v-spazio-5) 0; }
+}
+
 /* ------------------------------------------------------------------ stampa: i comandi non vanno sulla carta */
 @media print {
+  .v-lato, .v-barra, .v-linguette-cornice { display: none; }   /* la cornice: la pagina stampata resta quella di prima */
   .v-pagina { padding: 0; background: none; }
   .v-barra-comandi, .v-linguette, .v-stampa { display: none; }
   .v-scheda, .v-striscia, .v-tabella-contenitore { box-shadow: none; }
