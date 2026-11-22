@@ -51,6 +51,8 @@
 </head>
 <body{% block classe_body %}{% endblock %} data-pagina="{{ request.endpoint or '' }}" data-aiuto="{{ url_for('guida.indice') }}" data-guide="{{ guide_della_pagina() if guide_della_pagina is defined else '[]' }}">
 {% block menu %}{% include "_menu.html" %}{% endblock %}
+{%- if utente_rete %}
+{% include "_utente_rete.html" %}{% endif %}
 {#- il contenuto della pagina: messaggi e corpo (il menu sopra, il popup e gli script fuori) #}
 <main id="principale">
 {% with messaggi = get_flashed_messages(with_categories=true) %}

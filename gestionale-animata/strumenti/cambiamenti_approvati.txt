@@ -5,7 +5,9 @@
 #       un elemento che c'è in più qui (non appaiato, nello stesso ordine, con uno uguale del principale) e che
 #       corrisponde all'espressione non conta; uno che c'era e ora manca conta sempre;
 #   sostituisci   <chiave>   <espressione>  <al posto>     <perché>
-#       nel principale l'espressione diventa «al posto» (re.sub), poi si confronta: per le parole approvate.
+#       nel principale l'espressione diventa «al posto» (re.sub), poi si confronta: per le parole approvate;
+#   nuova         indirizzo  <espressione>                 <perché>
+#       una pagina che nel principale non c'è (404) e il cui indirizzo (senza i parametri) corrisponde: non conta.
 #
 # <chiave> è una parte del riassunto di una pagina: segni (data-tasto, data-guida, data-prova, role, aria-label,
 # aria-current, scritti «attributo=valore»), testo, collegamenti, moduli.
@@ -16,3 +18,7 @@ aggiunto	segni	^aria-label=(Ambulatori|Segreteria|Aiuto|Configura)$	tappa 1: le 
 aggiunto	segni	^(role=region|aria-label=Notifiche)$	tappa 1: la zona delle notifiche (#notifiche in _menu.html) è una regione di nome Notifiche
 aggiunto	segni	^(role=dialog|aria-label=Tasti rapidi)$	tappa 1: il riquadro dei tasti rapidi (#aiuto-tasti in _menu.html) è una finestra di nome Tasti rapidi
 aggiunto	segni	^(role=status|aria-label=Messaggi)$	tappa 1: la zona dei messaggi del programma (.avvisi in base.html) è uno stato di nome Messaggi
+aggiunto	collegamenti	^/configura/accessi$	accessi dagli altri PC (1.13, richiesta di Giovanni del 22/11/2026): la pagina «Aree e accessi» si apre da Impostazioni (un bottone accanto a «Controllo del programma»), senza toccare il menu che rifà la tappa 2; poi sarà la settima linguetta di Configura
+aggiunto	testo	^Aree e accessi$	accessi dagli altri PC: il nome del bottone nuovo di Impostazioni
+nuova	indirizzo	^/configura/accessi$	accessi dagli altri PC: la pagina «Aree e accessi» (utenti, aree, porta della rete, tentativi bloccati, ultimi accessi), solo dal PC principale
+nuova	indirizzo	^/accesso(/password)?$	accessi dagli altri PC: l'accesso con nome e password e la scelta della propria password; sul PC principale non servono e rimandano a Oggi

@@ -392,7 +392,7 @@ def _altra_persona(p, nome, data_nascita, codice_fiscale, cf_calcolato):
 
 
 def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_nascita=None,
-                 codice_fiscale='', indirizzo='', sesso='', luogo_nascita='', cf_calcolato=False):
+                 codice_fiscale='', indirizzo='', sesso='', luogo_nascita='', cf_calcolato=False, aggiorna=True):
     """Il paziente dell'appuntamento.
 
     - scelto dall'elenco (paziente_id) e con lo stesso cognome: e' lui, e
@@ -407,7 +407,11 @@ def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_n
     I valori arrivano gia' controllati (codice fiscale valido, data
     plausibile). Un codice fiscale calcolato dai dati (cf_calcolato) non
     prende mai il posto di quello gia' nella scheda: quello vero puo'
-    essere diverso (omocodia)."""
+    essere diverso (omocodia).
+
+    Con aggiorna=False (dagli altri PC, chi non puo' modificare i Pazienti: accessi.py) la scheda di un paziente
+    che c'e' gia' resta com'e': niente aggiornato, niente completato; una scheda nuova si crea lo stesso, con
+    appena_creato=True."""
     cognome, nome = (cognome or '').strip(), (nome or '').strip()
     sesso, luogo_nascita = (sesso or '').strip().upper(), (luogo_nascita or '').strip().upper()
     telefono, email = (telefono or '').strip(), (email or '').strip()
@@ -416,6 +420,8 @@ def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_n
     p = s.get(Paziente, paziente_id) if paziente_id else None
     if p is not None and (not cognome or semplifica(cognome) == semplifica(p.cognome)) and \
             not _altra_persona(p, nome, data_nascita, codice_fiscale, cf_calcolato):
+        if not aggiorna:
+            return p
         if nome and not p.nome:
             p.nome = nome
         if telefono and telefono_confronto(telefono) not in (telefono_confronto(p.telefono),
@@ -441,6 +447,8 @@ def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_n
         return None
 
     def completa(c):
+        if not aggiorna:
+            return c
         for campo, valore in (('nome', nome), ('email', email), ('data_nascita', data_nascita),
                               ('codice_fiscale', codice_fiscale), ('indirizzo', indirizzo), ('sesso', sesso),
                               ('luogo_nascita', luogo_nascita)):
@@ -456,7 +464,7 @@ def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_n
             if semplifica(r.cognome) == c_s:
                 c = completa(s.get(Paziente, r.id))
                 # il numero nuovo non si perde: va nel secondo telefono, se e' libero
-                if telefono and not c.telefono2 and telefono_confronto(telefono) not in (
+                if aggiorna and telefono and not c.telefono2 and telefono_confronto(telefono) not in (
                         telefono_confronto(c.telefono), ''):
                     if c.telefono:
                         c.telefono2 = telefono
@@ -489,6 +497,7 @@ def trova_o_crea(s, paziente_id, cognome, nome='', telefono='', email='', data_n
                  codice_fiscale=codice_fiscale, indirizzo=indirizzo, sesso=sesso, luogo_nascita=luogo_nascita)
     s.add(p)
     s.flush()
+    p.appena_creato = True
     return p
 
 

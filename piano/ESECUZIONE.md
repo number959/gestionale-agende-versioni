@@ -63,6 +63,13 @@ accessi-rete/revisione/attacchi/): DA FARE quando si applica (M2):
     ma attenzione: oggi la dashboard dietro Caddy funziona senza password → lasciare acceso se rete spenta? Deciso:
     con rete spenta il comportamento di Caddy resta quello di oggi (schermo libero), la casella vale per la rete accesa.
 11. Password: lista di vietate, frase lunga consigliata, cambio al primo accesso.
+Nucleo applicato (22/11, ramo `accessi`, gestionale/accessi.py + prove_accessi.py): correzioni 4-11 tutte; della 1 il
+`clear_untrusted_proxy_headers=False` in crea_server (senza, il portiere di Caddy sembrerebbe il PC); della 2 i limiti
+solo per l'ascolto della rete (13 MB, 20 collegamenti, 30 s). Restano da fare: 1 (i portieri puntati alla porta della
+rete, nella guida), 2 nel server principale, 3 (email e WhatsApp nel Sistema, password salvata cancellata), la pagina
+come settima linguetta di Configura (dopo la tappa 2), la guida e il LEGGIMI, le prove nel browser della pagina.
+Scelte del nucleo: Modo schermo libero solo con ?schermo=1 (le pagine con il menu vogliono l'accesso); «Oggi» senza i
+riquadri delle aree che l'utente non ha; menu (_menu.html) non toccato: le voci delle aree negate portano al 403.
 Domande lasciate a Giovanni (decido io il predefinito e lo scrivo): Importa da Excel → Configura «modificare» (no Sistema);
 Riepilogo medici → Statistiche e report; Oggi: spariscono i riquadri senza area; utenti personali consigliati;
 firewall: il programma propone la regola con il consenso di Windows (UAC) + comando netsh nella guida.

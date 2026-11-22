@@ -180,6 +180,13 @@ def chiudi_le_porte(cartella, db):
     # (importa.cartella_lavoro, che li' cancella i file di ieri): qui nella cartella della prova
     importa.tempfile = types.SimpleNamespace(gettempdir=lambda: cartella)
 
+    # gli altri PC della rete non entrano mai nella prova (1.13, accessi.py): la presa su 0.0.0.0 non si apre
+    import accessi
+
+    def niente_rete(*_, **__):
+        raise OSError('versione di prova: gli altri PC della rete non entrano mai')
+    accessi.presa_della_rete = niente_rete
+
     autoripara.PROGRAMMA = PROGRAMMA                    # /salute e il secondo clic: solo la prova riconosce la prova
     autoripara.riavvia_programma = lambda *_, **__: False
     autoripara.imposta_riavvio = lambda *_, **__: None

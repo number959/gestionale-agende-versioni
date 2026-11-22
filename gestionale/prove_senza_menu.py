@@ -2,7 +2,9 @@
 """Le pagine senza menu (tappa 1 della base, 22/11/2026).
 
 Undici pagine non mostrano il menu di sinistra: i nove fogli da stampare, sempre, e due pagine della dashboard,
-solo con ?schermo=1 (il modo schermo, per lo schermo grande). Per ognuna:
+solo con ?schermo=1 (il modo schermo, per lo schermo grande). Dalla 1.13 anche le due pagine di chi arriva da un
+altro PC della rete (accessi.py): l'accesso con nome e password e la scelta della propria password, che sul PC
+principale non si aprono (rimandano a Oggi). Per ognuna:
 - la pagina risponde 200 ed è fatta dalla funzione giusta (data-pagina del <body>): anche una pagina d'errore
   (500, 404) è senza menu, e non deve passare per buona;
 - il menu non c'è;
@@ -121,6 +123,49 @@ COPPIE = [
 ]
 
 
+# le due pagine dagli altri PC della rete (accessi.py): (cos'è, il modello, la pagina, la funzione, chi entra e con quale
+# password da cambiare, la gemella con il menu per un utente che la password l'ha già scelta)
+DALLA_RETE = [
+    ('l\'accesso dagli altri PC', 'accesso.html', '/accesso', 'accessi.accesso', None, '/oggi'),
+    ('la propria password dagli altri PC', 'accesso_password.html', '/accesso/password', 'accessi.password', True,
+     '/oggi'),
+]
+
+
+def client_della_rete(cambia):
+    """Un client da un altro PC (accessi.py), con la rete accesa; entrato con un utente se cambia non è None."""
+    import json
+    import accessi
+    from modelli import scrivi_impostazione
+    s = A.Sessione()
+    u = accessi.nuovo_utente('Rete Fintini', 'mela verde sul tavolo')
+    u.update(aree={'agenda': 'guarda'}, cambia=bool(cambia))
+    scrivi_impostazione(s, 'rete_accesa', '1')
+    scrivi_impostazione(s, 'rete_utenti', json.dumps([u]))
+    s.commit()
+    s.close()
+    c = A.app.test_client()
+    c.environ_base['REMOTE_ADDR'] = '192.168.1.50'
+    if cambia is not None:
+        r = c.post('/accesso', base_url='http://127.0.0.1:5080', headers={'Origin': 'http://127.0.0.1:5080'},
+                   data={'nome': 'Rete Fintini', 'password': 'mela verde sul tavolo'})
+        assert r.status_code == 302, r.status_code
+    return c
+
+
+def dalla_rete(senza, funzione, cambia, gemella):
+    def p():
+        c = client_della_rete(cambia)
+        g = guarda(c.get(senza, base_url='http://127.0.0.1:5080').get_data(as_text=True))
+        assert g.funzione == funzione, '%s è fatta da %s, non da %s' % (senza, g.funzione, funzione)
+        h = guarda(client_della_rete(False).get(gemella, base_url='http://127.0.0.1:5080').get_data(as_text=True))
+        assert h.menu == 1 and h.funzione == 'cruscotto.oggi', 'gemello: %s dalla rete, %d menu (%s)' % (
+            gemella, h.menu, h.funzione)
+        assert g.menu == 0, '%s: %d menu, la pagina deve esserne senza' % (senza, g.menu)
+        return 'con il menu: %s dalla rete' % gemella
+    return p
+
+
 def pagina(url):
     """La pagina letta dal parser: 200 e HTML, altrimenti la prova cade (anche una pagina d'errore è senza menu)."""
     r = C.get(url)
@@ -160,11 +205,11 @@ def p_undici():
             with open(os.path.join(cartella, n), encoding='utf-8') as f:
                 if BLOCCO_MENU.search(f.read()):
                     tolti.add(n)
-    attesi = {c[1] for c in COPPIE}
+    attesi = {c[1] for c in COPPIE} | {c[1] for c in DALLA_RETE}
     assert tolti == attesi, 'modelli che tolgono il menu e non sono nell\'elenco: %s; nell\'elenco e non lo tolgono ' \
                             'più: %s' % (sorted(tolti - attesi), sorted(attesi - tolti))
-    assert len(attesi) == len(COPPIE) == 11, (len(attesi), len(COPPIE))
-    return '%d modelli' % len(tolti)
+    assert len(attesi) == len(COPPIE) + len(DALLA_RETE) == 13 and len(COPPIE) == 11, (len(attesi), len(COPPIE))
+    return '%d modelli (%d dalla rete)' % (len(tolti), len(DALLA_RETE))
 
 
 def g_selettore():
@@ -181,9 +226,11 @@ def g_selettore():
     assert not BLOCCO_MENU.search('{% block menu_extra %}{% endblock %}{% block menubar %}{% block corpo %}')
 
 
-prova('i modelli che tolgono il menu sono gli undici dell\'elenco', p_undici)
+prova('i modelli che tolgono il menu sono gli undici dell\'elenco, più i due dalla rete', p_undici)
 for nome, _, senza, funzione, gemelle in COPPIE:
     prova('%s: senza menu, con il menu nella gemella' % nome, senza_menu(senza, funzione, gemelle))
+for nome, _, senza, funzione, cambia, gemella in DALLA_RETE:
+    prova('%s: senza menu, con il menu nella gemella' % nome, dalla_rete(senza, funzione, cambia, gemella))
 prova('gemello: il selettore e il blocco del menu lo vedono in ogni forma, e solo il menu', g_selettore)
 
 shutil.rmtree(PROVVISORIA, ignore_errors=True)

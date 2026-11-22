@@ -255,6 +255,8 @@ def leggi_approvati(percorso):
                 regole.append(('aggiunto', parti[1], re.compile(parti[2]), None))
             elif parti[0] == 'sostituisci' and len(parti) >= 5:
                 regole.append(('sostituisci', parti[1], re.compile(parti[2]), parti[3]))
+            elif parti[0] == 'nuova' and parti[1:2] == ['indirizzo'] and len(parti) >= 4:
+                regole.append(('nuova', parti[1], re.compile(parti[2]), None))
             else:
                 sys.exit('cambiamenti_approvati.txt, riga %d: non la capisco: %r' % (n, riga))
     return regole
@@ -279,6 +281,13 @@ def togli_aggiunti(principale, qui, rx):
     for op, _, _, j1, j2 in difflib.SequenceMatcher(None, principale, qui, autojunk=False).get_opcodes():
         tieni += [x for x in qui[j1:j2] if op == 'equal' or not (isinstance(x, str) and rx.search(x))]
     return tieni
+
+
+def pagina_nuova(percorso, ra, regole):
+    """Una pagina che nel principale non c'è (404) e che una regola «nuova» approva (per l'indirizzo, senza i
+    parametri): non è una differenza."""
+    return ra.get('stato') == 404 and any(tipo == 'nuova' and rx.search(urlsplit(percorso).path)
+                                          for tipo, _, rx, _ in regole)
 
 
 def applica_approvati(ra, rb, regole):
@@ -383,9 +392,13 @@ def main():
             ra, la, rb, (sa, modelli, byte) = due()
             if sa == 200:
                 viste.append((percorso, modelli, byte))
-            if not uguali(*applica_approvati(ra, rb, regole)):        # l'ora può scattare fra le due richieste: una volta ancora
+            if pagina_nuova(percorso, ra, regole):
+                approvate += 1
+            elif not uguali(*applica_approvati(ra, rb, regole)):        # l'ora può scattare fra le due richieste: una volta ancora
                 ra, la, rb, _ = due()
-            if not uguali(ra, rb) and uguali(*applica_approvati(ra, rb, regole)):
+            if pagina_nuova(percorso, ra, regole):
+                pass
+            elif not uguali(ra, rb) and uguali(*applica_approvati(ra, rb, regole)):
                 approvate += 1
             elif not uguali(ra, rb):
                 ra, rb = applica_approvati(ra, rb, regole)

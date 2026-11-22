@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block titolo %}Accesso{% endblock %}
+{% block menu %}{% endblock %}
+{% block corpo %}
+<div class="pagina pagina-accesso">
+  <h1>Gestionale Agende</h1>
+  <p class="sotto">Da questo PC si entra con il proprio nome e la propria password.</p>
+  {% if nessuna %}<div class="avviso errore">Questo utente non ha nessuna parte del programma disponibile: chiedere a chi usa il PC della segreteria.</div>{% endif %}
+  {% if errore %}<div class="avviso errore" role="alert">{{ errore }}</div>{% endif %}
+  <form method="post" action="{{ url_for('accessi.accesso') }}" class="riquadro">
+    <input type="hidden" name="dopo" value="{{ dopo }}">
+    <div class="campo"><label for="nome">Nome</label>
+      <input id="nome" name="nome" autocomplete="username" required maxlength="40" value="{{ nome }}" autofocus></div>
+    <div class="campo"><label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="200"></div>
+    <div class="azioni"><button class="bottone primario" type="submit">Entra</button></div>
+  </form>
+  <p class="nota-riga">Collegamento senza protezione (http): nome, password e dati passano in chiaro nella rete della
+  clinica. Usarlo solo dai PC della clinica, mai da una rete Wi-Fi aperta o da fuori.</p>
+</div>
+{% endblock %}

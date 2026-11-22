@@ -183,19 +183,19 @@
         {% endfor %}
       </select>
     </div>
-
+{% if puo('cassa') %}
     <div class="campo meta">
       <label for="convenzione">Convenzione / assicurazione</label>
       <input type="text" id="convenzione" name="convenzione" maxlength="80" list="lista_convenzioni"
-             value="{{ val('convenzione', a.convenzione if a else '') }}" placeholder="Privato">
+             value="{{ val('convenzione', a.convenzione if a else '') }}" placeholder="Privato"{% if not puo_cambiare('cassa') %} readonly{% endif %}>
       <datalist id="lista_convenzioni"><option value="Privato">{% for c in convenzioni %}{% if c != 'Privato' %}<option value="{{ c }}">{% endif %}{% endfor %}</datalist>
     </div>
     <div class="campo meta">
       <label for="importo">Importo in euro</label>
       <input type="text" id="importo" name="importo" inputmode="decimal" maxlength="12"
-             value="{{ val('importo', a.importo_testo if a else '') }}" placeholder="0,00" data-tariffe="{{ tariffe }}">
+             value="{{ val('importo', a.importo_testo if a else '') }}" placeholder="0,00" data-tariffe="{{ tariffe }}"{% if not puo_cambiare('cassa') %} readonly{% endif %}>
     </div>
-
+{% endif %}
     {% for pr in prestazioni if pr.elenco_campi_extra %}
     <div class="campi-extra" data-prestazione="{{ pr.id }}">
       {% set salvati = a.valori_extra if a and a.prestazione_id == pr.id else {} %}
@@ -269,21 +269,23 @@
     <p class="aiuto">Le caselle si salvano da sole. <a href="{{ url_for('sala.giornata', iso=a.inizio.date().isoformat(), struttura=sid) }}">Sala operatoria del giorno</a> · le voci si cambiano in <a href="{{ url_for('viste.impostazioni') }}#checklist">Impostazioni</a>.</p>
   </div>
   {% endif %}
-
+{% if puo('cassa') %}
   <div class="riquadro-modulo" id="incasso">
     <h2>Incasso</h2>
     {% if a.pagato %}
     <p><span class="pagato">Pagati {{ a.pagato_testo }} € ({{ a.etichetta_pagamento }})</span> il {{ a.pagato_il.strftime('%d/%m/%Y alle %H:%M') }}.
-      <form method="post" action="{{ url_for('cassa.pagamento', aid=a.id) }}" class="in-linea"><input type="hidden" name="azione" value="annulla"><button class="bottone piccolo" type="submit" onclick="return confirm('Annullare il pagamento?')">Annulla il pagamento</button></form></p>
-    {% else %}
+      {% if puo_cambiare('cassa') %}<form method="post" action="{{ url_for('cassa.pagamento', aid=a.id) }}" class="in-linea"><input type="hidden" name="azione" value="annulla"><button class="bottone piccolo" type="submit" onclick="return confirm('Annullare il pagamento?')">Annulla il pagamento</button></form>{% endif %}</p>
+    {% elif puo_cambiare('cassa') %}
     <form method="post" action="{{ url_for('cassa.pagamento', aid=a.id) }}" class="righe" style="display:flex">
       <div class="campo"><label for="importo_pagato">Importo (€)</label><input type="text" id="importo_pagato" name="importo" inputmode="decimal" maxlength="12" size="9" value="{{ a.importo_testo }}" placeholder="0,00"></div>
       <div class="campo"><label for="metodo">Metodo</label><select id="metodo" name="metodo">{% for codice, etichetta in metodi %}<option value="{{ codice }}">{{ etichetta }}</option>{% endfor %}</select></div>
       <div class="campo"><button class="bottone primario" type="submit">Registra il pagamento</button></div>
     </form>
+    {% else %}
+    <p class="aiuto">Non ancora pagato.</p>
     {% endif %}
   </div>
-
+{% endif %}
 
   <div class="riquadro-modulo">
     <h2>Stampe e documenti</h2>
@@ -292,7 +294,7 @@
     {% else %}
     <p class="aiuto">Nessun modulo per questa prestazione. <a href="{{ url_for('documenti.moduli') }}">Moduli da stampare</a></p>
     {% endif %}
-    {% if a.paziente %}<p>{{ documenti|length }} document{{ 'o' if documenti|length == 1 else 'i' }} nella scheda del paziente. <a href="{{ url_for('pazienti.scheda', pid=a.paziente_id) }}#documenti">Allega o apri</a></p>{% endif %}
+    {% if a.paziente and puo('pazienti') %}<p>{{ documenti|length }} document{{ 'o' if documenti|length == 1 else 'i' }} nella scheda del paziente. <a href="{{ url_for('pazienti.scheda', pid=a.paziente_id) }}#documenti">Allega o apri</a></p>{% endif %}
   </div>
 
   {% if messaggi %}{% set m = messaggi %}

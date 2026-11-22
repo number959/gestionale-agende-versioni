@@ -2,6 +2,8 @@
 # la risposta sui dati di prova. Lo scrive «python prove_indirizzi.py --scrivi»; lo controlla
 # prove_indirizzi.py. Un cambiamento qui è un cambiamento degli indirizzi: va spiegato nel commit.
 GET	/	home	302 → /oggi
+GET,POST	/accesso	accessi.accesso	302 → /
+GET,POST	/accesso/password	accessi.password	302 → /
 GET	/agenda-medico/<iso>	segreteria.agenda_medico
 GET,POST	/aggiornamenti	aggiornamenti.pagina	200
 POST	/aggiornamenti/aggiorna	aggiornamenti.aggiorna
@@ -61,6 +63,7 @@ GET,POST	/cassa/tariffari/anteprima/<token>	tariffari.anteprima
 GET	/cerca-tutto.json	segreteria.cerca_tutto	200
 GET,POST	/chiusura/<iso>	segreteria.chiusura
 GET	/conferme	viste.conferme	200
+GET,POST	/configura/accessi	accessi.pagina	200
 GET,POST	/cose-da-fare	segreteria.cose_da_fare	200
 POST	/cose-da-fare/<int:xid>/<azione>	segreteria.cosa_fatta
 GET,POST	/da-confermare	segreteria.da_confermare	200
@@ -81,6 +84,7 @@ GET	/dove-si-fa/stampa	dovesifa.stampa	404
 GET,POST	/dove-si-fa/strutture	dovesifa.strutture	200
 GET,POST	/dove-si-fa/strutture/<int:gid>	dovesifa.struttura
 GET,POST	/dove-si-fa/strutture/importa/<token>	dovesifa.anteprima
+POST	/esci	accessi.esci
 GET	/esporta/<iso>	esporta
 GET	/esportazioni	esportazioni.pagina	200
 GET	/esportazioni/<periodo>/<parte>/<iso>.xlsx	esportazioni.scarica

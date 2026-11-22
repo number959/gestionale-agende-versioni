@@ -24,6 +24,7 @@ import calendario
 import pazienti
 import backup
 import sala
+import accessi
 
 bp = Blueprint('segreteria', __name__)
 _fornitore = None
@@ -490,6 +491,7 @@ def sposta_blocco():
             flash(x, 'avviso')
         for x in falliti:
             flash('Non spostato — %s' % x, 'errore')
+        accessi.ricorda_spostati(avvisi)        # dagli altri PC la pagina dopo mostra solo questi
         return redirect(url_for('segreteria.avvisa_spostati', ids=','.join(map(str, avvisi))))
     apps, proposte = [], []
     if medico is not None:
@@ -512,6 +514,7 @@ def avvisa_spostati():
     """Dopo lo spostamento in blocco: chi avvisare, con il messaggio pronto."""
     s = ses()
     ids = [intero(x) for x in (request.args.get('ids') or '').split(',') if x.strip()][:500]
+    ids = accessi.spostati_permessi(ids)    # dagli altri PC solo quelli appena spostati da chi chiede
     apps = [a for a in (s.get(Appuntamento, i) for i in ids if i) if a is not None]
     apps.sort(key=lambda a: a.inizio)
     contatti = {a.id: pazienti.collegamenti_paziente(a.paziente, messaggio_spostamento(a, None))

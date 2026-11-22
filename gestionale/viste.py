@@ -3,13 +3,14 @@
 elenco del giorno, conferme, stampa, promemoria per il paziente, prima
 disponibilita', statistiche, impostazioni (backup e testo dei messaggi)."""
 import json
+import logging
 import os
 import re
 import threading
 from datetime import date, datetime, time, timedelta
 
 from flask import (Blueprint, render_template, request, redirect, url_for, flash,
-                   abort, send_file)
+                   abort, send_file, current_app)
 from sqlalchemy import select
 
 from modelli import (Risorsa, Operatore, Prestazione, Appuntamento, Paziente,
@@ -647,6 +648,13 @@ def ripristina():
         except Exception as e:
             flash('Ripristino non riuscito: %s' % e, 'errore')
             return redirect(url_for('viste.impostazioni'))
+    try:
+        # la copia rimessa puo' avere l'accesso dagli altri PC acceso o spento in un altro modo (1.13)
+        import accessi
+        if not current_app.config.get('TESTING'):
+            accessi.applica(current_app._get_current_object(), _sessionmaker())
+    except Exception:
+        logging.exception('accessi dopo il ripristino')
     flash('Ripristinata la copia del %s. Il database di prima è stato salvato come %s.' % (
         copia['quando'].strftime('%d/%m/%Y %H:%M'), os.path.basename(sicurezza)), 'ok')
     return redirect(url_for('viste.impostazioni'))

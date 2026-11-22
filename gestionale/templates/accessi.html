@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block titolo %}Aree e accessi{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-accessi">
+  <h1>Aree e accessi</h1>
+  <p class="sotto">Chi può aprire il programma dagli altri PC della rete della clinica, e quali parti. Questo PC (la segreteria) apre sempre tutto, senza password. Questa pagina si apre solo da qui.</p>
+
+  <h2 class="sezione" id="rete">Accesso dagli altri PC</h2>
+  <form method="post" action="{{ url_for('accessi.pagina') }}" class="riquadro">
+    <input type="hidden" name="azione" value="rete">
+    <div class="campo spunta"><label><input type="checkbox" name="accesa" value="1"{% if cfg.accesa %} checked{% endif %}> Gli altri PC della rete possono aprire il programma, con nome e password</label></div>
+    <div class="campo meta"><label for="porta-rete">Porta</label>
+      <input id="porta-rete" name="porta" value="{{ cfg.porta }}" inputmode="numeric" maxlength="5" size="6"></div>
+    <p class="nota-riga">5080 di partenza. Questo PC continua ad aprire http://127.0.0.1:5000 come sempre.</p>
+    <div class="campo spunta"><label><input type="checkbox" name="schermo_libero" value="1"{% if cfg.schermo_libero %} checked{% endif %}> Il Modo schermo della dashboard (solo numeri, mai nomi) si apre senza password</label></div>
+    <p class="nota-riga">Senza questa spunta, con l'accesso acceso anche lo schermo della dashboard chiede nome e password: se oggi la dashboard arriva agli altri PC da un «portiere» (Caddy), va spuntata. Con l'accesso spento il portiere funziona come prima.</p>
+    <div class="campo"><label for="nomi-rete">Altri nomi di questo PC <small>(solo se gli altri PC lo chiamano con un nome diverso da quelli qui sotto)</small></label>
+      <input id="nomi-rete" name="nomi" value="{{ cfg.nomi|join(' ') }}" maxlength="300"></div>
+    <div class="azioni"><button class="bottone primario" type="submit">Salva</button></div>
+  </form>
+  <div class="riquadro">
+    <p>{% if acceso %}<b>Acceso.</b> Sugli altri PC aprire, nel browser:{% elif cfg.accesa %}<b>Acceso nelle impostazioni, ma non in ascolto.</b> Sugli altri PC si aprirà:{% else %}<b>Spento.</b> Una volta acceso, sugli altri PC si aprirà:{% endif %}</p>
+    <ul>{% for x in indirizzi %}<li><code>{{ x }}</code></li>{% endfor %}</ul>
+    {% if errore_ascolto %}<div class="avviso errore">{{ errore_ascolto }}</div>{% endif %}
+    <p class="nota-riga"><b>Attenzione:</b> il collegamento è senza protezione (http, non https). Nome, password e dati dei pazienti passano in chiaro nella rete della clinica: va bene solo per la rete interna, via cavo o Wi-Fi con password, mai per una rete aperta o da fuori. Serve anche la regola del firewall di Windows per questa porta, solo per le reti private (la rete della clinica deve essere segnata «privata» in Windows).</p>
+  </div>
+
+  <h2 class="sezione" id="utenti">Utenti</h2>
+  {% for u in cfg.utenti %}
+  <section class="riquadro utente-accessi" id="utente-{{ u.id }}">
+    <h3>{{ u.nome }}{% if u.attivo is defined and not u.attivo %} <small>(spento: non entra)</small>{% endif %}{% if u.cambia %} <small>(al prossimo accesso sceglie la sua password)</small>{% endif %}{% if entrati(u.id) %} <small>· entrato da {{ entrati(u.id) }} PC</small>{% endif %}</h3>
+    <form method="post" action="{{ url_for('accessi.pagina') }}">
+      <input type="hidden" name="azione" value="salva"><input type="hidden" name="utente" value="{{ u.id }}">
+      <table class="elenco">
+        <tr><th>Area</th><th>Cosa può fare</th></tr>
+        {% for codice, nome, cosa in aree %}
+        <tr><td><b>{{ nome }}</b><br><small>{{ cosa }}</small></td>
+          <td>{% for v, etichetta in livelli %}<label><input type="radio" name="area_{{ codice }}" value="{{ v }}"{% if (u.aree or {}).get(codice, 'no') == v %} checked{% endif %}> {{ etichetta }}</label> {% endfor %}</td></tr>
+        {% endfor %}
+        <tr><td><b>Sistema</b><br><small>aggiornamenti, copie e ripristino, controllo del programma, impostazioni, questa pagina</small></td><td>solo da questo PC</td></tr>
+      </table>
+      <div class="campo spunta"><label><input type="checkbox" name="attivo" value="1"{% if u.attivo is not defined or u.attivo %} checked{% endif %}> Può entrare (togliendo la spunta esce subito da tutti i PC)</label></div>
+      <div class="azioni"><button class="bottone primario" type="submit">Salva le aree di {{ u.nome }}</button></div>
+    </form>
+    <form method="post" action="{{ url_for('accessi.pagina') }}">
+      <input type="hidden" name="azione" value="password"><input type="hidden" name="utente" value="{{ u.id }}">
+      <div class="campo"><label for="password-{{ u.id }}">Password nuova per {{ u.nome }} <small>(se l'ha dimenticata: al prossimo accesso ne sceglie una sua)</small></label>
+        <input id="password-{{ u.id }}" type="password" name="password" autocomplete="new-password" minlength="{{ minimo }}" maxlength="200"></div>
+      <div class="azioni"><button class="bottone" type="submit">Cambia la password</button></div>
+    </form>
+    {% if entrati(u.id) %}
+    <form method="post" action="{{ url_for('accessi.pagina') }}" class="in-linea">
+      <input type="hidden" name="azione" value="fai-uscire"><input type="hidden" name="utente" value="{{ u.id }}">
+      <button class="bottone" type="submit">Fai uscire {{ u.nome }}</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{{ url_for('accessi.pagina') }}" class="in-linea">
+      <input type="hidden" name="azione" value="elimina"><input type="hidden" name="utente" value="{{ u.id }}">
+      <button class="bottone elimina" type="submit" onclick='return confirm({{ ("Togliere l’utente %s? Non potrà più entrare dagli altri PC." % u.nome)|tojson }})'>Togli {{ u.nome }}</button>
+    </form>
+  </section>
+  {% else %}
+  <p class="vuoto">Nessun utente: dagli altri PC non entra nessuno.</p>
+  {% endfor %}
+
+  <h3>Nuovo utente</h3>
+  <form method="post" action="{{ url_for('accessi.pagina') }}" class="riquadro">
+    <input type="hidden" name="azione" value="nuovo">
+    <div class="campo meta"><label for="nuovo-nome">Nome</label><input id="nuovo-nome" name="nome" maxlength="40" autocomplete="off"></div>
+    <div class="campo meta"><label for="nuovo-password">Password per il primo accesso</label><input id="nuovo-password" type="password" name="password" autocomplete="new-password" minlength="{{ minimo }}" maxlength="200"></div>
+    <p class="nota-riga">Meglio un utente per ogni persona. Al primo accesso la persona sceglie una password sua (almeno {{ minimo }} caratteri). {{ consiglio }} Le aree si scelgono dopo, nel riquadro dell'utente.</p>
+    <div class="azioni"><button class="bottone" type="submit">Aggiungi l'utente</button></div>
+  </form>
+
+  <h2 class="sezione" id="bloccati">Tentativi sbagliati</h2>
+  {% if bloccati %}
+  <table class="elenco">
+    <tr><th>Nome scritto</th><th>Da quali PC</th><th>Attesa</th><th></th></tr>
+    {% for nome, da, minuti in bloccati %}
+    <tr><td>{{ nome }}</td><td>{{ da|join(', ') or 'da più PC' }}</td><td>ancora {{ minuti }} minut{{ 'o' if minuti == 1 else 'i' }}</td>
+      <td class="azione"><form method="post" action="{{ url_for('accessi.pagina') }}" class="in-linea"><input type="hidden" name="azione" value="sblocca"><input type="hidden" name="nome" value="{{ nome }}"><button class="bottone piccolo" type="submit">Sblocca</button></form></td></tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="vuoto">Nessun nome bloccato. Dopo 5 password sbagliate dallo stesso PC si aspetta un quarto d'ora; dopo 20 da qualsiasi PC l'attesa cresce a ogni errore.</p>
+  {% endif %}
+
+  <h2 class="sezione" id="registro">Ultimi accessi</h2>
+  <table class="elenco">
+    <tr><th>Quando</th><th>Utente</th><th>Da</th><th>Cosa</th></tr>
+    {% for quando, nome, da, cosa in eventi %}<tr><td>{{ quando }}</td><td>{{ nome }}</td><td>{{ da }}</td><td>{{ cosa }}</td></tr>
+    {% else %}<tr><td colspan="4">Ancora nessuno.</td></tr>{% endfor %}
+  </table>
+  <p class="nota-riga">Tutti gli accessi, i salvataggi e le schede, i documenti e gli Excel aperti dagli altri PC sono nel registro, un file per giorno nella cartella <code>accessi</code> accanto al database.</p>
+</div>
+{% endblock %}

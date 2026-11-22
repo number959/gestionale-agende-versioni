@@ -1,0 +1,3 @@
+{#- chi è entrato da un altro PC della rete (accessi.py): il nome, la sua password e «Esci». Sul PC principale non c'è. #}
+<div class="utente-rete" role="region" aria-label="Utente">Entrato da un altro PC come <b>{{ utente_rete.nome }}</b> · <a href="{{ url_for('accessi.password') }}">La mia password</a>
+  <form method="post" action="{{ url_for('accessi.esci') }}" class="in-linea"><button class="bottone piccolo" type="submit">Esci</button></form></div>

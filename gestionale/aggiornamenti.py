@@ -69,6 +69,7 @@ import comune
 from comune import VERSIONE, json_sicuro, destinazione_sicura
 import backup
 import novita
+import accessi
 import viste
 
 bp = Blueprint('aggiornamenti', __name__)
@@ -857,7 +858,8 @@ def novita_pagina():
     recenti = novita.dopo(precedente, VERSIONE) or novita.dopo('', VERSIONE)
     viste_qui = {v for v, _ in recenti}
     altre = [(v, voci) for v, voci in novita.NOVITA if v not in viste_qui and novita.confronta(v, VERSIONE) <= 0]
-    if leggi_impostazione(s, 'novita_vista', '') != VERSIONE:
+    # dagli altri PC della rete la pagina si guarda e basta: «vista» la segna solo il PC principale (accessi.py)
+    if leggi_impostazione(s, 'novita_vista', '') != VERSIONE and not accessi.dalla_rete():
         with _lucchetto:
             scrivi_impostazione(s, 'novita_vista', VERSIONE)
             s.commit()

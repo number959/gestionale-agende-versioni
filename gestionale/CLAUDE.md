@@ -131,6 +131,11 @@ Metti e Togli, la regola della stanza e il ritorno alla pagina di partenza) e
 invarianti), e dalla tappa 1 della base `prove_indirizzi.py`: l'elenco degli indirizzi in
 `indirizzi.txt` (uguale nelle due cartelle), con come risponde ogni pagina senza parametri; un indirizzo che
 sparisce o cambia la fa cadere, uno nuovo si aggiunge con `python prove_indirizzi.py --scrivi`, nello stesso commit.
+`prove_accessi.py` (dalla 1.13) prova l'accesso dagli altri PC: il censimento delle pagine (con una pagina finta senza
+area), la matrice area × livello × pagina × metodo dalla rete e dal PC (le decisioni lette senza far girare le pagine),
+le pagine di ogni area con tutti gli indirizzi che i loro script chiedono, i cinque modi di arrivare dalla rete, il
+Sistema, il Modo schermo, sessioni, tentativi, messaggi e registro, password, scritture e letture fra aree, e le prese
+vere (portiere, ascolto acceso e spento, chiave fissa rifiutata); ogni prova ha il suo gemello.
 `prove_canarino.py` è la guardia del Modo schermo: un paziente inventato apposta (il «canarino»), con appuntamenti
 di oggi in ogni stato, un intervento, la lista d'attesa e il nome scritto in note, cose da fare e appunti, non deve
 comparire in nessuna pagina sotto `/riepilogo-live*`, con e senza schermo, per ogni struttura e periodo; i suoi gemelli
@@ -306,6 +311,26 @@ temporanea.
   usano nomi e prezzi inventati. Il prezzo proposto nella prenotazione: convenzione, poi tariffario del medico
   (`prezzi_dei_medici`, chiave `medico:<id>` in `cassa.mappa_tariffe`), poi listino; un pacchetto non vale come prezzo
   della seduta. Un medico o una prestazione usati da un tariffario non si eliminano. `prove_tariffari.py`.
+- Accesso dagli altri PC della rete (dalla 1.13, `accessi.py`, richiesta di Giovanni del 22/11/2026): spento di partenza;
+  il PC principale resta su 127.0.0.1:5000 senza accesso e con tutte le pagine (con la rete spenta le sue pagine sono
+  quelle di prima, byte per byte). Acceso da *Configura → Aree e accessi* (`/configura/accessi`, per ora dalla pagina
+  Impostazioni), il programma ascolta anche su 0.0.0.0:<porta della rete> (5080) con un server suo (`AscoltoRete`,
+  fili e limiti suoi). «Dalla rete» = la presa della rete, un'intestazione di un portiere (X-Forwarded-For, Forwarded,
+  X-Real-Ip, X-Forwarded-Host: per questo `crea_server` ha `clear_untrusted_proxy_headers=False`) o un indirizzo non del
+  PC. Utenti, aree e livelli («solo guardare» = solo GET) fra le impostazioni (`rete_utenti`, JSON: id casuale,
+  impronta della password di werkzeug); nessuna tabella nuova. Ogni pagina (funzione di Flask) ha la sua area in
+  `accessi.CENSIMENTO`, uno solo: una pagina nuova va scritta lì (una che manca dalla rete è rifiutata come il
+  Sistema, e `prove_accessi.py` cade). Il Sistema (aggiornamenti, copie e ripristino, controllo del programma,
+  impostazioni, la pagina degli accessi) mai dalla rete. Ricerca dei pazienti, luoghi e codice fiscale servono a più
+  aree (`SERVIZIO_PAZIENTI`). Una notifica nuova ha una chiave che comincia con un prefisso di `AREA_NOTIFICHE`; un
+  Excel o un documento nuovo va in `REGISTRA_LETTURE`. Nei modelli e nelle pagine `puo('area')` e
+  `puo_cambiare('area')` (sul PC sempre vero): la prenotazione cambia la scheda di un paziente che c'è già solo con
+  `puo_cambiare('pazienti')` (`pazienti.trova_o_crea(aggiorna=)`), importo e convenzione solo con la Cassa, lista
+  d'attesa e appunti solo con la Segreteria. I `{% if puo(...) %}` si scrivono al posto di una riga vuota, così
+  sul PC l'HTML resta identico. Sessioni della rete sul server (`Sessioni`, `sessioni-rete.json` accanto a
+  `chiave-sessione`, nella cartella dei dati), chiave dei cookie casuale (mai più `gestionale-locale`), tentativi
+  bloccati per PC e nome e per nome (`Tentativi`), password con `problema_password`, registro per giorno in
+  `accessi/`. Nella prova (`prova.py`) la presa della rete non si apre mai.
 - Popup dell'aggiornamento (dalla 1.12.6): `aggiornamenti.popup_aggiornamento` decide, `_popup_aggiornamento.html` lo
   mostra (incluso in `base.html`); solo con `installato()`, mai nella dashboard (`live.*`), nelle stampe, nella
   guida e nella pagina degli aggiornamenti. Il pulsante è il POST di «Aggiorna adesso», nient'altro.

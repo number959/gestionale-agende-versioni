@@ -163,6 +163,7 @@ import comune  # noqa: E402
 import importa  # noqa: E402
 import invii  # noqa: E402
 import viste  # noqa: E402
+import accessi  # noqa: E402
 
 # l'elenco delle sostituzioni, scritto qui apposta (non preso da prova.py): (modulo, nome)
 SOLLEVANO = {(invii, 'manda_email'): invii.ErroreInvio, (invii, 'manda_whatsapp'): invii.ErroreInvio,
@@ -171,6 +172,7 @@ SOLLEVANO = {(invii, 'manda_email'): invii.ErroreInvio, (invii, 'manda_whatsapp'
              (aggiornamenti, 'scarica'): aggiornamenti.ErroreAggiornamento,
              (aggiornamenti, 'apri'): aggiornamenti.ErroreAggiornamento,
              (aggiornamenti, 'lancia'): aggiornamenti.ErroreAggiornamento,
+             (accessi, 'presa_della_rete'): OSError,
              (backup, 'ripristina'): RuntimeError,
              (backup, 'avvia_automatico'): RuntimeError}
 NON_FANNO_NIENTE = [(invii, 'avvia'), (aggiornamenti, 'avvia'), (autoripara, 'imposta_riavvio'),
