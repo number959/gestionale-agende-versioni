@@ -495,6 +495,33 @@ prova_('cookie e chiave suoi; «Backup ora» copia nella cartella della prova; l
 prova_('cornice anche sugli errori, WhatsApp, telefono ed email spenti, dati di un altro giorno, firma', p_cornice_dappertutto)
 
 
+def programma(processo):
+    """Il nome del programma lanciato, come lo registra la guardia: su Linux subprocess passa l'elenco degli argomenti
+    (['git', 'status', …]), su Windows una riga sola già composta ('git status …' o '"C:\\…\\git.exe" status …'): fino al
+    22/11/2026 la riga di Windows non era riconosciuta e le «Prove su Windows» cadevano su git, che dai sorgenti è ammesso
+    (prova.firma)."""
+    primo = str(processo[0]).strip()
+    if len(processo) == 1 and ' ' in primo:
+        primo = primo[1:].split('"', 1)[0] if primo.startswith('"') else primo.split()[0]
+    return re.split(r'[\\/]', primo)[-1].lower()
+
+
+def p_nome_del_programma():
+    casi = [(['git', 'rev-parse', '--short', 'HEAD'], 'git'),
+            (['git rev-parse --short HEAD'], 'git'),
+            (['"C:\\Program Files\\Git\\cmd\\git.exe" status --porcelain -- .'], 'git.exe'),
+            (['C:\\Programmi\\Gestionale.exe'], 'gestionale.exe'),
+            (['/usr/bin/git', 'status'], 'git'),
+            (['startfile', 'C:\\a.pdf'], 'startfile')]
+    sbagliati = [(c, programma(c), atteso) for c, atteso in casi if programma(c) != atteso]
+    assert not sbagliati, sbagliati
+    # gemello: la regola di prima (il nome del primo pezzo intero) sulla riga di Windows non trovava git
+    assert os.path.basename('git rev-parse --short HEAD') not in ('git', 'git.exe')
+
+
+prova_('il nome del programma lanciato si legge anche dalla riga di Windows', p_nome_del_programma)
+
+
 # =========================================================== in un processo a parte, come si avvia davvero
 GUARDIA = r'''
 import json, os, socket, sys, threading
@@ -729,7 +756,7 @@ def p_avvio_vero():
     assert sum(1 for v in voci if v.get('gemello')) == 2, 'la guardia non ha fermato il nome del gemello: %s' % voci
     verso_fuori = [v for v in voci if 'rete' in v and v['a'] != 'esempio-della-prova.invalid']
     assert not verso_fuori, 'connessioni verso fuori: %s' % verso_fuori
-    processi = [v['processo'] for v in voci if 'processo' in v and os.path.basename(v['processo'][0]) not in ('git', 'git.exe')]
+    processi = [v['processo'] for v in voci if 'processo' in v and programma(v['processo']) not in ('git', 'git.exe')]
     assert not processi, 'programmi lanciati: %s' % processi
     fili = [v['filo'] for v in voci if 'filo' in v]
     vietati = [f for f in fili if f in ('invii', 'backup', 'aggiornamenti', 'custode', 'aggiornamento')]
