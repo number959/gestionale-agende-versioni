@@ -390,10 +390,9 @@ with sync_playwright() as p:
     lun = lunedi_dopo(MESE + timedelta(days=1))
     # la settimana con il giorno 5, dove sopra si è messa la Mattina: le celle piene scrivono anche l'orario
     pg.goto(B + '/personale/turni/settimana/' + (MESE + timedelta(days=4) - timedelta(days=(MESE + timedelta(days=4)).weekday())).isoformat())
-    piene = pg.locator('#griglia-turni td.cella.piena')
-    ok('settimana: il turno con l\'orario', piene.count() > 0 and
-       all(re.search(r'\d{1,2}–\d{1,2}', piene.nth(i).inner_text()) for i in range(piene.count())),
-       [piene.nth(i).inner_text() for i in range(min(piene.count(), 5))])
+    piene = [c.split() for c in pg.locator('#griglia-turni td.cella.piena').all_inner_texts()]
+    mattine = [c for c in piene if c and c[0] == 'M']           # le assenze (MA, FE…) non hanno orario
+    ok('settimana: il turno con l\'orario', mattine and all(c[1:] == ['7–14'] for c in mattine), piene[:6])
     pg.goto(B + '/personale/turni/settimana/' + (lun + timedelta(days=7)).isoformat())
     prima_n = pg.locator('#griglia-turni td.cella.piena').count()
     pg.click('.gruppo-comandi .apri-gruppo')
