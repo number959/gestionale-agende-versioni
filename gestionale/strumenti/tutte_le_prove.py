@@ -29,13 +29,13 @@ import time
 
 QUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SENZA_BROWSER = ['prove_indirizzi.py', 'prove_canarino.py', 'prove_pagine.py', 'prove_senza_menu.py', 'prove_live_json.py', 'prove_dati_prova.py', 'prove_prova.py', 'prove.py', 'prove2.py', 'prove100.py', 'prove200.py', 'prove_14.py', 'prove_143.py',
+SENZA_BROWSER = ['prove_indirizzi.py', 'prove_canarino.py', 'prove_pagine.py', 'prove_mattoni.py', 'prove_senza_menu.py', 'prove_live_json.py', 'prove_dati_prova.py', 'prove_prova.py', 'prove.py', 'prove2.py', 'prove100.py', 'prove200.py', 'prove_14.py', 'prove_143.py',
                  'prove_145.py', 'prove_146.py', 'prove_anagrafiche.py', 'prove_funzioni.py', 'prove_guida.py',
                  'prove_personalizzazione.py', 'prove_15.py', 'prove_16.py', 'prove_17.py', 'prove_18.py',
                  'prove_19.py', 'prove_191.py', 'prove_110.py', 'prove_autoriparazione.py', 'prove_111.py', 'prove_111_importa.py', 'prove_111_turni.py',
                  'prove_112.py', 'prove_112_excel.py', 'prove_tariffari.py', 'campagna.py']
 # in quest'ordine: prima quelle che non cambiano niente, per ultima quella che cambia l'indirizzo degli aggiornamenti
-NEL_BROWSER = ['prove_guida_browser.py', 'prove_sicurezza_browser.py', 'prove_animazioni.py', 'prove_icone_animate.py',
+NEL_BROWSER = ['prove_guida_browser.py', 'prove_sicurezza_browser.py', 'prove_mattoni_browser.py', 'prove_animazioni.py', 'prove_icone_animate.py',
                'prove_tendine_browser.py', 'prove_15_browser.py', 'prove_17_browser.py', 'prove_18_browser.py',
                'prove_19_browser.py', 'prove_191_browser.py', 'prove_110_browser.py', 'prove_112_browser.py',
                'prove_tariffari_browser.py',

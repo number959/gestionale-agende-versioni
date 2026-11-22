@@ -1,0 +1,180 @@
+{#- I pezzi comuni della veste nuova (1.13, tappa 1-bis), scritti una volta sola. Aspetto in static/veste.css (classi
+    «v-»), colori e misure in static/gettoni.css. Il catalogo (strumenti/catalogo_pezzi.py) li mostra tutti, in chiaro e
+    in scuro. Si usano così:
+        {% from "_pezzi.html" import intestazione, scheda, tabella, pillola, conta, striscia, barra_comandi, passo,
+                                     tendina, linguette, stampa_e_scarica, euro %}
+    Regole:
+    - un pezzo non inventa testi: scrive solo quello che riceve (titoli, parole dei bottoni, voci). Le etichette per i
+      lettori di schermo (aria-label) si passano solo per quello che oggi non ha un nome (regioni, nav, tendine senza
+      etichetta) o se approvate;
+    - un pezzo tiene gli agganci di oggi: data-tasto, data-guida, la classe «primario» del bottone che Ctrl+Invio preme
+      (gestionale.js), le classi della tendina (gruppo-comandi, apri-gruppo, tendina: gestionale.js e guida.js) e
+      ul.numeri della striscia (animazioni.js);
+    - i moduli, i campi e i bottoni restano scritti nella pagina, dentro il pezzo (con {% call %}): il pezzo dà il
+      contenitore, non tocca nomi, valori e indirizzi;
+    - guida='nome' scrive data-guida="nome": prove_guida.py lo legge anche nelle chiamate dei pezzi. -#}
+{%- from "_icone.html" import icona -%}
+
+{#- ---------------------------------------------------------------- importo in euro
+    Uno solo dei tre modi di oggi: il filtro |euro (modelli.importo_in_testo) e le due macro di cassa_mese.html e
+    statistiche.html. Stesso testo, carattere per carattere (prove_mattoni.py):
+      euro(12345) -> «123,45»; euro(125050) -> «1.250,50»; euro(None) -> «» (come |euro);
+      euro(0, se_zero='—') -> «—» (come statistiche.html); simbolo=true aggiunge « €».
+    cassa_mese.html scrive l'importo solo se c'è: lì si traduce con «euro(x) if x else ''», non con se_zero. -#}
+{%- macro euro(cent, se_zero=none, simbolo=false) -%}
+{%- if se_zero is not none and not cent -%}{{ se_zero }}
+{%- else -%}{{ cent|euro }}{% if simbolo and cent is not none %} €{% endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{#- ---------------------------------------------------------------- intestazione della pagina
+    sopra: la riga piccola («Cassa · Sede centrale»); titolo: l'h1 di oggi, con le stesse parole; sotto: il sottotitolo.
+    classe_titolo: le classi di oggi dell'h1 (per esempio «giorno»). Quello che sta dentro {% call %} va sotto il
+    sottotitolo (per esempio i collegamenti «Questo mese · Mese scorso»). -#}
+{%- macro intestazione(titolo, sopra=none, sotto=none, classe_titolo='', id=none) -%}
+<div class="v-intestazione">
+  {%- if sopra %}<span class="v-sopra">{{ sopra }}</span>{% endif %}
+  <h1 class="v-titolo{{ ' ' ~ classe_titolo if classe_titolo }}"{% if id %} id="{{ id }}"{% endif %}>{{ titolo }}</h1>
+  {%- if sotto %}<p class="v-sotto">{{ sotto }}</p>{% endif %}
+  {%- if caller is defined %}{{ caller() }}{% endif %}
+</div>
+{%- endmacro -%}
+
+{#- ---------------------------------------------------------------- scheda: un riquadro bianco con un titolo
+    livello: 2 o 3 (h2 o h3); id: per collegare il titolo alla sezione (aria-labelledby); attaccata: il contenuto (una
+    tabella) tocca i bordi; sabbia: il riquadro «Da confermare». -#}
+{%- macro scheda(titolo=none, sotto=none, livello=3, id=none, attaccata=false, sabbia=false, classe='', guida=none) -%}
+<section class="v-scheda{{ ' v-attaccata' if attaccata }}{{ ' v-sabbia' if sabbia }}{{ ' ' ~ classe if classe }}"
+  {%- if titolo and id %} aria-labelledby="{{ id }}"{% endif %}{% if guida %} data-guida="{{ guida }}"{% endif %}>
+  {%- if titolo or sotto %}
+  <div class="v-scheda-testa">
+    {%- if titolo %}<h{{ livello }} class="v-scheda-titolo"{% if id %} id="{{ id }}"{% endif %}>{{ titolo }}</h{{ livello }}>{% endif %}
+    {%- if sotto %}<p class="v-scheda-sotto">{{ sotto }}</p>{% endif %}
+  </div>
+  {%- endif %}
+  {{ caller() if caller is defined }}
+</section>
+{%- endmacro -%}
+
+{#- ---------------------------------------------------------------- tabella
+    La tabella resta scritta nella pagina (thead, tbody, righe e celle di oggi); il pezzo dà il contenitore che scorre
+    di lato quando non ci sta. Celle numeriche: class="v-numero"; riga del totale: class="v-totale"; riga piccola sotto
+    un nome: <small> o class="v-testo-piccolo". classe: le classi di oggi che servono ancora a JavaScript o alle prove
+    (per esempio «elenco» per animazioni.js) restano sulla <table>. -#}
+{%- macro tabella(etichetta=none, classe='', id=none, guida=none) -%}
+<div class="v-tabella-contenitore"{% if guida %} data-guida="{{ guida }}"{% endif %}>
+  <table class="v-tabella{{ ' ' ~ classe if classe }}"{% if id %} id="{{ id }}"{% endif %}{% if etichetta %} aria-label="{{ etichetta }}"{% endif %}>
+    {{- caller() -}}
+  </table>
+</div>
+{%- endmacro -%}
+
+{#- ---------------------------------------------------------------- pillola dello stato
+    codice: PRENOTATO, CONFERMATO, ARRIVATO, NON_PRESENTATO, DISDETTO (modelli.STATI) o SALA; testo: la parola di oggi
+    (di solito ETICHETTA_STATO[codice]); dopo: un pezzetto in più, per esempio l'ora d'arrivo. Sempre parola e punto:
+    mai solo colore. -#}
+{%- macro pillola(codice, testo, dopo=none) -%}
+<span class="v-pillola v-pillola-{{ codice|lower }}"><span class="v-punto" aria-hidden="true"></span>{{ testo }}{% if dopo %} {{ dopo }}{% endif %}</span>
+{%- endmacro -%}
+
+{#- ---------------------------------------------------------------- contatore («Da confermare 3»)
+    Con n uguale a zero non scrive niente, tranne con zero=true (dove la pagina di oggi scrive anche lo 0). -#}
+{%- macro conta(n, titolo=none, zero=false) -%}
+{%- if n or (zero and n is not none) %}<span class="v-conta"{% if titolo %} title="{{ titolo }}"{% endif %}>{{ n }}</span>{% endif -%}
+{%- endmacro -%}
+
+{#- ---------------------------------------------------------------- striscia dei numeri
+    Un ul.numeri come quelli di oggi (l'animata fa entrare le voci e contare i numeri: animazioni.js), con l'aspetto
+    nuovo. voci, una per riga della striscia, in una di queste forme:
+      (numero, cosa)                                   «294 appuntamenti»
+      {numero, cosa, prima, allarme, guida}            prima: una parola che oggi sta PRIMA del numero («incassati
+                                                       915,00 €») e resta lì finché lo spostamento non è approvato
+      {parti: [(numero, parole), ...], allarme, guida} più numeri in una voce: «200,0 ore prenotate su 530,0 di turno
+                                                       (38%)» (Statistiche)
+    Il numero arriva già scritto (con euro(), con le ore...). Fra numero e parole uno spazio: il testo letto resta quello
+    di oggi. allarme: in rosso (come li.allarme). classe: le classi di oggi del ul («numeri grandi»). -#}
+{%- macro striscia(voci, etichetta=none, guida=none, classe='numeri') -%}
+<ul class="v-striscia{{ ' ' ~ classe if classe }}"{% if etichetta %} aria-label="{{ etichetta }}"{% endif %}{% if guida %} data-guida="{{ guida }}"{% endif %}>
+  {%- for v in voci %}
+  {%- set diz = v is mapping %}
+  {%- set parti = v.parti if diz and v.parti is defined else [((v.numero if diz else v[0]), (v.cosa if diz and v.cosa is defined else (none if diz else v[1])))] %}
+  {%- set allarme = diz and v.allarme is defined and v.allarme %}
+  <li class="v-striscia-voce{{ ' allarme v-allarme' if allarme }}"{% if diz and v.guida is defined and v.guida %} data-guida="{{ v.guida }}"{% endif %}>
+    {%- if diz and v.prima is defined and v.prima %}<span class="v-striscia-cosa">{{ v.prima }}</span> {% endif -%}
+    {%- for numero, parole in parti %}<b class="v-striscia-numero">{{ numero }}</b>{% if parole %} <span class="v-striscia-cosa">{{ parole }}</span>{% endif %}{% if not loop.last %} {% endif %}{% endfor -%}
+  </li>
+  {%- endfor %}
+</ul>
+{%- endmacro -%}
+
+{#- ---------------------------------------------------------------- barra dei comandi
+    Una scheda bassa con i comandi della pagina, nell'ordine di oggi. Dentro: passo(), bottoni (class="v-bottone", il
+    principale «v-bottone v-principale primario»), tendina(), stampa_e_scarica(); class="v-a-destra" spinge a destra
+    quello che segue. Dove la barra è il modulo di oggi, si mettono le classi direttamente sul <form> (form.ricerca
+    v-barra-comandi): veste.css ne azzera i margini. -#}
+{%- macro barra_comandi(etichetta=none, guida=none) -%}
+<div class="v-barra-comandi"{% if etichetta %} role="group" aria-label="{{ etichetta }}"{% endif %}{% if guida %} data-guida="{{ guida }}"{% endif %}>
+  {{- caller() -}}
+</div>
+{%- endmacro -%}
+
+{#- ---------------------------------------------------------------- le frecce ‹ › di oggi
+    Stesso indirizzo, stesso data-tasto, stesso title; il segno diventa un'icona. Il nome letto diventa il title
+    («Giorno precedente» invece di «‹»): una pagina che lo usa scrive il cambio di testo in
+    strumenti/cambiamenti_approvati.txt. -#}
+{%- macro passo(indirizzo, verso, titolo, tasto=none) -%}
+<a class="v-passo"{% if tasto %} data-tasto="{{ tasto }}"{% endif %} href="{{ indirizzo }}" title="{{ titolo }}">
+  {{- icona('chevron-left' if verso == 'indietro' else 'chevron-right') -}}
+</a>
+{%- endmacro -%}
+
+{#- ---------------------------------------------------------------- tendina di scelta
+    Il <select> di oggi (nome, scelte, onchange) resta scritto nella pagina, dentro {% call %}; il pezzo lo avvolge in
+    un <label> e aggiunge la freccia (chevron-down): senza, una tendina con appearance:none non si riconosce. -#}
+{%- macro tendina(guida=none) -%}
+<label class="v-tendina"{% if guida %} data-guida="{{ guida }}"{% endif %}>{{ caller() }}{{ icona('chevron-down') }}</label>
+{%- endmacro -%}
+
+{#- ---------------------------------------------------------------- linguette
+    voci: elenco di dizionari {testo, indirizzo, accesa, tasto, guida, titolo, icona, conta, conta_titolo} (dalla
+    tappa 2 li scrive menu.py). titolo: il title della linguetta (la riga piccola delle tendine di oggi); icona: un nome
+    di _icone.html, dopo il testo (la freccina di «Elenco del giorno»). etichetta: il nome della fila per i lettori di
+    schermo (aria-label del <nav>), per esempio quello che le <nav> di oggi hanno già. La linguetta accesa ha
+    aria-current="page", che le prove cercano. -#}
+{%- macro linguette(voci, etichetta=none, guida=none) -%}
+<nav class="v-linguette"{% if etichetta %} aria-label="{{ etichetta }}"{% endif %}{% if guida %} data-guida="{{ guida }}"{% endif %}>
+  {%- for v in voci %}
+  <a class="v-linguetta" href="{{ v.indirizzo }}"
+    {%- if v.accesa is defined and v.accesa %} aria-current="page"{% endif %}
+    {%- if v.titolo is defined and v.titolo %} title="{{ v.titolo }}"{% endif %}
+    {%- if v.tasto is defined and v.tasto %} data-tasto="{{ v.tasto }}"{% endif %}
+    {%- if v.guida is defined and v.guida %} data-guida="{{ v.guida }}"{% endif %}>{{ v.testo }}
+    {%- if v.icona is defined and v.icona %}{{ icona(v.icona) }}{% endif %}
+    {%- if v.conta is defined and v.conta %} {{ conta(v.conta, v.conta_titolo if v.conta_titolo is defined else none) }}{% endif -%}
+  </a>
+  {%- endfor %}
+</nav>
+{%- endmacro -%}
+
+{#- ---------------------------------------------------------------- «Stampa e scarica»
+    La tendina di oggi (griglia, settimana, mese, ambulatori, cassa, Strumenti dei Turni) con l'aspetto nuovo. Stesse
+    classi per il JavaScript (gruppo-comandi, apri-gruppo, tendina), stessi aria-haspopup e aria-expanded, stesso
+    role="menu". testo: la parola del bottone di oggi («Stampa e scarica», «Altre esportazioni», «Strumenti»);
+    icona: quella del bottone (none per nessuna). Le voci:
+    - scritte nella pagina dentro {% call %}, quando hanno attributi loro (role="menuitem", onclick, data-apri-schema,
+      un <button>): <a href="…"><b>Testo</b><small>Riga piccola</small></a>, con un'icona davanti se serve;
+    - oppure voci=[{testo, sotto, indirizzo, nuova_scheda, visibile, icona}]. -#}
+{%- macro stampa_e_scarica(voci=none, testo='Stampa e scarica', guida=none, icona_bottone='printer') -%}
+<div class="gruppo-comandi v-stampa"{% if guida %} data-guida="{{ guida }}"{% endif %}>
+  <button type="button" class="v-bottone apri-gruppo" aria-haspopup="true" aria-expanded="false">
+    {%- if icona_bottone %}{{ icona(icona_bottone) }}{% endif %}{{ testo }}<span class="v-freccia" aria-hidden="true">{{ icona('chevron-down') }}</span></button>
+  <div class="tendina" role="menu">
+    {%- if caller is defined %}{{ caller() }}{% endif %}
+    {%- for v in voci or [] if v.visibile is not defined or v.visibile %}
+    <a href="{{ v.indirizzo }}"{% if v.nuova_scheda is defined and v.nuova_scheda %} target="_blank"{% endif %}>
+      {%- if v.icona is defined and v.icona %}{{ icona(v.icona) }}{% endif %}<b>{{ v.testo }}</b>
+      {%- if v.sotto is defined and v.sotto %}<small>{{ v.sotto }}</small>{% endif %}</a>
+    {%- endfor %}
+  </div>
+</div>
+{%- endmacro -%}

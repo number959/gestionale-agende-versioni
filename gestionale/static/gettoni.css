@@ -1,0 +1,177 @@
+/* I gettoni della veste nuova (1.13, tappa 1-bis): variabili CSS con un nome di ruolo (fondo, superficie, testo, riga,
+   stati, errore) e le scale di spazi, raggi, caratteri e altezze. È l'unico file nuovo con i colori scritti: veste.css,
+   templates/_pezzi.html e le pagine nuove usano solo var(--v-...), e prove_mattoni.py lo controlla.
+
+   Da dove vengono: la tavola dei colori del gruppo (Nefro-Colori, «Cornice» e «Stati», 18 voci con nome e uso) e le
+   tavole Nefro delle pagine. Il colore della struttura non è scritto qui: resta quello scelto in «Nome, logo e colori»;
+   base.html lo scrive nello strato «vecchio» con le sue varianti (marchio.tema: le cinque di sempre più tinta, bordo,
+   profondo e testo) e i gettoni del primario lo riprendono.
+
+   Il tema scuro: come tema-scuro.css vale solo a schermo, con la classe «scuro» su <html>; i fogli stampati restano
+   chiari. I valori scuri vengono da converti() di strumenti/genera_tema_scuro.py, poi ritoccati perché fondi,
+   superfici, testo e righe siano della stessa famiglia del tema scuro di oggi (FISSI del generatore).
+
+   Regola: un colore nuovo entra qui con un ruolo, il suo valore scuro e la sua coppia testo/fondo in prove_mattoni.py,
+   che ricalcola da questo file tutti i contrasti (almeno 4,5:1, in chiaro e in scuro, anche per i colori della
+   struttura). Questo file sta fuori dallo strato «vecchio»: le pagine di oggi non usano nessuna variabile --v-. */
+
+:root {
+  /* ---- fondi */
+  --v-fondo: #F3F6FA;              /* la pagina (Colori «Fondo»); marchio.FONDI_DEL_TESTO */
+  --v-superficie: #FFFFFF;         /* schede, campi, bottoni normali */
+  --v-superficie-tenue: #F8FAFD;   /* menu laterale */
+  --v-incasso: #EEF2F8;            /* contenitore delle linguette, intestazione delle tabelle, riga del totale */
+  --v-chiuso: #ECEFF3;             /* caselle chiuse e fuori turno, pillola Disdetto (Colori «Fuori turno e disdetto») */
+
+  /* ---- testo */
+  --v-testo: #12244A;              /* principale (Colori «Inchiostro») */
+  --v-testo-medio: #38455A;        /* celle, voci e linguette non scelte */
+  --v-testo-tenue: #5B687C;        /* secondario: sopratitolo, sottotitolo, etichette (Colori «Grigio-blu») */
+  --v-testo-su-pieno: #FFFFFF;     /* sopra il primario e sopra i fondi pieni */
+
+  /* ---- righe (non sono testo: contrasto misurato, non regola dei 4,5:1) */
+  --v-riga: #E3E9F4;               /* bordi di schede e tabelle (Colori «Righe») */
+  --v-riga-campo: #B3BDCB;         /* bordo di campi e tendine: 1,9:1, non meno di oggi (#B8C0C4 di .campo input);
+                                      la tavola ha #D8DFEB (1,34:1), scelta del 22/11/2026 */
+  --v-segno-grigio: #98A3B3;       /* punto e tratteggio di Prenotato e Disdetto */
+
+  /* ---- il colore della struttura, con i nomi dei ruoli (base.html, marchio.tema) */
+  --v-primario: var(--primario);                 /* bottone principale, contatore (tavola #1C4184) */
+  --v-primario-premuto: var(--primario-profondo); /* bottone principale premuto e sotto il mouse (tavola #14294F) */
+  --v-primario-tinta: var(--primario-tinta);     /* fondo della voce e della linguetta accese (tavola #E7EEF8) */
+  --v-primario-chiaro: var(--primario-bordo);    /* bordo delle cose scelte (tavola #BCCCEC) */
+  --v-primario-testo: var(--primario-testo);     /* il primario come testo: almeno 4,5:1 sulla tinta e sui fondi */
+  --v-collegamento: var(--v-primario-testo);     /* collegamenti (tavola: il blu principale) */
+  --v-fuoco: var(--primario-fuoco);              /* contorno del pezzo con il fuoco della tastiera */
+
+  /* ---- stati. Dalla tavola approvata (Nefro-Colori); tre cambiano aspetto rispetto alle pagine di oggi, e si vedono
+     nelle foto del catalogo: Non presentato (oggi marrone #9C4A1A, nella tavola rosso), Confermato (oggi verde #2E7D32,
+     nella tavola azzurro fisso del gruppo), Disdetto (oggi #8C979E, 2,9:1; nella tavola grigio-blu leggibile) */
+  --v-occupato: #DFEBDA;           /* come td.occupata di oggi */
+  --v-arrivato: #CFE6C8;           /* come .voce.stato-arrivato di oggi */
+  --v-verde: #2E7D32;              /* ✓ di confermato, punto di Arrivato (come .segno.confermato) */
+  --v-verde-testo: #1B5E20;        /* testo della pillola Arrivato (come b.stato-arrivato) */
+  --v-disponibile: #E3F4E1;        /* stanza senza medico (come table.matrice td.libera) */
+  --v-confermato: #E7EEF8;         /* pillola Confermato (tavola) */
+  --v-confermato-testo: #1C4184;
+  --v-azzurro: #4F79C4;            /* punti e segni piccoli (Colori «Azzurro») */
+  --v-da-fare: #AFC4E2;            /* visite non cominciate (come .gr-da-fare) */
+  --v-rosso: #B3261E;              /* non presentato, errore (tavola; il bordo di .avviso.errore di oggi) */
+  --v-rosso-fondo: #FCE9E7;
+  --v-rosso-riga: #F3C9C4;
+  --v-rosso-forte: #8A1C16;        /* testo del riquadro di errore (come .avviso.errore) */
+  --v-sabbia: #F3EEDF;             /* riquadro «Da confermare» (Colori «Da guardare») */
+  --v-avviso-fondo: #FFF4D6;
+  --v-avviso-riga: #EBD49A;
+  --v-avviso-testo: #7A5412;
+  --v-ok-fondo: #E3F1E4;
+  --v-ok-testo: #1E5E22;
+  --v-sala-fondo: #EFE9F7;         /* la Sala, in viola */
+  --v-sala-testo: #4B3474;
+  --v-sala: #6B4E9B;
+  /* fondi pieni con il testo bianco sopra (targhetta «arrivato 10:21», segno della Sala): in scuro restano scuri,
+     mentre i colori di testo qui sopra in scuro diventano chiari */
+  --v-verde-pieno: #2E7D32;
+  --v-rosso-pieno: #B3261E;
+  --v-sala-pieno: #6B4E9B;
+
+  /* ---- ombre */
+  --v-ombra-1: 0 1px 2px rgba(18, 36, 74, .04);                                     /* schede e barre */
+  --v-ombra-2: 0 1px 2px rgba(18, 36, 74, .04), 0 10px 28px rgba(18, 36, 74, .04);  /* sezioni grandi */
+  --v-ombra-3: 0 12px 32px rgba(18, 36, 74, .16);                                   /* tendine, campanella, messaggi */
+
+  /* ---- spazi: 9 passi invece dei 24 valori delle tavole (la conversione è nel catalogo) */
+  --v-spazio-1: 2px;
+  --v-spazio-2: 4px;
+  --v-spazio-3: 6px;
+  --v-spazio-4: 8px;
+  --v-spazio-5: 12px;
+  --v-spazio-6: 16px;
+  --v-spazio-7: 20px;
+  --v-spazio-8: 24px;
+  --v-spazio-9: 36px;
+
+  /* ---- raggi: 4 passi e il tondo, invece dei 18 delle tavole */
+  --v-raggio-1: 4px;       /* 1-5 px: segni, barrette, quadratini della legenda */
+  --v-raggio-2: 8px;       /* 6-9 px: linguette, contatori, codici */
+  --v-raggio-3: 12px;      /* 10-14 px: bottoni, campi, tendine, voci del menu, blocchi */
+  --v-raggio-4: 16px;      /* 16-20 px: schede, barra dei comandi, striscia, sezioni */
+  --v-raggio-pieno: 999px; /* pillole e cerchi (999px, 100px, 50%) */
+
+  /* ---- caratteri: 9 grandezze invece di 26, ognuna con la sua interlinea. Il corpo resta 14px come oggi */
+  --v-titoli: var(--titoli);       /* Manrope (stile.css, :root) */
+  --v-corpo: var(--testo);         /* Inter */
+  --v-car-xs: 12px;   --v-int-xs: 16px;    /* 9-12: contatori, legende */
+  --v-car-s: 12.5px;  --v-int-s: 18px;     /* 12,5-13: pillole, righe piccole sotto un nome */
+  --v-car-m: 13.5px;  --v-int-m: 20px;     /* 13,5: sopratitolo, etichette, intestazioni di tabella */
+  --v-car-n: 14px;    --v-int-n: 22px;     /* 14-14,5: testo, bottoni, campi, linguette */
+  --v-car-l: 15px;    --v-int-l: 22px;     /* 15-16: sottotitolo della pagina */
+  --v-car-t3: 18px;   --v-int-t3: 24px;    /* 17-18: titolo di una scheda (h3) */
+  --v-car-t2: 22px;   --v-int-t2: 28px;    /* 20-24: titolo della linguetta (h2) */
+  --v-car-num: 30px;  --v-int-num: 36px;   /* 26-30: numeri della striscia */
+  --v-car-t1: 36px;   --v-int-t1: 40px;    /* 34-46: titolo della pagina (h1) */
+  --v-peso-normale: 400;
+  --v-peso-medio: 500;
+  --v-peso-forte: 600;
+  --v-peso-titolo: 700;
+  --v-lettere: -0.012em;            /* la spaziatura delle tavole (Inter un filo più stretta) */
+
+  /* ---- altezze dei comandi */
+  --v-alto-piccolo: 36px;   /* linguette, bottoni nelle righe */
+  --v-alto: 40px;           /* bottoni, campi, tendine */
+  --v-alto-grande: 44px;    /* ricerca e campanella (tappa 2) */
+}
+
+/* il tema scuro: come tema-scuro.css vale solo sullo schermo, i fogli stampati restano chiari */
+@media screen {
+  html.scuro {
+    --v-fondo: #141A21;
+    --v-superficie: #1C242D;
+    --v-superficie-tenue: #181F27;
+    --v-incasso: #222B35;
+    --v-chiuso: #222B35;
+    --v-testo: #E1E7ED;
+    --v-testo-medio: #C3CDD7;
+    --v-testo-tenue: #9AA8B4;
+    --v-testo-su-pieno: #FFFFFF;
+    --v-riga: #2E3843;
+    --v-riga-campo: #45525F;
+    --v-segno-grigio: #6B7785;
+    /* il primario in scuro: le varianti scure di tema-scuro.css (correzioni a mano), come le pagine di oggi; il premuto
+       si scurisce invece di schiarirsi (schiarito, il testo bianco sopra scende fino a 3,1:1 con certi colori) */
+    --v-primario-premuto: color-mix(in srgb, var(--primario) 82%, #000000);
+    --v-primario-tinta: var(--primario-tenue);
+    --v-primario-chiaro: var(--primario-fuoco);
+    /* il primario come testo: schiarito un filo più di --primario-scuro di tema-scuro.css (45%), che con i colori molto
+       scuri (il nero) scende a 4,3:1 sull'incasso */
+    --v-primario-testo: color-mix(in srgb, var(--primario) 40%, #FFFFFF);
+    --v-occupato: #2A3E22;
+    --v-arrivato: #294620;
+    --v-verde: #A9DFAC;
+    --v-verde-testo: #B5EAB9;
+    --v-disponibile: #2A3A28;
+    --v-confermato: #252B35;
+    --v-confermato-testo: #A5BDE8;
+    --v-azzurro: #8CA8D9;
+    --v-da-fare: #1E324F;
+    --v-rosso: #E49793;
+    --v-rosso-fondo: #322523;
+    --v-rosso-riga: #563733;
+    --v-rosso-forte: #E8A8A5;
+    --v-sabbia: #3B3729;
+    --v-avviso-fondo: #3A3528;
+    --v-avviso-riga: #61563A;
+    --v-avviso-testo: #EAD3AC;
+    --v-ok-fondo: #293A2A;
+    --v-ok-testo: #B6E8B9;
+    --v-sala-fondo: #2B2434;
+    --v-sala-testo: #BFAFDB;
+    --v-sala: #AC99CC;
+    --v-verde-pieno: #29702D;
+    --v-rosso-pieno: #A1221B;
+    --v-sala-pieno: #60468B;
+    --v-ombra-1: 0 1px 2px rgba(0, 0, 0, .35);
+    --v-ombra-2: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 28px rgba(0, 0, 0, .25);
+    --v-ombra-3: 0 12px 32px rgba(0, 0, 0, .55);
+  }
+}

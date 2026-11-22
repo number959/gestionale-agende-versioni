@@ -2481,6 +2481,54 @@ e mai il nome `Gestionale.exe` (`FERMA.bat` e il Setup chiudono per nome). Il pr
 che su Linux non si vedeva: Python 3.14, quello di `CREA_PROVA.bat`, controlla gli aiuti delle opzioni già all'avvio, e
 il % di «%LOCALAPPDATA%» fermava il doppio clic con una finestra d'errore; ora `prove_prova.py` legge l'aiuto.
 
+### La veste nuova: i mattoni (dalla tappa 1-bis)
+
+Prima delle pagine nuove, i pezzi con cui si faranno, senza cambiare di un pixel le pagine di oggi.
+
+- **Lo strato.** In `base.html` i fogli di oggi (`stile.css`, nell'animata `animazioni.css`, `tema-scuro.css`) arrivano
+  con `@import url(…) layer(vecchio)` dentro un `<style>`, nell'ordine di ogni variante, e anche il `:root` con il colore
+  della struttura sta nello strato. Dopo vengono `gettoni.css` e `veste.css`, fuori dallo strato: una regola fuori vince
+  sempre su una dentro, qualunque sia il suo peso, così in scuro un campo nuovo non prende il fondo di `html.scuro
+  input`. Il piano diceva un file `static/vecchio.css`; gli `@import` in `base.html` tengono l'ordine dell'animata con un
+  modello solo (un `vecchio.css` uguale nelle due cartelle non potrebbe) e lasciano `tema-scuro.css` scritto nella pagina
+  (`prove_14.py`). Il `:root` fuori dallo strato vincerebbe su `html.scuro { --primario-scuro }` di `tema-scuro.css`: in
+  scuro i collegamenti di oggi diventerebbero blu scuro (provato: 12 pagine su 18 cambiano, fino a 17.003 pixel). I
+  fogli da stampare restano con i link di oggi, senza strato e senza fogli nuovi. `@import` con `layer()` vuole Chrome o
+  Edge 99 o più nuovi (ce l'hanno anche i 109, gli ultimi per Windows 7); il programma usa già `color-mix()`, che vuole
+  il 111.
+- **I gettoni** (`static/gettoni.css`): variabili con un nome di ruolo (`--v-fondo`, `--v-superficie`, `--v-testo`,
+  `--v-testo-tenue`, `--v-riga`, gli stati, l'errore…) dalla tavola dei colori del gruppo, con il valore scuro sotto
+  `@media screen { html.scuro }`, e le scale: 9 spazi, 4 raggi e il tondo, 9 grandezze di carattere (il corpo resta
+  14 px), 3 altezze dei comandi. Il colore della struttura non è scritto: `marchio.tema` calcola, accanto alle cinque
+  varianti di sempre, `tinta`, `bordo`, `profondo` e `testo` (il colore scurito finché si legge 4,5:1 sulla tinta e sui
+  fondi chiari), e `base.html` le scrive nello strato. Il bordo dei campi è #B3BDCB (1,9:1, come oggi; la tavola ha
+  #D8DFEB, 1,34:1). Tre stati cambiano aspetto rispetto a oggi, come nella tavola approvata: Non presentato rosso (oggi
+  marrone), Confermato azzurro (oggi verde), Disdetto grigio-blu leggibile (oggi 2,9:1).
+- **I pezzi** (`templates/_pezzi.html`, aspetto in `static/veste.css`, classi con il prefisso `v-`): intestazione,
+  scheda, tabella, pillola dello stato, contatore, striscia dei numeri (un `ul.numeri`, anche con più numeri in una voce,
+  perché l'animata li fa contare), barra dei comandi, frecce, tendina con la freccia `chevron-down`, linguette (con
+  `title` e icona), «Stampa e scarica» (voci in un elenco o scritte nella pagina, come gli Strumenti dei Turni) e
+  l'importo in euro (`euro()`, lo stesso testo dei tre modi di oggi). Bottone piccolo (`v-bottone-piccolo`) e riga
+  piccola di testo (`v-testo-piccolo`) hanno nomi diversi; i pezzi che tengono una classe di oggi ne azzerano i margini.
+  Icone nuove: `chevron-down` e `id-card` (`strumenti/genera_icone.py`, Lucide 1.55.0).
+- **Il catalogo** (`python strumenti/catalogo_pezzi.py`, `http://127.0.0.1:5141/catalogo-pezzi`; `?colore=1C4184` con
+  il blu delle tavole): ogni pezzo negli stati che ha, i gettoni con i loro contrasti e le scale, su dati, nomi e logo
+  inventati. Sta in `strumenti/` e non entra nell'eseguibile; `--foto CARTELLA` fa le foto a 1366, 1024 e 683 px in
+  chiaro e in scuro, e dice se la pagina scorre di lato o ha errori.
+- **Le prove.** `prove_mattoni.py` (20 prove, 10 con il loro mutante): contrasti di 36 coppie testo/fondo su 444 colori
+  della struttura, in chiaro e in scuro (la più bassa 4,50, il testo bianco sul primario che `marchio.leggibile` porta
+  proprio a 4,5); valori scuri; nessun colore scritto a mano nei file nuovi; lo strato; il prefisso; i pezzi con le
+  variabili rigide; le icone; `euro()` su 3009 importi; `marchio.tema`; l'autoriparazione (`risorse_presenti` controlla
+  anche `gettoni.css` e `veste.css`, e `prove_installato.py` li chiede). `prove_mattoni_browser.py` (nel giro nel
+  browser) avvia da sé il catalogo e vuole i colori dei gettoni su campo, tendina, bottoni e collegamenti in chiaro e in
+  scuro, niente scorrimento di lato e la tendina «Stampa e scarica» mai coperta; i suoi gemelli tolgono lo strato e la
+  regola che porta sopra la barra aperta. `prove_pagine.py` legge i fogli anche negli `@import`. `prove_guida.py`
+  accetta i nomi passati ai pezzi (`guida='nome'`).
+- **Le foto prima e dopo**: `python strumenti/foto_pagine.py --principale <ramo o commit>`: il database di `demo.py` del
+  principale, poi i due programmi uno alla volta sulla stessa cartella, con l'orologio fermo (nel programma e nel
+  browser), 35 pagine a 1366×657 e intere, in chiaro e in scuro, più tendine aperte, fuoco della tastiera, messaggi a
+  scomparsa e stampa; le foto diverse si rifanno sul principale per misurare il rumore.
+
 ## Difetti trovati e corretti
 
 Primo giro:

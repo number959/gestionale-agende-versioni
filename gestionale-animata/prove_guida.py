@@ -158,13 +158,21 @@ def gu_menu():
         {g['condizione'] for g in guide if g['slug'] == 'prenotare'} == {'#cerca_paziente'}, guide
 
 
+def nomi_guida(modelli):
+    """I nomi data-guida scritti nei modelli: data-guida="nome", e dalla 1.13 anche passati ai pezzi della veste nuova
+    (_pezzi.html: scheda(..., guida='nome'), una voce {'guida': 'nome'}), che scrivono loro data-guida nella pagina."""
+    return (set(re.findall(r'data-guida="([a-z0-9-]+)"', modelli)) |
+            set(re.findall(r'''(?<![\w-])guida=['"]([a-z0-9-]+)['"]''', modelli)) |
+            set(re.findall(r'''['"]guida['"]\s*:\s*['"]([a-z0-9-]+)['"]''', modelli)))
+
+
 def gu_selettori_stabili():
     """I passi della guida indicano un punto della pagina solo con [data-guida="…"] o con un id (tappa 1 della base):
     una classe o un tag cambiano con la veste nuova, un data-guida no. Ogni nome usato esiste in un modello."""
     import glob
     ammessi = re.compile(r'^(\[data-guida="[a-z0-9-]+"\]|#[A-Za-z0-9_-]+)$')
     modelli = ''.join(open(f, encoding='utf-8').read() for f in glob.glob(os.path.join(CARTELLA, 'templates', '*.html')))
-    nomi = set(re.findall(r'data-guida="([a-z0-9-]+)"', modelli))
+    nomi = nomi_guida(modelli)
     con_punto = 0
     for a in guida.ARTICOLI:
         for i, p in enumerate(a['passi'], 1):
@@ -177,6 +185,11 @@ def gu_selettori_stabili():
     # gemello: lo stesso controllo vede una classe e un nome inesistente
     assert not ammessi.match('a.bottone.aggiungi') and not ammessi.match('nav.menu [data-guida="menu-oggi"]')
     assert 'nome-che-non-esiste' not in nomi and con_punto >= 150, con_punto
+    # gemello dei pezzi della veste nuova: il nome passato a un pezzo (o a una voce) conta come scritto nel modello,
+    # una parola che non è un argomento guida no
+    assert nomi_guida("{{ scheda('Titolo', guida='nome-dal-pezzo') }}{% set v = {'guida': \"nome-dalla-voce\"} %}"
+                      '<p data-guida="nome-scritto"></p>') == {'nome-dal-pezzo', 'nome-dalla-voce', 'nome-scritto'}
+    assert not nomi_guida("<p>altraguida='nome-finto'</p>{{ x(sguida='no') }}{{ y(guida=nome_variabile) }}")
     return '%d passi con un punto' % con_punto
 
 
