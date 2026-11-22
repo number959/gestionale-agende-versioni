@@ -790,7 +790,7 @@ ultime tre ore e chi era arrivato stamattina senza essere segnato non stava da n
   inventati.
 - **Avviso degli aggiornamenti** (1.12.6, stessa richiesta: «prevedi un popup che informa che c'è un nuovo
   aggiornamento e un tasto clicca qui per installare»): `aggiornamenti.popup_aggiornamento`, in
-  `_popup_aggiornamento.html` incluso nei due `base.html`. Solo nel programma installato (`installato()`: altrove
+  `_popup_aggiornamento.html` incluso in `base.html`. Solo nel programma installato (`installato()`: altrove
   «Aggiorna adesso» non si può, e così la demo e le immagini della guida restano senza), con la versione nuova già
   scaricata e integra, non mentre parte, mai nella dashboard (anche quella vista dagli altri PC), nelle stampe, nella
   guida e nella pagina degli aggiornamenti. «Clicca qui per installare» è il POST di «Aggiorna adesso»; «Più tardi»
@@ -1412,9 +1412,10 @@ testi sono in `static/animazioni/LICENZE.txt`, che viaggia con il programma. Con
 animazioni spente o il movimento ridotto di Windows non si carica niente; in stampa non
 compaiono. I colori seguono il tema chiaro o scuro.
 
-File: `static/animazioni.css` e `static/animazioni.js`, più tre righe in `base.html`,
-l'attributo `data-giorno` della griglia e il riquadro in Impostazioni. Tutto il resto è
-identico alla versione normale. `prove_animazioni.py` le prova nel browser (51
+File: `static/animazioni.css` e `static/animazioni.js`; nei modelli, che sono gli stessi della
+versione normale, tre righe in `base.html`, l'attributo `data-giorno` della griglia e il riquadro
+in Impostazioni, dietro `{% if variante == 'animata' %}` (la variante la passa `app.py` a ogni
+pagina, da `aggiornamenti.VARIANTE`). Tutto il resto è identico alla versione normale. `prove_animazioni.py` le prova nel browser (51
 controlli: linea dell'ora al minuto giusto, numeri finali uguali a quelli senza
 animazioni, pagina completa senza JavaScript, interruttore, movimento ridotto, stampa). `prove_icone_animate.py` prova le icone e il riquadro di attesa (14 controlli: lettore
 caricato solo quando serve e solo dal programma, spunta della checklist che compare e

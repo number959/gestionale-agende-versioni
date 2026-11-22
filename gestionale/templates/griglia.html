@@ -70,7 +70,7 @@
 </div>
 {% else %}
 <div class="telaio">
-<table class="griglia">
+<table class="griglia"{% if variante == 'animata' %} data-giorno="{{ g.isoformat() }}"{% endif %}>
   <thead>
     <tr>
       <th class="ora"></th>

@@ -58,14 +58,21 @@ Esistono due cartelle con le stesse funzioni: la versione normale e la versione
 nell'altra con `python strumenti/allinea_animata.py --copia` (senza `--copia` dice solo
 cosa è diverso). File che appartengono a una sola versione, da adattare a mano:
 
-- `CREA_SETUP.bat`, `LEGGIMI.md`, `installer.iss`, `templates/base.html`,
-  `templates/griglia.html`, `templates/impostazioni.html`;
+- `CREA_SETUP.bat`, `LEGGIMI.md`, `installer.iss`;
 - solo nell'animata: `static/animazioni.css`, `static/animazioni.js`, `static/animazioni/`,
   `prove_animazioni.py`, `prove_icone_animate.py`;
 - le immagini e i video della guida (`static/guida/`, `static/video/`) si rigenerano in
   ciascuna versione.
 
-Tutto il resto deve risultare uguale byte per byte (`allinea_animata.py` lo controlla).
+Tutto il resto deve risultare uguale byte per byte (`allinea_animata.py` lo controlla), anche i
+modelli: dalla tappa 1 della base `base.html`, `griglia.html` e `impostazioni.html` sono gli stessi
+nelle due cartelle, e le righe della sola animata (foglio e script delle animazioni, `data-giorno`
+della griglia, il riquadro *Animazioni* di Impostazioni) stanno dietro `{% if variante == 'animata' %}`.
+`variante` arriva a ogni modello da `funzioni_modelli` in `app.py` (`aggiornamenti.VARIANTE`:
+«animata» se c'è `static/animazioni.css`), e l'HTML che esce è quello di prima, byte per byte, in
+tutte e due le versioni. Una differenza nuova fra le versioni si scrive così, mai con un modello
+diverso; mai `variante is defined` (c'è sempre); attenzione agli spazi intorno a `{% if %}` (si usano
+`{%-` e `-%}` come nei tre modelli, perché la versione normale non abbia righe vuote in più).
 
 ## Prove (vanno tutte verdi prima di consegnare)
 
@@ -122,7 +129,9 @@ comparire in nessuna pagina sotto `/riepilogo-live*`, con e senza schermo, per o
 controllano che lo stesso canarino si veda nelle pagine normali.
 `prove_pagine.py` segue i collegamenti da tutte le pagine senza parametri (ogni tipo di pagina al massimo due
 volte) e controlla che in nessuna ci siano moduli dentro altri moduli, id ripetuti o cose prese da internet
-(script, fogli di stile, immagini, caratteri; lo stesso nei fogli di `static/`).
+(script, fogli di stile, immagini, caratteri; lo stesso nei fogli di `static/`); controlla anche che le righe
+della sola animata (fogli e script delle animazioni, `data-giorno` della griglia, riquadro *Animazioni*) ci siano
+solo nell'animata, e il gemello cambia `aggiornamenti.VARIANTE` e le vede comparire o sparire.
 `prove_live_json.py` confronta `/riepilogo-live.json` e `/riepilogo-live/statistiche.json` con
 `riepilogo_live_atteso.json` (uguale nelle due cartelle) chiave per chiave, a ogni livello e anche nel tipo
 (1 non è 1.0), su un mondo di prova con soli nomi inventati e l'orologio fermo in sette momenti; un numero
@@ -172,7 +181,7 @@ temporanea.
   appuntamento (`escludi_id`, attivo) non contano le fasce che divideva già con un altro.
   Senza turni a fasce proprie tutto deve restare identico alla 1.9.1: `prove_110.py` lo
   confronta con copie ferme delle funzioni della 1.9.1 (da non toccare). Nei modelli
-  `griglia.html` (tutte e due le versioni) e `settimana.html` la tabella a righe fitte è
+  `griglia.html` e `settimana.html` la tabella a righe fitte è
   `tbody.fasce-miste` con l'altezza in `--riga`; il nome della prestazione compare solo in
   una cella alta almeno 52 pixel, una cella sotto i 37 è `bassa` (una riga sola).
 - Autoriparazione (dalla 1.11): tutto in `autoripara.py`, senza Flask (lo usa l'avvio prima del
@@ -271,7 +280,7 @@ temporanea.
   (`prezzi_dei_medici`, chiave `medico:<id>` in `cassa.mappa_tariffe`), poi listino; un pacchetto non vale come prezzo
   della seduta. Un medico o una prestazione usati da un tariffario non si eliminano. `prove_tariffari.py`.
 - Popup dell'aggiornamento (dalla 1.12.6): `aggiornamenti.popup_aggiornamento` decide, `_popup_aggiornamento.html` lo
-  mostra (incluso nei due `base.html`); solo con `installato()`, mai nella dashboard (`live.*`), nelle stampe, nella
+  mostra (incluso in `base.html`); solo con `installato()`, mai nella dashboard (`live.*`), nelle stampe, nella
   guida e nella pagina degli aggiornamenti. Il pulsante è il POST di «Aggiorna adesso», nient'altro.
 - Stampe (dalla 1.12): il foglio del giorno è una `table.impaginazione` con testata in `thead` e
   piede in `tfoot` (il browser li ripete su ogni pagina); il numero di pagina viene dai margin box di

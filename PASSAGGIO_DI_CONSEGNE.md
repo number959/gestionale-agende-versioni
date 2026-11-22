@@ -363,8 +363,8 @@ fatto, non richiesto per ora).
 1. Si modifica la versione **normale** (`gestionale/`).
 2. Si portano i file comuni nell'animata: `python strumenti/allinea_animata.py --copia`.
    Senza `--copia` dice solo cosa è diverso. I file propri di ogni versione si adattano a
-   mano: `CREA_SETUP.bat`, `LEGGIMI.md`, `installer.iss`, `templates/base.html`,
-   `templates/griglia.html`, `templates/impostazioni.html`. Solo l'animata ha `static/animazioni*`,
+   mano: `CREA_SETUP.bat`, `LEGGIMI.md`, `installer.iss`. I modelli sono tutti comuni: le righe della
+   sola animata stanno dietro `{% if variante == 'animata' %}` (vedi `gestionale/CLAUDE.md`). Solo l'animata ha `static/animazioni*`,
    `prove_animazioni.py` e `prove_icone_animate.py`.
 3. Prove in tutte e due le cartelle (vedi *Prove*).
 4. Se cambia l'aspetto di una pagina con una guida: immagini e video rigenerati in tutte e due

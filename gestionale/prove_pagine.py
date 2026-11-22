@@ -20,6 +20,7 @@ import re
 import shutil
 import sys
 import tempfile
+from datetime import date
 from html.parser import HTMLParser
 from urllib.parse import parse_qsl, urljoin, urlsplit
 
@@ -30,6 +31,7 @@ PROVVISORIA = tempfile.mkdtemp(prefix='prove-pagine-')
 
 import seed  # noqa: E402
 import app as A  # noqa: E402
+import aggiornamenti as AG  # noqa: E402
 
 A.app.config['TESTING'] = True
 A.Sessione = seed.popola('sqlite:///' + os.path.join(PROVVISORIA, 'prove.db'))
@@ -61,6 +63,8 @@ class Guarda(HTMLParser):
         self.esterni = []
         self.risorse = 0              # script, fogli di stile e immagini del programma
         self.collegamenti = []
+        self.fonti = []               # src degli script e href dei <link>
+        self.griglie = []             # data-giorno di ogni table.griglia (None se non c'e')
         self._stile = False
         self.menu = 0                 # quanti nav.menu: lo stesso selettore del browser, della guida e di prove_senza_menu
         self.funzione = None          # data-pagina del <body>: la funzione che ha fatto la pagina
@@ -82,6 +86,10 @@ class Guarda(HTMLParser):
             self.collegamenti.append(a['href'])
         if tag == 'style':
             self._stile = True
+        if (tag == 'script' and a.get('src')) or (tag == 'link' and a.get('href')):
+            self.fonti.append(a.get('src') or a.get('href'))
+        if tag == 'table' and 'griglia' in a.get('class', '').split():
+            self.griglie.append(dict(attrs).get('data-giorno'))
         # quello che il browser va a prendere da solo (un collegamento <a> invece si apre solo se si clicca)
         for k in ('src', 'srcset', 'poster', 'data', 'background'):
             if a.get(k) and ESTERNO.match(a[k]):
@@ -247,6 +255,50 @@ def g_vede_le_pagine():
     return '%d moduli, %d risorse del programma' % (moduli, risorse)
 
 
+def righe_della_variante(g, animata):
+    """Cosa non torna, in una pagina, con le righe della sola animata (lista vuota: tutto a posto)."""
+    male = []
+    if '/static/gestionale.js' in g.fonti:                                  # le pagine con base.html
+        for f in ('/static/animazioni.css', '/static/animazioni.js'):
+            if (f in g.fonti) != animata:
+                male.append(f)
+    if any((d is not None) != animata for d in g.griglie):
+        male.append('data-giorno della griglia')
+    if 'stato-tema' in g.id and ('aspetto' in g.id) != animata:              # Impostazioni
+        male.append('riquadro Animazioni')
+    return male
+
+
+def p_variante():
+    """base.html, griglia.html e impostazioni.html sono gli stessi nelle due cartelle: le righe della sola animata
+    ci sono tutte nell'animata e nessuna nella normale."""
+    animata = AG.VARIANTE == 'animata'
+    male = {p: righe_della_variante(g, animata) for p, g in PAGINE.items() if righe_della_variante(g, animata)}
+    assert not male, 'versione %s, righe sbagliate: %s' % (AG.VARIANTE, sorted(male.items())[:5])
+    con_base = sum(1 for g in PAGINE.values() if '/static/gestionale.js' in g.fonti)
+    griglie = sum(len(g.griglie) for g in PAGINE.values())
+    impostazioni = sum(1 for g in PAGINE.values() if 'stato-tema' in g.id)
+    assert con_base >= 200 and griglie and impostazioni, (con_base, griglie, impostazioni)
+    return '%s: %d pagine con base.html, %d griglie, %d Impostazioni' % (AG.VARIANTE, con_base, griglie, impostazioni)
+
+
+def g_variante():
+    """Il gemello: con la variante dell'altra versione le stesse pagine cambiano tutte e tre le cose (i modelli
+    leggono davvero la variante, e app.py la passa a ogni pagina)."""
+    vera = AG.VARIANTE
+    AG.VARIANTE = 'normale' if vera == 'animata' else 'animata'
+    try:
+        imp = guarda(C.get('/impostazioni').get_data(as_text=True))
+        gri = guarda(C.get('/giorno/%s?struttura=1' % date.today().isoformat()).get_data(as_text=True))
+    finally:
+        AG.VARIANTE = vera
+    altra = vera != 'animata'
+    assert gri.griglie, 'nessuna griglia nella pagina del giorno'
+    assert sorted(righe_della_variante(imp, altra) + righe_della_variante(gri, altra)) == [], 'non reagiscono'
+    assert len(righe_della_variante(imp, not altra)) == 3 and righe_della_variante(gri, not altra) == \
+        ['/static/animazioni.css', '/static/animazioni.js', 'data-giorno della griglia'], 'il controllo non vede'
+
+
 prova('il giro vede le pagine del programma', p_quante)
 prova('nessun modulo dentro un altro modulo', p_annidati)
 prova('nessun id ripetuto nella stessa pagina', p_id)
@@ -255,6 +307,8 @@ prova('niente caricato da internet nei fogli di stile', p_fogli_di_stile)
 prova('il menu c\'è, una volta sola, tranne nei fogli da stampare e nel modo schermo', p_menu)
 prova('gemello: il controllo trova moduli annidati, id ripetuti e risorse da internet', g_trova_i_difetti)
 prova('gemello: nelle pagine vere il controllo vede moduli, id e risorse', g_vede_le_pagine)
+prova('le righe della sola animata solo nell\'animata (modelli comuni)', p_variante)
+prova('gemello: con l\'altra variante le pagine cambiano', g_variante)
 
 shutil.rmtree(PROVVISORIA, ignore_errors=True)
 for esito, nome, dettaglio in esiti:

@@ -785,7 +785,7 @@ ultime tre ore e chi era arrivato stamattina senza essere segnato non stava da n
   inventati.
 - **Avviso degli aggiornamenti** (1.12.6, stessa richiesta: «prevedi un popup che informa che c'è un nuovo
   aggiornamento e un tasto clicca qui per installare»): `aggiornamenti.popup_aggiornamento`, in
-  `_popup_aggiornamento.html` incluso nei due `base.html`. Solo nel programma installato (`installato()`: altrove
+  `_popup_aggiornamento.html` incluso in `base.html`. Solo nel programma installato (`installato()`: altrove
   «Aggiorna adesso» non si può, e così la demo e le immagini della guida restano senza), con la versione nuova già
   scaricata e integra, non mentre parte, mai nella dashboard (anche quella vista dagli altri PC), nelle stampe, nella
   guida e nella pagina degli aggiornamenti. «Clicca qui per installare» è il POST di «Aggiorna adesso»; «Più tardi»

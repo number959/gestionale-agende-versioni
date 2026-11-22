@@ -279,6 +279,8 @@ def funzioni_modelli():
             return None
     return {'marchio_di': marchio_di, 'oggi_iso': date.today().isoformat(), 'popup_aggiornamento': popup_aggiornamento,
             'etichetta_stato': ETICHETTA_STATO, 'n_da_confermare': da_confermare, 'versione_programma': VERSIONE,
+            # 'normale' o 'animata': i modelli comuni (base, griglia, impostazioni) scelgono le righe di ciascuna versione
+            'variante': aggiornamenti.VARIANTE,
             'testo_luogo_paziente': pazienti.testo_luogo_paziente}
 
 
