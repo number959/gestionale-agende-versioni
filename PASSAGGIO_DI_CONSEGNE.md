@@ -1191,6 +1191,30 @@ aprirle (le tavole `.dc.html` vogliono accanto `support.js`, il piccolo motore c
 accetta circa 3 MB per volta: cartella e documento ci sono, l'archivio aspetta la scelta di Giovanni (due archivi più
 piccoli, o il file nella conversazione).
 
+## La base 1.13 e i moduli (in corso, ramo `ccr-interfaccia`)
+
+Il 22 novembre 2026 Giovanni ha chiesto: «Completa tutto il software, attieniti al piano, dammi la possibilità di
+scegliere quale modulo rendere disponibile sugli altri PC della rete in locale a quale utente e quale no». Il piano,
+le decisioni prese per eseguirlo e le ricognizioni delle aree stanno in `piano/` (vedi `piano/LEGGIMI.md`).
+
+- **Ramo**: tutto il lavoro (base e moduli) va su `ccr-interfaccia`. `ccr-moduli` resta fermo. Il ramo principale
+  `ccr-07f8e160-7j5lup` non si tocca: niente unione, niente release, niente «ultima», niente Setup fuori da Wine
+  senza il via di Giovanni («Non pubblicare nulla perché voglio prima testarlo io sul mio PC»).
+- **Ordine**: tappa 1 (la rete di prove) → 1-bis (i mattoni della veste) → 2 menu a sinistra e barra in alto → 3
+  campanella, messaggi in basso, domande nella pagina → 4-9 la veste area per area → 10 prova finale della 1.13 →
+  M1 fondamenta dei moduli → M2 «Aree e accessi» con l'accesso dagli altri PC per utente e per area (non
+  disponibile, solo guardare, guardare e modificare) → M3-M10 (Dove si fa e mappa, Comunicazioni, Statistiche e
+  report con Excel e PDF con i grafici, Ambulatori e dashboard, Sala e due agende, finestra, Segreteria, nucleo).
+- **Come si controlla ogni passo**: tutte le prove nelle due cartelle, senza e con il browser, e
+  `strumenti/confronta_rami.py` contro il ramo principale (pagine, moduli, segni, testi, JSON, Excel e i fogli da
+  stampare in PDF): le differenze che restano sono solo quelle scritte in `strumenti/cambiamenti_approvati.txt`.
+- **Tappa 1, la rete di prove** (chiusa il 22 novembre): vedi *La rete di prove per la veste nuova* nei due
+  `LEGGIMI.md`. Dentro anche il pacchetto di prova per Giovanni (`prova.py`, `CREA_PROVA.bat`): un file solo, con
+  dati inventati, cartella e porta sue, che non tocca il programma della clinica.
+- **Pacchetto di prova da rifare** dopo le correzioni della revisione di sicurezza (commit 3b8d3f7): costruirlo di
+  nuovo prima di mandarlo a Giovanni (in Wine: `bash strumenti/wine/costruisci.sh --prova ../gestionale-animata`, poi
+  `prova_isolamento.py`).
+
 ## Cose aperte
 
 - **Altri PC e «Statistiche e report»** (21 novembre 2026, Giovanni: «voglio pure che il modulo agenda sala operatoria

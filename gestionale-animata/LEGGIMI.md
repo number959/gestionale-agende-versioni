@@ -2512,6 +2512,44 @@ tabella *strutture* della 1.1, preso dal database che quella versione creava. Co
 `DETTAGLIO=1` stampa anche le note delle prove superate, e la campagna i motivi dei
 moduli rifiutati.
 
+### La rete di prove per la veste nuova (tappa 1 della base)
+
+La veste nuova cambia classi, colori e posti delle cose, ma non deve cambiare quello che il programma fa. Prima di
+toccare l'aspetto, le prove sono state rese indipendenti dall'aspetto, e ogni controllo nuovo ha un gemello che lo
+vede cadere su un programma rotto apposta (un «mutante», fatto sempre su una copia):
+
+- **i messaggi** (`flash()`) in `prove_14.py` e `prove_funzioni.py` si prendono da Flask quando il programma li fa
+  (`prove_messaggi.py`); dove si vedono lo controlla `prove_sicurezza_browser.py`;
+- **i controlli «non c'è»** hanno il loro gemello (`prove_gemelli.py`: `manca`, `protetto`, `sparisce`,
+  `manca_nel_browser`): un controllo che dice «la parola X non c'è» passa anche se la pagina è vuota, il gemello
+  guarda che X ci sia dove deve esserci;
+- **le pagine senza menu** (stampe, Modo schermo, pezzi chiesti dalla pagina) restano senza menu: `prove_senza_menu.py`;
+- **i tre modelli comuni** (`base.html`, `griglia.html`, `impostazioni.html`) sono uguali nelle due cartelle, e
+  `prove_pagine.py` controlla che ogni pagina abbia un solo `<main id="principale">` e che le righe della sola animata
+  stiano solo lì;
+- **le variabili dei modelli** sono rigide nelle prove (`GESTIONALE_PROVE_RIGIDE=1`, messo da `tutte_le_prove.py`,
+  `prove_dove.py` e `demo.py`): una variabile che manca ferma la pagina invece di scrivere niente;
+- **i passi della guida** indicano un punto della pagina solo con `[data-guida="…"]` o con un id (`prove_guida.py`);
+- **le prove nel browser** cercano menu, tendine, ricerca rapida, messaggi e domande per ruolo e nome, come un
+  lettore di schermo (`aiuti_browser.py`); prima di togliere un selettore vecchio, `strumenti/equivalenza_selettori.py`
+  ha visto che quello nuovo trova lo stesso elemento (413 confronti, tutti uguali, il 22/11/2026). Ogni pagina aperta
+  registra le domande del browser (`prepara_domande`), quelle volute passano da `rispondi`, e una domanda che nessuno
+  aspettava fa cadere la prova. L'indirizzo arriva solo da `indirizzo_di_prova`, che si ferma senza indirizzo o con
+  la porta 5000; `tutte_le_prove.py` non lancia una raccolta nel browser che non passa da lì;
+- **il confronto con il ramo principale** (`strumenti/confronta_rami.py`): stesse pagine, moduli, collegamenti, segni
+  (`data-tasto`, `data-guida`, `role`, `aria-*`, `data-prova`), testi, JSON ed Excel, più i 9 fogli da stampare in PDF
+  pixel per pixel (`strumenti/fogli_pdf.py`). I cambiamenti voluti stanno, uno per uno con il perché, in
+  `strumenti/cambiamenti_approvati.txt`.
+
+```
+python strumenti/demo.py --porta 5001                      # in un'altra finestra
+python strumenti/equivalenza_selettori.py http://127.0.0.1:5001   # i selettori vecchi e nuovi trovano lo stesso elemento
+python strumenti/confronta_rami.py                         # alla fine: «0 diverse» e «0 diversi o mancanti»
+```
+
+Il 22/11/2026, a tappa 1 chiusa: tutte le prove senza browser e nel browser verdi nelle due cartelle, e il confronto
+con il ramo principale con 607 pagine e 20 fogli da stampare, nessuno diverso oltre ai cambiamenti approvati.
+
 ### Il pacchetto di prova (dalla tappa 1 della base)
 
 Il gestionale di oggi, da provare sul PC di Giovanni prima che arrivi in clinica, senza toccare il programma della

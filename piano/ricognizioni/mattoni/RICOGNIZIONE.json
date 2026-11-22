@@ -1,0 +1,200 @@
+{
+ "area": "mattoni (tappa 1-bis: gettoni.css, lo strato dei fogli di oggi, veste.css, _pezzi.html, catalogo dei pezzi). Gestionale di prova sulla porta 5141, ora fermo.",
+ "riassunto": "Ho scritto le bozze e le ho provate nel browser. Il repository non è stato toccato (git status pulito fuori dai prove*.py degli altri agenti).\n\nCosa ho trovato:\n\n1) Lo strato non cambia le pagine di oggi. Ho confrontato 18 pagine (Oggi, Giorno, Settimana, Mese, Elenco, Sala, Pazienti, Conferme, Cassa, Turni, Dove si fa, Statistiche, Impostazioni, Riepilogo ambulatori, Nuovo appuntamento, Aiuto, Modo schermo, Stampa del giorno). Ogni pagina in chiaro e in scuro, a 1366×657 e a pagina intera: 72 confronti, 0 pixel diversi, nessun errore JavaScript. Nell'animata ho confrontato 9 pagine nello stesso modo: 36 confronti, anche qui 0 pixel. Il rumore misurato fra due foto «prima» è lo stesso che si vede fra prima e dopo: 6 px del cursore in Dove si fa e 1233 px nel Modo schermo.\n\n2) Serve una correzione al piano. Il :root con il colore della struttura (base.html:14) deve stare anch'esso dentro lo strato. Fuori dallo strato vince su «html.scuro { --primario-scuro }» di tema-scuro.css, e in scuro i collegamenti diventano blu scuro su fondo scuro. La versione «mutante» è diversa su 12 pagine su 18 (fino a 17.003 px su Pazienti) e la prova la trova.\n\n3) Nell'animata l'ordine di oggi è stile.css, animazioni.css, tema-scuro.css. Un vecchio.css uguale nelle due cartelle non può tenere quest'ordine. Propongo di scrivere gli @import … layer(vecchio) dentro un <style> di base.html, nell'ordine di ogni variante (soluzione B). L'alternativa A è un vecchio.css proprio dell'animata. Con B, prove_14.py:1836 resta verde senza toccarla. Con l'ordine sbagliato le 9 pagine sono comunque uguali, ma solo da ferme: B è la scelta sicura.\n\n4) I gettoni:\n- Le 18 voci di Nefro-Colori hanno tutte un ruolo, più 21 gettoni presi dalle tavole.\n- 27 coppie testo/fondo sono tutte ≥4,5:1 in chiaro e in scuro. La più bassa è 4,90 (testo-tenue su chiuso, in chiaro).\n- In scuro il primario usato come testo non si legge. Ho aggiunto --v-primario-testo, che in scuro diventa il primario schiarito.\n- Il bordo dei campi delle tavole (#D8DFEB) ha contrasto 1,34:1, oggi è 1,85:1. Propongo #B3BDCB (1,90:1).\n\n5) Le scale:\n- raggi: 18 → 4 passi più il tondo;\n- caratteri: 26 → 9 grandezze, ognuna con la sua interlinea;\n- spazi: 24 → 9.\nLa conversione è nel catalogo.\n\n6) Il prefisso «v-» è libero: nessuna classe di oggi comincia con v- («c-» e «gr-» sono già usati). La prova controlla anche che veste.css non abbia regole su elementi senza un pezzo v-.\n\n7) La macro euro() dà lo stesso testo dei tre modi di oggi su 22.013 importi, compreso None.\n\n8) Il catalogo funziona a 1366, 1024 e 683 px, in chiaro e in scuro, senza scorrimento di lato. La tendina «Stampa e scarica» si apre con il gestionale.js di oggi. In scuro campo, bottone e collegamento prendono i colori dei gettoni (misurato con getComputedStyle).\n\n9) prove_mattoni.py (bozza) ha 7 prove. Sono verdi sulle bozze e prendono 5 mutanti su 5: colore scritto a mano, :root fuori dallo strato, classe senza prefisso, contrasto basso, classe vecchia pestata.\n\nFuori dalla mia area, da lasciare ai moduli: niente. I mattoni servono alla tappa 2 (menu.py, linguette) e alle aree dopo.",
+ "modelli": [
+  {
+   "modello": "static/gettoni.css (nuovo, uguale nelle due cartelle)",
+   "tavola": "Nefro-Colori.dc.html. Cornice: Blu NefroCenter→--v-primario (colore della struttura), Blu profondo→--v-primario-premuto, Azzurro→--v-azzurro, Tinta chiara→--v-primario-tinta, Azzurro chiaro→--v-primario-chiaro, Inchiostro→--v-testo, Grigio-blu→--v-testo-tenue, Righe→--v-riga, Fondo→--v-fondo. Stati: Occupato, Arrivato, Arrivato e confermato (--v-verde), Disponibile, Confermato, Non presentato (--v-rosso), Fuori turno e disdetto (--v-chiuso), Da fare, Da guardare (--v-sabbia). Dalle altre 57 tavole Nefro (colori contati per proprietà CSS): testo-medio #38455A (1107 usi), superficie-tenue #F8FAFD, incasso #EEF2F8, segno-grigio, verde-testo, confermato-testo, rosso-fondo/riga/forte, avviso-fondo/riga/testo, ok-fondo/testo, sala-fondo/testo/segno, verde/rosso/sala-pieno; 3 ombre.",
+   "cambia": "File nuovo. :root con i valori chiari e il blocco @media screen { html.scuro {...} } con quelli scuri: la stessa chiave del tema scuro di oggi (classe scuro su html, solo a schermo; la carta resta chiara). I valori scuri vengono da converti() di strumenti/genera_tema_scuro.py. Fondi, superfici, testo e righe sono ritoccati sulla famiglia FISSI del generatore (#141A21, #1C242D, #222B35, #E1E7ED, #9AA8B4, #2E3843, #45525F), così vecchio e nuovo si somigliano in scuro; gli stati restano come li dà converti(). Il primario non ha valori scritti: var(--primario-tinta, var(--primario-tenue)) eccetera, con un ripiego sulle varianti di oggi finché marchio.tema non ha quelle nuove. Scale: --v-spazio-1..9 (2,4,6,8,12,16,20,24,36), --v-raggio-1..4 (4,8,12,16) e -pieno, --v-car-xs..t1 con --v-int-* (12/16, 12,5/18, 13,5/20, 14/22, 15/22, 18/24, 22/28, 30/36, 36/40), pesi 400/500/600/700, --v-lettere -0.012em, altezze 36/40/44.",
+   "resta": "stile.css, tema-scuro.css e il generatore non si toccano. I colori degli stati sono quelli di oggi (stile.css:133, 204, 431-438, 570, 654). I caratteri (Manrope e Inter, stile.css:36-37) e il colore scelto per ogni struttura restano.",
+   "testi_nuovi_della_tavola": "Nessuno: i gettoni non hanno testo.",
+   "js_e_prove_che_dipendono": "Nessun JavaScript. La prova nuova (bozza prove_mattoni.py) legge le coppie direttamente da questo file. app.py:987-991 (risorse_presenti) e strumenti/prove_installato.py:147 vanno estesi a gettoni.css e veste.css. In gestionale/CLAUDE.md la regola dei gettoni va accanto a quella del generatore.",
+   "rischi": "(1) Il primario scelto per la struttura, se è al limite (≥4,5:1 sul bianco), sulla tinta scende sotto 4,5. Misurato: #767676 4,13; #0087B4 4,27; #5B7F3E 4,20. Rimedio: la variante «testo» in marchio.tema (bozza marchio_tema_nuovo.py), senza cambiare le 5 variabili di oggi. (2) Con #1C4184 le varianti di oggi danno tenue #EDF0F5, scuro #142F5F e chiaro #A9B7D0, contro #E7EEF8, #14294F e #BCCCEC della tavola; la formula HSL della bozza dà #E7EDF9, #112851 e #BACCED. (3) Nel tema scuro, il passaggio del mouse sul bottone principale (80% primario e 20% bianco, come .bottone.primario di oggi) può scendere sotto 4,5 con i colori al limite: è già così oggi. (4) In scuro il verde come testo diventa chiaro: la targhetta «arrivato 10:21» con il testo bianco deve usare --v-verde-pieno, non --v-verde."
+  },
+  {
+   "modello": "templates/base.html, testa della pagina: lo strato «vecchio» (il piano dice static/vecchio.css)",
+   "tavola": "Nessuna: è il meccanismo che fa convivere vecchio e nuovo.",
+   "cambia": "Pagine normali: <style>@layer vecchio; @import url(stile.css) layer(vecchio); [animata: @import animazioni.css] @import url(tema-scuro.css) layer(vecchio);</style>. Poi <style>@layer vecchio { :root { --primario... } }</style>, poi i link a gettoni.css e veste.css, fuori dallo strato. Lo script che aggiunge la classe «anim» va sotto {% if variante == 'animata' %}. Con foglio_carta (9 fogli da stampare) restano i link di oggi (stile, [animazioni], tema-scuro), senza strato e senza fogli nuovi. Alternativa A (file vecchio.css, come il piano): va bene per la normale, ma nell'animata servirebbe un vecchio.css proprio con 3 @import.",
+   "resta": "Le pagine di oggi pixel per pixel (misurato), l'ordine dei fogli di ogni variante, lo script del tema scuro (if (true) sui fogli di carta), i preload dei caratteri, l'icona. I !important di oggi dentro lo strato vincono ancora su tutto: [hidden] (stile.css:368), stampa (843, 864, 951), «riduci movimento» (956), animazioni.css:239-243. È voluto.",
+   "testi_nuovi_della_tavola": "Nessuno.",
+   "js_e_prove_che_dipendono": "prove_14.py:1836 cerca 'tema-scuro.css' nella pagina del giorno: con B passa ancora (il nome sta nell'@import), con A cadrebbe. prove_pagine.py p_esterni e p_fogli_di_stile passano: @import locali. confronta_rami.py:89 salta il contenuto di <style>, quindi non vede il cambio, ma non fa foto delle pagine a schermo: le foto prima e dopo servono a parte (bozza misure/foto_layer_B.py, che cambia la pagina al volo con Playwright). JS: nessuno legge document.styleSheets (controllato con grep in static/*.js).",
+   "rischi": "(1) Già verificato: il :root fuori dallo strato rovina i collegamenti in scuro (12 pagine su 18, mutante preso). (2) @import con layer() richiede Chrome/Edge 99 o più nuovo; un browser più vecchio ignora l'@import e la pagina resta senza stile. Il programma usa già color-mix() (Chrome 111+, tema-scuro correzioni:4-13), ma prima di pubblicare va verificato con la telefonata. (3) Una regola unlayered aggiunta più avanti a una pagina (<style> in un modello) vincerebbe sempre su stile.css, anche con meno peso. Oggi solo stampa.html e aiuto_stampa.html hanno un <style>, e sono fogli di carta. (4) La variabile «variante» arriva con la tappa 1 (tre modelli uguali): finché manca, il ramo animato di base.html non c'è."
+  },
+  {
+   "modello": "static/veste.css (nuovo, uguale nelle due cartelle)",
+   "tavola": "Gli stili ripetuti delle tavole Nefro. Pagina: padding 22/36 e gap 18 → 20/36/20. Intestazione: sopra 13,5 tenue, h1 Manrope 500 36/40, sotto 15 tenue (Cassa1). Linguette: contenitore #EEF2F8 con raggio 12 e padding 4; linguetta alta 36, padding 16, raggio 9→8, 14/600; accesa con la tinta. Barra dei comandi: scheda raggio 16, padding 10/12→8/12. Bottoni e campi alti 40, raggio 12 (10→12). Striscia: padding 14/4→16/4, numero Manrope 500 30/36, parola 13,5. Tabella: intestazione #EEF2F8 13,5/600 #38455A, righe #E3E9F4. Pillole alte 26, padding 10→12, 12,5/600, punto di 7 (SPEC-AGENDE.md:126). Tendina: ombra 0 12px 32px.",
+   "cambia": "File nuovo, fuori dallo strato. Classi v-pagina, v-intestazione/sopra/titolo/titolo-sezione/sotto, v-scheda (-testa, -titolo, -sotto, v-attaccata, v-sabbia), v-tabella-contenitore, table.v-tabella (v-numero, v-totale, v-spento, v-piccolo), v-pillola-{prenotato, confermato, arrivato, non_presentato, disdetto, sala} con v-punto, v-conta, v-striscia(-voce, -numero, -cosa, v-allarme), v-barra-comandi, v-bottone (v-principale, v-pericolo, v-piccolo), v-passo, v-tendina, v-campo (v-etichetta, v-aiuto), v-linguette/v-linguetta[aria-current], v-stampa, v-riquadro(-avviso, -errore, -ok), v-a-destra, v-stacco. Fuoco della tastiera: outline 2px --v-fuoco. Stampa: barra, linguette e tendina nascoste.",
+   "resta": "Nessun colore scritto qui, solo var(--v-...), e la prova lo controlla. Nessun selettore senza un pezzo v-. Le uniche classi senza prefisso sono quelle tenute per il JavaScript (primario, gruppo-comandi, apri-gruppo, tendina). La v-barra-comandi ha z-index 40 come .barra di oggi (stile.css:52-57), così la tendina copre quello che viene dopo.",
+   "testi_nuovi_della_tavola": "Nessuno nel CSS.",
+   "js_e_prove_che_dipendono": "gestionale.js:714-771 apre e chiude .gruppo-comandi con .apri-gruppo, .tendina e aria-expanded: provato nel catalogo, la tendina si apre. Il CSS di oggi la mostra con :hover/:focus-within/.aperto (stile.css:397, nello strato) e funziona ancora. animazioni.js:70 mette l'onda solo su .bottone e .passo (non su v-bottone), :119 su table.elenco, :135 su ul.numeri b, :255 su .pagina h1: le animazioni vanno adattate nella tappa di ogni area.",
+   "rischi": "(1) Se un pezzo tiene una classe vecchia come aggancio (per esempio «elenco» sulla tabella), le proprietà che veste.css non riscrive arrivano da stile.css. Ho aggiunto margin:0 per table.elenco (stile.css:283). Meglio data-* o aggiornare il JS. (2) letter-spacing -0,012em solo sui pezzi nuovi: in una pagina mista le larghezze del testo differiscono di poco. (3) Manca lo stile di :disabled su v-bottone (nel catalogo «Spento» sembra normale): da decidere, perché l'opacità abbassa il contrasto. (4) Misure proprie dei pezzi scritte una volta (pillola 26, punto 7, contatore 22, freccia della tendina 36, tendina 300)."
+  },
+  {
+   "modello": "templates/_pezzi.html · euro(cent, se_zero=none, simbolo=false)",
+   "tavola": "Gli importi delle tavole Cassa1-4 e Stat1 («915,00 €», «28.515,00 euro indicati»).",
+   "cambia": "Una macro al posto dei tre modi di oggi: il filtro |euro (app.py:263 → modelli.importo_in_testo), la macro di cassa_mese.html:3 e quella di statistiche.html:5. euro(c) = c|euro. euro(c, se_zero='—') = statistiche (0 o None → «—»). simbolo=true aggiunge « €» con lo spazio normale. Le due macro locali e i 13 punti d'uso si sostituiscono nelle tappe 4 e 6.",
+   "resta": "Il testo carattere per carattere: 22.013 importi provati, compresi negativi, miliardi e None. Il filtro |euro resta nel programma (cassa.py, cruscotto.py e i flash lo usano in Python).",
+   "testi_nuovi_della_tavola": "Nessuno.",
+   "js_e_prove_che_dipendono": "Le prove della cassa e delle statistiche confrontano i testi degli importi (prove_112*, prove_18*): non devono cambiare. Il lanciatore confronta i dati delle pagine.",
+   "rischi": "cassa_mese.html:22 scrive euro(x) solo se l'importo c'è, altrimenti ''. Da tradurre con euro(x) if x else '', non con se_zero (che darebbe «—»)."
+  },
+  {
+   "modello": "templates/_pezzi.html · intestazione(titolo, sopra, sotto, classe_titolo, id) e scheda(titolo, sotto, livello, id, attaccata, sabbia, classe, guida)",
+   "tavola": "Intestazione: Cassa1, Stat1, Paz1 («Cassa · Sede centrale», h1 36, sottotitolo 15; in Stat1 i collegamenti «Questo mese · Mese scorso» vanno nel {% call %}). Scheda: le section bianche con raggio 16-20, titolo h3 18/600 e sottotitolo 13,5 (Stat1 «Saturazione delle stanze», Cassa1 «Incassi del giorno»), aria-labelledby.",
+   "cambia": "Contenitori nuovi: div.v-intestazione con h1.v-titolo; section.v-scheda con la testa h2/h3 e il corpo nel {% call %}. classe_titolo serve a tenere le classi di oggi sull'h1 (per esempio «giorno»).",
+   "resta": "Le parole dell'h1 sono quelle di oggi: il pezzo scrive solo quello che riceve. data-guida si può passare.",
+   "testi_nuovi_della_tavola": "I sopratitoli delle tavole («Cassa · Sede centrale», «Statistiche · Sede centrale») e i sottotitoli descrittivi («Quanto si è incassato, come e quando…») oggi non ci sono: vanno nell'elenco delle frasi da approvare, area per area.",
+   "js_e_prove_che_dipendono": "animazioni.js:255 cerca .pagina h1. Le prove che cercano <h1 class=\"giorno\"> o testi dell'h1 restano valide se si passa classe_titolo. tappa 1: il <main> sta in base.html, quindi i pezzi non devono avere un altro <main> (il catalogo usa div.v-pagina).",
+   "rischi": "Livelli dei titoli: le tavole usano h1 → h2 (linguetta) → h3 (scheda); oggi diverse pagine hanno h2 per le sezioni. Cambiare il livello cambia ciò che leggono i lettori di schermo e le prove per ruolo (get_by_role('heading', level=…))."
+  },
+  {
+   "modello": "templates/_pezzi.html · tabella(etichetta, classe, id)",
+   "tavola": "Le tabelle delle tavole (role=table, intestazione #EEF2F8, numeri a destra con tabular-nums, totale su #EEF2F8 in grassetto, sottoriga piccola grigia «Ambulatorio 1»): Cassa1, Paz1, Nefro-Agenda4-Elenco, Stat1.",
+   "cambia": "Il pezzo dà solo il contenitore che scorre (div.v-tabella-contenitore) e table.v-tabella. thead, tbody, righe e celle restano scritti nella pagina. Classi delle celle: v-numero, v-totale, v-spento, small/v-piccolo per la sottoriga.",
+   "resta": "Le colonne, le celle, i moduli dentro le celle, l'ordine delle righe. Si usa la <table> vera, non i div role=table delle tavole: le prove e il lanciatore leggono le celle.",
+   "testi_nuovi_della_tavola": "Le aria-label delle tabelle nelle tavole («Incassi del giorno per metodo»): solo se approvate (parametro etichetta).",
+   "js_e_prove_che_dipendono": "animazioni.js:119-120 (table.elenco th). prove_112_excel e confronta_rami confrontano dati ed Excel, non l'HTML della tabella. Le prove che cercano 'table class=\"elenco\"' (grep nelle prove dell'area) vanno riscritte per ruolo nel primo passo della tappa.",
+   "rischi": "Vedi veste.css (1): tenere «elenco» porta dentro gli stili vecchi."
+  },
+  {
+   "modello": "templates/_pezzi.html · pillola(codice, testo, dopo) e conta(n, titolo)",
+   "tavola": "Pillole di Nefro-Colori e Nefro-Agenda4-Elenco (Prenotato tratteggiata, Confermato azzurra, Arrivato verde, Non presentato rossa, Disdetto grigia barrata; punto di 7 px), più la Sala viola. Contatore: «Segreteria 3» del menu e «Da confermare 3».",
+   "cambia": "span.v-pillola.v-pillola-{codice|lower} con lo span del punto aria-hidden e la parola; dopo= aggiunge l'ora («Arrivato 10:21»). conta() scrive span.v-conta solo se n non è zero.",
+   "resta": "La parola è sempre quella di oggi (modelli.STATI, ETICHETTA_STATO): mai solo colore.",
+   "testi_nuovi_della_tavola": "«arrivato 10:21» (targhetta della griglia, in minuscolo) e «in attesa da 168 min» (Agenda4) sono testi nuovi delle tavole: si decidono nelle aree, non qui.",
+   "js_e_prove_che_dipendono": "Nessun JS. Le prove che cercano b.stato-arrivato o .bottone.stato-* (stile.css:437-439, _stato.html) restano su quei pezzi finché le aree non li cambiano.",
+   "rischi": "I bottoni di stato (_stato.html, form con stato e torna) non sono pillole: restano moduli. La pillola è solo per mostrare lo stato."
+  },
+  {
+   "modello": "templates/_pezzi.html · striscia(voci, etichetta, guida)",
+   "tavola": "Le strisce di Cassa1 («915,00 € incassati · 7 pagamenti»), Stat1 (7 numeri), Nefro-Agenda4 (23 appuntamenti, 17 arrivati, 1 disdetto, 1 non presentato). Scheda bianca, voci separate da una riga verticale.",
+   "cambia": "div.v-striscia con le voci: numero, uno spazio, parola. v-allarme in rosso (come ul.numeri li.allarme, stile.css:540). prima= tiene una parola davanti al numero.",
+   "resta": "Il testo letto: «294 appuntamenti». Con prima='incassati' resta «incassati 915,00 €» come cassa.html:7.",
+   "testi_nuovi_della_tavola": "(1) aria-label della striscia («I conti della cassa»): solo se approvata. (2) Le tavole spostano parole: «incassati 915,00 €» diventa «915,00 € incassati»; «Totale (7 pagamenti)» diventa «7 pagamenti». Non sono fra le 5 frasi approvate di s1.md.",
+   "js_e_prove_che_dipendono": "animazioni.js:135 anima i numeri di ul.numeri b: nell'animata va esteso a .v-striscia-numero. Le prove delle statistiche che cercano ul.numeri vanno riscritte per testo nel primo passo della tappa 4.",
+   "rischi": "Il lanciatore confronta le righe di testo: lo spostamento numero/parola è una differenza da approvare o da evitare con prima=."
+  },
+  {
+   "modello": "templates/_pezzi.html · barra_comandi(etichetta, guida) e passo(indirizzo, verso, titolo, tasto)",
+   "tavola": "Barra di Cassa1 e Nefro-Agenda4: frecce ‹ › da 40×40 con icona, «Oggi», tendina della sede con la freccia, bottoni a destra con margin-left:auto, il principale «+ Nuovo appuntamento».",
+   "cambia": "div.v-barra-comandi con dentro i comandi di oggi (in un {% call %}). I <form> dentro la barra hanno display:contents. passo(): a.v-passo con l'icona chevron, title e aria-label uguali al title di oggi.",
+   "resta": "Indirizzi, data-tasto (precedente, successivo, oggi, nuovo: gestionale.js:523-540), data-guida e i <form method=get> con select name=struttura e onchange. Il bottone principale tiene la classe «primario»: Ctrl+Invio la cerca (gestionale.js:531).",
+   "testi_nuovi_della_tavola": "(1) L'etichetta nascosta «Struttura» sul select della sede: oggi griglia.html:15 non ce l'ha. È un testo nuovo per i lettori di schermo, da approvare (migliora l'accessibilità). (2) Il nome letto delle frecce passa da «‹» a «Giorno precedente», cioè il title di oggi. (3) «Oggi» al posto di «Vai a oggi» è già approvato (tappe 5 e 8).",
+   "js_e_prove_che_dipendono": "gestionale.js:523 ([data-tasto]), :531 (button[type=submit].primario), animazioni.js:70 (onda su .bottone e .passo). Prove: tutte quelle che cliccano «‹» o cercano a.passo (prove_110_browser, prove_tendine_browser) vanno riscritte per nome («Giorno precedente») nel primo passo.",
+   "rischi": "(1) Il testo visibile «‹ ›» sparisce: confronta_rami legge il testo dei collegamenti (handle_data), quindi è una differenza da mettere nell'elenco. (2) Manca l'icona chevron-down in _icone.html: va aggiunta a ICONE in strumenti/genera_icone.py (rigenerando _icone.html), altrimenti la freccia della tendina e di «Stampa e scarica» resta vuota (si vede nel catalogo)."
+  },
+  {
+   "modello": "templates/_pezzi.html · linguette(voci, etichetta, guida)",
+   "tavola": "Cassa1 (Giorno · Mese · Listino · Tariffari dei medici), Seg (sei linguette, «Da confermare» con il numero), Conf (sei più una), Nefro-Agenda (Giorno · Settimana · Mese · Elenco), Amb.",
+   "cambia": "nav.v-linguette con a.v-linguetta. La linguetta accesa ha aria-current=\"page\". Ogni voce è un dizionario {testo, indirizzo, accesa, tasto, guida, conta, conta_titolo}: è la forma che menu.py darà in tappa 2.",
+   "resta": "Gli indirizzi sono quelli delle tendine di oggi (_menu.html), con struttura e giorno (_menu.html:1-4). Le parole sono quelle delle voci di oggi.",
+   "testi_nuovi_della_tavola": "L'aria-label del nav («Pagine di Cassa»): testo nuovo, solo se approvato.",
+   "js_e_prove_che_dipendono": "Oggi le tendine del menu dipendono da gestionale.js:714 (.menu .gruppo). Le linguette non hanno JavaScript. Le prove della tappa 2 cercheranno aria-current e il nome.",
+   "rischi": "Le linguette sono collegamenti fra pagine, non tab ARIA (role=tablist): va bene così, con aria-current. Da non mescolare."
+  },
+  {
+   "modello": "templates/_pezzi.html · stampa_e_scarica(voci, testo, guida)",
+   "tavola": "Il bottone «Stampa e scarica» con l'icona della stampante e la freccia (Nefro-Colori, Nefro-Agenda4) e la tendina con voce in grassetto e riga piccola sotto.",
+   "cambia": "div.gruppo-comandi.v-stampa con button.v-bottone.apri-gruppo (icona printer, parola, freccia chevron-down) e div.tendina role=menu con a > b + small. Aspetto nuovo: superficie, raggio 12, ombra 3, voce accesa con la tinta.",
+   "resta": "Le classi e gli attributi per gestionale.js:714-771 e guida.js:130 (gruppo-comandi, apri-gruppo, tendina, aria-haspopup, aria-expanded, role=menu), target=_blank dove c'è oggi, voci e indirizzi di griglia.html:25-34. data-guida (giorno-stampa) si passa.",
+   "testi_nuovi_della_tavola": "«Altre esportazioni» → «Tutte le esportazioni» è già approvato (tappe 5 e 8).",
+   "js_e_prove_che_dipendono": "gestionale.js:714-771 (provato: il clic apre la tendina), guida.js:130. prove_tendine_browser.py controlla che niente copra la tendina: il z-index 40 della v-barra-comandi serve a questo.",
+   "rischi": "La <span class=\"freccia\"> di oggi (disegnata dal CSS) diventa un'icona: guida e prove che cercano .freccia vanno controllate con grep nella tappa dell'area."
+  },
+  {
+   "modello": "strumenti/catalogo_pezzi.html e strumenti/catalogo_pezzi.py (nuovi)",
+   "tavola": "Nefro-Colori per i gettoni, più tutti i pezzi qui sopra con i dati inventati di anteprime/SPEC.md (Gallo Marco, Bove Chiara…).",
+   "cambia": "Pagina /catalogo-pezzi con: gettoni (campione, nome, chiaro e scuro, letti da gettoni.css), contrasti delle coppie (calcolati con marchio.contrasto), scale con la tabella di conversione dalle tavole, linguette, barra con la tendina, bottoni, strisce, pillole, scheda con tabella, riquadri, campi, euro(). Tema chiaro o scuro con localStorage (come Impostazioni). Lo script è un gestionale di prova a sé: database da seed.py in una cartella temporanea, strutture rinominate (Sede centrale, Sede nord, Poliambulatorio est), colore #1C4184, logo inventato fatto con PIL, recapiti finti. registra(app) aggiunge la rotta; --bozze CARTELLA serve per provare i file prima di metterli nel programma.",
+   "resta": "Fuori dall'eseguibile: gestionale.spec:20 porta solo templates/ e static/. Fuori da demo.py, che resta fermo dalla tappa 1, e fuori da indirizzi.txt: confronta_rami e prove_indirizzi non vedono un indirizzo in più.",
+   "testi_nuovi_della_tavola": "I testi del catalogo non vanno in clinica: li vede solo Giovanni nelle foto.",
+   "js_e_prove_che_dipendono": "Usa gestionale.js e guida.js di base.html (provato: nessun errore in console, la tendina si apre).",
+   "rischi": "(1) Le tavole Nefro hanno il logo vero della clinica (nefro.py: LOGO_STRUTTURA da static/logo-posillipo.png) e seed.py ha nome e medici veri: il catalogo li sostituisce, e le foto non mostrano nomi veri (controllato). (2) Il piano dice «lo serve solo il gestionale di prova»: se si preferisce che lo registri demo.py, va fatto dentro la tappa 1, prima che demo.py si fermi."
+  },
+  {
+   "modello": "marchio.tema() (proposta, file Python; bozza marchio_tema_nuovo.py)",
+   "tavola": "Nefro-Colori: Tinta chiara #E7EEF8, Azzurro chiaro #BCCCEC, Blu profondo #14294F rispetto al blu #1C4184.",
+   "cambia": "Quattro varianti nuove: tinta, bordo, profondo, testo. Tinta, bordo e profondo prendono la stessa tinta del colore della struttura, con luce e saturazione delle tavole (HSL: luce 0,94 / 0,83 / ×0,61). «testo» è il primario scurito finché ha 4,5:1 sulla tinta. base.html le scrive come --primario-tinta, -bordo, -profondo e -testo nello stesso <style> dello strato.",
+   "resta": "Le cinque varianti di oggi (primario, scuro, tenue, chiaro, fuoco) e leggibile(): le pagine di oggi non cambiano.",
+   "testi_nuovi_della_tavola": "Nessuno.",
+   "js_e_prove_che_dipendono": "marchio.py:185-215. Le prove di marchio (grep tema( nelle prove) controllano le 5 chiavi: le chiavi nuove si aggiungono senza toglierne.",
+   "rischi": "Il piano mette in tappa 2 «il colore della struttura si scurisce finché si legge anche sui fondi chiari nuovi». Farlo cambiando leggibile() cambierebbe il primario delle pagine di oggi per i colori fra 4,5 e circa 5,2:1: per questo la variante «testo» è separata."
+  }
+ ],
+ "file_bozze": [
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/bozze/static/gettoni.css",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/bozze/static/veste.css",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/bozze/templates/_pezzi.html",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/bozze/templates/base.html",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/bozze/templates/base.html.diff",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/bozze/templates/base.html.oggi",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/bozze/alternativa-A/vecchio.css",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/bozze/strumenti/catalogo_pezzi.html",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/bozze/strumenti/catalogo_pezzi.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/bozze/prove_mattoni.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/bozze/marchio_tema_nuovo.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/misure/foto_layer_B.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/misure/foto_layer_animata.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/misure/foto_layer.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/misure/contrasti_gettoni.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/misure/contrasti_gettoni.txt",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/misure/scale_tavole.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/misure/scale_tavole.json",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/misure/prova_euro.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/misure/foto_catalogo.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/catalogo/catalogo-1366-chiaro.png",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/catalogo/catalogo-1366-scuro.png",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/catalogo/catalogo-1024-chiaro.png",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/catalogo/catalogo-1024-scuro.png",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/catalogo/catalogo-683-chiaro.png",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/catalogo/catalogo-683-scuro.png",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/catalogo/tendina-aperta-chiaro.png",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/catalogo/tendina-aperta-scuro.png",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/layer-B/esito.json",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/layer/esito.json",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/layer-animata/esito.json",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/layer/mutante-pazienti-scuro-confronto.png",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/foto/tavole/Nefro-Colori-1366-intera.png",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-mattoni/mutanti"
+ ],
+ "misure": [
+  "Tavole con il blu del gruppo (#1C4184): 58. Raggi diversi: 18 valori in px (più 0 e 50%): 12px×1311, 10×608, 9×230, 16×220, 20×157, 14×143, 3×102, 8×94, 6×71, 999×70… Grandezze di carattere: 26 (12,5px×704, 13,5×703, 14×351, 13×157, 14,5×132, 18×127, 15×120, 12×102, 20×79, 36×55…). Gap/padding: 24 valori. Pesi: 400/500/600/700 (800 solo 4 volte). Altezze dei comandi: 42 (voci del menu), 36, 40, 44.",
+  "Scale proposte: raggi 4/8/12/16/999; caratteri 12/12,5/13,5/14/15/18/22/30/36, con interlinea 16/18/20/22/22/24/28/36/40; spazi 2/4/6/8/12/16/20/24/36. Tabella di conversione in catalogo_pezzi.py e nella pagina del catalogo.",
+  "Strato, normale: 18 pagine × chiaro/scuro × schermo/intera = 72 confronti, 0 pixel diversi (foto/layer e, con il <style> di @import della soluzione B, foto/layer-B). Rumore misurato fra due foto «prima»: Dove si fa 6 px (cursore, 814,200), Modo schermo 1233 px (dati che si aggiornano).",
+  "Strato, animata: 9 pagine × 2 temi × 2 = 36 confronti, 0 pixel (rumore 53 px su Oggi, uguale fra due «prima»). Con l'ordine sbagliato (tema-scuro prima di animazioni) sono uguali anche le stesse 9 pagine, ma solo da ferme e con «riduci movimento».",
+  "Mutante «:root della struttura fuori dallo strato»: in scuro cambiano 12 pagine su 18 (Pazienti 17.003 px, Elenco 10.986, Oggi 7.036, Statistiche 6.195, Conferme 5.093, Dove si fa 4.225…). I collegamenti diventano blu scuro su fondo scuro (foto mutante-pazienti-scuro-confronto.png).",
+  "Contrasti dei gettoni (27 coppie, sotto 4,5 nessuna). In chiaro i più bassi: testo-tenue su chiuso 4,90, su incasso 5,03, verde su superficie 5,13, bianco su verde-pieno 5,13, testo-tenue su fondo 5,21. In scuro il più basso è testo-tenue su incasso 5,89. Bordi (non testo): riga-campo 1,90 (oggi 1,85; la tavola #D8DFEB 1,34), segno-grigio 2,55, riga 1,22.",
+  "Colore della struttura come testo sulla tinta (tema di oggi): #1C4184 8,60; #154381 8,53; colori al limite #767676 4,13, #5B7F3E 4,20, #0087B4 4,27 (sotto 4,5). Con la variante «testo» proposta: 4,54-4,84. Formula HSL contro la tavola: tinta #E7EDF9 (tavola #E7EEF8), bordo #BACCED (#BCCCEC), profondo #112851 (#14294F).",
+  "In scuro, misurato nel catalogo con getComputedStyle: campo fondo rgb(28,36,45), testo rgb(225,231,237), bordo rgb(69,82,95); bottone normale rgb(28,36,45) e rgb(225,231,237); collegamento ≈ rgb(153,170,200), cioè --primario-scuro schiarito; linguetta accesa con testo chiaro su tinta scura, 5,79:1.",
+  "euro(): 22.013 importi (interi da -10^9 a 10^12, 0, ±1, None) uguali a |euro, alla macro di cassa_mese e a quella di statistiche.",
+  "Prefisso: 763 classi di oggi (CSS, modelli e JS delle due cartelle), nessuna comincia con «v-» o usa «--v-». Prefissi già presi: gr- (9 classi), c- (10).",
+  "Catalogo: larghezza della pagina uguale a quella della finestra a 1366, 1024 e 683 (niente scorrimento di lato); 0 errori in console in chiaro e in scuro; la tendina «Stampa e scarica» si apre con il clic (gestionale.js di oggi).",
+  "prove_mattoni.py (bozza): 7 prove verdi; mutanti presi 5 su 5, ognuno dalla sua prova (colore a mano, :root fuori, classe senza prefisso, testo-tenue #8A95A5 a 3,03:1, classe .voce pestata)."
+ ],
+ "pezzi_comuni_usati": [
+  "euro(cent, se_zero, simbolo)",
+  "intestazione(titolo, sopra, sotto, classe_titolo, id) con {% call %} facoltativo",
+  "scheda(titolo, sotto, livello, id, attaccata, sabbia, classe, guida) con {% call %}",
+  "tabella(etichetta, classe, id) con {% call %}: thead e tbody restano nella pagina",
+  "pillola(codice, testo, dopo)",
+  "conta(n, titolo)",
+  "striscia(voci, etichetta, guida), voce = (numero, cosa) o {numero, cosa, prima, allarme, guida}",
+  "barra_comandi(etichetta, guida) con {% call %}",
+  "passo(indirizzo, verso, titolo, tasto)",
+  "linguette(voci, etichetta, guida), voce = {testo, indirizzo, accesa, tasto, guida, conta, conta_titolo}",
+  "stampa_e_scarica(voci, testo, guida), voce = {testo, sotto, indirizzo, nuova_scheda, visibile}",
+  "classi di veste.css per ciò che resta scritto nella pagina: v-bottone (v-principale con «primario», v-pericolo, v-piccolo), v-tendina, v-campo (v-aiuto), v-riquadro-avviso/-errore/-ok, v-a-destra, v-stacco, v-numero, v-totale, v-spento",
+  "icona() di _icone.html (printer, chevron-left, chevron-right, plus, search; manca chevron-down)"
+ ],
+ "domande_aperte": [
+  "Strato: gli @import con layer() scritti in base.html (B, provata: tiene l'ordine dell'animata stile → animazioni → tema-scuro e lascia verde prove_14.py:1836), oppure il file vecchio.css del piano (A), che nell'animata dovrebbe diventare un file proprio con 3 @import (e i file propri tornano 4)?",
+  "Bordo dei campi: #B3BDCB (1,90:1, non peggio di oggi) o #D8DFEB della tavola (1,34:1, più chiaro di oggi)? Va deciso guardando le foto.",
+  "Varianti del colore della struttura (tinta, bordo, profondo, testo) in marchio.tema: si fanno nella 1-bis, così le foto del catalogo hanno esattamente i colori della tavola, o nella tappa 2? Finché non ci sono, i gettoni usano tenue, chiaro e scuro di oggi (#EDF0F5, #A9B7D0 e #142F5F con il blu del gruppo).",
+  "Testo del corpo: 14,5px delle tavole → 14px (come oggi, scelta della bozza) o 15px? Cambia quanto sta in una riga a 1366×657.",
+  "Le etichette per i lettori di schermo che le tavole aggiungono (aria-label «Pagine di Cassa», «I conti della cassa», l'etichetta nascosta «Struttura» sul select, il nome «Giorno precedente» al posto di «‹») entrano fra le frasi da approvare o restano fuori? I pezzi le scrivono solo se passate.",
+  "Striscia: lo spostamento numero/parola delle tavole («incassati 915,00 €» → «915,00 € incassati», «Totale (7 pagamenti)» → «7 pagamenti») è un cambio di testo non approvato. Si tiene l'ordine di oggi con prima= o si aggiunge alle frasi approvate?",
+  "Browser e versione sul PC della segreteria (telefonata): @import con layer() vuole Chrome/Edge 99 o più nuovi. Senza, la pagina resta senza stile, quindi va confermato prima di pubblicare la 1.13.",
+  "Foto prima e dopo «con il lanciatore»: confronta_rami.py non fa foto delle pagine a schermo e salta il contenuto di <style>. Si aggiunge un modo «foto dello schermo» al lanciatore (due server, stessi dati, ora ferma) o si tiene uno strumento a parte come misure/foto_layer_B.py (un server, la pagina cambiata al volo)?",
+  "Nell'animata le animazioni agganciate a .bottone/.passo, table.elenco, ul.numeri b e .pagina h1 (animazioni.js:70, 119, 135, 255) non toccano i pezzi nuovi: si estendono ai pezzi v- nella tappa di ogni area, come dice la regola «le animazioni si adattano nella stessa tappa»?",
+  "Catalogo: va bene un gestionale di prova a sé (strumenti/catalogo_pezzi.py, con /catalogo-pezzi che non esiste altrove) invece di una rotta in demo.py, che dalla fine della tappa 1 non cambia più ed è usato dal lanciatore?"
+ ]
+}

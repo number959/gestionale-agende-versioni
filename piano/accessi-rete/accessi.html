@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block titolo %}Aree e accessi{% endblock %}
+{% block corpo %}
+<div class="pagina larga">
+  <h1>Aree e accessi</h1>
+  <p class="nota-riga">Bozza della seconda parte della pagina «Aree e accessi» (la prima, aree accese e spente, arriva con M2).
+  Questa pagina si apre solo da questo PC.</p>
+
+  <h2 class="sezione">Accesso dagli altri PC della rete</h2>
+  <form method="post" class="riquadro">
+    <input type="hidden" name="azione" value="rete">
+    <p><label><input type="checkbox" name="accesa" value="1"{% if cfg.accesa %} checked{% endif %}> Gli altri PC della rete possono aprire il programma, con nome e password</label></p>
+    <p><label>Porta <input name="porta" value="{{ cfg.porta }}" inputmode="numeric" size="6"></label>
+       <span class="nota-riga">5080 di partenza; questo PC continua ad aprire http://127.0.0.1:5000 senza password.</span></p>
+    <p><label><input type="checkbox" name="schermo_libero" value="1"{% if cfg.schermo_libero %} checked{% endif %}> Il Modo schermo (la dashboard senza nomi) si apre senza password</label></p>
+    <p><label>Altri nomi di questo PC <input name="nomi" value="{{ cfg.nomi|join(' ') }}" size="40"></label>
+       <span class="nota-riga">solo se gli altri PC lo chiamano con un nome diverso da quelli qui sotto</span></p>
+    <p><button class="bottone primario">Salva</button></p>
+    <p>{% if acceso %}<b>Acceso.</b> Sugli altri PC aprire:{% else %}<b>Spento.</b> Una volta acceso, sugli altri PC si aprirà:{% endif %}</p>
+    <ul>{% for x in indirizzi %}<li><code>{{ x }}</code></li>{% endfor %}</ul>
+    {% if errore_ascolto %}<p class="avviso errore">{{ errore_ascolto }}</p>{% endif %}
+    <p class="nota-riga">Il collegamento è senza protezione (http): nome, password e dati dei pazienti passano in chiaro nella rete
+    della clinica. Va bene solo per la rete interna, cablata o Wi-Fi con password. Serve anche la regola del firewall di Windows
+    per questa porta, solo per le reti private (la rete della clinica deve essere segnata «privata» in Windows).</p>
+  </form>
+
+  <h2 class="sezione">Utenti</h2>
+  {% for u in cfg.utenti %}
+  <form method="post" class="riquadro">
+    <input type="hidden" name="azione" value="salva"><input type="hidden" name="utente" value="{{ u.nome }}">
+    <h3>{{ u.nome }} <label class="nota-riga"><input type="checkbox" name="attivo" value="1"{% if u.attivo is not defined or u.attivo %} checked{% endif %}> attivo</label></h3>
+    <table class="tabella">
+      <tr><th>Area</th><th>Cosa può fare</th></tr>
+      {% for codice, nome, cosa in aree %}
+      <tr><td><b>{{ nome }}</b><br><small>{{ cosa }}</small></td>
+        <td>{% for v, etichetta in livelli %}<label><input type="radio" name="area_{{ codice }}" value="{{ v }}"{% if (u.aree or {}).get(codice, 'no') == v %} checked{% endif %}> {{ etichetta }}</label> {% endfor %}</td></tr>
+      {% endfor %}
+      <tr><td><b>Sistema</b><br><small>aggiornamenti, copie e ripristino, controllo del programma, questa pagina</small></td><td>solo da questo PC</td></tr>
+    </table>
+    <p><button class="bottone primario">Salva le aree di {{ u.nome }}</button></p>
+  </form>
+  <form method="post" class="riquadro filtri">
+    <input type="hidden" name="azione" value="password"><input type="hidden" name="utente" value="{{ u.nome }}">
+    <label>Nuova password per {{ u.nome }} <input type="password" name="password" autocomplete="new-password" minlength="8"></label>
+    <button class="bottone">Cambia la password</button>
+  </form>
+  <form method="post" class="riquadro" data-conferma="Togliere l'utente {{ u.nome }}?">
+    <input type="hidden" name="azione" value="elimina"><input type="hidden" name="utente" value="{{ u.nome }}">
+    <button class="bottone">Togli {{ u.nome }}</button>
+  </form>
+  {% else %}
+  <p>Nessun utente: dagli altri PC non entra nessuno.</p>
+  {% endfor %}
+  <form method="post" class="riquadro filtri">
+    <input type="hidden" name="azione" value="nuovo">
+    <label>Nome <input name="nome" maxlength="40" autocomplete="off"></label>
+    <label>Password <input type="password" name="password" autocomplete="new-password" minlength="8"></label>
+    <button class="bottone">Aggiungi un utente</button>
+  </form>
+
+  <h2 class="sezione">Ultimi accessi</h2>
+  <table class="tabella">
+    {% for quando, nome, da, cosa in eventi %}<tr><td>{{ quando }}</td><td>{{ nome }}</td><td>{{ da }}</td><td>{{ cosa }}</td></tr>
+    {% else %}<tr><td>Ancora nessuno.</td></tr>{% endfor %}
+  </table>
+</div>
+{% endblock %}
