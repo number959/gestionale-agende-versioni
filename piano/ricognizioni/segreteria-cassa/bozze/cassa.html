@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{#- BOZZA tappa 6 (tavola Cassa1-Giorno). La cassa del giorno è una delle 8 pagine che si stampano: in stampa deve
+    uscire come oggi (ESECUZIONE: confrontate in PDF dalla tappa 2). Per questo:
+    - la testata della carta di oggi (logo, «Cassa · giorno», «incassati X €») resta, solo in stampa (.solo-stampa);
+    - intestazione, linguette, titolo della linguetta, barra e striscia sono solo a schermo (.solo-schermo);
+    - le tabelle tengono le classi di oggi (elenco, lista-giorno, numero, totale, solo-schermo, azione) e lo stile
+      max-width:520px; il loro aspetto nuovo sta in veste-segreteria-cassa.css SOLO in @media screen.
+    Moduli, campi e collegamenti come oggi, salvo le linguette (Mese, Listino, Tariffari passano davanti a ‹ ›).
+    Restano: '<th>Incassa</th>' scritto così (prove_145.py:451), «Altro…» una volta per riga da incassare
+    (prove_14.py:1187), form.in-linea con i bottoni dei metodi (guida.py:476), data-tasto precedente/successivo/oggi. -#}
+{% from "_pezzi.html" import barra_comandi, passo, striscia %}
+{% from "_area.html" import testa_cassa with context %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Cassa del {{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="solo-stampa"><div class="barra">
+  <span class="marchio">{% include "_marchio.html" %}</span>
+  <h1 class="giorno">Cassa · {{ titolo }}</h1>
+  <span class="conteggio">incassati {{ totale|euro }} €</span>
+</div></div>
+<div class="v-pagina v-cassa v-stampa-come-oggi">
+<div class="solo-schermo v-cassa-testa">
+{{ testa_cassa() }}
+<h2 class="v-titolo-sezione">Cassa · {{ titolo }}</h2>
+{% call barra_comandi() %}
+  {{ passo(url_for('cassa.cassa_giorno', iso=ieri, struttura=sid), 'indietro', 'Giorno precedente', 'precedente') }}
+  {{ passo(url_for('cassa.cassa_giorno', iso=domani, struttura=sid), 'avanti', 'Giorno successivo', 'successivo') }}
+  <a class="v-bottone" data-tasto="oggi" href="{{ url_for('cassa.cassa_giorno', iso=oggi_iso, struttura=sid) }}">Oggi</a>
+  {% if strutture|length > 1 %}
+  <form method="get" class="v-in-riga"><span class="v-tendina"><select name="struttura" onchange="this.form.submit()" aria-label="Struttura">
+    {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+  </select></span></form>
+  {% endif %}
+  <span class="v-a-destra"></span>
+  <button class="v-bottone" type="button" onclick="window.print()">{{ icona('printer') }}Stampa la chiusura di cassa</button>
+{% endcall %}
+{#- oggi «incassati 915,00 €»: «incassati» resta prima del numero (prima=) finché la tavola («915,00 € incassati»)
+    non è approvata; «7 pagamenti» della tavola è un conto nuovo nella striscia (oggi è nella riga del totale) -#}
+{{ striscia([{'numero': (totale|euro) ~ ' €', 'cosa': '', 'prima': 'incassati'}]) }}
+</div>
+<div class="contenuto v-cassa-carta">
+  <h2 class="sezione">Incassi del giorno</h2>
+  <div class="v-tabella-contenitore v-cassa-stretta"><table class="elenco v-tabella v-cassa-metodi" style="max-width:520px">
+    {% for codice, etichetta in metodi %}<tr><td>{{ etichetta }}</td><td class="numero">{{ per_metodo[codice]|euro }} €</td></tr>{% endfor %}
+    <tr class="totale"><td>Totale ({{ pagati|length }} pagament{{ 'o' if pagati|length == 1 else 'i' }})</td><td class="numero">{{ totale|euro }} €</td></tr>
+  </table></div>
+  {% if pagati %}
+  <div class="v-tabella-contenitore"><table class="elenco lista-giorno v-tabella v-cassa-tabella">
+    <tr><th>Ora</th><th>Paziente</th><th>Prestazione · medico</th><th>Appuntamento</th><th>Metodo</th><th class="numero">Importo</th><th class="solo-schermo"></th></tr>
+    {% for a in pagati %}
+    <tr><td>{{ a.pagato_il.strftime('%H:%M') }}</td><td>{{ a.paziente.etichetta if a.paziente else '' }}</td>
+      <td>{{ a.prestazione.nome if a.prestazione else '' }}<div class="nota-riga">{{ a.operatore.etichetta }}{% if a.convenzione %} · {{ a.convenzione }}{% endif %}</div></td>
+      <td><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}">{{ a.inizio.strftime('%d/%m %H:%M') }}</a></td>
+      <td>{{ etichette.get(a.pagamento, a.pagamento) }}</td><td class="numero">{{ a.pagato_testo }} €</td>
+      <td class="azione solo-schermo"><form method="post" action="{{ url_for('cassa.pagamento', aid=a.id) }}" class="in-linea"><input type="hidden" name="azione" value="annulla"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit" onclick="return confirm('Annullare il pagamento?')">Annulla</button></form></td></tr>
+    {% endfor %}
+  </table></div>
+  {% endif %}
+
+  <h2 class="sezione solo-schermo">Appuntamenti del giorno da incassare</h2>
+  {% if da_incassare %}
+  <div class="v-tabella-contenitore solo-schermo"><table class="elenco lista-giorno solo-schermo v-tabella v-cassa-tabella">
+    <tr><th>Ora</th><th>Paziente</th><th>Prestazione</th><th>Stato</th><th class="numero">Importo</th><th>Incassa</th></tr>
+    {% for a in da_incassare %}
+    <tr><td class="ora-lista"><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}#incasso">{{ a.inizio.strftime('%H:%M') }}</a></td>
+      <td>{{ a.paziente.etichetta if a.paziente else '' }}</td>
+      <td>{{ a.prestazione.nome if a.prestazione else '' }}{% if a.convenzione %}<div class="nota-riga">{{ a.convenzione }}</div>{% endif %}</td>
+      <td>{{ a.etichetta_stato }}</td>
+      <td class="numero">{% if a.importo_cent %}{{ a.importo_testo }} €{% else %}<span class="senza">non indicato</span>{% endif %}</td>
+      <td class="azione">{% if a.importo_cent %}{% for codice, etichetta in metodi[:2] %}<form method="post" action="{{ url_for('cassa.pagamento', aid=a.id) }}" class="in-linea"><input type="hidden" name="metodo" value="{{ codice }}"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit">{{ etichetta }}</button></form> {% endfor %}{% endif %}
+        <a class="bottone piccolo" href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}#incasso">Altro…</a></td></tr>
+    {% endfor %}
+  </table></div>
+  {% else %}
+  <p class="vuoto solo-schermo">Niente da incassare.</p>
+  {% endif %}
+  <p class="piede-stampa">{{ st.nome }}{% if st.societa %} — {{ st.societa }}{% endif %} · stampato il {{ adesso.strftime('%d/%m/%Y alle %H:%M') }}</p>
+</div>
+</div>
+{% endblock %}

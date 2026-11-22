@@ -1,16 +1,21 @@
 """Prove nel browser della 1.5, su un gestionale gia' avviato con i dati di
 prova:
-    python prove_15_browser.py http://127.0.0.1:5000
+    python prove_15_browser.py http://127.0.0.1:5001
 - il codice fiscale riempie da solo la data di nascita (modulo di
   prenotazione e scheda del paziente), senza toccare una data gia' scritta;
 - scegliendo un paziente dall'elenco si riempiono anche nascita, codice
   fiscale e indirizzo;
 - i pulsanti che mandano un messaggio dicono "Invio in corso…";
 - nessun errore JavaScript nelle pagine nuove.
+Le domande del browser passano da aiuti_browser.py (tappa 1 della base): una
+domanda che nessuno aspettava fa cadere la prova.
 Non usarla sul database vero."""
 import os, re, sys, datetime as dt
 from playwright.sync_api import sync_playwright
-B = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000'
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from aiuti_browser import prepara_domande  # noqa: E402
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 def ok(n, c, d=''):
     esiti.append(bool(c)); print(('OK ' if c else 'KO ') + n, '' if c else d)
@@ -37,6 +42,7 @@ with sync_playwright() as p:
     ctx = br.new_context(viewport={'width': 1366, 'height': 900})
     ctx.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); } catch (e) {}")
     pg = ctx.new_page(); err = []
+    domande = prepara_domande(pg)            # subito: ogni domanda del browser passa da qui (nessuna e' attesa)
     pg.on('pageerror', lambda e: err.append(str(e))); pg.on('console', lambda m: err.append(m.text) if m.type == 'error' else None)
     nuovo = B + '/appuntamento?data=%s&ora=11:00&risorsa=1&struttura=1' % domani
     pg.goto(nuovo); pg.wait_for_timeout(300)
@@ -105,6 +111,7 @@ with sync_playwright() as p:
               '/aiuto/email-per-medico', '/aiuto/promemoria', '/aiuto/mese', '/aiuto/aggiornare', '/aiuto'):
         pg.goto(B + u); pg.wait_for_timeout(250)
     ok('nessun errore JavaScript', not err, err[:3])
+    ok('nessuna domanda del browser inattesa', not domande.inattese, domande.inattese)
     br.close()
 print('\n%d prove nel browser, %d superate' % (len(esiti), sum(esiti)))
 sys.exit(0 if all(esiti) else 1)

@@ -11,10 +11,10 @@
     <p class="campo">Paziente: <b>{{ x.paziente.etichetta }}</b>{% if x.paziente.telefono %}, tel. {{ x.paziente.telefono }}{% endif %}</p>
     {% else %}
     <div class="campo cerca-paziente">
-      <label for="cerca_paziente">Cerca in anagrafica</label>
+      {% if puo_cercare_pazienti() %}<label for="cerca_paziente">Cerca in anagrafica</label>
       <input type="search" id="cerca_paziente" placeholder="cognome, nome o telefono"
              data-indirizzo="{{ url_for('pazienti.cerca_json') }}" data-scheda="{{ url_for('pazienti.scheda', pid=0) }}">
-      <div class="suggerimenti" id="suggerimenti" hidden></div>
+      <div class="suggerimenti" id="suggerimenti" hidden></div>{% endif %}
       <p class="aiuto" id="paziente-scelto">{% if p %}Paziente in anagrafica: <a href="{{ url_for('pazienti.scheda', pid=p.id) }}">{{ p.etichetta }}</a>{% else %}Se non è in anagrafica, basta scrivere cognome e telefono.{% endif %}</p>
     </div>
     <input type="hidden" name="paziente_id" id="paziente_id" value="{% if modulo %}{{ modulo.get('paziente_id', '') }}{% elif p %}{{ p.id }}{% endif %}">

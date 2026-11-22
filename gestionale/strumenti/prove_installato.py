@@ -17,7 +17,9 @@ menu, la ricerca rapida con le prestazioni) e la pagina dell'email della 1.9.1 (
 casella, gestionale.js, la guida vecchia che porta a quella nuova), le fasce dei turni della 1.10
 (giorno, settimana e mese con il database aggiornato, la durata delle fasce nel modulo del turno,
 lo stile, la guida), l'autoriparazione della 1.11 (/salute, la pagina Controllo del programma con i
-tre lavori in sottofondo attivi; con CARTELLA_DATI anche gestionale.pid e il diario). L'invio delle
+tre lavori in sottofondo attivi; con CARTELLA_DATI anche gestionale.pid e il diario), e dalla 1.13 la pagina «Aree e
+accessi» e il Modo schermo dietro un portiere, dopo i quali le pagine di sempre devono rispondere (nell'eseguibile app.py
+gira come «__main__»: revisione del 22/11). L'invio delle
 email sul programma installato si prova con strumenti/prova_email_installato.py."""
 import json
 from datetime import date
@@ -96,8 +98,14 @@ controlla('Riepilogo del periodo della sala (1.12.6): la pagina',
 s, b, _ = get('/riepilogo-live/statistiche?struttura=1&periodo=settimana&schermo=1')
 pagina_st = b.decode('utf-8', 'replace')
 controlla('Riepilogo del periodo nella dashboard (1.12.6): la pagina senza menu e senza Excel',
-          s == 200 and 'class="frase-live' in pagina_st and '<nav class="menu"' not in pagina_st and 'riepilogo.xlsx' not in pagina_st
+          s == 200 and 'class="frase-live' in pagina_st and not re.search(r'<nav class="menu[ "]', pagina_st) and 'riepilogo.xlsx' not in pagina_st
           and '<h1 class="giorno">Riepilogo del periodo' in pagina_st, s)
+# gemello: lo stesso indirizzo senza ?schermo=1 ha il menu e il collegamento all'Excel (solo lettura)
+s, b, _ = get('/riepilogo-live/statistiche?struttura=1&periodo=settimana')
+pagina_st = b.decode('utf-8', 'replace')
+controlla('Riepilogo del periodo nella dashboard (gemello): senza il modo schermo il menu e l\'Excel ci sono',
+          s == 200 and re.search(r'<nav class="menu[ "]', pagina_st) is not None and 'riepilogo.xlsx' in pagina_st,
+          (s, re.search(r'<nav class="menu[ "]', pagina_st) is not None, 'riepilogo.xlsx' in pagina_st))
 s, b, _ = get('/cassa/tariffari')
 controlla('Tariffari dei medici (1.12.6): la pagina con il controllo dei medici e «Carica tariffario»',
           s == 200 and 'Controllo dei medici' in testo(b) and 'Carica tariffario' in testo(b), s)
@@ -105,8 +113,15 @@ s, b, _ = get('/aggiornamenti')
 controlla('Aggiornamenti (1.12.6): il controllo automatico risulta acceso', s == 200 and
           'Controllo automatico degli aggiornamenti: acceso' in testo(b), s)
 s, b, _ = get('/oggi')
+# il gemello qui non si può (il popup vuole un aggiornamento pronto, e qui non si scrive niente): c'è in prove_16.py,
+# a_popup(), con lo stesso pezzo cercato nell'HTML della stessa /oggi ('data-popup="aggiornamento"' in t)
 controlla('Aggiornamenti (1.12.6): senza una versione nuova pronta nessun popup', s == 200 and
           'data-popup="aggiornamento"' not in b.decode('utf-8', 'replace'), s)
+t = b.decode('utf-8', 'replace')
+posti = [t.find(x) for x in ('@import url("/static/stile.css") layer(vecchio);', '@layer vecchio { :root { --primario:',
+                             'href="/static/gettoni.css"', 'href="/static/veste.css"')]
+controlla('veste nuova (1.13): i fogli di oggi nello strato «vecchio», gettoni.css e veste.css fuori',
+          s == 200 and -1 not in posti and posti == sorted(posti), (s, posti))
 s, b, _ = get('/ambulatori/riepilogo.json?struttura=1&periodo=settimana')
 d = json.loads(b) if s == 200 else {}
 controlla('Riepilogo del periodo (1.12.2): il JSON con stanze, medici e giorni', s == 200 and all(k in d for k in ('stanze', 'medici', 'giorni', 'totale')), (s, list(d)[:8]))
@@ -137,6 +152,7 @@ s, b, h = get('/static/video/prenotare.webm', {'Range': 'bytes=1000-1999'})
 controlla('video: scorrimento (Range → 206)', s == 206 and len(b) == 1000 and h.get('Content-Range', '').startswith('bytes 1000-1999/'),
           (s, len(b), h.get('Content-Range')))
 for p, tipo in (('/static/guida.js', 'text/javascript'), ('/static/stile.css', 'text/css'),
+                ('/static/gettoni.css', 'text/css'), ('/static/veste.css', 'text/css'),       # 1.13: i mattoni
                 ('/static/fonts/inter-latin.woff2', 'font/woff2'), ('/static/guida/aggiornare.png', 'image/png')):
     s, b, h = get(p)
     controlla('tipo di %s: %s' % (p, tipo), s == 200 and h.get('Content-Type', '').startswith(tipo), h.get('Content-Type'))
@@ -244,8 +260,25 @@ controlla('autoriparazione: la pagina Controllo del programma', s == 200 and 'Co
           'Cosa ha fatto da solo' in t and 'Database' in t, (s, t[:200]))
 controlla('autoriparazione: i tre lavori in sottofondo sorvegliati e attivi',
           t.count('Lavoro in sottofondo') == 3 and ' fermo' not in t, t[t.find('Lavoro in sottofondo'):][:400])
+# accanto al « fermo» che non c'è, in positivo: le tre righe dicono «attivo» (templates/autoriparazione.html). Non è il
+# gemello (un lavoro fermo qui non si può creare: si scriverebbe nel programma); la pagina con un lavoro fermo va
+# provata in prove_autoriparazione.py
+controlla('autoriparazione: le tre righe dei lavori in sottofondo dicono «attivo»',
+          len(re.findall(r'Lavoro in sottofondo: [^<]*</td><td>attivo</td>', b.decode('utf-8', 'replace'))) == 3,
+          re.findall(r'Lavoro in sottofondo: [^<]*</td><td>[^<]*', b.decode('utf-8', 'replace')))
 s, b, _ = get('/impostazioni')
 controlla('autoriparazione: il collegamento in Impostazioni', s == 200 and b'/autoriparazione' in b, s)
+# accesso dagli altri PC (1.13). Revisione del 22/11 (grave): nell'eseguibile app.py gira come «__main__», e il primo
+# «from app import» di accessi.py caricava una seconda copia del programma: dopo la pagina Aree e accessi, o una
+# richiesta del portiere, TUTTO rispondeva 500. Qui solo letture: la pagina, il Modo schermo dietro un portiere, e dopo
+# le pagine di sempre
+s, b, _ = get('/configura/accessi')
+controlla('Aree e accessi (1.13): la pagina', s == 200 and 'Accesso dagli altri PC' in testo(b), s)
+s, b, _ = get('/riepilogo-live?schermo=1&struttura=1', {'X-Forwarded-For': '192.168.1.50'})
+controlla('Aree e accessi (1.13): il Modo schermo dietro un portiere, con l\'accesso dalla rete spento', s == 200, s)
+dopo = [(p, get(p)[0]) for p in ('/oggi', '/pazienti', '/cassa/listino', '/impostazioni')]
+controlla('Aree e accessi (1.13): dopo la pagina e il portiere Oggi, Pazienti, Cassa e Impostazioni rispondono',
+          all(x == 200 for _, x in dopo), dopo)
 cartella_dati = os.environ.get('CARTELLA_DATI')
 if cartella_dati:
     try:

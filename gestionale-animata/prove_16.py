@@ -9,6 +9,8 @@ GitHub. Il Setup non parte davvero: si controlla il comando che lo
 avvierebbe. La prova vera, con il Setup che chiude, aggiorna e riapre il
 programma, si fa con l'eseguibile su Windows (vedi LEGGIMI)."""
 import hashlib
+from prove_dove import dove
+from prove_gemelli import manca
 import json
 import os
 import random
@@ -71,7 +73,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
     finally:
@@ -408,8 +410,16 @@ def c_nuova_versione():
     t = testo(C.get('/aggiornamenti'))
     assert 'È pronta la versione %s' % nuova in t and 'Correzioni. Piccole correzioni di prova.' in t, t
     assert 'data-guida="aggiorna-adesso"' in html(C.get('/aggiornamenti'))
-    # le novita' delle versioni gia' installate non si ripetono
-    assert 'Videoguide' not in t, 'novità già installate mostrate di nuovo'
+    # le novita' delle versioni gia' installate non si ripetono. Il gemello: la stessa pagina, con lo stesso
+    # file delle versioni, se il programma installato fosse la 1.5 mostra le Videoguide della 1.6
+    def installata_la_15():
+        prima = AG.VERSIONE
+        AG.VERSIONE = '1.5'
+        try:
+            return testo(C.get('/aggiornamenti'))
+        finally:
+            AG.VERSIONE = prima
+    manca(t, 'Videoguide', dove_ce=installata_la_15, perche='novità già installate mostrate di nuovo')
     return 'scaricato e controllato: %s' % os.path.basename(st['pronto'])
 
 
@@ -1242,10 +1252,11 @@ area('pagine, menu e sicurezza')
 def p_pagine_e_menu():
     S, C, dove = mondo()
     t = html(C.get('/aggiornamenti'))
-    menu = t.split('<nav class="menu"')[1].split('</nav>')[0]
-    assert 'Aggiornamenti' in menu and 'Novità' in menu, 'voci del menu'
-    assert re.search(r'class="gruppo[^"]*attivo"[^>]*data-guida="menu-configura"', t), 'Configura non evidenziato'
-    assert re.search(r'class="gruppo[^"]*attivo"[^>]*data-guida="menu-aiuto"', html(C.get('/aiuto/novita')))
+    # dalla tappa 2: Novità nella tendina Aiuto del menu, Aggiornamenti la linguetta accesa di Configura
+    from prove_cornice import linguetta_accesa, menu_html, voce_accesa
+    assert 'Novità' in menu_html(t) and linguetta_accesa(t) == 'Aggiornamenti', 'voci del menu e linguetta'
+    assert voce_accesa(t, 'menu-configura') and not voce_accesa(t, 'menu-aiuto'), 'Configura non accesa'
+    assert voce_accesa(html(C.get('/aiuto/novita')), 'menu-aiuto')
     t = html(C.get('/aiuto'))
     assert 'href="/aiuto/novita"' in t and 'href="/aggiornamenti"' in t, 'collegamenti in Aiuto'
     assert C.get('/aiuto/novita').status_code == 200

@@ -1,0 +1,227 @@
+{
+ "area": "configura-aiuto: tappa 9 (s4.md 139-144). Comprende i 15 modelli di Configura (anagrafiche, scheda, dove_strutture, dove_anteprima, dove_struttura, invii, regola_email, importa, importa_anteprima, importa_esito, impostazioni, moduli, modulo, autoriparazione, aggiornamenti), poi aggiornamento_in_corso, _popup_aggiornamento, aiuto, aiuto_articolo, aiuto_stampa, novita, da_configurare, le due pagine d'errore di app.py e la nuova «Pagina non trovata». I 15 sono i modelli che passano sezione anagrafiche, gruppo, invii, importa, impostazioni o aggiornamenti (_menu.html:10).",
+ "riassunto": "Per la tappa 9 ho messo a confronto le tavole Conf1-7 con le pagine di oggi, in un gestionale di prova sulla porta 5148 (fermato alla fine). Ho preparato e provato le bozze di quattro modelli in una copia della cartella, con sopra i mattoni della bozza «veste-mattoni»: anagrafiche, importa, aggiornamenti e la nuova pagina «non trovata».\n\nCosa ho misurato:\n- con il lettore del lanciatore (Lettore di strumenti/confronta_rami.py), nelle tre pagine di Configura in bozza i moduli e i loro campi sono identici. Anche i data-guida sono gli stessi, a parte quelli che la tappa 1 sta aggiungendo in questi minuti. Nessun collegamento è aggiunto o tolto. Cambiano solo le 9 righe di testo della testa di Configura (riga piccola, titolo, sottotitolo, sei linguette);\n- sulla copia con le bozze sono verdi prove_anagrafiche (78/78), prove_personalizzazione (51/51), prove_111_importa (10/10), prove_16 (49/49) e prove_indirizzi (149/149). prove_senza_menu (12/13) segnala che non_trovata.html toglie il menu: la pagina va aggiunta all'elenco. Il rosso di prove_pagine (g_variante) non viene dalle mie bozze ma dalla base.html della bozza dei mattoni, che carica i fogli con @import invece che con <link>;\n- le linguette: sei occupano 838 px, sette 968 px. A 1366 lo spazio utile è 1046 px, quindi la settima («Aree e accessi», M2) ci sta su una riga. A 1280 e 1024 le linguette vanno su due righe, a 683 su quattro. Il posto della settima è già nell'elenco, ma la linguetta si mostra solo quando la sua pagina esiste;\n- la «Pagina non trovata» è provata nel browser: sotto /riepilogo-live* non ha cornice e non fa nessuna richiesta fuori da quello che il portiere lascia passare. Per i .json risponde in JSON, e la risposta resta 404.\n\nLe cose che il piano rimanda ai moduli, cioè mappa, linguette delle regioni, righe cliccabili di Conf3 e logo del gruppo, vengono dopo, nei moduli (M3).\n\nDue rischi da decidere prima della tappa:\n1. Le linguette ripetono testi e indirizzi che il menu di oggi ha già. La regola «aggiunto» di cambiamenti_approvati.txt non li filtra, perché tiene tutto quello che c'è già nel principale. Bisogna decidere nella tappa 2 come il lanciatore salta la cornice e le linguette.\n2. Molte prove cercano pezzi di HTML carattere per carattere, per esempio prove_191.py:520 e 527 e prove_16.py:1313. O si riscrivono prima, oppure non si aggiungono classi a quegli elementi.",
+ "modelli": [
+  {
+   "modello": "anagrafiche.html",
+   "tavola": "Conf1-Anagrafiche. Ordine: testa di Configura (riga piccola, titolo «Configura», sottotitolo), sei linguette con Anagrafiche accesa, titolo della linguetta «Anagrafiche» con accanto «stanze, medici e turni», «Torna alla giornata», «Per cominciare» (solo se manca un passo), poi le 8 sezioni: Strutture, Medici, Turni ricorrenti, Turni di un giorno, Assenze, Chiusure, Stanze, Prestazioni. Bozza provata: bozze/templates/anagrafiche.html.",
+   "cambia": "Va via la riga del marchio (<p class=\"marchio\">): nella tavola il logo sta nel menu a sinistra (tappa 2). div.pagina larga diventa v-pagina c-configura. La testa è testa_configura('anagrafiche') (bozze/templates/_configura.html). L'h1 della pagina diventa h2, con lo small «sotto-titolo». «Per cominciare» va in una scheda con il filo ocra; il suo h2 diventa h3. Ogni sezione è una <section class=\"c-sezione\" aria-labelledby>: h3 a sinistra, «Aggiungi …» a destra (classi bottone aggiungi v-bottone, icona plus). Ogni tabella passa dal pezzo tabella(classe='elenco'), con thead e tbody. Le tabelle vanno da un bordo all'altro (oggi 960 px).",
+   "resta": "Tutti i collegamenti, nello stesso ordine, e tutte le condizioni (Struttura o Strutture; colonna Struttura solo con più sedi; «Aggiungi turno» solo con medici attivi). Restano i data-guida anagrafiche-medico-nuovo, anagrafiche-turno-nuovo, anagrafiche-turno-giorno e anagrafiche-assenza-nuova, aggiunti dalla tappa 1 in corso. Restano le classi table.elenco (animazioni.js:119), tr.spento, small.fasce-turno (prove_110.py, 13 volte; prove_guida.py), a.bottone.aggiungi, p.vuoto (animazioni.js:244), .guida li.fatto, td.azione, td.logo e span.campione. Restano tutti i testi.",
+   "testi_nuovi_della_tavola": "I tre testi della testa: «Configura · tutte le sedi», «Configura», «Le anagrafiche, le strutture del gruppo, i messaggi ai pazienti e le impostazioni del programma.». Poi: l'intestazione nascosta «Apri la scheda» e le aria-label «Nome, logo e colori: <struttura>», «Modifica: <medico>» e «Colore #…», che cambiano il nome letto dei collegamenti: non messe nella bozza. Dei testi di oggi la tavola non ha i vuoti e «Per cominciare» (sono condizioni): restano.",
+   "js_e_prove_che_dipendono": "JS: animazioni.js:119 (table.elenco), :244 (p.vuoto), :70 (.bottone per l'onda: per questo la bozza tiene la classe bottone). Prove: prove_anagrafiche, prove_personalizzazione:239 («Dare il nome alla struttura e caricare il logo») e :633 (href…>Torna alla giornata, sull'appuntamento), prove_110 (fasce-turno), prove_guida, guida «medici-turni».",
+   "rischi": "A 1366×657 la testa fa partire il titolo della linguetta a y=253 (misurato nella tavola): la prima tabella scende a circa y=380, oggi è a y=228. Le linguette ripetono 6 collegamenti e 6 testi del menu: l'ordine della lista dei collegamenti cambia anche senza aggiunte (vedi il lanciatore). Il marchio esce dal contenuto: va nel menu della tappa 2."
+  },
+  {
+   "modello": "scheda.html (scheda del medico; stanza, prestazione, turno, «Nome, logo e colori» della struttura, assenza, chiusura)",
+   "tavola": "Conf2-Medico solo per la scheda del medico. Le altre 6 schede non hanno tavola. Ordine della tavola: testa e linguette (Anagrafiche accesa), titolo «Modifica medico», «Torna a stanze, medici e turni», poi due colonne (3/5 e 2/5; misurate 616/410 px): a sinistra il modulo, a destra i riquadri «Email automatiche ai suoi pazienti» e «Tariffario».",
+   "cambia": "Testa di Configura con Anagrafiche accesa. L'h1 diventa titolo_linguetta(titolo). Le due colonne (c-due-colonne c-tre-quinti) solo se c'è elenco_extra; senza, una colonna. Il modulo va in una v-scheda e i campi diventano v-campo. Serve una griglia nuova per .campo.meta (Cognome e Nome affiancati): oggi la fa «.pagina form» (stile.css:271-277), che smette di valere senza div.pagina. «Salva» è v-principale a sinistra, «Elimina» v-pericolo a destra. Gli h2 dei riquadri diventano h3, con il filo arancio. Va via il marchio.",
+   "resta": "Il modulo POST, con enctype multipart per il logo. Restano tutti i name e id (c.nome), i campi nascosti, required, maxlength, min e max, i datalist lista_*, giorno_0…6 e chiusa_festivi, le titolo-sezione (Recapiti, Orario della griglia, Posti letto), img.anteprima-logo e p.nota. Resta il bottone Elimina: name=azione, value=elimina, formnovalidate, con conferma_elimina|tojson (nella tappa 3 diventa data-conferma). Le classi c.classe restano sul contenitore del campo: solo-giorno e solo-settimanale le nasconde gestionale.js:398-407 con hidden, e [hidden]{display:none!important} di stile.css:368 vince anche dentro lo strato.",
+   "testi_nuovi_della_tavola": "I tre della testa. Le aria-label «Scheda del medico» (sul modulo) ed «Elimina il medico» (cambia il nome letto di «Elimina»): da non mettere senza un sì.",
+   "js_e_prove_che_dipendono": "gestionale.js:398-407 (#ripetizione, .solo-giorno, .solo-settimanale, #data_singola), :529 (Ctrl+Invio, button.primario), :365 (#prestazione e .campi-extra, non qui). Prove: prove_anagrafiche, prove_personalizzazione (logo, colore, rimuovi_logo, sedi), prove_15 (riquadro delle email del medico), prove_tariffari.",
+   "rischi": "Un solo modello per 7 schede: la disposizione a due colonne deve dipendere da elenco_extra. Con la scheda del turno, una regola display:flex senza !important su .v-campo non deve vincere su [hidden]."
+  },
+  {
+   "modello": "dove_strutture.html (Strutture del gruppo)",
+   "tavola": "Conf3-Gruppo. Ordine: testa e linguette (Strutture del gruppo accesa), titolo con accanto «il database delle prestazioni e i recapiti, per Dove si fa», «Vai a Dove si fa», il riquadro del caricamento (data-guida gruppo-carica), «Le strutture» con la tabella, «Com'è fatto il file del database» chiuso. La mappa dell'Italia, le linguette delle regioni, le righe cliccabili e la frase della struttura senza città vengono dopo, nei moduli (M3).",
+   "cambia": "Testa di Configura con sezione 'gruppo'. L'h1 diventa h2 con lo small. Il riquadro del caricamento va in una v-scheda: stato con icona check o info, etichetta su una riga, campo e bottone sulla stessa riga, aiuto grigio. «Le strutture» passa da h2 a h3, con tabella(classe='elenco elenco-gruppo'). Il details formato-dove va in una scheda con il filo blu.",
+   "resta": "Il modulo POST con enctype, class modulo-carica e data-attesa=\"Lettura del file…\" (gestionale.js:291). input#file-database name=file con lo stesso accept. Il bottone con icona upload e le sue due parole, secondo info. data-guida gruppo-carica e gruppo-elenco. tr.non-attiva, etichetta-spenta, sede-elenco con --c, il collegamento «Recapiti», i testi del details.",
+   "testi_nuovi_della_tavola": "Testa; «Scegli file» e «Nessun file selezionato» (il campo file disegnato in italiano: un pezzo nuovo); l'errore ripetuto in rosso dentro il riquadro, oltre al messaggio in basso: testo doppio. Tutto il resto nuovo è della mappa (M3).",
+   "js_e_prove_che_dipendono": "gestionale.js:291 (form[data-attesa]). prove_19.py e prove_19_browser.py (/dove-si-fa/strutture, caricamento e anteprima); guida «strutture-gruppo» (menu-configura, gruppo-carica, gruppo-elenco).",
+   "rischi": "La pagina sta nel blueprint dovesifa (/dove-si-fa/strutture) ma è una linguetta di Configura: la sezione 'gruppo' decide la linguetta accesa. Con M3 si ritocca, con la mappa accanto alla tabella."
+  },
+  {
+   "modello": "dove_anteprima.html, dove_struttura.html",
+   "tavola": "Nessuna: sono pagine della linguetta «Strutture del gruppo», fra le 32 senza tavola.",
+   "cambia": "Testa con 'gruppo' e titolo in h2. dove_anteprima: ul.numeri grandi (tenere la classe, perché animazioni.js:93 e :135 contano i numeri, oppure adattare animazioni.js nella stessa tappa); tabella delle strutture nel pezzo tabella; details.cambi-dove in una scheda; avvisi gialli come v-riquadro-avviso; Importa e Annulla in una fila. dove_struttura: modulo dei recapiti in una scheda, a due colonne con campo meta; gli errori come v-riquadro-errore.",
+   "resta": "dove_anteprima: hidden azione=importa, data-attesa «Importazione in corso…», data-guida anteprima-importa, il collegamento Annulla. dove_struttura: i 12 campi con name, id, maxlength, placeholder e type uguali, select struttura_id, checkbox attiva, Salva e Annulla. Le righe di testo devono restare identiche: il lanciatore le confronta per le pagine senza tavola.",
+   "testi_nuovi_della_tavola": "Solo la testa di Configura, se si decide di metterla anche nelle pagine secondarie (domanda aperta).",
+   "js_e_prove_che_dipendono": "gestionale.js:291 (data-attesa); animazioni.js (ul.numeri); prove_19.py.",
+   "rischi": "Righe di testo identiche; la testa aggiunta va nell'elenco dei cambiamenti approvati."
+  },
+  {
+   "modello": "invii.html (Email e WhatsApp)",
+   "tavola": "Conf4-Invii. Ordine: testa e linguette, titolo «Email e WhatsApp ai pazienti» con la riga grigia, le 5 pastiglie (al posto della barra dei comandi), poi Email automatiche (gruppi per medico in h3, «Per tutti i medici», «Nuova email per»), Account email, Promemoria, WhatsApp (con «Registra il numero»), Registro. Una colonna; pagina lunga 6952 px nella tavola (oggi 4417).",
+   "cambia": "Testa con 'invii'; l'h1 diventa h2; le 5 a.spia diventano pastiglie verdi, ocra o grigie in fila. Gli h2.sezione diventano h3 sopra le schede bianche; i gruppi per medico restano h3, come dice la tavola. Tabelle nel pezzo tabella(classe='elenco'); i details in una v-scheda; «Registra il numero» passa da h3 a h4; «Annulla» del registro con la domanda dentro la pagina (tappa 3).",
+   "resta": "Gli id regole, email, promemoria, whatsapp, registro, regole-<id>, caselle-email (lo script JSON), email_tipo (con form=\"modulo-email\"), modulo-email, email-server, etichetta-password, i campi email_* e wa_*, pin-wa, registra-numero. data-casella: 3 per tipo, prove_191:534 li conta. data-salvata, i tre data-attesa, i 13 data-guida (email-tipo, email-istruzioni, email-account, email-server, email-prova, nuova-regola, promemoria, regola-pronta, regole-medico, regole-al-posto-di, invii-registro, whatsapp-requisiti, whatsapp-registra, whatsapp-prova). Tutti i moduli con i campi nascosti azione, sezione e invio. .gruppo-regole p.azioni-gruppo a. class=\"avviso-gmail\" scritto così. Le classi stato-invio-*.",
+   "testi_nuovi_della_tavola": "Testa; l'intestazione nascosta «Riprova o annulla» del registro; l'aria-label «Come stanno email e WhatsApp» (non è testo, si può).",
+   "js_e_prove_che_dipendono": "gestionale.js:289-357 (tipo di casella: #email_tipo, #caselle-email, [data-casella], #email_utente, #email_server, #email_porta, #email_sicurezza, #email_password, #etichetta-password, #email-server.open). prove_191.py:520 e :527 cercano carattere per carattere <details class=\"riquadro\" data-guida=\"email-istruzioni\" open> e <details class=\"campo\" id=\"email-server\" data-guida=\"email-server\" open>: non aggiungere classi a quei due details (lo stile li prende da #email-server e da [data-guida=…]), oppure riscrivere prima le prove. prove_191:530 e :535; prove_191_browser; prove_15:2486 (conta class=\"avviso-gmail\"); prove_15_browser:82; prove_16, prove_18; guide email-casella, email-automatiche, email-per-medico, promemoria, whatsapp-numero.",
+   "rischi": "È la pagina con più prove fragili. Gli h3 dei gruppi stanno sotto l'h3 della sezione (gerarchia piatta, voluta dalla tavola)."
+  },
+  {
+   "modello": "regola_email.html",
+   "tavola": "Nessuna: si apre da Email e WhatsApp e dalla scheda del medico (fra le 32 senza tavola).",
+   "cambia": "Testa con 'invii' e titolo in h2. Il modulo va in una v-scheda: campi meta a due colonne, fieldset delle prestazioni a colonne. Il riquadro-incroci in una scheda (con «doppie»: v-riquadro-avviso). Prova e Duplica passano da h2 a h3, con il modulo in riga.",
+   "resta": "Gli id nome, oggetto, testo, operatore, allegati, prova, duplica, incroci, togli-<id>, elimina-regola. form=\"togli-…\" e form=\"elimina-regola\", con i moduli nascosti fuori dal modulo principale. Gli hidden azione (salva, togli_allegato, elimina, prova, duplica). Le checkbox name=prestazioni, data-attesa, data-gmail; i confirm (nella tappa 3 diventano data-conferma con risposta=si); «Manda la prova» disabled con il suo title. Testi identici.",
+   "testi_nuovi_della_tavola": "Solo la testa, se approvata per le pagine secondarie.",
+   "js_e_prove_che_dipendono": "gestionale.js:291; id=\"operatore\" accende il prezzo proposto (gestionale.js:420) solo se c'è anche #importo: non aggiungere un id importo. prove_15, prove_15_browser, prove_16, prove_18, prove_191.",
+   "rischi": "Il modello contiene l'indirizzo email vero della segreteria (invii.html:41, regola_email.html:141): è di oggi; nelle foto per Giovanni coprirlo o usare dati inventati."
+  },
+  {
+   "modello": "importa.html (Importa da Excel)",
+   "tavola": "Conf5-Importa. Ordine: testa e linguette (Importa da Excel accesa), titolo «Importa da Excel o CSV», riga grigia larga al massimo 760 px con «Torna alle impostazioni», poi due colonne uguali (misurate 513/513): il modulo, poi «Cosa riconosce». Bozza provata: bozze/templates/importa.html.",
+   "cambia": "Testa con 'importa'; titolo in h2. Il modulo va in una v-scheda, con v-campo e v-tendina. «Cosa riconosce» diventa una v-scheda con il filo arancio. La classe riquadro-elenco va via: il suo margine di oggi (stile.css:497) spostava il riquadro in basso, si è visto nella foto della bozza.",
+   "resta": "POST senza action, con enctype; input#file name=file con accept .xlsx, .csv, .txt e required; select#tipo con 3 opzioni; il bottone senza nome; data-guida importa-file e importa-carica (tappa 1). Testi identici. Verificato con il lettore del lanciatore: moduli e collegamenti uguali.",
+   "testi_nuovi_della_tavola": "Testa; «Scegli file» e «Nessun file selezionato» (campo file disegnato, che nella bozza non c'è: il browser in inglese mostra «Choose File»).",
+   "js_e_prove_che_dipendono": "prove_111_importa (10/10 sulla bozza), prove_14, prove_143, prove_145, prove_19, prove_guida; guida «importare» (importa-file, importa-carica).",
+   "rischi": "L'icona chevron-down della tendina non c'è in _icone.html: va aggiunta con genera_icone.py nella tappa 1-bis (la usa anche la bozza dei mattoni)."
+  },
+  {
+   "modello": "importa_anteprima.html, importa_esito.html",
+   "tavola": "Nessuna: passi 2 e 3 di Importa (fra le 32 senza tavola).",
+   "cambia": "Testa con 'importa' e titolo in h2. Le opzioni in una scheda (la fila di filtri). Le tabelle Colonne, Stanze e Righe nel pezzo tabella, con le classi elenco mappa-colonne ed elenco lista-giorno; avvisi gialli e rossi come v-riquadro. Via gli style in linea (max-width:1200px, style=\"margin:0\"). «Cosa succederà» e l'esito: ul.numeri grandi resta, oppure si adatta animazioni.js.",
+   "resta": "Gli hidden tipo_precedente e foglio_precedente; foglio (hidden o select con onchange submit) e tipo (onchange submit); struttura, durata, passati, medico_file, data. Le coppie hidden value=0 + checkbox (maiuscole, crea_medici, crea_prestazioni, unisci_simili, appunti). Le select campo_<pos> e stanza_<k>. I bottoni azione=anteprima (2) e azione=importa (con la domanda; per l'importazione niente risposta=si, s4 riga 96). Nell'esito: i collegamenti scarti, «Anteprima del foglio …», «Vai alla prima giornata importata». Testi identici.",
+   "testi_nuovi_della_tavola": "Solo la testa, se approvata.",
+   "js_e_prove_che_dipendono": "animazioni.js:255 cerca «.pagina h1» con «completata» (importa_esito): senza div.pagina non lo trova più, va cambiato nella stessa tappa. animazioni.js:61 guarda table.lista-giorno. prove_111_importa, prove_14, prove_143, prove_19.",
+   "rischi": "Righe di testo identiche (pagina senza tavola). L'«Importa» con la domanda: tappa 3."
+  },
+  {
+   "modello": "impostazioni.html (uno dei tre modelli uguali nelle due cartelle)",
+   "tavola": "Conf6-Impostazioni. Ordine: testa e linguette, titolo «Impostazioni» senza riga piccola, la barra degli 8 comandi in una scheda (vanno a capo), poi Aspetto, Foglio del giorno, Checklist pre-operatoria, Backup del database (con la tabella delle copie), Messaggi ai pazienti; i titoli stanno sopra le schede.",
+   "cambia": "Testa con 'impostazioni'; l'h1 diventa h2. Gli 8 comandi diventano v-bottone in una v-scheda. Gli h2.sezione diventano h3 sopra le schede. «Animazioni» (solo nell'animata, la tavola non la disegna) prende la stessa scheda di Aspetto. Tabella delle copie nel pezzo tabella; Ripristina con la domanda nella pagina (tappa 3).",
+   "resta": "Gli id aspetto-tema, aspetto, stampa, checklist, backup e messaggi (ancore; guide «aspetto» e «backup»), stato-tema, stato-animazioni, animazioni-ridotte. I radio name=tema e name=animazioni. Il modulo verso sala.salva_voci. Gli hidden azione: stampa, cartella, backup_ora. Le checkbox colonne, i radio orientamento e ordine, la casella tutti. Ripristina: name=nome e la spunta conferma required, che resta con la domanda (s4 riga 97). Bottoni azione=testo e azione=testo_predefinito con formnovalidate; data-guida backup-adesso. Il blocco {% if variante == 'animata' %}. «Tasti rapidi» resta un <a href=\"#\" onclick> (nella tavola è un bottone, ma cambierebbe i collegamenti) e dipende da #aiuto-tasti di _menu.html.",
+   "testi_nuovi_della_tavola": "Testa; l'aria-label «Copie del database»; «Scarica la copia del …», «confermo: copia del …», «Ripristina la copia del …» come aria-label: cambiano i nomi letti. Meglio aria-describedby sulla cella della data. Dei testi di oggi la tavola non ha i casi (backup non disponibile, nessuna copia, ultimo errore) e la sezione Animazioni: restano.",
+   "js_e_prove_che_dipendono": "gestionale.js:662-668 (tema, #stato-tema); animazioni.js:16-26 (animazioni, #stato-animazioni, #animazioni-ridotte); prove_pagine (stato-tema; g_variante: il modello reagisce alla variante); POST di impostazioni in prove_14, 111, 112, 143, 145, 146, 15, 16, prove_autoriparazione, prove_sicurezza_browser, prove_tariffari; guide aspetto e backup.",
+   "rischi": "Il modello è uguale nelle due cartelle: si prova con le due varianti. Nella tavola la tabella dei backup è lunga (Backup a 1493 px)."
+  },
+  {
+   "modello": "moduli.html, modulo.html (Moduli da stampare)",
+   "tavola": "Nessuna: si aprono dal bottone delle Impostazioni (fra le 32 senza tavola).",
+   "cambia": "Testa con 'impostazioni' (linguetta Impostazioni accesa) e titolo in h2. moduli: «Nuovo modulo» e «Crea un modulo di esempio» in una fila c-azioni: oggi un <form> dentro un <p> (HTML non valido) diventa un div; tabella nel pezzo tabella(classe='elenco'). modulo: il modulo in una v-scheda, campi meta.",
+   "resta": "Il POST verso documenti.modulo con hidden azione=esempio; nella scheda nome, prestazione (select#prestazione), testo, firma, «Salva modulo», «Elimina» con azione=elimina (domanda, tappa 3). Collegamenti e testi identici.",
+   "testi_nuovi_della_tavola": "Solo la testa, se approvata.",
+   "js_e_prove_che_dipendono": "select#prestazione accende gestionale.js:365 (campi-extra e durata), che qui non trova niente da cambiare. prove_14 (/moduli).",
+   "rischi": "Righe di testo identiche."
+  },
+  {
+   "modello": "autoriparazione.html (Controllo del programma)",
+   "tavola": "Nessuna: si apre dal bottone delle Impostazioni e dalla campanella.",
+   "cambia": "Testa con 'impostazioni' e titolo in h2. Problemi come v-riquadro-errore, «Tutto a posto» come v-riquadro-ok, tabella dello stato nel pezzo tabella(classe='elenco'). «Controlla adesso» e «Svuota…» in fila; «Cosa ha fatto da solo» in h3.",
+   "resta": "Gli id tutto-a-posto, stato-programma, danneggiati, svuota-danneggiati, diario, diario-riparazioni (prove_autoriparazione li cerca); data-guida autoriparazione-controlla (tappa 1); hidden azione=svuota-danneggiati; la domanda (tappa 3). Testi identici.",
+   "testi_nuovi_della_tavola": "Solo la testa, se approvata.",
+   "js_e_prove_che_dipendono": "prove_autoriparazione (circa 50 controlli su questi id; :1051 vuole anche «confirm(», da cambiare nella tappa 3); guida «autoriparazione» (#stato-programma, #diario).",
+   "rischi": "Righe di testo identiche."
+  },
+  {
+   "modello": "aggiornamenti.html",
+   "tavola": "Conf7-Aggiornamenti. Ordine: testa e linguette, titolo «Aggiornamenti» con la riga grigia, il riquadro dello stato (filo blu), «Da dove arrivano» e «Aggiornare a mano» con il titolo sopra la scheda, in fondo i due collegamenti fuori dalle schede. Bozza provata: bozze/templates/aggiornamenti.html.",
+   "cambia": "Testa con 'aggiornamenti' e titolo in h2. Lo stato diventa una v-scheda c-filo-blu. Gli h2.sezione diventano h3 v-titolo-sezione; il testo di «Aggiornare a mano» va in una v-scheda. Bottoni v-bottone e v-principale; il campo diventa v-campo.",
+   "resta": "section#stato-aggiornamento con data-in-corso e data-indirizzo; #avanzamento; #indirizzo; #indirizzo-aggiornamenti; i 5 data-guida. Il modulo aggiorna (POST /aggiornamenti/aggiorna), «Controlla adesso» con hidden azione=controlla, il modulo dell'indirizzo, il pulsante form=rimetti-predefinito e <form method=\"post\" id=\"rimetti-predefinito\" hidden> scritto così (prove_16:352). Lo script in linea, tutti i casi dello stato, gli indirizzi /aggiornamenti, /aggiornamenti/stato.json e /aiuto/novita.",
+   "testi_nuovi_della_tavola": "Testa; l'aria-label «Stato degli aggiornamenti».",
+   "js_e_prove_che_dipendono": "Lo script della pagina (#stato-aggiornamento, data-in-corso, data-indirizzo, #avanzamento). prove_16 (49/49 sulla bozza: :352, :412, :1255-1258 Configura evidenziato nel menu, per la tappa 2), prove_16_browser:141, 142 e 207; guida «aggiornare».",
+   "rischi": "Nella bozza i margini dei <p> di oggi si sommano al gap della scheda (foto bozza-aggiornamenti-1366): in veste.css serve .v-scheda > p { margin: 0 }."
+  },
+  {
+   "modello": "aggiornamento_in_corso.html, _popup_aggiornamento.html",
+   "tavola": "Nessuna. Il popup c'è in tutte le pagine, ma la tavola Conf7 non lo apre.",
+   "cambia": "aggiornamento_in_corso: v-pagina, titolo con il pezzo intestazione (h1 «Aggiornamento alla versione …»), riquadro in una v-scheda. Popup: aspetto di scheda o finestra con i bottoni nuovi. Resta il suo <div role=dialog>: la <dialog> della tappa 3 è solo per le domande.",
+   "resta": "#attesa-aggiornamento con data-avviato, data-da, data-a, data-stato, data-novita e data-pagina. #messaggio-attesa con primo figlio span.rotella e ultimo figlio il nodo di testo: lo script fa p.lastChild.textContent e p.firstChild.className, quindi nessuna icona o span in più dentro quel <p>. #se-non-torna hidden. Popup: role=dialog, aria-modal, aria-labelledby, data-popup e data-versione; i due POST (aggiorna, piu_tardi con hidden torna); autofocus; le classi solo-schermo e popup-aggiornamento.",
+   "testi_nuovi_della_tavola": "Nessuno.",
+   "js_e_prove_che_dipendono": "Lo script in linea; prove_16:911 (id=\"attesa-aggiornamento\"); prove_16_browser:176-181 (#messaggio-attesa .rotella e il testo); aggiornamenti.popup_aggiornamento (escluso per endpoint None, live.*, aggiornamenti.*, guida.*, stampa); prove_installato.py in Wine.",
+   "rischi": "La pagina d'attesa di una 1.12.x chiede /aggiornamenti/stato.json e poi /aiuto/novita alla 1.13: indirizzi e JSON identici (s6)."
+  },
+  {
+   "modello": "aiuto.html, aiuto_articolo.html, novita.html (voce Aiuto); aiuto_stampa.html",
+   "tavola": "Nessuna (fra le 32 senza tavola). aiuto_stampa è uno dei 9 fogli da stampare.",
+   "cambia": "v-pagina e intestazione (h1 di oggi, senza riga piccola: non inventare testi). aiuto: la ricerca in barra_comandi, le schede-guida come v-scheda in griglia. aiuto_articolo: passi e figura in due colonne come oggi. novita: le voci in schede, details.versione-precedente in una scheda. aiuto_stampa: non si tocca (confronto pixel per pixel).",
+   "resta": "aiuto: il form GET con q e autofocus, data-guida novita, class scheda-guida e class=\"con-video\" scritto così (prove_16:1320 conta la stringa; prove_16_browser:96), ol.passi-guida. aiuto_articolo e novita: <a class=\"bottone primario guarda-video\" href=… data-video=…> con quelle classi in quell'ordine (prove_16:1313 è una regex): non aggiungere v-bottone, lo stile va da .guarda-video in veste.css. Restano data-guida guarda-video, data-guida-mostra, «Apri la pagina», figura e figcaption. aiuto_stampa: identico.",
+   "testi_nuovi_della_tavola": "Nessuno.",
+   "js_e_prove_che_dipendono": "guida.js:217 (a[data-video] apre il video), :253 (nav.menu), :13 (pagina-stampa); animazioni.css:58-61 e animazioni.js (.scheda-guida, ol.passi-guida li). prove_16, prove_16_browser, prove_guida (:123 class=\"articolo-stampa\"), prove_guida_browser, prove_110, prove_15, prove_17_browser, prove_191, prove_senza_menu.",
+   "rischi": "Le frasi che descrivono il menu di oggi («Aiuto → Guida di questa pagina», «Configura → Aggiornamenti», «in alto») restano vere se Aiuto tiene la tendina in fondo al menu (s7). Altrimenti sono frasi della cornice, che il piano lascia cambiare."
+  },
+  {
+   "modello": "da_configurare.html",
+   "tavola": "Nessuna (si vede quando non c'è nessuna struttura attiva).",
+   "cambia": "v-pagina e intestazione con h1 «Nessuna stanza configurata» e lo stesso sotto. I due collegamenti restano nel paragrafo.",
+   "resta": "Testi, i due collegamenti e la riga del marchio (con il database vuoto il menu a sinistra non ha una struttura: decidere nella tappa 2 se il marchio resta qui). Nessuna sezione: nessuna linguetta.",
+   "testi_nuovi_della_tavola": "Nessuno.",
+   "js_e_prove_che_dipendono": "Le prove della «pagina da configurare» (prove_112, prove_senza_menu); viste.py:110 e seguenti (render senza contesto).",
+   "rischi": "La si rende senza variabili di contesto: con la cornice nuova le variabili che mancano non devono fermare la pagina (tappa 1, «variabili rigide»)."
+  },
+  {
+   "modello": "PAGINA_ERRORE (app.py:188) e PAGINA_AVVIO_NON_RIUSCITO (app.py:1018)",
+   "tavola": "Nessuna.",
+   "cambia": "Solo lo stile in linea, con i colori dei gettoni scritti nel testo (#12244A per il testo, #1C4184 per i collegamenti, fondo #F3F6FA, scheda bianca con bordo #E3E9F4) e i caratteri del gruppo. Restano pagine a sé: la 500 può venire da modelli o file mancanti, e la pagina dell'avvio si apre come file:// senza programma acceso. Quindi niente gettoni.css: è un'eccezione scritta alla regola «nessun colore a mano», che vale per i file nuovi.",
+   "resta": "Testi identici («Qualcosa non è andato», «Configura → Controllo del programma», /autoriparazione, «Torna alla pagina Oggi»; «Il programma non è partito»), i segnaposto %(motivo)s, %(registro)s e %(errore)s con escape, lo stato 500.",
+   "testi_nuovi_della_tavola": "Nessuno.",
+   "js_e_prove_che_dipendono": "prove_autoriparazione:564 (500 e «Qualcosa non è andato»), :1468-1472 (avvio_non_riuscito con «<guasto>» protetto e «non è partito»).",
+   "rischi": "Il % nei CSS in linea va raddoppiato (%%): le pagine sono stringhe con il formato %."
+  },
+  {
+   "modello": "NUOVO: templates/non_trovata.html + @app.errorhandler(404) in app.py",
+   "tavola": "Nessuna: «Pagina non trovata» in italiano (s1, s4 riga 141). Bozze: bozze/templates/non_trovata.html e bozze/app_404.py, provate nella copia.",
+   "cambia": "Oggi i 41 abort(404) (in 15 file) e ogni indirizzo che non esiste mostrano la pagina inglese di Flask. Il gestore: per i .json o con X-Richiesta risponde un JSON corto, 404. Per /riepilogo-live*, /logo/ e /static/ la pagina senza cornice (block menu vuoto). Il resto: la pagina nella cornice, con il menu e «Torna alla pagina Oggi».",
+   "resta": "Lo stato 404 (le prove guardano solo il numero; nessuna prova cerca «Not Found»). Gli script controllano r.ok (guida.js:146, dove.js:63 e :145). Il popup non compare (endpoint None).",
+   "testi_nuovi_della_tavola": "Proposti, da approvare: «Pagina non trovata» e «Questo indirizzo non porta a nessuna pagina del programma: forse è scritto male, oppure quello che mostrava è stato eliminato.»; «Torna alla pagina Oggi» c'è già nella 500.",
+   "js_e_prove_che_dipendono": "prove_senza_menu:164: non_trovata.html toglie il menu e va aggiunto all'elenco degli 11 (oggi 12). La guardia del Modo schermo: misurato, sotto /riepilogo-live/xyz zero richieste fuori dal portiere.",
+   "rischi": "405 (GET su un indirizzo solo POST, per esempio /appuntamento/1/stato) e i 6 abort(400) restano in inglese: domanda aperta. Senza modelli (risorse_presenti) risponde il gestore del 500, che non ha bisogno dei modelli."
+  },
+  {
+   "modello": "(elenco) le 32 pagine senza tavola: letture.json, «Pagine vere senza una tavola»",
+   "tavola": "Nessuna. Regola comune: righe di testo, moduli, collegamenti e data-* identici (il lanciatore confronta le righe di testo di queste pagine); i pezzi comuni danno solo il contenitore.",
+   "cambia": "Come vestirle (tappa: modelli):\n- Fogli da stampare, non si toccano (confronto pixel per pixel): stampa, agenda_medico, lista_operatoria, promemoria, stampa_modulo, tariffario_stampa, aiuto_stampa (e dove_stampa, riepilogo_medici). Al massimo i comandi solo-schermo.\n- Tappa 4: unisci, codici_fiscali e la scheda vuota «Nuovo paziente» (paziente.html), con intestazione, scheda, tabella e striscia per i conti di codici_fiscali.\n- Tappa 5: serie, sposta, sposta_blocco, sposta_avvisi (sezione giorno) e chirurghi (Sala), con intestazione, scheda per il modulo, tabella e barra_comandi.\n- Tappa 6: attesa_scheda, attesa_per (Segreteria), tariffari_anteprima, tariffario (Cassa), con intestazione, scheda e tabella; il campo file in italiano come in Conf3 e Conf5, se approvato.\n- Tappa 8 (Ambulatori): riepilogo_medici, già fra i fogli.\n- Tappa 9: regola_email, dove_anteprima, dove_struttura, importa_anteprima, importa_esito, autoriparazione, aggiornamento_in_corso, aiuto, aiuto_articolo, novita, da_configurare, moduli, modulo, le 6 schede di scheda.html e il pezzo _popup_aggiornamento (vedi le loro voci).\n- Casi a parte: dove_stampa (foglio) e riepilogo_live (resta fino a M6).",
+   "resta": "Righe di testo, ordine, moduli (anche i campi nascosti), bottoni con il loro valore, data-tasto, data-guida, collegamenti. Per i fogli: il PDF identico.",
+   "testi_nuovi_della_tavola": "Nessuno: nelle pagine senza tavola non si inventano testi. Il pezzo intestazione si chiama senza «sopra» e senza un «sotto» nuovo.",
+   "js_e_prove_che_dipendono": "Lanciatore (testo delle 32 pagine; fogli in PDF); animazioni.js (table.elenco, ul.numeri, p.vuoto, .pagina h1).",
+   "rischi": "Fine della tappa 9: nessun <div class=\"pagina…\"> (oggi 48 modelli, 20 in quest'area; la regola giusta per cercarli è <div class=\"pagina( |\")>, che non prende body.pagina-stampa) e nessun div.barra (oggi 21, nessuno in quest'area). 33 regole di stile.css dipendono da .pagina (fra queste «.pagina form», che oggi fa la griglia dei moduli): senza div.pagina smettono di valere, e lo stesso vale per animazioni.js:255."
+  }
+ ],
+ "file_bozze": [
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/bozze/templates/_configura.html",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/bozze/templates/anagrafiche.html",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/bozze/templates/importa.html",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/bozze/templates/aggiornamenti.html",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/bozze/templates/non_trovata.html",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/bozze/app_404.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/bozze/static/configura.css",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/bozze/strumenti/proponi_regole_inutili.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/bozze/cambiamenti_approvati_tappa9.txt",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/copia",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/misure/linguette.json",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/misure/tavole-1366.json",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/misure/regole-inutili-oggi.txt",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/misure",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/foto",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/confronta_bozze.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/confronta_testi.py",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/schema.js",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/foto.js",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/misura_linguette.js",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/misura_tavole.js",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/guardia_404.js",
+  "/tmp/claude-0/-home-user-gestionale-agende-versioni/e320334c-e9fc-59d6-bb37-15e83858aab7/scratchpad/veste-configura-aiuto/commenti.py"
+ ],
+ "misure": [
+  "Linguette di Configura nella tavola, a 1366: sei occupano 838 px, sette («Aree e accessi» copiata) 968 px. Spazio utile 1046 px (main 1118 meno 72 di margini), quindi una riga a 1366 e a 1440; due righe a 1280 e 1024, quattro a 683 (misure/linguette.json, foto/linguette-sette-*.png). Caratteri Inter e Manrope davvero caricati nella tavola, quindi le misure valgono.",
+  "Tavole a 1366×657: il titolo della linguetta sta a y=253 in tutte le Conf. Prima schermata: Conf1 arriva alla tabella Strutture (y≈333-566), mentre oggi la prima tabella di anagrafiche sta a y≈228. Altezze delle pagine: tavole Conf1 4456, Conf2 845, Conf3 1443, Conf4 6952, Conf5 845, Conf6 3418, Conf7 1168 px; oggi anagrafiche 2920, invii 4417, impostazioni 2003, aggiornamenti 1062, importa 766 (misure/tavole-1366.json).",
+  "Colonne misurate: Conf2 616/410 px (3/5 e 2/5); Conf5 513/513 px.",
+  "Bozze contro oggi, con il lettore del lanciatore (confronta_bozze.py): anagrafiche, importa e aggiornamenti hanno moduli identici e segni identici (cambiano solo i data-guida della tappa 1). Nessun collegamento aggiunto o tolto, ma l'ordine cambia perché le linguette ripetono 6 indirizzi del menu. Il testo ha +9 righe, cioè testa e linguette (in aggiornamenti in più l'ora del controllo, che è un dato).",
+  "Prove sulla copia con le bozze: prove_anagrafiche 78/78, prove_personalizzazione 51/51, prove_111_importa 10/10, prove_16 49/49, prove_indirizzi 149/149. prove_senza_menu 12/13: non_trovata.html va nell'elenco delle pagine senza menu. prove_pagine 13/14: g_variante viene dalla base.html della bozza dei mattoni (@import invece di <link>), non dalle bozze di quest'area.",
+  "404: confermati 41 abort(404) in 15 file. Oggi «/nonesiste», /anagrafiche/medici/999, /riepilogo-live/x, /static/nonesiste.css e /logo/99 danno la pagina inglese di Flask; anche 405 è in inglese. Con la bozza: 404 in italiano; /aiuto/x/passi.json risponde in JSON; sotto /riepilogo-live/xyz e /riepilogo-live/statistiche/xyz nessuna richiesta fuori da /riepilogo-live, /static/ e /logo/, e nessun menu (guardia_404.js).",
+  "Testi delle tavole che oggi non ci sono (confronta_testi.py): la testa di Configura in tutte e sette; le aria-label che rinominano bottoni e collegamenti di oggi (Conf1, Conf2, Conf6); «Apri la scheda» e «Riprova o annulla» (intestazioni nascoste); «Scegli file» e «Nessun file selezionato» (Conf3 e Conf5); «Stato degli aggiornamenti» (aria-label in Conf7); in Conf3 tutto quello della mappa (M3).",
+  "stile.css: 33 regole dipendono da .pagina; 48 modelli usano <div class=\"pagina…\"> (20 in quest'area), 21 usano div.barra (nessuno in quest'area). proponi_regole_inutili.py oggi propone 1 regola (.da-pagare, stile.css:928, davvero inutilizzata). Il mutante (novita-piede tolto da novita.html) viene preso.",
+  "Agganci in quest'area: gestionale.js 289-357 (casella email), 291 (data-attesa), 398-407 (turno di un giorno), 529 (Ctrl+Invio), 662-668 (tema); animazioni.js 16-26, 61, 70, 93, 119, 135, 244, 255; guida.py con le guide medici-turni, strutture-gruppo, importare, backup, aspetto, autoriparazione, aggiornare, email-casella, email-automatiche, email-per-medico, promemoria e whatsapp-numero.",
+  "Il repository è cambiato durante la ricognizione: la tappa 1 sta aggiungendo data-guida ai modelli di quest'area (anagrafiche, autoriparazione, importa, impostazioni, invii). Le bozze li tengono già."
+ ],
+ "pezzi_comuni_usati": [
+  "intestazione (testa di Configura; pagine senza tavola solo con il titolo di oggi; «Pagina non trovata»)",
+  "linguette: serve la chiave «titolo» per il title con la riga piccola del menu. Aggiunta nella copia, da proporre alla tappa 1-bis",
+  "tabella(classe='elenco' …): thead e tbody; la classe elenco resta per animazioni.js:119",
+  "classi v-scheda, v-scheda-titolo, v-titolo-sezione, v-sotto, v-campo, v-tendina, v-bottone, v-principale, v-pericolo, v-riquadro-avviso, v-riquadro-errore, v-riquadro-ok",
+  "barra_comandi (gli 8 comandi delle Impostazioni, la ricerca dell'Aiuto)",
+  "icona('plus'), icona('upload'), icona('check'), icona('info'). Manca chevron-down in _icone.html",
+  "Proposti, propri di Configura (prefisso c-, in bozze/static/configura.css): testa_configura e titolo_linguetta in _configura.html, c-sezione, c-sezione-testa, c-due-colonne, c-tre-quinti, c-filo-arancio, c-filo-blu, c-azioni, c-riga-limitata, c-non-trovata",
+  "Da decidere: un pezzo «campo file in italiano» (Conf3, Conf5, Cassa Tariffari, logo della struttura); striscia al posto di ul.numeri solo adattando animazioni.js"
+ ],
+ "domande_aperte": [
+  "La testa di Configura ha tre testi nuovi: «Configura · tutte le sedi», il titolo «Configura» e il sottotitolo. Vanno approvati, e bisogna decidere se compaiono anche nelle pagine secondarie (schede, anteprime, regola, moduli, Controllo del programma), dove il lanciatore confronta le righe di testo. Proposta: sì, perché la linguetta accesa dice dove si è; poi vanno in cambiamenti_approvati.txt.",
+  "Lanciatore e linguette (tappa 2): la regola «aggiunto» lascia passare solo elementi che il principale non ha. Le linguette ripetono testi e indirizzi del menu, quindi le liste cambiano d'ordine e di lunghezza. Serve un modo per saltare la cornice e le linguette nel confronto, per esempio un attributo data-cornice o una regola nuova.",
+  "La settima linguetta: nome e riga piccola si decidono in M2 («Aree e accessi» è la proposta; «Moduli» c'è già per i moduli da stampare). Quello che chiede il titolare (quale modulo si vede dagli altri PC della rete e per quale utente) è funzionamento nuovo, quindi dopo, nei moduli. Oggi il programma non ha utenti né accessi dagli altri PC, salvo il Modo schermo dietro il portiere: in M1 e M2 va deciso come si riconosce un utente (il PC, un nome, un PIN) e cosa vede il portiere.",
+  "«Pagina non trovata»: vanno approvati i due testi proposti. In più: si fanno in italiano anche 405 «Method Not Allowed» e i 6 abort(400)?",
+  "Le aria-label delle tavole che cambiano il nome letto di bottoni e collegamenti di oggi («Elimina il medico», «Modifica: <medico>», «Ripristina la copia del …»): proposta di non metterle e di usare aria-describedby, così le prove per ruolo e nome e la guida non cambiano.",
+  "L'errore ripetuto in rosso dentro il riquadro (Conf3, Conf5, Conf6 checklist, Conf7 indirizzo), oltre al messaggio in basso: è un testo doppio. Si fa o no?",
+  "Il campo file disegnato in italiano («Scegli file», «Nessun file selezionato»): testi e pezzo nuovi; il browser lo mostra nella sua lingua. Si fa?",
+  "«Tasti rapidi» nelle Impostazioni resta un collegamento (proposta, i collegamenti restano uguali) o diventa un bottone come nella tavola?",
+  "Le prove che cercano HTML carattere per carattere vanno riscritte nel primo passo della tappa, oppure le pagine non toccano quegli elementi: prove_191.py:520 e :527, prove_16.py:352 e :1313, prove_15.py:2486, prove_16.py:1320, prove_autoriparazione.py:1051 («confirm(», per la tappa 3).",
+  "Per chi fa la tappa 1-bis: nella bozza dei mattoni manca l'icona chevron-down, e prove_pagine g_variante fallisce con la loro base.html (i fogli dell'animata caricati con @import non si vedono come <link>)."
+ ]
+}

@@ -1,0 +1,66 @@
+{#- BOZZA (tappa 8). dove.html nella veste nuova, SENZA mappa (la mappa è M3). Tavole Dove1-3 (non ci sono tavole
+    Nefro di Dove: i colori sono già quelli NefroCenter). Risultati e scheda restano UN disegno solo
+    (_dove_risultati.html e _dove_scheda.html servono sia la pagina intera sia i pezzi che dove.js chiede). -#}
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% from "_pezzi.html" import intestazione, linguette %}
+{% block titolo %}Dove si fa{% endblock %}
+{% block classe_body %}{% if scheda %} class="scheda-dove-aperta"{% endif %}{% endblock %}
+    {#- body class="scheda-dove-aperta" DA SOLA: prove_19.py:800 cerca proprio 'class="scheda-dove-aperta"' -#}
+{% block linguette %}{% endblock %}
+{% block corpo %}
+<div class="pagina larga pagina-dove" id="pagina-dove" data-risultati=… data-scheda=… data-indirizza=… data-pazienti=…
+     data-pagina=… data-paziente=… data-struttura=…>   {#- tutti i data-* di oggi, identici (dove.js:10-17, prove_111.py:809) -#}
+  {#- via <p class="marchio"> (riga 15): il logo sta nel menu dalla tappa 2. Se manca il logo _marchio.html scrive il
+      NOME della struttura: togliendolo sparisce una riga di testo (elenco dei cambiamenti). -#}
+  {{ intestazione('Dove si fa', sopra='Dove si fa · ' ~ st.nome) }}
+      {#- sottotitolo: oggi «in quale struttura del gruppo si fa una prestazione» (minuscolo, senza punto, dentro l'h1);
+          la tavola scrive «In quale struttura del gruppo si fa una prestazione.»: tenere le parole di oggi o mettere
+          maiuscola e punto nell'elenco (il lanciatore confronta le righe di testo) -#}
+  {{ linguette([
+       {'testo': 'Cerca', 'indirizzo': url_for('dovesifa.pagina', struttura=…come «Torna a Dove si fa» di oggi…), 'accesa': true},
+       {'testo': 'Pazienti indirizzati', 'indirizzo': url_for('dovesifa.registro', struttura=sid if strutture|length > 1 else none)},
+       {'testo': 'Strutture del gruppo', 'indirizzo': url_for('dovesifa.strutture'), 'fuori': true,
+        'title': 'database delle prestazioni e recapiti, per Dove si fa'}]) }}
+      {#- gli indirizzi di «Pazienti indirizzati» e «Strutture del gruppo» IDENTICI ai due collegamenti di oggi (righe 19-20,
+          con la stessa condizione sulla struttura); «Cerca» è un collegamento in più. «fuori» = freccia ↗ come
+          «Elenco del giorno» nelle linguette della Segreteria (bozza menu.py della tappa 2). Per accendere «Pazienti
+          indirizzati» il registro ha bisogno di una sua sezione (oggi tutte e due le pagine hanno sezione='dove',
+          dovesifa.py:876 e 1009). aria-label «Pagine di Dove si fa»: nuovo, solo se approvato. -#}
+
+  {% if vuoto %} … riquadro di oggi in una scheda bianca … {% else %}
+  <section class="v-scheda v-cerca-dove">
+    <form class="cerca-dove" method="get" … id="modulo-dove"> … identico (campi sede, struttura, paziente nascosti;
+          #q-dove con autofocus, #branca-dove, #cerca-dove-invia) … </form>
+    <div class="paziente-dove" data-guida="dove-paziente"> … identico … </div>
+  </section>
+  <div id="risultati-dove" class="risultati-dove" aria-live="polite" aria-busy="false">
+    {% include "_dove_risultati.html" %}
+  </div>
+  {% endif %}
+</div>
+<aside id="scheda-dove" class="scheda-dove" role="dialog" aria-modal="false" aria-labelledby="titolo-scheda-dove"
+       tabindex="-1"{% if not scheda %} hidden{% endif %}> … </aside>   {#- «hidden» resta: prove_19.py:704, 801 -#}
+<div class="avvisi-turni" id="avvisi-dove" aria-live="polite"></div>   {#- dalla tappa 3: la funzione sola dei messaggi -#}
+<script src="{{ url_for('static', filename='dove.js') }}"></script>
+{% endblock %}
+
+{#- _dove_risultati.html, senza ricerca (Dove1 senza mappa). Proposta: TENERE L'ORDINE DI OGGI (Per branca, poi Le
+    strutture e Ultimi indirizzati) e cambiare solo l'aspetto (schede bianche, i riquadri delle strutture come nella
+    tavola). Perché: la tavola mette «Per branca» in fondo perché a sinistra c'è la mappa; spostarlo cambia l'ordine dei
+    collegamenti (lanciatore), l'ordine delle frecce di dove.js (voci(): dove.js:116-118, oggi la freccia giù dal campo
+    va alla prima branca) e l'ordine di lettura. Il riordino si fa in M3, con la mappa.
+    Con la ricerca (Dove2 senza mappa): i risultati a tutta larghezza, ogni prestazione come nella tavola, le pillole
+    delle strutture SOTTO il nome (oggi a destra): la scheda ora copre i 440 px di destra senza stringere la pagina, e
+    le pillole a destra finirebbero sotto la scheda. Le classi delle pillole NON cambiano: prove_19.py:711 e 713 cercano
+    class="sede qui" e class="sede da-confermare" senza altre classi; dove.js aggiunge «scelta». -#}
+
+{#- dove.js, posizionaScheda (righe 175-183): oggi la scheda comincia sotto «.menu». Con il menu a sinistra alto
+    quanto la finestra (tappa 2) la scheda partirebbe a 657 px, cioè FUORI dallo schermo (misurato con il menu
+    simulato: scheda top 657, finestra 657), e le prove restano verdi (prove_19_browser.py:147-149 confronta con lo
+    stesso .menu; inner_text legge anche una scheda invisibile). Proposta di modifica, già nella tappa 2:
+        var barra = document.querySelector('[data-barra-alto]') || document.querySelector('.menu');
+        … var sotto = barra ? Math.max(0, Math.round(barra.getBoundingClientRect().bottom)) : 0; …
+    e nelle prove: «la scheda comincia sotto la barra in alto ed è tutta dentro la finestra» (alta almeno 400 px).
+    Poi in tappa 8, nello stile: via body.scheda-dove-aperta .pagina-dove { margin-right: 460px } (stile.css:1708):
+    la pagina non si stringe più (cambiamento approvato: «scheda sopra la pagina»). -#}

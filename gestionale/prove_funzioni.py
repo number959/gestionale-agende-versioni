@@ -8,6 +8,9 @@ qui in modo diverso (query dirette, cicli minuto per minuto), non con il
 programma stesso.
 """
 import io
+from prove_dove import dove
+import prove_messaggi as PM
+from prove_gemelli import manca
 import json
 import os
 import random
@@ -30,6 +33,7 @@ import backup
 import viste
 import modelli
 import app as A
+PM.segui(A.app)
 from modelli import (Base, crea_sessione, Struttura, Risorsa, Operatore, Turno, Appuntamento,
                      Prestazione, Paziente, Assenza, Chiusura, Modifica, Impostazione,
                      STATI_ATTIVI, VERSIONE_SCHEMA)
@@ -54,7 +58,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 
@@ -67,7 +71,7 @@ def percorso_nuovo(nome='db'):
 def collega(S):
     A.Sessione = S
     A._registro = None
-    return A.app.test_client()
+    return PM.segna(A.app.test_client())     # i messaggi di questo cliente non finiscono agli altri
 
 
 def mondo(medici=True):
@@ -119,17 +123,7 @@ def html(r):
     return r.get_data(as_text=True)
 
 
-def avvisi(C, r=None):
-    """I messaggi per l'utente: quelli ancora in coda nella sessione (dopo un
-    rinvio) piu', se si passa la risposta, quelli gia' scritti nella pagina."""
-    from html import unescape
-    with C.session_transaction() as sess:
-        m = sess.get('_flashes', [])
-        sess['_flashes'] = []
-    testo = ' '.join(x[1] for x in m)
-    if r is not None and r.status_code == 200:
-        testo += ' ' + ' '.join(unescape(x) for x in re.findall(r'class="avviso[^"]*">([^<]*)</div>', html(r)))
-    return testo
+avvisi = PM.avvisi       # i messaggi presi da Flask (prove_messaggi.py); con una pagina 200 anche scritti lì
 
 
 def prenota(C, d, stanza, medico, prest, g, ora, **altro):
@@ -873,7 +867,11 @@ def fe_assenza():
     s.close()
     assert avviso == 'Lippiello risulta assente il %s (Congresso).' % g.strftime('%d/%m'), avviso
     t = html(C.get('/appuntamento?data=%s&ora=09:00&risorsa=%d' % (g, I['Ambulatorio 1'])))
-    assert not re.search(r'<option value="%d" selected>Lippiello' % I['Lippiello'], t), 'propone il medico assente'
+    # il gemello: due giorni dopo, senza assenza, lo stesso modulo propone Lippiello
+    manca(t, re.compile(r'<option value="%d" selected>Lippiello' % I['Lippiello']),
+          dove_ce=lambda: html(C.get('/appuntamento?data=%s&ora=09:00&risorsa=%d'
+                                     % (g + timedelta(days=2), I['Ambulatorio 1']))),
+          perche='propone il medico assente')
 
 
 def fe_chiusura():

@@ -215,39 +215,83 @@ def leggi_file(dati, nome):
                          '"Cartella di lavoro di Excel (.xlsx)".')
     if not dati.startswith(b'PK'):
         raise ValueError('Il file non è un Excel .xlsx né un CSV.')
+    # prima di aprirlo, quanto diventa scompattato; poi in sola lettura, riga per riga (revisione dell'attaccante: un
+    # .xlsx di 189 KB con milioni di celle veniva caricato tutto in memoria, oltre un GB, prima di ogni controllo)
+    from comune import controlla_excel_compresso
+    controlla_excel_compresso(dati)
     from openpyxl import load_workbook
     try:
-        wb = load_workbook(io.BytesIO(dati), data_only=True)
+        wb = load_workbook(io.BytesIO(dati), read_only=True, data_only=True)
     except Exception as e:
         raise ValueError('Il file Excel non si apre: %s' % e)
     fogli = []
-    for ws in wb.worksheets:
-        max_r = min(ws.max_row or 0, MASSIMO_RIGHE + 30)
-        max_c = min(ws.max_column or 0, MASSIMO_COLONNE)
-        righe = [[None] * max_c for _ in range(max_r)]
-        for r_i, riga in enumerate(ws.iter_rows(min_row=1, max_row=max_r, max_col=max_c, values_only=True)):
-            for c_i, v in enumerate(riga):
-                righe[r_i][c_i] = v
-        for m in ws.merged_cells.ranges:
-            v = ws.cell(m.min_row, m.min_col).value
-            for r in range(m.min_row, min(m.max_row, max_r) + 1):
-                for c in range(m.min_col, min(m.max_col, max_c) + 1):
-                    righe[r - 1][c - 1] = v
-        while righe and all(v in (None, '') for v in righe[-1]):
-            righe.pop()
-        # le righe oltre il massimo non si leggono, ma si contano per dirlo. Solo
-        # quelle scritte: max_row conta anche le righe vuote con un formato
-        oltre = 0
-        if (ws.max_row or 0) > max_r:
-            for riga in ws.iter_rows(min_row=max_r + 1, max_col=max_c or None, values_only=True):
-                if any(not vuoto(v) for v in riga):
-                    oltre += 1
-        fogli.append({'nome': ws.title, 'righe': righe, 'file': os.path.basename(nome), 'oltre': oltre})
+    try:
+        for ws in wb.worksheets:
+            try:
+                righe, oltre = _leggi_foglio(ws)
+            except Exception as e:
+                raise ValueError('Il file Excel non si apre: %s' % e)
+            fogli.append({'nome': ws.title, 'righe': righe, 'file': os.path.basename(nome), 'oltre': oltre})
+    finally:
+        wb.close()
     # il planning esportato dal gestionale ha la data nel nome del primo foglio
     data_libro = next((d for d in (data_dal_nome(f['nome']) for f in fogli) if d), None)
     for f in fogli:
         f['data_libro'] = data_libro
     return fogli
+
+
+def _leggi_foglio(ws):
+    """(righe, oltre) di un foglio aperto in sola lettura: le stesse che dava il foglio aperto per intero fino alla
+    1.12 (prove_111_importa.py le confronta), ma tenendo in memoria solo le prime MASSIMO_RIGHE + 30 righe e
+    MASSIMO_COLONNE colonne. In un passaggio solo sul foglio: celle, dimensioni (anche delle celle unite: openpyxl
+    le conta) e le celle unite, che stanno in fondo al foglio. Usa il lettore dei fogli di openpyxl (lo stesso della
+    sola lettura), perché le celle unite in sola lettura non le dà."""
+    from openpyxl.worksheet._reader import WorkSheetParser
+    from openpyxl.worksheet.cell_range import CellRange
+    massimo = MASSIMO_RIGHE + 30
+    celle = {}                      # (riga, colonna) -> valore, solo dentro i massimi
+    ultima_riga = ultima_colonna = oltre = 0
+    libro = ws.parent
+    with ws._get_source() as sorgente:
+        lettore = WorkSheetParser(sorgente, ws._shared_strings, data_only=True, epoch=libro.epoch,
+                                  date_formats=libro._date_formats, timedelta_formats=libro._timedelta_formats)
+        for _, riga in lettore.parse():
+            piena_oltre = False
+            for c in riga:
+                r, k = c['row'], c['column']
+                ultima_riga, ultima_colonna = max(ultima_riga, r), max(ultima_colonna, k)
+                if k > MASSIMO_COLONNE:
+                    continue
+                if r <= massimo:
+                    celle[(r, k)] = c['value']
+                elif not vuoto(c['value']):
+                    piena_oltre = True
+            # le righe oltre il massimo non si leggono, ma si contano per dirlo (solo quelle scritte)
+            oltre += piena_oltre
+        unite = [CellRange(m.ref) for m in (lettore.merged_cells.mergeCell if lettore.merged_cells else ())]
+    for m in unite:             # openpyxl crea tutte le celle di ogni gruppo unito, anche di uno di una cella sola
+        ultima_riga, ultima_colonna = max(ultima_riga, m.max_row), max(ultima_colonna, m.max_col)
+    max_r = min(ultima_riga or 1, massimo)
+    max_c = min(ultima_colonna or 1, MASSIMO_COLONNE)
+    righe = [[celle.get((r, k)) for k in range(1, max_c + 1)] for r in range(1, max_r + 1)]
+    del celle
+    # le celle unite prendono tutte il valore della cella in alto a sinistra (come aprendo il foglio per intero:
+    # prima ogni cella dentro un gruppo, tranne la prima, resta vuota; poi ogni gruppo prende il valore della sua prima)
+    for m in unite:
+        for r in range(m.min_row, min(m.max_row, max_r) + 1):
+            for k in range(m.min_col, min(m.max_col, max_c) + 1):
+                if (r, k) != (m.min_row, m.min_col):
+                    righe[r - 1][k - 1] = None
+    valori = [righe[m.min_row - 1][m.min_col - 1] if m.min_row <= max_r and m.min_col <= max_c else None
+              for m in unite]
+    for m, v in zip(unite, valori):
+        for r in range(m.min_row, min(m.max_row, max_r) + 1):
+            for k in range(m.min_col, min(m.max_col, max_c) + 1):
+                righe[r - 1][k - 1] = v
+    while righe and all(v in (None, '') for v in righe[-1]):
+        righe.pop()
+    return righe, oltre
 
 
 def _leggi_csv(dati):

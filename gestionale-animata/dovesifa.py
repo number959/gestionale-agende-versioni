@@ -148,6 +148,11 @@ def leggi_database(dati, nome_file=''):
      'voci': [{'branca', 'nome', 'sinonimi', 'note', 'sedi': {struttura: {'da_confermare', 'nota'}}}],
      'recapiti': {struttura: {campo: valore}}, 'avvisi': [...]}.
     ErroreDatabase se il file non e' quello giusto."""
+    from comune import controlla_excel_compresso
+    try:
+        controlla_excel_compresso(dati)
+    except ValueError as e:
+        raise ErroreDatabase(str(e))
     try:
         import openpyxl
         libro = openpyxl.load_workbook(io.BytesIO(dati), read_only=True, data_only=True)
@@ -803,8 +808,13 @@ def scheda_struttura(s, g, voce=None, paziente=None, st=None):
 
 # ================================================================ pagine
 def _paziente(s, valore):
+    """Il paziente scelto (?paziente=). Dagli altri PC solo a chi può cercare i pazienti (accessi.py): altrimenti,
+    cambiando il numero nell'indirizzo, nome e telefono di chiunque a chi ha solo Dove si fa da guardare."""
     pid = intero(valore)
-    return s.get(Paziente, pid) if pid else None
+    if not pid:
+        return None
+    import accessi
+    return s.get(Paziente, pid) if accessi.puo_cercare_pazienti() else None
 
 
 def _voce(s, valore):

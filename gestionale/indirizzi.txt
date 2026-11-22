@@ -1,0 +1,156 @@
+# Gli indirizzi del programma: metodi, indirizzo, funzione e, per le pagine GET senza parametri,
+# la risposta sui dati di prova. Lo scrive «python prove_indirizzi.py --scrivi»; lo controlla
+# prove_indirizzi.py. Un cambiamento qui è un cambiamento degli indirizzi: va spiegato nel commit.
+GET	/	home	302 → /oggi
+GET,POST	/accesso	accessi.accesso	302 → /
+GET,POST	/accesso/password	accessi.password	302 → /
+GET	/agenda-medico/<iso>	segreteria.agenda_medico
+GET,POST	/aggiornamenti	aggiornamenti.pagina	200
+POST	/aggiornamenti/aggiorna	aggiornamenti.aggiorna
+POST	/aggiornamenti/piu-tardi	aggiornamenti.piu_tardi
+GET	/aggiornamenti/stato.json	aggiornamenti.stato_json	200
+GET	/aiuto	guida.indice	200
+GET	/aiuto/<slug>	guida.articolo
+GET	/aiuto/<slug>/passi.json	guida.passi_json
+GET	/aiuto/novita	aggiornamenti.novita_pagina	200
+GET	/aiuto/stampa	guida.stampa	200
+GET	/ambulatori/	ambulatori.inizio	302 → /ambulatori/settimana/N-N-N
+GET	/ambulatori/mese/<aaaamm>	ambulatori.mese
+GET	/ambulatori/mese/<aaaamm>.xlsx	ambulatori.mese_excel
+POST	/ambulatori/metti	ambulatori.metti
+GET	/ambulatori/riepilogo	ambulatori.riepilogo	200
+GET	/ambulatori/riepilogo.json	ambulatori.riepilogo_json	200
+GET	/ambulatori/riepilogo.xlsx	ambulatori.riepilogo_excel	200
+GET	/ambulatori/settimana/<iso>	ambulatori.settimana
+GET	/ambulatori/settimana/<iso>.xlsx	ambulatori.settimana_excel
+POST	/ambulatori/togli	ambulatori.togli
+GET	/anagrafiche	anagrafiche.elenco	200
+GET,POST	/anagrafiche/assenze/<int:xid>	anagrafiche.assenza
+GET,POST	/anagrafiche/assenze/nuova	anagrafiche.assenza	200
+GET,POST	/anagrafiche/chiusure/<int:xid>	anagrafiche.chiusura
+GET,POST	/anagrafiche/chiusure/nuova	anagrafiche.chiusura	200
+GET,POST	/anagrafiche/medici/<int:oid>	anagrafiche.medico
+GET,POST	/anagrafiche/medici/nuovo	anagrafiche.medico	200
+GET,POST	/anagrafiche/prestazioni/<int:pid>	anagrafiche.prestazione
+GET,POST	/anagrafiche/prestazioni/nuova	anagrafiche.prestazione	200
+GET,POST	/anagrafiche/stanze/<int:rid>	anagrafiche.stanza
+GET,POST	/anagrafiche/stanze/nuova	anagrafiche.stanza	200
+GET,POST	/anagrafiche/strutture/<int:sid>	anagrafiche.struttura
+GET,POST	/anagrafiche/strutture/nuova	anagrafiche.struttura	200
+GET,POST	/anagrafiche/turni/<int:tid>	anagrafiche.turno
+GET,POST	/anagrafiche/turni/nuovo	anagrafiche.turno	200
+GET,POST	/appuntamento	appuntamento	200
+GET,POST	/appuntamento/<int:aid>	appuntamento
+POST	/appuntamento/<int:aid>/checklist	sala.checklist
+GET	/appuntamento/<int:aid>/modulo/<int:mid>	documenti.stampa_modulo
+POST	/appuntamento/<int:aid>/pagamento	cassa.pagamento
+GET	/appuntamento/<int:aid>/promemoria	viste.promemoria
+GET,POST	/appuntamento/<int:aid>/sposta	segreteria.sposta
+POST	/appuntamento/<int:aid>/stato	cambia_stato
+GET	/attesa	segreteria.attesa	200
+GET,POST	/attesa/<int:xid>	segreteria.attesa_scheda
+GET,POST	/attesa/nuova	segreteria.attesa_scheda	200
+GET	/attesa/per/<int:aid>	segreteria.attesa_per
+GET,POST	/autoriparazione	autoriparazione	200
+GET	/cassa/<iso>	cassa.cassa_giorno
+GET,POST	/cassa/listino	cassa.listino	200
+GET	/cassa/mese/<aaaamm>	cassa.cassa_mese
+GET	/cassa/mese/<aaaamm>/excel	cassa.cassa_mese_excel
+GET,POST	/cassa/tariffari	tariffari.elenco	200
+GET,POST	/cassa/tariffari/<int:tid>	tariffari.scheda
+GET	/cassa/tariffari/<int:tid>/stampa	tariffari.stampa
+GET,POST	/cassa/tariffari/anteprima/<token>	tariffari.anteprima
+GET	/cerca-tutto.json	segreteria.cerca_tutto	200
+GET,POST	/chiusura/<iso>	segreteria.chiusura
+GET	/conferme	viste.conferme	200
+GET,POST	/configura/accessi	accessi.pagina	200
+GET,POST	/cose-da-fare	segreteria.cose_da_fare	200
+POST	/cose-da-fare/<int:xid>/<azione>	segreteria.cosa_fatta
+GET,POST	/da-confermare	segreteria.da_confermare	200
+POST	/da-confermare/<int:xid>/<azione>	segreteria.appunto_azione
+POST	/da-confermare/prenota	segreteria.prenota_appunti
+GET	/disponibilita	viste.disponibilita	200
+GET	/documenti/<int:did>	documenti.mostra_documento
+POST	/documenti/<int:did>/elimina	documenti.elimina_documento
+GET	/dove-si-fa/	dovesifa.pagina	200
+GET	/dove-si-fa/cerca.json	dovesifa.cerca_json	200
+POST	/dove-si-fa/indirizza	dovesifa.indirizza
+POST	/dove-si-fa/indirizzati/<int:iid>/togli	dovesifa.togli
+GET	/dove-si-fa/registro	dovesifa.registro	200
+GET	/dove-si-fa/registro/<mese>.xlsx	dovesifa.registro_excel
+GET	/dove-si-fa/risultati	dovesifa.risultati	200
+GET	/dove-si-fa/scheda/<int:gid>	dovesifa.scheda
+GET	/dove-si-fa/stampa	dovesifa.stampa	404
+GET,POST	/dove-si-fa/strutture	dovesifa.strutture	200
+GET,POST	/dove-si-fa/strutture/<int:gid>	dovesifa.struttura
+GET,POST	/dove-si-fa/strutture/importa/<token>	dovesifa.anteprima
+POST	/esci	accessi.esci
+GET	/esporta/<iso>	esporta
+GET	/esportazioni	esportazioni.pagina	200
+GET	/esportazioni/<periodo>/<parte>/<iso>.xlsx	esportazioni.scarica
+GET	/giorno/<iso>	giorno
+GET	/giorno/<iso>/elenco	viste.elenco_giorno
+GET,POST	/importa	importa.carica	200
+GET,POST	/importa/<token>	importa.anteprima
+GET	/importa/<token>/scarti.xlsx	importa.scarti
+GET,POST	/impostazioni	viste.impostazioni	200
+GET	/impostazioni/backup/<nome>	viste.scarica_backup
+POST	/impostazioni/ripristina	viste.ripristina
+GET,POST	/invii	invii.pagina	200
+GET	/invii/allegati/<int:aid>	invii.allegato
+POST	/invii/appuntamento/<int:aid>	invii.appuntamento
+GET,POST	/invii/regole/<int:rid>	invii.regola
+GET,POST	/invii/regole/nuova	invii.regola	200
+GET	/lista-operatoria/<iso>	sala.lista_operatoria
+GET	/logo/<int:sid>	logo
+GET	/mese/<aaaamm>	viste.mese
+GET	/moduli	documenti.moduli	200
+GET,POST	/moduli/<int:mid>	documenti.modulo
+GET,POST	/moduli/nuovo	documenti.modulo	200
+POST	/note-giorno	segreteria.salva_nota
+GET	/notifiche.json	segreteria.notifiche	200
+GET	/oggi	cruscotto.oggi	200
+GET	/pazienti	pazienti.elenco	200
+GET,POST	/pazienti/<int:pid>	pazienti.scheda
+POST	/pazienti/<int:pid>/documenti	documenti.carica_documento
+GET,POST	/pazienti/<int:pid>/unisci	pazienti.unisci_pagina
+GET	/pazienti/cerca	pazienti.cerca_json	200
+GET	/pazienti/codice-fiscale	pazienti.codice_fiscale_json	200
+GET,POST	/pazienti/codici-fiscali	pazienti.codici_fiscali	200
+GET	/pazienti/luoghi	pazienti.luoghi_json	200
+GET,POST	/pazienti/nuovo	pazienti.scheda	200
+GET	/personale/persone	personale.persone	200
+GET,POST	/personale/persone/<int:pid>	personale.persona
+POST	/personale/persone/medici-dall-agenda	personale.medici_dall_agenda
+GET,POST	/personale/persone/nuova	personale.persona	200
+GET,POST	/personale/tipi	personale.tipi_turno	200
+GET	/personale/turni	personale.turni	302 → /personale/turni/mese/
+POST	/personale/turni/cambia	personale.cambia
+POST	/personale/turni/copia-settimana	personale.copia
+GET	/personale/turni/giorno/	personale.giorno	200
+GET	/personale/turni/giorno/<iso>	personale.giorno
+GET	/personale/turni/mese/	personale.mese	200
+GET	/personale/turni/mese/<aaaamm>	personale.mese
+GET	/personale/turni/mese/<aaaamm>.xlsx	personale.mese_excel
+POST	/personale/turni/schema	personale.schema
+GET	/personale/turni/settimana/	personale.settimana	200
+GET	/personale/turni/settimana/<iso>	personale.settimana
+GET	/posti-letto	sala.posti_letto	200
+GET	/riepilogo-live	live.pagina	200
+GET	/riepilogo-live.json	live.dati	200
+GET	/riepilogo-live/statistiche	live.statistiche	200
+GET	/riepilogo-live/statistiche.json	live.statistiche_json	200
+GET	/riepilogo-medici/<aaaamm>	cruscotto.riepilogo
+GET	/riepilogo-medici/<aaaamm>/excel	cruscotto.riepilogo_excel
+GET	/sala/<iso>	sala.giornata
+POST	/sala/checklist-voci	sala.salva_voci
+GET,POST	/sala/chirurghi	sala.chirurghi	200
+GET	/salute	salute	200
+GET,POST	/serie/<codice>	segreteria.serie
+GET	/settimana/<iso>	viste.settimana
+GET,POST	/sposta	segreteria.sposta_blocco	200
+GET	/sposta/avvisi	segreteria.avvisa_spostati	200
+GET	/stampa/<iso>	viste.stampa
+GET	/static/<path:filename>	static
+GET	/statistiche	viste.statistiche	200
+GET	/statistiche/excel	viste.statistiche_excel	200

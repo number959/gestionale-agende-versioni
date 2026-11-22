@@ -1,0 +1,50 @@
+{#- BOZZA tappa 7: il Giorno (tavola Turni3). Ordine della tavola: intestazione, linguette, barra; a destra «+ Turno a»;
+    la linea delle 24 ore in una scheda; la legenda sotto. Cambiano solo i contenitori (v-pagina, v-scheda): il blocco
+    #vista-giorno è quello di oggi, riga per riga (turni.js:876-1010 legge #vista-giorno e i suoi data-*,
+    .pista[data-k], pista.parentNode con .nome-giorno a e i [data-id] della riga, #aggiungi-persona).
+    La linea delle ore resta elastica (grid --nome + 1fr): la tavola ha 24 colonne fisse da 36 px e a 1366 la pagina
+    scorre di lato di 37 px (misurato, tavola Turni3 a 1366: scrollWidth 1403). -#}
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block classe_body %} class="pagina-turni vista-giorno"{% endblock %}
+{% block corpo %}
+<div class="v-pagina v-turni">
+{% include "_personale_barra.html" %}
+{% set gi = giorni[0] %}
+
+{% if nessuno %}
+<section class="v-scheda primi-turni"><div class="vuoto-turni">
+  <h2>Per cominciare, il personale</h2>
+  <p>Prima si aggiungono le persone, poi i loro turni nella vista della settimana o del mese.</p>
+  <div class="azioni"><a class="bottone primario con-icona v-bottone v-principale" href="{{ url_for('personale.persone') }}">{{ icona('users') }}Persone</a></div>
+</div></section>
+{% else %}
+{#- - tolta la classe «telaio» (overflow-x: auto): la scala delle ore resta ferma in cima alla finestra -#}
+<div class="telaio-giorno" id="vista-giorno" data-indirizzo="{{ url_for('personale.cambia') }}" data-giorno="{{ g.isoformat() }}"
+     data-ruolo="{{ ruolo }}" data-area="{{ area }}"{% if strutture|length > 1 %} data-struttura="{{ sid }}"{% endif %}>
+  <div class="testa-giorno">            {#- la festa a sinistra, «Turno a» a destra (tavola); stampa: sparisce come oggi -#}
+    … identico a oggi (righe 14-24): festa-giorno, label.aggiungi-turno con select#aggiungi-persona …
+  </div>
+  {% if not gruppi %}
+  <p class="avvio">Nessun turno in questo giorno{% if ruolo or area %} con questi filtri{% endif %}. Si mettono qui sopra («Turno a…») o nella vista della settimana.</p>
+  {% else %}
+  {#- niente v-scheda qui (è flex con gap: cambierebbe il passo fra i gruppi); la scheda bianca la fa
+      «.v-turni .linea-tempo» in turni-veste.css. Senza .telaio la scala delle ore resta davvero ferma in cima:
+      oggi no (misurato: dopo 600 px di scorrimento sta a y=-406, perché .telaio ha overflow-x: auto); sotto i
+      760 px serve ancora un contenitore che scorre di lato (.linea-tempo min-width 760, stile.css:1582) -#}
+  <div class="linea-tempo" data-guida="turni-ore">
+    … identico a oggi (righe 28-63): scala-ore, section.gruppo-giorno, riga-presenze, riga-giorno con nome-giorno,
+      giorno-intero e .pista (class="pista" SENZA classi in più: prove_18.py:843), linea-adesso …
+  </div>
+  <div class="legenda-turni legenda-giorno">
+    … identica a oggi (righe 65-70) …
+  </div>
+  {% endif %}
+</div>
+{% include "_personale_scelta.html" %}
+<script type="application/json" id="tipi-turno">{{ tipi_json|tojson }}</script>
+{% endif %}
+</div>
+<script src="{{ url_for('static', filename='turni.js') }}"></script>
+{% endblock %}

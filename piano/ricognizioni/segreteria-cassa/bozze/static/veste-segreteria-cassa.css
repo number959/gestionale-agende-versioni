@@ -1,0 +1,53 @@
+/* BOZZA tappa 6 (non è nel repository): Segreteria e Cassa. Classi «v-seg-» e «v-cassa-»; colori solo da gettoni.css.
+   Le macro di _stato.html (pulsanti-stato, contatti-rapidi) e le classi di oggi (bottone, piccolo, stato-*) non si
+   toccano: le usano anche Elenco e Oggi. Qui cambiano aspetto solo dentro .v-seg e .v-cassa. */
+
+/* ------------------------------------------------------------------ stampa come oggi (cassa del giorno e del mese)
+   In stampa ogni regola fuori dallo strato «vecchio» (gettoni, veste, questo file) torna indietro allo strato di oggi:
+   la carta esce con stile.css sul DOM nuovo, i contenitori nuovi diventano div senza aspetto. */
+@media print {
+  .v-stampa-come-oggi, .v-stampa-come-oggi * { all: revert-layer !important; }
+  /* !important batte anche gli style= scritti nel modello: quello di oggi si rimette qui (cassa.html:27) */
+  .v-stampa-come-oggi table.v-cassa-metodi { max-width: 520px !important; }
+}
+
+@media screen {
+  /* titolo della linguetta con il conto accanto («0 da chiudere») */
+  .v-seg-titolo { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--v-spazio-4); }
+  .v-seg-titolo .v-sotto { margin: 0; font-size: var(--v-car-m); color: var(--v-testo-tenue); }
+  .v-in-riga { display: inline-flex; margin: 0; }
+  .v-seg p.nota, .v-cassa p.nota { margin: 0; }
+
+  /* le tabelle di oggi dentro i pezzi nuovi: niente intestazione blu, niente margine sotto (stile.css) */
+  .v-seg table.v-tabella.elenco, .v-cassa table.v-tabella.elenco { margin: 0; }
+  .v-seg table.v-tabella tr:first-child th, .v-cassa table.v-tabella tr:first-child th {
+    border-top: 0; background: var(--v-incasso); color: var(--v-testo-medio);
+    font-size: var(--v-car-m); line-height: var(--v-int-m); font-weight: var(--v-peso-forte); white-space: nowrap;
+  }
+  .v-seg td.ora-lista a, .v-cassa td.ora-lista a { font-family: var(--v-titoli); font-size: var(--v-car-l); }
+  .v-seg .nota-riga, .v-cassa .nota-riga { color: var(--v-testo-tenue); }
+  .v-cassa .v-tabella .numero { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .v-cassa .v-tabella tr.totale td { background: var(--v-incasso); color: var(--v-testo); font-weight: var(--v-peso-titolo); }
+  .v-cassa .v-cassa-stretta { max-width: 520px; }
+  .v-cassa h2.sezione { margin: 0; font-family: var(--v-titoli); font-size: var(--v-car-t3); line-height: var(--v-int-t3); color: var(--v-testo); }
+  .v-cassa .contenuto { padding: 0; display: flex; flex-direction: column; gap: var(--v-spazio-6); }
+  .v-cassa-testa { display: flex; flex-direction: column; gap: var(--v-spazio-7); }
+  .v-cassa .piede-stampa { margin: 0; color: var(--v-testo-tenue); }
+
+  /* i bottoni piccoli di oggi nelle righe (Confermato, Disdetto, Contanti, POS / carta, Altro…, Annulla, Manda) */
+  :is(.v-seg, .v-cassa) td .bottone.piccolo {
+    display: inline-flex; align-items: center; height: var(--v-alto-piccolo); padding: 0 var(--v-spazio-4);
+    border: 1px solid var(--v-riga); border-radius: var(--v-raggio-3); background: var(--v-superficie);
+    color: var(--v-testo); font-size: var(--v-car-m); font-weight: var(--v-peso-forte); text-decoration: none;
+  }
+  :is(.v-seg, .v-cassa) td .bottone.piccolo.stato-confermato { color: var(--v-verde-testo); }
+  :is(.v-seg, .v-cassa) td .bottone.piccolo.stato-disdetto { color: var(--v-rosso); }
+  :is(.v-seg, .v-cassa) td .bottone.piccolo.primario { background: var(--v-primario); border-color: var(--v-primario); color: var(--v-testo-su-pieno); }
+
+  /* «Arrivati con un importo e non ancora incassati»: il filo arancio a sinistra della tavola */
+  .v-seg .v-seg-da-incassare { border-left: 4px solid var(--v-avviso-riga); }
+  .v-seg .riquadro-elenco h2 { margin: 0; font-size: var(--v-car-l); }
+  .v-seg .riquadro-elenco ul { margin: 0; padding-left: var(--v-spazio-8); }
+  .v-seg-vuoto { margin: 0; }
+  .v-seg-azioni { display: flex; flex-wrap: wrap; gap: var(--v-spazio-4); margin: 0; }
+}

@@ -1,0 +1,8 @@
+lettura del database delle prestazioni            5 prove  tutte a posto
+importazione e versioni nuove del file            5 prove  tutte a posto
+ricerca                                           7 prove  tutte a posto
+pagine e richieste                                9 prove  tutte a posto
+database                                          1 prove  tutte a posto
+
+27 prove totali, 27 superate, 0 da sistemare
+uscita 0

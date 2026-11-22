@@ -1,0 +1,132 @@
+===== psc-intro
+Come leggere questa pagina
+
+Sono le pagine di oggi di Pazienti, Segreteria e Cassa, con la cornice nuova: il menu a sinistra con i loghi, la campanella degli avvisi, le schede bianche. Il contenuto, i comandi, i testi e i messaggi sono quelli del programma: sono stati presi uno per uno dalle pagine di oggi.
+
+Cosa cambia:
+• Segreteria e Cassa diventano una pagina con le linguette, come Ambulatori (le voci del menu di oggi);
+• i conti scritti piccoli accanto al titolo diventano una striscia di numeri;
+• i messaggi dopo un'azione compaiono in basso, come nelle agende;
+• le conferme («Eliminare…?») compaiono dentro la pagina;
+• tre frasi con singolare e plurale sbagliati sono corrette («1 appuntamento messo in agenda», «segnati come arrivati», «1 giorno»).
+
+Dati inventati: giovedì 19 novembre 2026, ore 10:40, Sede centrale. Sono gli stessi delle agende e della dashboard (per esempio 915,00 € incassati oggi, 3 appunti da confermare, 5 telefonate per venerdì 20).
+
+Premi Play su una tavola per provarne i bottoni.
+
+===== psc-titolo-1
+Segreteria (sei linguette; «Elenco del giorno» si apre nell'Agenda)
+
+===== psc-nota-seg1-conferme
+Segreteria · Conferme
+
+Oggi è: le telefonate per il prossimo giorno di lavoro, qui venerdì 20: per ogni appuntamento il promemoria partito e i bottoni «Confermato» e «Disdetto».
+
+Non cambia: prima i prenotati, poi i confermati, in ordine di ora. Telefono, prestazione, medico e stanza, la colonna Promemoria, «Chiama», «WhatsApp» ed «Email». «Confermato» e «Disdetto» salvano subito, senza chiedere.
+
+Cambia: Segreteria diventa una pagina con le linguette: Conferme, Da confermare, Chiusura della giornata, Da fare, Lista d'attesa, Prima disponibilità ed Elenco del giorno (questa apre l'Agenda). «5 da confermare su 14» diventa la striscia dei numeri. I messaggi compaiono in basso.
+
+Da provare: «Confermato» su Grasso Ettore: la riga scende fra i confermati e la striscia passa a 4. «Disdetto» su Bruno Lidia: la riga sparisce. «Disdetto» su Grasso Ettore: l'avviso è giallo, perché c'è una persona in lista d'attesa per quel posto (Ferrandi Ugo).
+
+===== psc-nota-seg2-daconfermare
+Segreteria · Da confermare
+
+Oggi è: gli appunti delle prenotazioni che non si possono ancora mettere in agenda (la stanza non si sa, il paziente deve richiamare…), divisi per giorno, con «Nuovo appunto» e «Prenota i selezionati».
+
+Non cambia: testi, campi, colonne e bottoni: Prenota, Chiudi, Riapri ed Elimina; le parti Da oggi in poi, Senza giorno, Giorni passati e Chiusi di recente. Gli appunti di tutte le sedi restano insieme.
+
+Cambia: diventa la linguetta «Da confermare», con il numero degli appunti aperti (lo stesso numero è nel menu). Il conto sta nella striscia. «Eliminare l'appunto?» compare dentro la pagina. Con un appunto solo la frase è al singolare: «1 appuntamento messo in agenda.».
+
+Da provare: spuntare Ferri Gino e premere «Prenota i selezionati». Spuntare Bianchi Rita: manca l'ora, quindi non va in agenda. «Chiudi» su un appunto: il numero scende, nella linguetta e nel menu. Aprire «Nuovo appunto» e aggiungerne uno.
+
+===== psc-nota-seg3-chiusura
+Segreteria · Chiusura della giornata
+
+Oggi è: il controllo di fine giornata: quanti sono arrivati, non presentati, disdetti o ancora da segnare, e chi è arrivato ma non ha ancora pagato.
+
+Non cambia: i comandi (‹ ›, Oggi, sede, Elenco, Cassa del giorno), gli stessi numeri e le stesse frasi. A fine giornata compare la tabella degli appuntamenti da chiudere, con «Segna i selezionati come…».
+
+Cambia: diventa la linguetta «Chiusura della giornata». I numeri vanno in una striscia, con i non presentati in rosso. Con più appuntamenti la frase è al plurale: «3 appuntamenti segnati come arrivati.».
+
+Da provare: «›» porta a venerdì 20: «È un giorno futuro: si chiude quando è passato.». «‹» porta a mercoledì 18. Alle 10:40 non c'è niente da chiudere: la tabella compare solo a fine giornata.
+
+===== psc-nota-seg4-dafare
+Segreteria · Da fare
+
+Oggi è: le cose da fare (richiamare un paziente, sollecitare un referto, ordinare qualcosa): il modulo per aggiungerle e le parti Rimaste indietro, Oggi, Prossimi giorni e Fatte di recente. Nel giorno indicato diventano una notifica.
+
+Non cambia: testi e bottoni: Fatto, Domani ed Elimina; sulle cose fatte «fatto il …», Riapri ed Elimina. Valgono per tutte le sedi.
+
+Cambia: diventa la linguetta «Da fare». Le notifiche stanno nella campanella, e i loro «Fatto» e «Domani» fanno lo stesso dei bottoni della pagina. «Elimina» chiede «Eliminare?» dentro la riga.
+
+Da provare: «Fatto» su una cosa di oggi. «Domani» su una cosa di oggi: va a venerdì 20. «Aggiungi» con un testo, poi con il campo vuoto: errore. Aprire «Fatte di recente» e premere «Riapri».
+
+===== psc-nota-seg5-attesa
+Segreteria · Lista d'attesa
+
+Oggi è: i pazienti che aspettano un posto, dal più vecchio, con «Apri» e «Cerca posto». Quando un appuntamento adatto viene disdetto, il programma lo dice e propone chi chiamare.
+
+Non cambia: comandi, colonne e parole. Scegliendo un medico restano anche le richieste per «qualsiasi medico». Le richieste chiuse si vedono solo con la casella, in grigio.
+
+Cambia: diventa la linguetta «Lista d'attesa». La barra sta in una scheda bianca. Con un giorno solo si scrive «1 giorno», al singolare.
+
+Da provare: Medico «Gallo Marco»: restano Ferrandi Ugo e Pagliari Enzo (che va bene con qualsiasi medico). Spuntare «anche le richieste chiuse»: compaiono in grigio Zanetti Carlo e Tosi Marisa.
+
+===== psc-nota-seg6-disponibilita
+Segreteria · Prima disponibilità
+
+Oggi è: i primi 20 posti liberi di un medico nei suoi turni, per la durata che serve. Qui si arriva da «Cerca posto» di Orsini Lidia: Monti Anna, Visita dermatologica.
+
+Non cambia: lo stesso modulo (Medico, Prestazione, Durata, Dal, Fascia, tutte le strutture, Cerca), gli stessi posti con «Prenota» e lo stesso testo quando non c'è posto.
+
+Cambia: diventa la linguetta «Prima disponibilità»: aperta dalla linguetta o dal menu, ha solo il modulo, senza medico. Modulo e posti stanno in schede bianche.
+
+Da provare: Fascia «pomeriggio», poi «Cerca»: nessun posto, perché Monti lavora solo la mattina. Durata 60: posti di un'ora. Dal 25/11/2026: si parte da mercoledì 25. Per gli altri medici la tavola conosce gli appuntamenti solo fino a sabato 21.
+
+===== psc-titolo-2
+Cassa (quattro linguette)
+
+===== psc-nota-cassa1-giorno
+Cassa · Giorno
+
+Oggi è: la cassa del giorno: quanto si è incassato e come, i pagamenti registrati e gli appuntamenti ancora da incassare.
+
+Non cambia: gli incassi per metodo con il totale; i pagamenti con «Annulla»; gli appuntamenti da incassare con «Contanti», «POS / carta» e «Altro…» («non indicato» quando manca l'importo). La sede, «Stampa la chiusura di cassa» e gli stessi messaggi.
+
+Cambia: Mese, Listino e Tariffari dei medici diventano linguette. L'incassato diventa una striscia con il numero dei pagamenti. «Annullare il pagamento?» compare sotto la riga, dentro la pagina. «Altro…» sta sempre in fondo a destra.
+
+Da provare: «Contanti» o «POS / carta» su una riga: la riga passa fra i pagamenti e crescono i totali. «Annulla» su un pagamento, poi «Annulla il pagamento».
+
+===== psc-nota-cassa2-mese
+Cassa · Mese
+
+Oggi è: gli incassi del mese, un giorno per riga, con il totale per metodo.
+
+Non cambia: il titolo «Incassi · Novembre 2026», le stesse colonne, la riga Totale, le frecce, «Scarica in Excel» e «Stampa». Il giorno apre la sua cassa.
+
+Cambia: diventa la linguetta «Mese». Il totale e il numero dei pagamenti, oggi scritti piccoli accanto al titolo, diventano una striscia.
+
+Da provare: solo la campanella: la tavola mostra novembre e non salva niente.
+
+===== psc-nota-cassa3-listino
+Cassa · Listino
+
+Oggi è: i prezzi di listino delle prestazioni e le tariffe per convenzione o assicurazione.
+
+Non cambia: le tre parti nello stesso ordine, gli stessi campi e le stesse regole: basta un prezzo sbagliato e non si salva niente; «Togli» non chiede conferma; «Privato» non si usa come convenzione. Il listino vale per tutte le sedi.
+
+Cambia: diventa la linguetta «Listino», e le tabelle sono larghe quanto la pagina. I messaggi compaiono in basso.
+
+Da provare: cambiare un prezzo e premere «Salva il listino». Scrivere «abc» in un prezzo: errore. «Aggiungi tariffa» con una convenzione e un prezzo. «Togli» su una tariffa.
+
+===== psc-nota-cassa4-tariffari
+Cassa · Tariffari dei medici
+
+Oggi è: i tariffari dei medici: il controllo per medico, l'elenco dei tariffari, il caricamento da Excel e il tariffario fatto a mano.
+
+Non cambia: testi, colonne e comandi. Il conto in alto conta solo i medici con la spunta verde: «1 medico su 7». Ricci ha un tariffario attivo ma senza voci collegate, quindi non conta. Tariffari e controllo valgono per tutte le sedi.
+
+Cambia: diventa la linguetta «Tariffari dei medici», con tutto in schede bianche larghe quanto la pagina. I messaggi compaiono in basso.
+
+Da provare: «Carica tariffario» senza file: errore. Scrivere «Dott. Rossi» e premere «Crea»: il tariffario nuovo compare nell'elenco, e sotto il controllo esce l'avviso giallo (tariffario senza medici).
+

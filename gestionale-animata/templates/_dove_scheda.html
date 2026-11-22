@@ -37,7 +37,7 @@
   <p class="qui-scheda">{{ icona('check') }}<span>È questa struttura: il paziente si prenota da qui.</span></p>
   {%- endif %}
 
-  <ul class="recapiti-scheda">
+  <ul class="recapiti-scheda" data-guida="dove-recapiti">
     {%- if scheda.indirizzo or scheda.citta %}
     <li>{{ icona('map-pin') }}<span>{{ [scheda.indirizzo, scheda.citta]|select|join(', ') }}</span>
       {%- if scheda.mappa %} <a href="{{ scheda.mappa }}" target="_blank" rel="noopener noreferrer" class="piccolo-link">mappa</a>{% endif %}</li>

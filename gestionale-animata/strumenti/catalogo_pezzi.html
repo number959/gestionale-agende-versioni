@@ -1,0 +1,200 @@
+{#- Il catalogo dei pezzi della veste nuova (tappa 1-bis): ogni pezzo di templates/_pezzi.html negli stati che ha
+    davvero, con i gettoni, i loro contrasti e le scale. Lo serve solo strumenti/catalogo_pezzi.py (un gestionale di
+    prova a sé): non sta in templates/ e non entra nell'eseguibile. Dati, nomi e logo inventati. Nessun colore scritto
+    qui (prove_mattoni.py lo controlla): campioni e coppie usano i gettoni. -#}
+{% extends "base.html" %}
+{% from "_pezzi.html" import intestazione, scheda, tabella, pillola, conta, striscia, barra_comandi, passo, tendina, linguette, stampa_e_scarica, euro %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Catalogo dei pezzi{% endblock %}
+{% block menu %}{% endblock %}
+{% block corpo %}
+<div class="v-pagina" id="catalogo">
+
+  {% call intestazione('I pezzi della veste nuova', sopra='Catalogo · ' ~ struttura,
+                       sotto='Ogni pezzo come lo mostrerà il programma, negli stati che ha davvero. Dati, nomi e logo inventati.') %}
+  <p class="v-sotto">Tema:
+    <a href="#" onclick="try { localStorage.setItem('gestionale-tema', 'chiaro'); } catch (e) {} location.reload(); return false;">chiaro</a> ·
+    <a href="#" onclick="try { localStorage.setItem('gestionale-tema', 'scuro'); } catch (e) {} location.reload(); return false;">scuro</a>.
+    Colore della struttura {{ colore }}{% if colore_della_clinica %} (quello della clinica){% endif %}:
+    <a href="?colore=1C4184">il blu delle tavole</a> · <a href="?">quello della clinica</a>.</p>
+  {% endcall %}
+
+  {# ------------------------------------------------------------ 1. gettoni #}
+  {% call scheda('Gettoni: i colori con il loro ruolo', sotto='Il valore chiaro viene dalla tavola dei colori del gruppo, quello scuro da converti() del tema scuro, ritoccato. Il primario è il colore della struttura, con le sue varianti.', livello=2, id='gettoni') %}
+  <div class="cat-gettoni">
+    {% for g in gettoni %}
+    <div class="cat-gettone">
+      <span class="cat-campione" style="background: var(--v-{{ g.nome }})" aria-hidden="true"></span>
+      <span><b>--v-{{ g.nome }}</b><small>{{ g.chiaro }} · scuro {{ g.scuro }}</small></span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endcall %}
+
+  {% call scheda('Contrasto delle coppie testo e fondo', sotto='Almeno 4,5 a 1 in chiaro e in scuro, per questo colore della struttura (prove_mattoni.py le prova su ' ~ colori_provati ~ ' colori). Il campione mostra la coppia nel tema in uso.', livello=2, id='contrasti', attaccata=true) %}
+  {% call tabella(etichetta='Contrasto delle coppie testo e fondo') %}
+    <thead><tr><th>Testo</th><th>Fondo</th><th>Dove</th><th>Campione</th><th class="v-numero">Chiaro</th><th class="v-numero">Scuro</th></tr></thead>
+    <tbody>
+    {% for c in coppie %}
+      <tr><td>--v-{{ c.testo }}</td><td>--v-{{ c.fondo }}</td><td>{{ c.dove }}</td>
+        <td><span class="cat-coppia" style="color: var(--v-{{ c.testo }}); background: var(--v-{{ c.fondo }})">Esempietti 10:40</span></td>
+        <td class="v-numero">{{ '%.2f'|format(c.chiaro)|replace('.', ',') }}</td><td class="v-numero">{{ '%.2f'|format(c.scuro)|replace('.', ',') }}</td></tr>
+    {% endfor %}
+    </tbody>
+  {% endcall %}
+  {% endcall %}
+
+  {# ------------------------------------------------------------ 2. scale #}
+  {% call scheda('Scale: spazi, raggi e caratteri', sotto='Poche misure decise prima, perché le pagine si somiglino. Sotto ogni passo, i valori delle tavole che diventano quel passo.', livello=2, id='scale') %}
+  <div class="cat-scale">
+    <div>
+      <h3 class="v-scheda-titolo">Spazi</h3>
+      {% for nome, valore, dalle_tavole in scala_spazi %}
+      <div class="cat-riga-scala"><span class="cat-barra" style="width: var(--v-{{ nome }})"></span><code>--v-{{ nome }}</code> {{ valore }}<small>{{ dalle_tavole }}</small></div>
+      {% endfor %}
+    </div>
+    <div>
+      <h3 class="v-scheda-titolo">Raggi</h3>
+      {% for nome, valore, dalle_tavole in scala_raggi %}
+      <div class="cat-riga-scala"><span class="cat-angolo" style="border-radius: var(--v-{{ nome }})"></span><code>--v-{{ nome }}</code> {{ valore }}<small>{{ dalle_tavole }}</small></div>
+      {% endfor %}
+    </div>
+    <div>
+      <h3 class="v-scheda-titolo">Caratteri</h3>
+      {% for nome, valore, dalle_tavole, titoli in scala_caratteri %}
+      <div class="cat-riga-scala"><span style="font-size: var(--v-car-{{ nome }}); line-height: var(--v-int-{{ nome }}){% if titoli %}; font-family: var(--v-titoli){% endif %}">Agende {{ valore }}</span><small>{{ dalle_tavole }}</small></div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endcall %}
+
+  {# ------------------------------------------------------------ 3. i pezzi #}
+  <h2 class="v-titolo-sezione">Linguette</h2>
+  {{ linguette([
+      {'testo': 'Giorno', 'indirizzo': '#', 'accesa': true, 'titolo': 'la giornata di una struttura'},
+      {'testo': 'Settimana', 'indirizzo': '#', 'titolo': 'sette giorni a colpo d\'occhio'},
+      {'testo': 'Mese', 'indirizzo': '#'},
+      {'testo': 'Da confermare', 'indirizzo': '#', 'conta': 3, 'conta_titolo': '3 da confermare'},
+      {'testo': 'Elenco del giorno', 'indirizzo': '#', 'icona': 'chevron-right'}], etichetta='Viste del catalogo') }}
+
+  <h2 class="v-titolo-sezione">Barra dei comandi</h2>
+  {% call barra_comandi() %}
+    {{ passo('#', 'indietro', 'Giorno precedente') }}
+    {{ passo('#', 'avanti', 'Giorno successivo') }}
+    <a class="v-bottone v-stacco" href="#">Oggi</a>
+    {% call tendina() %}<select aria-label="Struttura del catalogo"><option>{{ struttura }}</option><option>Sede nord</option></select>{% endcall %}
+    <a class="v-bottone v-a-destra" href="#">{{ icona('search') }}Prima disponibilità</a>
+    {{ stampa_e_scarica([
+        {'testo': 'Stampa del giorno', 'sotto': "il foglio per l'accettazione", 'indirizzo': '#'},
+        {'testo': 'Scarica in Excel', 'sotto': 'il planning del giorno', 'indirizzo': '#'},
+        {'testo': 'Tutte le esportazioni', 'sotto': 'ambulatori, sala operatoria o tutto insieme', 'indirizzo': '#'}]) }}
+    <button type="button" class="v-bottone v-principale primario">{{ icona('plus') }}Nuovo appuntamento</button>
+  {% endcall %}
+  {% call barra_comandi() %}
+    <span class="cat-nota">Le voci scritte nella pagina, con i loro attributi (gli Strumenti dei Turni):</span>
+    {% call stampa_e_scarica(testo='Strumenti', icona_bottone='settings-2') %}
+      <a href="#" role="menuitem">{{ icona('repeat') }}<b>Schema che si ripete</b><small>riempie le settimane con lo schema</small></a>
+      <a href="#" role="menuitem">{{ icona('copy') }}<b>Copia la settimana</b><small>sulla settimana dopo</small></a>
+      <button type="button" role="menuitem">{{ icona('printer') }}<b>Stampa</b><small>il mese come si vede</small></button>
+    {% endcall %}
+  {% endcall %}
+  <form class="ricerca v-barra-comandi" action="#" onsubmit="return false;">
+    <span class="cat-nota">Una barra che è il modulo di oggi (form.ricerca: i suoi margini di oggi sono azzerati):</span>
+    <span class="v-campo cat-cerca"><input type="search" name="q" aria-label="Cerca nel catalogo" placeholder="cognome, nome o telefono"></span>
+    <button type="submit" class="v-bottone v-principale primario">{{ icona('search') }}Cerca</button>
+  </form>
+  <div class="cat-fila">
+    <button type="button" class="v-bottone">Normale</button>
+    <button type="button" class="v-bottone v-principale primario">Principale</button>
+    <button type="button" class="v-bottone v-pericolo">Elimina</button>
+    <button type="button" class="v-bottone v-bottone-piccolo">Prenota</button>
+    <button type="button" class="v-bottone v-bottone-piccolo v-pericolo">Non presentato</button>
+    <button type="button" class="v-bottone" disabled>Spento</button>
+    <a class="v-bottone" href="#">{{ icona('file-spreadsheet') }}Un collegamento come bottone</a>
+  </div>
+
+  <h2 class="v-titolo-sezione">Striscia dei numeri</h2>
+  {{ striscia([(23, 'appuntamenti'), (17, 'arrivati'), (1, 'disdetto'), {'numero': 1, 'cosa': 'non presentato', 'allarme': true}]) }}
+  {{ striscia([{'numero': euro(91500, simbolo=true), 'prima': 'incassati'}, (7, 'pagamenti')]) }}
+  {{ striscia([(294, 'appuntamenti'), {'parti': [('200,0', 'ore prenotate su'), ('530,0', 'di turno (38%)')]}, {'numero': '12%', 'cosa': 'non presentati', 'allarme': true}], classe='numeri grandi') }}
+
+  <h2 class="v-titolo-sezione">Pillole dello stato</h2>
+  <div class="cat-fila">
+    {% for codice, parola in stati %}{{ pillola(codice, parola) }}{% endfor %}
+    {{ pillola('ARRIVATO', 'Arrivato', dopo='10:21') }}
+    {{ pillola('SALA', 'Sala A') }}
+    <span>Da confermare {{ conta(3, '3 da confermare') }}</span>
+  </div>
+
+  <h2 class="v-titolo-sezione">Scheda e tabella</h2>
+  {% call scheda('Incassi del giorno', sotto='Una tabella dentro una scheda: numeri a destra, il totale in grassetto.', id='incassi', attaccata=true) %}
+  {% call tabella() %}
+    <thead><tr><th>Metodo</th><th class="v-numero">Importo</th></tr></thead>
+    <tbody>
+      <tr><td>Contanti</td><td class="v-numero">{{ euro(28000, simbolo=true) }}</td></tr>
+      <tr><td>POS / carta</td><td class="v-numero">{{ euro(63500, simbolo=true) }}</td></tr>
+      <tr class="v-spento"><td>Bonifico</td><td class="v-numero">{{ euro(0, simbolo=true) }}</td></tr>
+      <tr class="v-totale"><td>Totale (7 pagamenti)</td><td class="v-numero">{{ euro(91500, simbolo=true) }}</td></tr>
+    </tbody>
+  {% endcall %}
+  {% endcall %}
+  {% call tabella(classe='elenco') %}
+    <thead><tr><th>Ora</th><th>Paziente</th><th>Prestazione</th><th>Medico · stanza</th><th>Stato</th><th></th></tr></thead>
+    <tbody>
+      <tr><td>08:00</td><td><a href="#">Esempietti Maria</a><small>porta le analisi</small></td><td>Visita cardiologica</td><td>Esposito<span class="v-testo-piccolo">Ambulatorio 1</span></td><td>{{ pillola('ARRIVATO', 'Arrivato', dopo='08:02') }}</td><td><a class="v-bottone v-bottone-piccolo" href="#">Prenota</a></td></tr>
+      <tr><td>08:30</td><td><a href="#">Fintini Paolo</a></td><td>Gastroscopia</td><td>Saggiatori<small>Sala endoscopia</small></td><td>{{ pillola('CONFERMATO', 'Confermato') }}</td><td><a class="v-bottone v-bottone-piccolo" href="#">Prenota</a></td></tr>
+      <tr><td>09:00</td><td><a href="#">Provolo Anna</a></td><td>Visita dermatologica</td><td>Marino<small>Ambulatorio 2</small></td><td>{{ pillola('PRENOTATO', 'Prenotato') }}</td><td><a class="v-bottone v-bottone-piccolo" href="#">Prenota</a></td></tr>
+      <tr><td>09:30</td><td><a href="#">Testabianca Luigi</a></td><td>Colonscopia</td><td>Saggiatori<small>Sala endoscopia</small></td><td>{{ pillola('NON_PRESENTATO', 'Non presentato') }}</td><td><a class="v-bottone v-bottone-piccolo" href="#">Prenota</a></td></tr>
+      <tr><td>10:00</td><td><a href="#">Fittizi Rosa</a></td><td>Ecocardiogramma</td><td>Esposito<small>Ambulatorio 1</small></td><td>{{ pillola('DISDETTO', 'Disdetto') }}</td><td><a class="v-bottone v-bottone-piccolo" href="#">Prenota</a></td></tr>
+    </tbody>
+  {% endcall %}
+  <p class="v-vuoto vuoto">Nessun appuntamento per questo filtro (il testo «nessun dato», senza margini).</p>
+
+  <h2 class="v-titolo-sezione">Riquadri e campi</h2>
+  <div class="cat-due">
+    <div class="cat-colonna">
+      <div class="v-riquadro v-riquadro-avviso">Venerdì: 5 appuntamenti da confermare.</div>
+      <div class="v-riquadro v-riquadro-errore">L'orario si sovrappone a un altro appuntamento.</div>
+      <div class="v-riquadro v-riquadro-ok">Checklist completa.</div>
+      {% call scheda(sabbia=true) %}<b>Da confermare per questo giorno (1)</b> Provolo Anna, visita cardiologica, preferisce dopo le 12{% endcall %}
+    </div>
+    {% call scheda('Campi', id='campi') %}
+      <div class="v-campo"><label for="cat-cognome">Cognome</label><input id="cat-cognome" value="Esempietti"></div>
+      <div class="v-campo"><label for="cat-tel">Telefono</label><input id="cat-tel" placeholder="333 000 0000"><p class="v-aiuto">Anche fisso; si cerca nei telefoni.</p></div>
+      <div class="v-campo"><label for="cat-med">Medico</label><select id="cat-med"><option>Esposito</option><option>Marino</option></select></div>
+      <div class="v-campo"><label for="cat-note">Note</label><textarea id="cat-note" rows="2">porta le analisi</textarea></div>
+      <div class="v-campo"><label for="cat-cf">{{ icona('id-card') }} Codice fiscale</label><input id="cat-cf" value="FNTPRV80A01F839W"></div>
+    {% endcall %}
+  </div>
+
+  <h2 class="v-titolo-sezione">Importo in euro</h2>
+  {% call tabella() %}
+    <thead><tr><th>Centesimi</th><th>euro(c)</th><th>euro(c, se_zero='—')</th><th>euro(c, simbolo=true)</th></tr></thead>
+    <tbody>
+    {% for c in [12345, 125050, 0, -150, None] %}
+      <tr><td>{{ c }}</td><td>«{{ euro(c) }}»</td><td>«{{ euro(c, se_zero='—') }}»</td><td>«{{ euro(c, simbolo=true) }}»</td></tr>
+    {% endfor %}
+    </tbody>
+  {% endcall %}
+</div>
+{# solo per il catalogo: la disposizione delle sue prove (non è un pezzo, non va in veste.css) #}
+<style>
+  .cat-gettoni { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--v-spazio-4) var(--v-spazio-6); }
+  .cat-gettone { display: flex; gap: var(--v-spazio-4); align-items: center; min-width: 0; }
+  .cat-gettone b { display: block; font-size: var(--v-car-m); font-weight: var(--v-peso-forte); }
+  .cat-gettone small, .cat-riga-scala small { display: block; font-size: var(--v-car-xs); color: var(--v-testo-tenue); }
+  .cat-campione { flex: none; width: 44px; height: 30px; border-radius: var(--v-raggio-2); box-shadow: inset 0 0 0 1px var(--v-riga-campo); }
+  .cat-coppia { display: inline-block; padding: 0 var(--v-spazio-4); border-radius: var(--v-raggio-1); font-weight: var(--v-peso-forte); white-space: nowrap; }
+  .cat-scale { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--v-spazio-8); }
+  .cat-riga-scala { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--v-spazio-4); padding: var(--v-spazio-2) 0; border-top: 1px solid var(--v-riga); }
+  .cat-riga-scala small { flex-basis: 100%; }
+  .cat-barra { display: inline-block; height: 12px; background: var(--v-primario); }
+  .cat-angolo { display: inline-block; width: 34px; height: 24px; background: var(--v-primario-tinta); border: 1px solid var(--v-primario-chiaro); }
+  .cat-fila { display: flex; flex-wrap: wrap; gap: var(--v-spazio-4); align-items: center; }
+  .cat-due { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--v-spazio-7); align-items: start; }
+  .cat-colonna { display: flex; flex-direction: column; gap: var(--v-spazio-5); }
+  .cat-nota { color: var(--v-testo-tenue); font-size: var(--v-car-m); }
+  .cat-cerca { flex: 1 1 220px; }
+  @media (max-width: 760px) { #catalogo { padding: var(--v-spazio-6); } }
+</style>
+{% endblock %}

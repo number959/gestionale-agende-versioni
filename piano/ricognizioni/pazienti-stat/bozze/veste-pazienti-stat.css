@@ -1,0 +1,74 @@
+/* BOZZA tappa 4: le poche regole proprie di Pazienti, scheda, Unisci, Codici fiscali e Statistiche, da mettere in
+   fondo a static/veste.css (stesse regole: prefisso «v-», solo var(--v-...) di gettoni.css, niente !important).
+   Misure prese dalle tavole Paz1, Paz2 e Stat1 a 1440 (misure-tavole.json). */
+
+/* --- correzioni ai pezzi comuni che servono qui (da portare nei mattoni) */
+table.v-tabella { margin: 0; }                         /* con la classe «elenco» tenuta resta margin-bottom: 26px (stile.css:283) */
+.v-vuoto { margin: 0; color: var(--v-testo-tenue); }   /* p.vuoto di oggi: margin 0 0 26px (stile.css:332) */
+.v-testo { margin: 0; max-width: 90ch; }
+.v-blocco { display: flex; flex-direction: column; gap: var(--v-spazio-5); min-width: 0; }
+.v-piede-scheda { margin: 0; padding: var(--v-spazio-5) var(--v-spazio-8) var(--v-spazio-7); display: flex; align-items: center; gap: var(--v-spazio-5); flex-wrap: wrap; }
+.v-scheda h2.v-scheda-titolo small, .v-codici .v-scheda-titolo small { font-weight: var(--v-peso-normale); color: var(--v-testo-tenue); }
+.v-scheda.v-filo-giallo { border-left: 4px solid var(--v-avviso-riga); gap: var(--v-spazio-3); padding: var(--v-spazio-5) var(--v-spazio-7); }
+.v-elenco-puntato { margin: 0; padding-left: 20px; }
+.v-riga-comandi { display: flex; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-4); }
+.v-spunta label, label.v-spunta { display: inline-flex; align-items: center; gap: var(--v-spazio-4); font-weight: var(--v-peso-normale); color: var(--v-testo); }
+.v-spunta input[type=checkbox], label.v-spunta input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--v-primario); }
+
+/* --- ricerca (Pazienti, Unisci): il campo largo con la lente */
+form.ricerca.v-barra-comandi { margin: 0; }                         /* form.ricerca di oggi: margin 0 0 18px (stile.css:528) */
+.v-cerca { position: relative; flex: 1 1 360px; min-width: 0; display: flex; align-items: center; }
+.v-cerca > svg { position: absolute; left: var(--v-spazio-5); width: 18px; height: 18px; color: var(--v-testo-tenue); pointer-events: none; }
+.v-cerca input[type=search] {
+  flex: 1; min-width: 0; height: var(--v-alto); padding: 0 var(--v-spazio-5) 0 40px;
+  border: 1px solid var(--v-riga-campo); border-radius: var(--v-raggio-3);
+  background: var(--v-superficie); color: var(--v-testo); font: inherit;
+}
+.v-cerca input[type=search]:focus-visible { outline: 2px solid var(--v-fuoco); outline-offset: 0; border-color: var(--v-primario); }
+.v-bottone > svg.icona { width: 18px; height: 18px; }
+table.v-tabella td.azione { width: 1%; white-space: nowrap; padding-top: var(--v-spazio-3); padding-bottom: var(--v-spazio-3); }
+
+/* --- scheda del paziente: due colonne circa 3/5 e 2/5 (tavola: 660 e 440 px a 1440) */
+.v-paziente-colonne { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--v-spazio-7); align-items: start; }
+.v-paziente-colonne > form.v-modulo { display: grid; grid-template-columns: 1fr 1fr; gap: var(--v-spazio-6) var(--v-spazio-7); }
+.v-modulo > .campo.v-campo:not(.meta), .v-modulo > .v-azioni, .v-modulo > .campo.spunta:not(.meta) { grid-column: 1 / -1; }
+.v-modulo .v-campo { margin: 0; }
+.v-modulo .allinea-basso { align-self: end; min-height: var(--v-alto); display: flex; align-items: center; }
+.v-modulo .v-azioni { display: flex; gap: var(--v-spazio-4); padding-top: var(--v-spazio-6); border-top: 1px solid var(--v-riga); }
+.v-modulo .esito-cf { margin: 0; font-size: var(--v-car-s); line-height: var(--v-int-s); }   /* niente classe nuova sul <p>: la riscrive gestionale.js:144 */
+.v-in-breve { gap: var(--v-spazio-4); }
+.v-in-breve p { margin: 0; }
+.v-in-breve ul.numeri { display: flex; flex-wrap: wrap; gap: var(--v-spazio-4) var(--v-spazio-7); margin: 0; padding: 0; list-style: none; }
+.v-in-breve ul.numeri b { font-family: var(--v-titoli); font-size: 28px; line-height: 34px; font-weight: var(--v-peso-forte); color: var(--v-primario-testo); margin-right: var(--v-spazio-3); }
+.v-in-breve ul.numeri li.allarme, .v-in-breve ul.numeri li.allarme b { color: var(--v-rosso); }
+.v-separa { border-top: 1px solid var(--v-riga); padding-top: var(--v-spazio-5); margin: var(--v-spazio-2) 0 0; }
+.v-scheda-sottotitolo { margin: 0 0 var(--v-spazio-3); font-family: var(--v-titoli); font-size: 16px; font-weight: var(--v-peso-forte); }
+.v-ricordami { display: flex; flex-direction: column; gap: var(--v-spazio-4); }
+.v-ricordami input[type=date] { height: var(--v-alto); padding: 0 var(--v-spazio-5); border: 1px solid var(--v-riga-campo); border-radius: var(--v-raggio-3); background: var(--v-superficie); color: var(--v-testo); font: inherit; }
+.v-appuntamenti tr.stato-disdetto td { color: var(--v-testo-tenue); }
+.v-etichetta-file { display: inline-block; margin-right: var(--v-spazio-4); padding: 0 var(--v-spazio-3); border-radius: var(--v-raggio-1); background: var(--v-incasso); color: var(--v-testo-medio); font-size: var(--v-car-xs); font-weight: var(--v-peso-forte); }
+.v-in-riga { display: inline; margin-left: var(--v-spazio-3); }
+.v-allega { display: flex; flex-wrap: wrap; align-items: end; gap: var(--v-spazio-5); padding: var(--v-spazio-6) var(--v-spazio-7); border-top: 1px solid var(--v-riga); }
+.v-allega .v-largo { flex: 1 1 300px; }
+.v-allega input[type=text] { width: 100%; height: var(--v-alto); padding: 0 var(--v-spazio-5); border: 1px solid var(--v-riga-campo); border-radius: var(--v-raggio-3); background: var(--v-superficie); color: var(--v-testo); font: inherit; }
+.v-allega br { display: none; }
+.v-allega label.v-campo { font-size: var(--v-car-m); font-weight: var(--v-peso-forte); color: var(--v-testo-medio); }
+
+/* --- Statistiche */
+.v-etichetta-in-riga { display: inline-flex; align-items: center; gap: var(--v-spazio-4); font-size: var(--v-car-m); font-weight: var(--v-peso-forte); color: var(--v-testo-medio); }
+.v-etichetta-in-riga input[type=date] { height: var(--v-alto); padding: 0 var(--v-spazio-5); border: 1px solid var(--v-riga-campo); border-radius: var(--v-raggio-3); background: var(--v-superficie); color: var(--v-testo); font: inherit; font-weight: var(--v-peso-normale); }
+form.filtri.v-barra-comandi { margin: 0; }
+ul.v-striscia { margin: 0; list-style: none; }                       /* ul.numeri di oggi: margin 0 0 10px (stile.css:537) */
+ul.v-striscia b.v-striscia-numero { margin: 0; color: var(--v-testo); } /* ul.numeri b di oggi: 26px, colore primario (stile.css:538-539) */
+ul.v-striscia li.v-allarme b.v-striscia-numero { color: var(--v-rosso); }
+.v-barra-e-numero { display: flex; align-items: center; gap: var(--v-spazio-5); }
+.v-barra-e-numero .barra-dato { flex: 1; width: auto; max-width: 280px; height: 8px; margin: 0; border-radius: var(--v-raggio-pieno); background: var(--v-riga); }
+.v-barra-e-numero .barra-dato span { border-radius: var(--v-raggio-pieno); background: var(--v-primario); }
+.v-stat-colonne { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--v-spazio-7); align-items: start; }
+.v-colonna { display: flex; flex-direction: column; gap: var(--v-spazio-7); min-width: 0; }
+.v-statistiche table.v-tabella td.senza, .v-statistiche table.v-tabella .senza { color: var(--v-testo-tenue); }
+
+/* --- schermi stretti: una colonna sola (oggi la scheda del paziente resta su due colonne anche a 683 px) */
+@media (max-width: 900px) {
+  .v-paziente-colonne, .v-stat-colonne { grid-template-columns: minmax(0, 1fr); }
+}

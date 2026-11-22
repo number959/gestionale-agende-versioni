@@ -1,0 +1,287 @@
+{
+ "683": {
+  "sei": {
+   "nav": [
+    284,
+    305,
+    363,
+    120
+   ],
+   "main": [
+    248,
+    154,
+    435,
+    6056
+   ],
+   "tab": [
+    [
+     "Anagrafiche",
+     113
+    ],
+    [
+     "Strutture del gruppo",
+     165
+    ],
+    [
+     "Email e WhatsApp",
+     152
+    ],
+    [
+     "Importa da Excel",
+     142
+    ],
+    [
+     "Impostazioni",
+     117
+    ],
+    [
+     "Aggiornamenti",
+     130
+    ]
+   ]
+  },
+  "sette": {
+   "nav": [
+    284,
+    305,
+    363,
+    158
+   ],
+   "righe": 4,
+   "settima": [
+    288,
+    423,
+    129,
+    36
+   ]
+  }
+ },
+ "1024": {
+  "sei": {
+   "nav": [
+    284,
+    191,
+    704,
+    82
+   ],
+   "main": [
+    248,
+    62,
+    776,
+    5397
+   ],
+   "tab": [
+    [
+     "Anagrafiche",
+     113
+    ],
+    [
+     "Strutture del gruppo",
+     165
+    ],
+    [
+     "Email e WhatsApp",
+     152
+    ],
+    [
+     "Importa da Excel",
+     142
+    ],
+    [
+     "Impostazioni",
+     117
+    ],
+    [
+     "Aggiornamenti",
+     130
+    ]
+   ]
+  },
+  "sette": {
+   "nav": [
+    284,
+    191,
+    704,
+    82
+   ],
+   "righe": 2,
+   "settima": [
+    539,
+    233,
+    129,
+    36
+   ]
+  }
+ },
+ "1280": {
+  "sei": {
+   "nav": [
+    284,
+    191,
+    838,
+    44
+   ],
+   "main": [
+    248,
+    62,
+    1032,
+    4878
+   ],
+   "tab": [
+    [
+     "Anagrafiche",
+     113
+    ],
+    [
+     "Strutture del gruppo",
+     165
+    ],
+    [
+     "Email e WhatsApp",
+     152
+    ],
+    [
+     "Importa da Excel",
+     142
+    ],
+    [
+     "Impostazioni",
+     117
+    ],
+    [
+     "Aggiornamenti",
+     130
+    ]
+   ]
+  },
+  "sette": {
+   "nav": [
+    284,
+    191,
+    960,
+    82
+   ],
+   "righe": 2,
+   "settima": [
+    288,
+    233,
+    129,
+    36
+   ]
+  }
+ },
+ "1366": {
+  "sei": {
+   "nav": [
+    284,
+    191,
+    838,
+    44
+   ],
+   "main": [
+    248,
+    62,
+    1118,
+    4394
+   ],
+   "tab": [
+    [
+     "Anagrafiche",
+     113
+    ],
+    [
+     "Strutture del gruppo",
+     165
+    ],
+    [
+     "Email e WhatsApp",
+     152
+    ],
+    [
+     "Importa da Excel",
+     142
+    ],
+    [
+     "Impostazioni",
+     117
+    ],
+    [
+     "Aggiornamenti",
+     130
+    ]
+   ]
+  },
+  "sette": {
+   "nav": [
+    284,
+    191,
+    968,
+    44
+   ],
+   "righe": 1,
+   "settima": [
+    1120,
+    195,
+    129,
+    36
+   ]
+  }
+ },
+ "1440": {
+  "sei": {
+   "nav": [
+    284,
+    191,
+    838,
+    44
+   ],
+   "main": [
+    248,
+    62,
+    1192,
+    4394
+   ],
+   "tab": [
+    [
+     "Anagrafiche",
+     113
+    ],
+    [
+     "Strutture del gruppo",
+     165
+    ],
+    [
+     "Email e WhatsApp",
+     152
+    ],
+    [
+     "Importa da Excel",
+     142
+    ],
+    [
+     "Impostazioni",
+     117
+    ],
+    [
+     "Aggiornamenti",
+     130
+    ]
+   ]
+  },
+  "sette": {
+   "nav": [
+    284,
+    191,
+    968,
+    44
+   ],
+   "righe": 1,
+   "settima": [
+    1120,
+    195,
+    129,
+    36
+   ]
+  }
+ }
+}

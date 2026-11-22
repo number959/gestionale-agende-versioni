@@ -1,0 +1,219 @@
+HEAD:gestionale/prove_110.py:4:Un turno puo' avere la sua durata delle fasce (Turno.passo): dall'ora di
+HEAD:gestionale/prove_110.py:138:    st.ora_apertura, st.ora_chiusura, st.passo = time(8, 0), time(20, 0), 30
+HEAD:gestionale/prove_110.py:213:    annullati = sorted([a for a in appuntamenti if a.risorsa_id in ids_ and a.stato not in STATI_ATTIVI],
+HEAD:gestionale/prove_110.py:249:    return {'fasce': elenco, 'colonne': colonne, 'annullati': annullati, 'giorno': info,
+HEAD:gestionale/prove_110.py:360:            passo = st.passo_min
+HEAD:gestionale/prove_110.py:388:    propri = sorted((t for t in turni if t.passo_proprio), key=lambda x: (x.ora_inizio, x.id or 0))
+HEAD:gestionale/prove_110.py:389:    normali = [t for t in turni if not t.passo_proprio]
+HEAD:gestionale/prove_110.py:395:            chiave = ('turno', id(t), (m - _minuti(t.ora_inizio)) // t.passo_proprio)
+HEAD:gestionale/prove_110.py:449:    if t is None or not t.passo_proprio:
+HEAD:gestionale/prove_110.py:451:    ts, te, c = _minuti(t.ora_inizio), _minuti(t.ora_fine), t.passo_proprio
+HEAD:gestionale/prove_110.py:463:    propri = [t for t in turni if t.passo_proprio]
+HEAD:gestionale/prove_110.py:468:        b = gcd(gcd(gcd(b, t.passo_proprio), abs(_minuti(t.ora_inizio) - a)), abs(_minuti(t.ora_fine) - a))
+HEAD:gestionale/prove_110.py:485:    st.passo = rng.choice(PASSI_AMMESSI)
+HEAD:gestionale/prove_110.py:595:    return (v['fasce'], v['passo'], [a.id for a in v['annullati']],
+HEAD:gestionale/prove_110.py:603:        return '%s: fasce, passo o annullati diversi' % cosa
+HEAD:gestionale/prove_110.py:719:            self.id, self.ora_inizio, self.ora_fine, self.passo = i, ora(a_), ora(b_), passo
+HEAD:gestionale/prove_110.py:723:            return self.passo if self.passo in PASSI_TURNO else None
+HEAD:gestionale/prove_110.py:775:        propri = [t for t in effettivi if t.passo_proprio]
+HEAD:gestionale/prove_110.py:788:            assert c['fasce_proprie'] == sorted({t.passo_proprio for t in c['turni'] if t.passo_proprio}), n
+HEAD:gestionale/prove_110.py:798:            minima = min([passo] + [t.passo_proprio for t in propri])
+HEAD:gestionale/prove_110.py:807:    return next((t for t in turni if t.risorsa_id == rid and t.passo_proprio
+HEAD:gestionale/prove_110.py:814:        (t for t in turni if t.risorsa_id == rid and t.passo_proprio
+HEAD:gestionale/prove_110.py:900:            storto = t_inizio is not None and (m - _minuti(t_inizio.ora_inizio)) % t_inizio.passo_proprio != 0
+HEAD:gestionale/prove_110.py:936:                        m += t.passo_proprio or st.passo_min
+HEAD:gestionale/prove_110.py:1077:    # alle 9:30 (orari veri liberi) no: la fascia delle 9:20 e' della visita
+HEAD:gestionale/prove_110.py:1184:    T.passo_proprio = None
+HEAD:gestionale/prove_110.py:1189:        T.passo_proprio, T.ora_inizio, T.ora_fine = passo_, inizio, fine
+HEAD:gestionale/prove_110.py:1193:    T.passo_proprio = 15
+HEAD:gestionale/prove_110.py:1196:    T.passo_proprio = 20
+HEAD:gestionale/prove_110.py:1198:    T.passo_proprio = 10
+HEAD:gestionale/prove_110.py:1200:    T.passo_proprio = 60
+HEAD:gestionale/prove_110.py:1235:    assert s.get(Turno, tid).passo == 20
+HEAD:gestionale/prove_110.py:1268:    # modificando la seconda alle 9:30 per 10 minuti (orari veri liberi, ma la fascia delle 9:20 e' della prima),
+HEAD:gestionale/prove_110.py:1432:              if 'con-ora' in l[1]]
+HEAD:gestionale/prove_110.py:1450:    for classe in ('fasce-miste', 'fasce-turno', 'con-ora', 'sotto-fascia'):
+HEAD:gestionale/prove_110.py:1462:        t = tabella(p, 'agenda-medico')
+HEAD:gestionale/prove_110.py:1526:    assert t.passo == 15 and t.passo_proprio == 15
+HEAD:gestionale/prove_110.py:1538:    assert s.get(Turno, tid).passo == 15
+HEAD:gestionale/prove_110.py:1544:    assert s.get(Turno, tid).passo == 15 and s.get(Turno, tid).ora_fine == time(12, 30)
+HEAD:gestionale/prove_110.py:1552:    assert s.get(Turno, tid).passo is None
+HEAD:gestionale/prove_110.py:1557:    a = guida.PER_SLUG['fasce-turno']
+HEAD:gestionale/prove_110.py:1558:    assert a['condizione'] == 'thead .fasce-turno' and a['endpoint'] == 'giorno'
+HEAD:gestionale/prove_110.py:1560:    assert len(voci) >= 3 and all(x.get('guida') == 'fasce-turno' for x in voci), voci
+HEAD:gestionale/prove_110.py:1566:    assert 'class="fasce-turno"' in p.split('</thead>')[0]
+HEAD:gestionale/prove_110.py:1567:    assert any('con-ora' in l[1] for r_ in t.righe for c in r_ for l in c.get('link', []))
+HEAD:gestionale/prove_110.py:1569:    r = C.get('/aiuto/fasce-turno')
+HEAD:gestionale/prove_110.py:1574:    assert m and m.group(1).replace('&amp;', '&') == '/giorno/%s?struttura=1&guida=fasce-turno' % primo.isoformat(), \
+HEAD:gestionale/prove_110.py:1578:    m = re.search(r'href="([^"]+)" data-guida-mostra', html(C2.get('/aiuto/fasce-turno')))
+HEAD:gestionale/prove_110.py:1579:    assert m and m.group(1).replace('&amp;', '&') == '/giorno/%s?guida=fasce-turno' % OGGI.isoformat(), m and m.group(1)
+HEAD:gestionale/prove_110.py:1581:    passi = C.get('/aiuto/fasce-turno/passi.json').get_json()
+HEAD:gestionale/prove_110.py:1582:    assert passi['slug'] == 'fasce-turno' and len(passi['passi']) >= 4, passi
+HEAD:gestionale/prove_110.py:1585:        if x.get('sel') == 'thead .fasce-turno':
+HEAD:gestionale/prove_110.py:1586:            assert 'class="fasce-turno"' in p.split('</thead>')[0]
+HEAD:gestionale/prove_110.py:1587:        elif x.get('sel') == 'td.aperta a.con-ora':
+HEAD:gestionale/prove_110.py:1588:            assert re.search(r'<td class="aperta"[^>]*><a class="posa con-ora"', p)
+HEAD:gestionale/prove_110.py:1589:        elif x.get('sel') == 'td.occupata':
+HEAD:gestionale/prove_110.py:1641:    assert 'turni.passo' in S.colonne_aggiunte, S.colonne_aggiunte
+HEAD:gestionale/prove_110.py:1645:    assert t.passo is None and t.passo_proprio is None and t.ora_inizio == time(9, 0)
+HEAD:gestionale/prove_110.py:1649:    t.passo = 20
+HEAD:gestionale/prove_110_browser.py:35:  const t = document.querySelector('table.griglia');
+HEAD:gestionale/prove_110_browser.py:48:      const a = td.querySelector('a.posa');
+HEAD:gestionale/prove_110_browser.py:93:    ok('fasce libere della sala con la loro ora', libere and all('con-ora' in c['posa'] and re.match(r'^\d\d:\d\d', c['testo'])
+HEAD:gestionale/prove_110_browser.py:99:       altre and all(c['testo'] == 'libero' and 'con-ora' not in c['posa'] and c['righe'] == 2
+HEAD:gestionale/prove_110_browser.py:103:    x = pg.locator('tbody.fasce-miste td.aperta a.posa.con-ora').first
+HEAD:gestionale/prove_110_browser.py:120:    pg.goto(giorno + '&guida=fasce-turno')
+HEAD:gestionale/prove_110_browser.py:144:      const t = document.querySelector('table.agenda-medico');
+HEAD:gestionale/prove_110_browser.py:150:              libere: Array.from(t.querySelectorAll('a.posa.con-ora')).map(x => x.textContent.trim()).slice(0, 3)};
+HEAD:gestionale/prove_110_browser.py:177:      const a = document.querySelector('tbody.fasce-miste td.aperta a.posa.con-ora');
+HEAD:gestionale/prove_112.py:764:    assert '/esportazioni/mese/sala/2026-12-01.xlsx?struttura=1' in t and 'Altre esportazioni' in t
+HEAD:gestionale/prove_112.py:1784:    # ogni stanza: conteggio, turno, assenti; la sala operatoria no (solo con un intervento: il gemello in fondo)
+HEAD:gestionale/prove_112.py:2639:    assert '<h1 class="giorno">Riepilogo del periodo' in ts, 'il nome della pagina'
+HEAD:gestionale/prove_112.py:2663:    barra = tl.split('<div class="barra">')[1].split('</div>')[0]
+HEAD:gestionale/prove_112.py:2666:    manca(barra, 'Statistiche', dove_ce=tl.split('<div class="barra">')[0], perche='nessun pulsante «Statistiche» nella barra')
+HEAD:gestionale/prove_112_browser.py:39:    .filter(g => { const t = g.querySelector('.tendina'); return t && getComputedStyle(t).display !== 'none'; })
+HEAD:gestionale/prove_112_browser.py:40:    .map(g => ({gruppo: (g.querySelector('.apri-gruppo') || g).textContent.trim(), classi: g.className,
+HEAD:gestionale/prove_112_browser.py:45:    """Apre «Stampa e scarica» come una persona: il mouse prima in un punto neutro della pagina, poi nessuna tendina del
+HEAD:gestionale/prove_112_browser.py:46:    menu deve essere aperta. 21/11/2026, nell'animata: la tendina «Stampa e scarica» entra con un'animazione, Playwright
+HEAD:gestionale/prove_112_browser.py:48:    cima, il gruppo «Ambulatori» del menu finisce sotto il mouse e apre la sua tendina sopra il pulsante (una volta in
+HEAD:gestionale/prove_112_browser.py:54:        ok('nessuna tendina del menu resta aperta da sola', False, pg.evaluate(TENDINE_MENU_APERTE))
+HEAD:gestionale/prove_112_browser.py:56:    pg.locator('.gruppo-comandi .apri-gruppo').click()
+HEAD:gestionale/prove_112_browser.py:88:    riga = pg.locator('#matrice-ambulatori tbody tr', has=pg.locator('th.stanza-sett', has_text='Ambulatorio 1'))
+HEAD:gestionale/prove_112_browser.py:92:    ok('i pomeriggi di Ambulatorio 1 liberi', len(pomeriggi) == 6 and all('libera' in x for x in pomeriggi), pomeriggi)
+HEAD:gestionale/prove_112_browser.py:93:    attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
+HEAD:gestionale/prove_112_browser.py:95:    voci = pg.locator('nav.menu .gruppo.attivo .tendina a').all_inner_texts()
+HEAD:gestionale/prove_112_browser.py:117:    nomi = cella.locator('.turno-sett a').all_inner_texts()
+HEAD:gestionale/prove_112_browser.py:119:    ok('il nome apre il turno e torna qui', '/anagrafiche/turni/' in (cella.locator('.turno-sett a').first.get_attribute('href') or '')
+HEAD:gestionale/prove_112_browser.py:120:       and 'torna=' in (cella.locator('.turno-sett a').first.get_attribute('href') or ''), cella.locator('.turno-sett a').first.get_attribute('href'))
+HEAD:gestionale/prove_112_browser.py:130:       and cella.locator('.turno-sett').count() == 0, cella.get_attribute('class'))
+HEAD:gestionale/prove_112_browser.py:133:    voci = pg.locator('.gruppo-comandi .tendina a').all_inner_texts()
+HEAD:gestionale/prove_112_browser.py:140:        pg.locator('.gruppo-comandi .tendina a', has_text='Ambulatori e sala in Excel').click()
+HEAD:gestionale/prove_112_browser.py:145:        pg.locator('.gruppo-comandi .tendina a', has_text='La matrice in Excel').click()
+HEAD:gestionale/prove_112_browser.py:150:        pg.locator('.gruppo-comandi .tendina a', has_text='settimana tipo').click()
+HEAD:gestionale/prove_112_browser.py:157:    sale_viste = parte.locator('th.stanza-sett').all_inner_texts() if parte.count() else []
+HEAD:gestionale/prove_112_browser.py:166:       pg.locator('#matrice-ambulatori tbody:not(.parte-sala) th.stanza-sett', has_text='Sala A').count() == 0)
+HEAD:gestionale/prove_112_browser.py:179:    attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
+HEAD:gestionale/prove_112_browser.py:194:    pg.locator('[data-guida="programmazione-altre"] .apri-gruppo').click()
+HEAD:gestionale/prove_112_browser.py:195:    altre = pg.locator('[data-guida="programmazione-altre"] .tendina a').all_inner_texts()
+HEAD:gestionale/prove_112_browser.py:196:    ok('«Altre esportazioni» del mese: la sala, tutto insieme, la pagina delle esportazioni',
+HEAD:gestionale/prove_112_browser.py:199:        pg.locator('[data-guida="programmazione-altre"] .tendina a', has_text='La sala operatoria del mese').click()
+HEAD:gestionale/prove_112_browser.py:200:    # sul telefono la tendina aperta resta dentro lo schermo (prima usciva a sinistra)
+HEAD:gestionale/prove_112_browser.py:203:    pg.locator('[data-guida="programmazione-altre"] .apri-gruppo').click()
+HEAD:gestionale/prove_112_browser.py:204:    box = pg.locator('[data-guida="programmazione-altre"] .tendina').bounding_box()
+HEAD:gestionale/prove_112_browser.py:205:    ok('sul telefono la tendina «Altre esportazioni» resta dentro lo schermo',
+HEAD:gestionale/prove_112_browser.py:227:    attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
+HEAD:gestionale/prove_112_browser.py:297:    ok('riepilogo del periodo: «Questa settimana» scelto, sette giorni nella tabella',
+HEAD:gestionale/prove_112_browser.py:298:       pg.locator('.periodi-pronti .bottone.attivo').inner_text() == 'Questa settimana' and
+HEAD:gestionale/prove_112_browser.py:304:    pg.locator('a.passo[data-tasto="precedente"]').click()
+HEAD:gestionale/prove_112_browser.py:312:    attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
+HEAD:gestionale/prove_112_browser.py:346:    pg.locator('.periodi-pronti a', has_text='Questo mese').click()
+HEAD:gestionale/prove_14.py:378:              '/moduli/nuovo', '/importa', '/sposta', '/agenda-medico/%s' % MAR, '/appuntamento/1',
+HEAD:gestionale/prove_14.py:470:    assert importa.passo_orari(a) == 60, 'passo %s' % importa.passo_orari(a)
+HEAD:gestionale/prove_14.py:775:    assert '<b>2</b> appuntamenti da importare' in t, 'conteggio primo mese: %s' % re.findall(r'<li><b>\d+</b>[^<]*', t)
+HEAD:gestionale/prove_14.py:1447:    t = html(C.get('/agenda-medico/%s?medico=%d' % (MAR, I['Lippiello'])))
+HEAD:gestionale/prove_14.py:1450:    t = html(C.get('/agenda-medico/%s' % MAR))
+HEAD:gestionale/prove_14.py:1458:    t = html(C.get('/agenda-medico/%s?medico=%d' % (GIO, I['Lippiello'])))
+HEAD:gestionale/prove_14.py:1841:              '/agenda-medico/%s' % MAR.isoformat()):
+HEAD:gestionale/prove_14.py:1875:    modelli_url = ['/chiusura/%s', '/cassa/%s', '/cassa/mese/%s', '/cassa/mese/%s/excel', '/agenda-medico/%s',
+HEAD:gestionale/prove_143.py:28:import cruscotto
+HEAD:gestionale/prove_143.py:329:    assert 'checklist-voce incompleta' in g and '>1/3<' in g, 'contatore nella griglia'
+HEAD:gestionale/prove_143.py:339:    assert 'checklist-voce' not in g and 'Checklist pre-operatoria' not in html(C.get('/appuntamento/%d' % aid))
+HEAD:gestionale/prove_143.py:412:    agenda = lambda: testo(C.get('/agenda-medico/%s?medico=%d' % (MAR, I['Borrelli'])))  # noqa: E731
+HEAD:gestionale/prove_143.py:580:    q = cruscotto.quadro_di_oggi(s, st, adesso)
+HEAD:gestionale/prove_143.py:625:    fogli = cruscotto.riepilogo_medici(s, primo, (primo + timedelta(days=31)).replace(day=1) - timedelta(days=1))
+HEAD:gestionale/prove_143.py:632:        assert all(f['conteggio'].get(k, 0) == v for k, v in d['stati'].items()), (m, f['conteggio'], d['stati'])
+HEAD:gestionale/prove_143.py:725:    assert 'liberi Borrelli' in t, 'chirurgo libero non indicato'
+HEAD:gestionale/prove_143.py:728:    assert 'in sala Borrelli' in t and 'liberi Borrelli' not in t
+HEAD:gestionale/prove_143.py:737:    manca(t, 'liberi: Borrelli', dove_ce=prima, perche='un chirurgo assente non è libero')
+HEAD:gestionale/prove_143.py:764:prova('proposta dagli interventi (almeno due giorni diversi), salvataggio, griglia: in sala, liberi, assenti', gs_proposta_e_griglia)
+HEAD:gestionale/prove_143.py:871:    manca(t, 'sala-giorno', dove_ce=con_sala, perche='senza sale niente riga della sala nella giornata')
+HEAD:gestionale/prove_145.py:28:import cruscotto
+HEAD:gestionale/prove_145.py:447:    q = cruscotto.quadro_di_oggi(s, s.get(Struttura, 1), adesso)
+HEAD:gestionale/prove_145.py:647:    chi prenota vede, e i letti risulterebbero liberi quando non lo sono."""
+HEAD:gestionale/prove_146.py:219:    import cruscotto
+HEAD:gestionale/prove_146.py:224:              cruscotto.testo_riepilogo(cruscotto.riepilogo_medici(s, primo, ultimo, o.id, None)[0], primo, '')]
+HEAD:gestionale/prove_146.py:228:    for (indirizzo, coda), intero in zip((('/agenda-medico/%s?medico=%d' % (MAR, I['Borrelli']), 'agenda completa'),
+HEAD:gestionale/prove_146.py:247:    href = _mailto(html(C.get('/agenda-medico/%s?medico=%d' % (MAR, I['Lippi']))))
+HEAD:gestionale/prove_146.py:374:    import cruscotto
+HEAD:gestionale/prove_146.py:383:                         (pazienti, ['json_sicuro']), (cruscotto, ['mese_da']),
+HEAD:gestionale/prove_146.py:388:    assert cassa.mese_da('202609') == cruscotto.mese_da('2026-09') == (date(2026, 9, 1), date(2026, 9, 30))
+HEAD:gestionale/prove_15.py:481:    import marchio
+HEAD:gestionale/prove_15.py:488:    s.get(Struttura, 1).logo = marchio.normalizza_logo(precedente)
+HEAD:gestionale/prove_15.py:511:    assert s.get(Struttura, 1).logo == marchio.normalizza_logo(
+HEAD:gestionale/prove_15.py:532:    import marchio
+HEAD:gestionale/prove_15.py:537:    nuovo = marchio.normalizza_logo(open(os.path.join(statica, 'logo-posillipo.png'), 'rb').read())
+HEAD:gestionale/prove_15.py:538:    altro = marchio.normalizza_logo(open(os.path.join(statica, 'icona.png'), 'rb').read())
+HEAD:gestionale/prove_15.py:545:    st.nome, st.logo, st.logo_aggiornato = 'Clinica Posillipo', marchio.normalizza_logo(vecchio), ieri
+HEAD:gestionale/prove_15.py:565:    assert marchio.stesso_logo(marchio.normalizza_logo(jpg.getvalue()), vecchio)
+HEAD:gestionale/prove_15.py:566:    assert marchio.stesso_logo(marchio.normalizza_logo(piccolo.getvalue()), vecchio)
+HEAD:gestionale/prove_15.py:567:    assert not marchio.stesso_logo(nuovo, vecchio) and not marchio.stesso_logo(altro, vecchio)
+HEAD:gestionale/prove_15.py:568:    assert not marchio.stesso_logo(None, vecchio) and not marchio.stesso_logo(b'non un PNG', vecchio)
+HEAD:gestionale/prove_15.py:573:    assert not marchio.stesso_logo(stirato.getvalue(), vecchio) and not marchio.stesso_logo(largo.getvalue(), vecchio)
+HEAD:gestionale/prove_15.py:1587:    import marchio
+HEAD:gestionale/prove_15.py:1588:    logo = marchio.normalizza_logo(open(os.path.join(CARTELLA, 'static', 'icona.png'), 'rb').read())
+HEAD:gestionale/prove_15.py:1800:    aspettano: il lucchetto e il database restano liberi."""
+HEAD:gestionale/prove_15.py:2311:    assert d['liberi'] == []
+HEAD:gestionale/prove_15.py:2312:    assert [o.cognome for o in vista['giorni'][MER]['sala']['liberi']] == ['Borrelli'], 'il mercoledi\' di sala libero'
+HEAD:gestionale/prove_15.py:2315:    assert sale[MER + timedelta(days=7)]['liberi'] == [], 'chiusa: nessuno è libero'
+HEAD:gestionale/prove_15.py:2318:    assert passato[MER - timedelta(days=28)]['liberi'] == [], 'i giorni passati non hanno posti liberi'
+HEAD:gestionale/prove_15.py:2324:    assert sale[dom]['liberi'] == [], 'sala libera in un giorno di chiusura'
+HEAD:gestionale/prove_15.py:2328:    assert [o.cognome for o in sale[dom]['liberi']] == ['Lippi']
+HEAD:gestionale/prove_15.py:2334:    assert lippi['giorni'][MAR]['sala']['interventi'] == 1 and lippi['giorni'][MER]['sala']['liberi'] == []
+HEAD:gestionale/prove_15_browser.py:98:        corpo: getComputedStyle(document.body).fontFamily, titolo: getComputedStyle(document.querySelector('h1.giorno')).fontFamily})""")
+HEAD:gestionale/prove_16.py:1077:    assert AG.popup_aggiornamento(s, 'cruscotto.oggi', adesso + timedelta(hours=AG.ORE_RIMANDO - 1)) is None
+HEAD:gestionale/prove_16.py:1078:    torna = AG.popup_aggiornamento(s, 'cruscotto.oggi', adesso + timedelta(hours=AG.ORE_RIMANDO, minutes=1))
+HEAD:gestionale/prove_18.py:771:    passi = annullati = 0
+HEAD:gestionale/prove_18.py:810:            annullati += 1
+HEAD:gestionale/prove_18.py:811:    assert passi == 260 and annullati > 30, (passi, annullati)
+HEAD:gestionale/prove_18.py:812:    return '%d passi, %d annulla e rifai' % (passi, annullati)
+HEAD:gestionale/prove_18_browser.py:395:    pg.click('.gruppo-comandi .apri-gruppo')
+HEAD:gestionale/prove_18_browser.py:406:    pg.click('.gruppo-comandi .apri-gruppo')
+HEAD:gestionale/prove_18_browser.py:502:    ok('Oggi: la scheda «In servizio oggi»', pg.locator('.in-servizio').count() == 1)
+HEAD:gestionale/prove_191.py:303:    """Il valore scelto della tendina 'nome' (o quello del campo di testo)."""
+HEAD:gestionale/prove_191.py:535:    assert 'form="modulo-email"' in p and 'id="modulo-email"' in p, 'la tendina del tipo non va con il modulo'
+HEAD:gestionale/prove_191_browser.py:10:- la tendina del tipo, fuori dal modulo, si salva con il modulo;
+HEAD:gestionale/prove_191_browser.py:98:    # la tendina e' fuori dal modulo (attributo form): si salva con il modulo
+HEAD:gestionale/prove_191_browser.py:119:    ok('schermo stretto: la tendina del tipo ci sta', all(riquadro), riquadro)
+HEAD:gestionale/prove_anagrafiche.py:461:    assert re.search(r'<th>Studio Lippiello\s*<span class="sotto">', t), 'nome nuovo assente dall intestazione'
+HEAD:gestionale/prove_autoriparazione.py:1468:        A.avvio_non_riuscito(os.path.join(c, 'gestionale.log'), RuntimeError('<guasto> inventato'))
+HEAD:gestionale/prove_funzioni.py:403:    annullati = {a.id for a in v['annullati']}
+HEAD:gestionale/prove_funzioni.py:407:    assert annullati == {a1, a2}, 'elencati a parte: %s' % annullati
+HEAD:gestionale/prove_funzioni.py:1364:    conteggio = re.search(r'<span class="conteggio">([^<]+)</span>', t).group(1)
+HEAD:gestionale/prove_funzioni.py:1369:    assert conteggio.startswith('%d appuntament' % attivi), 'conteggio con i disdetti: %s' % conteggio
+HEAD:gestionale/prove_funzioni.py:1370:    assert disdetti == 0 or '%d disdett' % disdetti in conteggio, conteggio
+HEAD:gestionale/prove_funzioni.py:1421:    st.ora_apertura, st.ora_chiusura, st.passo = time(7, 30), time(13, 0), 15
+HEAD:gestionale/prove_funzioni.py:1450:    st.ora_apertura, st.ora_chiusura, st.passo = time(8, 10), time(12, 0), 20
+HEAD:gestionale/prove_funzioni.py:1469:    esito = (st.indirizzo, st.apertura, st.chiusura, st.passo, st.giorni_apertura, st.chiusa_festivi, st.patrono)
+HEAD:gestionale/prove_funzioni.py:1477:    esito2 = (st.nome, st.indirizzo, st.giorni_apertura, st.chiusa_festivi, st.passo)
+HEAD:gestionale/prove_funzioni.py:1495:    st.ora_apertura, st.ora_chiusura, st.passo = time(8, 0), time(20, 0), 30
+HEAD:gestionale/prove_guida.py:152:    assert {g['slug'] for g in guide} == {'fasce-turno', 'stampare-giornata', 'griglia'} and \
+HEAD:gestionale/prove_guida.py:153:        {g['condizione'] for g in guide if g['slug'] == 'fasce-turno'} == {'thead .fasce-turno'}, guide
+HEAD:gestionale/prove_guida_browser.py:47:    pg.click('[data-guida="menu-segreteria"] .apri-gruppo'); pg.wait_for_timeout(150)
+HEAD:gestionale/prove_guida_browser.py:48:    ok('Segreteria si apre al clic', pg.locator('[data-guida="menu-segreteria"] .tendina').is_visible())
+HEAD:gestionale/prove_guida_browser.py:50:    ok('Esc chiude la tendina', not pg.locator('[data-guida="menu-segreteria"] .tendina').is_visible())
+HEAD:gestionale/prove_guida_browser.py:52:    ok('Configura si apre passandoci sopra', pg.locator('[data-guida="menu-configura"] .tendina').is_visible())
+HEAD:gestionale/prove_guida_browser.py:54:    pg.click('[data-guida="giorno-stampa"] .apri-gruppo'); pg.wait_for_timeout(150)
+HEAD:gestionale/prove_guida_browser.py:55:    ok('Stampa e scarica si apre', pg.locator('[data-guida="giorno-stampa"] .tendina').is_visible())
+HEAD:gestionale/prove_guida_browser.py:57:    ok('clic fuori: si chiude', not pg.locator('[data-guida="giorno-stampa"] .tendina').is_visible())
+HEAD:gestionale/prove_pagine.py:197:SENZA_MENU = {'viste.stampa', 'segreteria.agenda_medico', 'sala.lista_operatoria', 'cruscotto.riepilogo',
+HEAD:gestionale/prove_personalizzazione.py:27:import marchio
+HEAD:gestionale/prove_personalizzazione.py:238:    assert 'class="marchio-nome">%s<' % servizi.NOME_INIZIALE in t, 'senza logo non compare il nome'
+HEAD:gestionale/prove_personalizzazione.py:263:        assert im.height <= marchio.ALTEZZA_MAX, 'alto %d' % im.height
+HEAD:gestionale/prove_personalizzazione.py:312:    assert marchio.contrasto(c, '#ffffff') >= 4.5, 'colore salvato illeggibile: %s' % c
+HEAD:gestionale/prove_personalizzazione.py:364:    assert 'marchio-nome' in t and '<img src="/logo/' not in t, 'senza logo la pagina non mostra il nome'
+HEAD:gestionale/prove_personalizzazione.py:633:    assert 'struttura=%d' % sid in re.search(r'href="([^"]*)">Torna alla giornata', t).group(1), \
+HEAD:gestionale/prove_personalizzazione.py:634:        'modificando, "Torna alla giornata" porta a un altra sede'
+HEAD:gestionale/prove_senza_menu.py:100:    ('l\'agenda dei medici', 'agenda_medico.html', '/agenda-medico/%s?struttura=1' % OGGI,
+HEAD:gestionale/prove_senza_menu.py:104:    ('il riepilogo dei medici', 'riepilogo_medici.html', '/riepilogo-medici/%s' % MESE, 'cruscotto.riepilogo',
+HEAD:gestionale/prove_tariffari_browser.py:101:    pg.click('.pagina-tariffari p.sotto a[href$="/stampa"]')
+HEAD:gestionale/prove_tendine_browser.py:18:Nella versione animata la tendina «Stampa e scarica» finiva sotto la nota del
+HEAD:gestionale/prove_tendine_browser.py:21:un piano più alto (stile.css, .barra)."""
+HEAD:gestionale/prove_tendine_browser.py:77:    pg.click('[data-guida="%s"] .apri-gruppo' % gruppo)
+HEAD:gestionale/prove_tendine_browser.py:78:    pg.wait_for_timeout(350)                 # nell'animata la tendina entra in .18 s
+HEAD:gestionale/prove_tendine_browser.py:111:            controlla(pg, '[data-guida="giorno-stampa"] .tendina a', '%s, giorno %s: Stampa e scarica' % (dim, nome))
+HEAD:gestionale/prove_tendine_browser.py:114:                controlla(pg, '[data-guida="%s"] .tendina a' % gruppo, '%s, giorno %s: %s' % (dim, nome, gruppo))
+HEAD:gestionale/prove_tendine_browser.py:119:                pg.wait_for_selector('[data-guida="giorno-stampa"] .apri-gruppo')
+HEAD:gestionale/prove_tendine_browser.py:121:                controlla(pg, '[data-guida="giorno-stampa"] .tendina a', '%s, giorno appena aperto: Stampa e scarica' % dim)
+HEAD:gestionale/prove_tendine_browser.py:146:                    controlla(pg, '[data-guida="%s"] .tendina a' % gruppo, '%s, %s: %s' % (dim, urlparse(h).path, gruppo))
+HEAD:gestionale/prove_tendine_browser.py:154:            scrivi(pg, '#ricerca-rapida', 'Sep', '#risultati-rapidi a.voce-rapida')
+HEAD:gestionale/prove_tendine_browser.py:155:            controlla(pg, '#risultati-rapidi a.voce-rapida', '%s, %s: risultati della ricerca rapida' % (dim, pagina.split('?')[0]))

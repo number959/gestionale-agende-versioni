@@ -1356,6 +1356,16 @@ def pannello(s, a):
             'canali': CANALI, 'motivi': MOTIVI, 'stati': STATI}
 
 
+def casella_cambiata(cfg, server, porta, sicurezza, utente, accesso):
+    """Server, porta, sicurezza o nome con cui si entra diversi da quelli salvati (le maiuscole del server e
+    dell'indirizzo non contano)?"""
+    def chi(u, a):
+        return (a or u or '').strip().lower()
+    return ((cfg.get('email_server') or '').lower().rstrip('.') != (server or '').lower() or
+            str(cfg.get('email_porta') or '') != str(porta or '') or (cfg.get('email_sicurezza') or '') != sicurezza or
+            chi(cfg.get('email_utente'), cfg.get('email_accesso')) != chi(utente, accesso))
+
+
 def _cfg_modulo(f, cfg):
     """Le impostazioni dal modulo: (nuove impostazioni, errori, avvisi).
     Password e token restano quelli salvati se il campo e' vuoto. Server,
@@ -1409,6 +1419,13 @@ def _cfg_modulo(f, cfg):
                               'parte, crearne una nuova in myaccount.google.com/apppasswords.')
         elif f.get('togli_password') in ('1', 'on'):
             nuovi['email_password'] = ''
+        elif cfg.get('email_password') and casella_cambiata(cfg, server, porta, sicurezza, utente, accesso):
+            # la password salvata vale solo per il server, la porta, la sicurezza e l'utente per cui e' stata scritta:
+            # cambiato uno di questi senza riscriverla, si toglie (correzione 3 della revisione degli accessi dalla
+            # rete, 1.13: con un altro server, o senza sicurezza, partirebbe verso chi non la deve avere)
+            nuovi['email_password'] = ''
+            avvisi.append('La password salvata è stata tolta perché sono cambiati server, porta, sicurezza o nome '
+                          'utente: riscriverla e salvare di nuovo.')
         if porta.isdigit() and sicurezza in dict(SICUREZZE):
             if int(porta) == 465 and sicurezza != 'ssl':
                 avvisi.append('Con la porta 465 la sicurezza di solito è SSL: se la prova non parte, scegliere SSL.')

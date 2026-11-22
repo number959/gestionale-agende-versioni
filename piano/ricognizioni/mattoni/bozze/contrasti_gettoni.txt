@@ -1,0 +1,77 @@
+gettone            chiaro   scuro    converti()
+fondo              #F3F6FA  #141A21  #1F252D   ritoccato
+superficie         #FFFFFF  #1C242D  #1C242D 
+superficie-tenue   #F8FAFD  #181F27  #1C2129   ritoccato
+incasso            #EEF2F8  #222B35  #222831   ritoccato
+chiuso             #ECEFF3  #222B35  #252B35   ritoccato
+testo              #12244A  #E1E7ED  #BDCDEF   ritoccato
+testo-medio        #38455A  #C3CDD7  #BDC7D6   ritoccato
+testo-tenue        #5B687C  #9AA8B4  #B0B8C5   ritoccato
+testo-su-pieno     #FFFFFF  #FFFFFF  #FFFFFF 
+riga               #E3E9F4  #2E3843  #2F3A4F   ritoccato
+riga-campo         #B3BDCB  #45525F  #404C5D   ritoccato
+segno-grigio       #98A3B3  #6B7785  #4A5565   ritoccato
+occupato           #DFEBDA  #2A3E22  #2A3E22 
+arrivato           #CFE6C8  #294620  #294620 
+verde              #2E7D32  #A9DFAC  #A9DFAC 
+verde-testo        #1B5E20  #B5EAB9  #B5EAB9 
+disponibile        #E3F4E1  #2A3A28  #2A3A28 
+confermato         #E7EEF8  #252B35  #252B35 
+confermato-testo   #1C4184  #A5BDE8  #A5BDE8 
+azzurro            #4F79C4  #8CA8D9  #8CA8D9 
+da-fare            #AFC4E2  #1E324F  #1E324F 
+rosso              #B3261E  #E49793  #E49793 
+rosso-fondo        #FCE9E7  #322523  #322523 
+rosso-riga         #F3C9C4  #563733  #563733 
+rosso-forte        #8A1C16  #E8A8A5  #E8A8A5 
+sabbia             #F3EEDF  #3B3729  #3B3729 
+avviso-fondo       #FFF4D6  #3A3528  #3A3528 
+avviso-riga        #EBD49A  #61563A  #61563A 
+avviso-testo       #7A5412  #EAD3AC  #EAD3AC 
+ok-fondo           #E3F1E4  #293A2A  #293A2A 
+ok-testo           #1E5E22  #B6E8B9  #B6E8B9 
+sala-fondo         #EFE9F7  #2B2434  #2B2434 
+sala-testo         #4B3474  #BFAFDB  #BFAFDB 
+sala               #6B4E9B  #AC99CC  #AC99CC 
+verde-pieno        #2E7D32  #29702D  #29702D 
+rosso-pieno        #B3261E  #A1221B  #A1221B 
+sala-pieno         #6B4E9B  #60468B  #60468B 
+
+testo / fondo                    chiaro  scuro
+testo / fondo                     14.07  14.05
+testo / superficie                15.25  12.58
+testo / superficie-tenue          14.59  13.33
+testo / incasso                   13.57  11.51
+testo-medio / superficie           9.69   9.73
+testo-medio / incasso              8.63   8.90
+testo-medio / fondo                8.94  10.87
+testo-tenue / superficie           5.65   6.45
+testo-tenue / fondo                5.21   7.20
+testo-tenue / incasso              5.03   5.89
+testo-tenue / superficie-tenue     5.40   6.83
+testo-tenue / chiuso               4.90   5.89
+verde-testo / occupato             6.38   8.52
+verde-testo / arrivato             5.92   7.75
+verde / superficie                 5.13  10.33
+verde-testo / superficie           7.87  11.52
+confermato-testo / confermato      8.41   7.48
+rosso / rosso-fondo                5.59   6.42
+rosso / superficie                 6.54   6.83
+rosso-forte / rosso-fondo          7.95   7.42
+avviso-testo / avviso-fondo        6.17   8.38
+avviso-testo / sabbia              5.83   8.17
+ok-testo / ok-fondo                6.71   8.79
+sala-testo / sala-fondo            8.65   7.38
+testo / disponibile               13.29   9.72
+testo / occupato                  12.37   9.31
+testo / arrivato                  11.48   8.46
+testo-su-pieno / verde-pieno       5.13   6.09
+testo-su-pieno / rosso-pieno       6.54   7.61
+testo-su-pieno / sala-pieno        6.59   7.65
+
+bordi (non testo; WCAG 1.4.11 chiede 3:1, oggi i campi hanno 1,85:1)
+riga-campo / superficie            1.90   1.96
+segno-grigio / superficie          2.55   3.44
+riga / superficie                  1.22   1.32
+
+COPPIE SOTTO 4,5: nessuna

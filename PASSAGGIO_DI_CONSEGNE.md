@@ -363,8 +363,8 @@ fatto, non richiesto per ora).
 1. Si modifica la versione **normale** (`gestionale/`).
 2. Si portano i file comuni nell'animata: `python strumenti/allinea_animata.py --copia`.
    Senza `--copia` dice solo cosa è diverso. I file propri di ogni versione si adattano a
-   mano: `CREA_SETUP.bat`, `LEGGIMI.md`, `installer.iss`, `templates/base.html`,
-   `templates/griglia.html`, `templates/impostazioni.html`. Solo l'animata ha `static/animazioni*`,
+   mano: `CREA_SETUP.bat`, `LEGGIMI.md`, `installer.iss`. I modelli sono tutti comuni: le righe della
+   sola animata stanno dietro `{% if variante == 'animata' %}` (vedi `gestionale/CLAUDE.md`). Solo l'animata ha `static/animazioni*`,
    `prove_animazioni.py` e `prove_icone_animate.py`.
 3. Prove in tutte e due le cartelle (vedi *Prove*).
 4. Se cambia l'aspetto di una pagina con una guida: immagini e video rigenerati in tutte e due
@@ -1191,6 +1191,53 @@ aprirle (le tavole `.dc.html` vogliono accanto `support.js`, il piccolo motore c
 accetta circa 3 MB per volta: cartella e documento ci sono, l'archivio aspetta la scelta di Giovanni (due archivi più
 piccoli, o il file nella conversazione).
 
+## La base 1.13 e i moduli (in corso, ramo `ccr-interfaccia`)
+
+Il 22 novembre 2026 Giovanni ha chiesto: «Completa tutto il software, attieniti al piano, dammi la possibilità di
+scegliere quale modulo rendere disponibile sugli altri PC della rete in locale a quale utente e quale no». Il piano,
+le decisioni prese per eseguirlo e le ricognizioni delle aree stanno in `piano/` (vedi `piano/LEGGIMI.md`).
+
+- **Ramo**: tutto il lavoro (base e moduli) va su `ccr-interfaccia`. `ccr-moduli` resta fermo. Il ramo principale
+  `ccr-07f8e160-7j5lup` non si tocca: niente unione, niente release, niente «ultima», niente Setup fuori da Wine
+  senza il via di Giovanni («Non pubblicare nulla perché voglio prima testarlo io sul mio PC»).
+- **Ordine**: tappa 1 (la rete di prove) → 1-bis (i mattoni della veste) → 2 menu a sinistra e barra in alto → 3
+  campanella, messaggi in basso, domande nella pagina → 4-9 la veste area per area → 10 prova finale della 1.13 →
+  M1 fondamenta dei moduli → M2 «Aree e accessi» con l'accesso dagli altri PC per utente e per area (non
+  disponibile, solo guardare, guardare e modificare) → M3-M10 (Dove si fa e mappa, Comunicazioni, Statistiche e
+  report con Excel e PDF con i grafici, Ambulatori e dashboard, Sala e due agende, finestra, Segreteria, nucleo).
+- **Come si controlla ogni passo**: tutte le prove nelle due cartelle, senza e con il browser, e
+  `strumenti/confronta_rami.py` contro il ramo principale (pagine, moduli, segni, testi, JSON, Excel e i fogli da
+  stampare in PDF): le differenze che restano sono solo quelle scritte in `strumenti/cambiamenti_approvati.txt`.
+- **Tappa 1, la rete di prove** (chiusa il 22 novembre): vedi *La rete di prove per la veste nuova* nei due
+  `LEGGIMI.md`. Dentro anche il pacchetto di prova per Giovanni (`prova.py`, `CREA_PROVA.bat`): un file solo, con
+  dati inventati, cartella e porta sue, che non tocca il programma della clinica.
+- **Pacchetto di prova da rifare** dopo le correzioni della revisione di sicurezza (commit 3b8d3f7): costruirlo di
+  nuovo prima di mandarlo a Giovanni (in Wine: `bash strumenti/wine/costruisci.sh --prova ../gestionale-animata`, poi
+  `prova_isolamento.py`).
+
+**Dove si è fermati (22 novembre 2026, sera, su richiesta di Giovanni: «Arriva ad un punto concreto e fermati»).**
+Nel ramo `ccr-interfaccia` (commit 7856656 e il commit di questa nota), provati e caricati:
+- tappa 1 (la rete di prove), 1-bis (i mattoni e il catalogo), 2 (menu a sinistra, barra in alto, linguette,
+  `menu.py`): le pagine sono quelle di oggi dentro la cornice nuova;
+- l'accesso dagli altri PC per utente e per area (*Configura → Aree e accessi*; resoconto in
+  `piano/resoconti/accessi-dagli-altri-pc.md`), unito alla tappa 2: dalla rete il menu mostra solo le parti permesse.
+Prove: tutte verdi su Linux nelle due cartelle (37 raccolte senza browser; nel browser 15 nella normale e 17
+nell'animata); `confronta_rami.py`: 610 pagine, 0 diverse oltre ai cambiamenti approvati, 49 fogli in PDF identici. Su
+Windows (GitHub) tutte le raccolte senza browser passano; `prove_prova.py` cadeva solo per git letto male sulla riga di
+comando di Windows, corretto in 7856656. Le prove nel browser su Windows di questo ramo vanno guardate nella pagina
+*Actions* (esecuzioni del 22/11 sera).
+**Non fatto**: la tappa 3 (campanella, messaggi in basso, domande nella pagina) è stata fermata al primo passo; il
+lavoro a metà, non provato, è solo nel ramo locale `tappa3` della sessione nel cloud (commit 9be9aa7) e va rifatto da
+capo partendo da `ccr-interfaccia`. Poi le tappe 4-10 e i moduli M1, M3-M10, come in `piano/`.
+**Da decidere con Giovanni** (scritto anche in `piano/DECISIONI-VESTE.md` ed `ESECUZIONE.md`): le linguette per ora
+stanno sopra il titolo della pagina (sotto arrivano con le tappe 4-9); nel Giorno a 1366×657 si vedono 5 mezz'ore
+invece di 7 fino alla tappa 5; a 1024 px le linguette di Configura e Segreteria vanno su due righe; Chrome o Edge
+almeno 111 in clinica; i predefiniti degli accessi (una copia rimessa non riporta indietro utenti e password; in
+Statistiche e report nomi solo con Pazienti o Agenda e importi solo con la Cassa).
+**Per provarlo sul PC di Giovanni** (senza toccare il programma della clinica): dal ramo `ccr-interfaccia`, in
+`gestionale-animata`, `CREA_PROVA.bat` (il pacchetto di prova, porta 5050, dati inventati, cartella sua); oppure
+`python strumenti/demo.py --porta 5001` e il browser su http://127.0.0.1:5001.
+
 ## Cose aperte
 
 - **Altri PC e «Statistiche e report»** (21 novembre 2026, Giovanni: «voglio pure che il modulo agenda sala operatoria
@@ -1329,7 +1376,10 @@ piccoli, o il file nella conversazione).
    «Executable doesn't exist … playwright install», la libreria Playwright di Python cerca un
    Chromium più nuovo di quello installato: le prove usano il Chromium indicato nella variabile
    `CHROMIUM` (nelle sessioni nel cloud `CHROMIUM=/opt/pw-browsers/chromium`, dove non si
-   scaricano browser; successo il 21 novembre 2026).
+   scaricano browser; successo il 21 novembre 2026). Se invece cadono `prove_16.py` («No space left on device») e
+   `prove_autoriparazione.py` (righe 615 e 1002), guardare lo spazio su disco: sotto i 300 MB liberi il programma
+   segnala giustamente «poco spazio» e le prove non se lo aspettano. Nelle sessioni lunghe lo riempiono le copie del
+   codice fatte dagli agenti nella cartella degli appunti (21 novembre 2026: 12 GB).
 3. Lancia le prove di tutte e due le cartelle (`python strumenti/tutte_le_prove.py` dentro
    ciascuna): devono essere tutte verdi prima di toccare qualcosa.
 4. Per vedere il programma: `python strumenti/demo.py` dentro `gestionale/`, poi

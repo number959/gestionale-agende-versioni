@@ -1,0 +1,52 @@
+{#- BOZZA tappa 7: Persone (tavola Turni4). Ordine della tavola: intestazione dei Turni, linguette (Persone accesa),
+    «Persone» + «il personale che fa i turni», «Torna ai turni · Tipi di turno», una scheda bassa con i bottoni,
+    poi una scheda per ruolo: icona, nome, numero, «Aggiungi» a destra, la tabella.
+    Restano: <title>, i due bottoni (data-guida persone-nuova / persone-medici, il POST dei medici, il title con i
+    nomi), «Aggiungi» e «Modifica» con gli stessi indirizzi, le classi elenco elenco-persone e td.azione (passo della
+    guida guida.py:418, prove_18_browser.py:485, animazioni.js:119 «table.elenco»), «non in servizio», «tutte». -#}
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% from "_pezzi.html" import intestazione %}
+{% block titolo %}Persone del personale{% endblock %}
+{% block corpo %}
+<div class="v-pagina v-turni pagina-persone">          {#- - tolte «pagina larga» (div.pagina sparisce alla tappa 9) -#}
+  <span class="marchio solo-stampa">{% include "_marchio.html" %}</span>   {#- il logo va nel menu -#}
+  {#- intestazione dei Turni (con il via: «Turni · Sede centrale», «Turni», il sottotitolo) e linguette:
+      {% include "_personale_linguette.html" %} con accesa='persone' -#}
+  {#- l'h1 di oggi, con la riga piccola accanto; i due collegamenti di oggi sotto -#}
+  <h1 class="v-titolo-sezione">Persone <small class="sotto-titolo">il personale che fa i turni</small></h1>
+  <p class="v-sotto"><a href="{{ url_for('personale.turni') }}">Torna ai turni</a> · <a href="{{ url_for('personale.tipi_turno') }}">Tipi di turno</a></p>
+
+  <div class="v-barra-comandi comandi-persone">
+    <a class="bottone primario con-icona v-bottone v-principale" href="{{ url_for('personale.persona') }}" data-guida="persone-nuova">{{ icona('user-plus') }}Aggiungi una persona</a>
+    {% if medici_liberi %}
+    <form method="post" action="{{ url_for('personale.medici_dall_agenda') }}" style="display:inline">
+      <button class="bottone con-icona v-bottone" type="submit" data-guida="persone-medici" title="{{ medici_liberi|map(attribute='etichetta')|join(', ') }}">{{ icona('stethoscope') }}Aggiungi i medici dell'agenda ({{ medici_liberi|length }})</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if not gruppi %}
+  <section class="v-scheda guida">                {#- la classe «guida» di oggi resta: è il riquadro «Per cominciare» -#}
+    <h2>Per cominciare</h2>
+    <ol>… i tre punti di oggi, parola per parola …</ol>
+  </section>
+  {% endif %}
+
+  {% for gr in gruppi %}
+  <section class="v-scheda v-attaccata">
+    {#- il titolo del gruppo resta un h2 con la classe di oggi; il numero resta un <small> (conta() non va bene:
+        con 0 persone in servizio oggi si legge «0», conta() non scrive niente) -#}
+    <h2 class="sezione titolo-ruolo v-scheda-titolo"><span class="icona-ruolo">{{ icona(gr.icona) }}</span>{{ gr.nome }} <small>{{ gr.persone|selectattr('attiva')|list|length }}</small>
+      <a class="bottone aggiungi v-bottone" href="{{ url_for('personale.persona', ruolo=gr.ruolo) }}">Aggiungi</a></h2>
+    <div class="v-tabella-contenitore">
+    <table class="elenco elenco-persone v-tabella">
+      {#- + <thead>: oggi la prima riga ha i <th> senza thead (animazioni.js salta già le righe con <th>) -#}
+      <thead><tr><th>Cognome e nome</th><th>Qualifica</th><th>Ore a settimana</th><th>Telefono</th><th>{% if gr.ruolo == 'MEDICO' %}Agenda{% else %}Struttura{% endif %}</th><th></th></tr></thead>
+      … le righe di oggi, identiche (righe 35-44) …
+    </table>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

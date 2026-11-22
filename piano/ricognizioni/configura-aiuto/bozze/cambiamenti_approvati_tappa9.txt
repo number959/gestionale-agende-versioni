@@ -1,0 +1,10 @@
+# BOZZA tappa 9: righe da aggiungere a strumenti/cambiamenti_approvati.txt SOLO dopo il sì di Giovanni ai testi.
+# Campi separati da TAB, come nel file vero. Attenzione: «aggiunto» lascia passare solo elementi che il principale NON
+# ha; le linguette ripetono parole e indirizzi che il principale ha già nel menu («Anagrafiche», /anagrafiche…):
+# quelle righe non bastano, serve che il lanciatore salti la cornice e le linguette (domanda per la tappa 2).
+aggiunto	testo	^Configura · tutte le sedi$	tappa 9: la riga piccola sopra il titolo di Configura (tavole Conf1-7)
+aggiunto	testo	^Le anagrafiche, le strutture del gruppo, i messaggi ai pazienti e le impostazioni del programma\.$	tappa 9: il sottotitolo di Configura (tavole Conf1-7)
+aggiunto	testo	^Pagina non trovata$	tappa 9: la pagina 404 in italiano (oggi la pagina inglese di Flask)
+aggiunto	testo	^Questo indirizzo non porta a nessuna pagina del programma: forse è scritto male, oppure quello che mostrava è stato eliminato\.$	tappa 9: il testo della pagina 404 (da approvare)
+# La 404 il lanciatore la vede solo se un collegamento della pagina porta a un indirizzo che non esiste (non dovrebbe):
+# la si prova con prove nuove (stato 404, testo italiano, senza cornice sotto /riepilogo-live, JSON per i .json).

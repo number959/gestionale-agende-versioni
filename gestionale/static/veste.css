@@ -1,0 +1,531 @@
+/* La veste nuova (1.13, tappa 1-bis): l'aspetto dei pezzi comuni di templates/_pezzi.html.
+   Regole (prove_mattoni.py le controlla):
+   - tutte le classi cominciano con «v-» (veste) e nessuna è già usata dalle pagine di oggi; ogni selettore ha un pezzo
+     v-. Le sole classi senza prefisso sono quelle che servono al JavaScript di oggi e che i pezzi tengono apposta
+     (primario, gruppo-comandi, apri-gruppo, tendina, aperto, numeri, allarme);
+   - nessun colore scritto qui: solo var(--v-...) di gettoni.css;
+   - caratteri, spazi, raggi, ombre e altezze dalle scale di gettoni.css; le poche misure proprie di un pezzo (pillola,
+     punto, contatore, freccia della tendina) sono scritte una volta sola, qui;
+   - questo file sta fuori dallo strato «vecchio» (base.html): vince su stile.css, animazioni.css e tema-scuro.css
+     senza !important (restano più forti solo i loro !important: [hidden], stampa, «riduci movimento»). Per questo un
+     pezzo che tiene una classe di oggi (elenco, numeri, vuoto, ricerca…) scrive qui ogni proprietà che quella classe
+     cambierebbe: margini compresi.
+   Il tema scuro non ha regole qui: lo fanno i gettoni, che cambiano valore sotto html.scuro. */
+
+/* ------------------------------------------------------------------ base dei pezzi */
+.v-pagina, .v-scheda, .v-barra-comandi, .v-striscia, .v-linguette, .v-tabella-contenitore, .v-intestazione {
+  box-sizing: border-box;
+  letter-spacing: var(--v-lettere);
+}
+.v-pagina *, .v-pagina *::before, .v-pagina *::after { box-sizing: border-box; }
+.v-pagina {
+  display: flex; flex-direction: column; gap: var(--v-spazio-7);
+  margin: 0; padding: var(--v-spazio-7) var(--v-spazio-9);
+  min-width: 0;
+  background: var(--v-fondo); color: var(--v-testo);
+  font: var(--v-car-n)/var(--v-int-n) var(--v-corpo);
+}
+:where(.v-pagina) a:not([class]) { color: var(--v-collegamento); }
+:where(.v-pagina) a:not([class]):hover { color: var(--v-testo); }   /* il premuto in scuro è scuro: sul fondo non si leggerebbe */
+
+/* ------------------------------------------------------------------ intestazione della pagina */
+.v-intestazione { display: flex; flex-direction: column; gap: var(--v-spazio-2); min-width: 0; margin: 0; }
+.v-sopra { font-size: var(--v-car-m); line-height: var(--v-int-m); color: var(--v-testo-tenue); }
+.v-titolo {
+  margin: 0;
+  font-family: var(--v-titoli); font-weight: var(--v-peso-medio);
+  font-size: var(--v-car-t1); line-height: var(--v-int-t1); letter-spacing: -0.01em;
+  color: var(--v-testo);
+}
+.v-titolo-sezione {
+  margin: 0;
+  font-family: var(--v-titoli); font-weight: var(--v-peso-medio);
+  font-size: var(--v-car-t2); line-height: var(--v-int-t2);
+  color: var(--v-testo);
+}
+.v-sotto { margin: 0; font-size: var(--v-car-l); line-height: var(--v-int-l); color: var(--v-testo-tenue); }
+.v-sotto a { color: var(--v-collegamento); }
+
+/* ------------------------------------------------------------------ scheda */
+.v-scheda {
+  display: flex; flex-direction: column; gap: var(--v-spazio-5);
+  min-width: 0; margin: 0;
+  padding: var(--v-spazio-7) var(--v-spazio-8);
+  background: var(--v-superficie); color: var(--v-testo);
+  border: 1px solid var(--v-riga); border-radius: var(--v-raggio-4);
+  box-shadow: var(--v-ombra-1);
+}
+.v-scheda-testa { display: flex; flex-direction: column; gap: var(--v-spazio-1); }
+.v-scheda-titolo {
+  margin: 0;
+  font-family: var(--v-titoli); font-weight: var(--v-peso-forte);
+  font-size: var(--v-car-t3); line-height: var(--v-int-t3);
+  color: var(--v-testo);
+}
+.v-scheda-sotto { margin: 0; font-size: var(--v-car-m); line-height: var(--v-int-m); color: var(--v-testo-tenue); }
+.v-scheda.v-attaccata { padding: 0; overflow: hidden; }            /* una tabella che tocca i bordi */
+.v-scheda.v-attaccata > .v-scheda-testa { padding: var(--v-spazio-7) var(--v-spazio-8) 0; }
+.v-scheda.v-sabbia { background: var(--v-sabbia); border-color: var(--v-sabbia); color: var(--v-avviso-testo); }
+
+/* il testo «nessun dato» (oggi p.vuoto, che darebbe 26px sotto: qui il margine è zero) */
+.v-vuoto { margin: 0; color: var(--v-testo-tenue); font-size: var(--v-car-n); line-height: var(--v-int-n); }
+
+/* ------------------------------------------------------------------ tabella */
+.v-tabella-contenitore {
+  max-width: 100%; overflow-x: auto; margin: 0;
+  background: var(--v-superficie);
+  border: 1px solid var(--v-riga); border-radius: var(--v-raggio-4);
+  box-shadow: var(--v-ombra-1);
+}
+.v-scheda .v-tabella-contenitore { border: 0; border-radius: 0; box-shadow: none; }
+table.v-tabella {
+  width: 100%; margin: 0; border-collapse: collapse;   /* margin: con «elenco» (animazioni.js) stile.css darebbe 26px sotto */
+  background: transparent; color: var(--v-testo);
+  font-size: var(--v-car-n); line-height: var(--v-int-n);
+}
+table.v-tabella th, table.v-tabella td {
+  padding: var(--v-spazio-4) var(--v-spazio-6);
+  border: 0; border-top: 1px solid var(--v-riga);
+  background: transparent;
+  text-align: left; vertical-align: top;
+}
+table.v-tabella thead th {
+  border-top: 0;
+  background: var(--v-incasso); color: var(--v-testo-medio);
+  font-family: var(--v-corpo);
+  font-size: var(--v-car-m); line-height: var(--v-int-m); font-weight: var(--v-peso-forte);
+  white-space: nowrap;
+}
+table.v-tabella td { color: var(--v-testo-medio); }
+table.v-tabella td:first-child { color: var(--v-testo); }
+table.v-tabella .v-numero { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.v-tabella tr.v-totale td { background: var(--v-incasso); color: var(--v-testo); font-weight: var(--v-peso-titolo); }
+table.v-tabella tr.v-spento td { color: var(--v-testo-tenue); }
+/* la riga piccola sotto un nome («Ambulatorio 1»): un nome suo, diverso dal bottone piccolo */
+.v-testo-piccolo { font-size: var(--v-car-s); line-height: var(--v-int-s); color: var(--v-testo-tenue); }
+table.v-tabella td small, table.v-tabella .v-testo-piccolo { display: block; }
+
+/* ------------------------------------------------------------------ pillole dello stato (sempre parola + punto, mai solo colore) */
+.v-pillola {
+  display: inline-flex; align-items: center; gap: var(--v-spazio-3);
+  height: 26px; padding: 0 var(--v-spazio-5);
+  border: 1px solid transparent; border-radius: var(--v-raggio-pieno);
+  font-size: var(--v-car-s); line-height: var(--v-int-s); font-weight: var(--v-peso-forte);
+  white-space: nowrap;
+}
+.v-punto { flex: none; width: 7px; height: 7px; border-radius: var(--v-raggio-pieno); background: currentColor; }
+.v-pillola-prenotato { background: var(--v-superficie); border: 1px dashed var(--v-segno-grigio); color: var(--v-testo-tenue); }
+.v-pillola-prenotato .v-punto { background: var(--v-segno-grigio); }
+.v-pillola-confermato { background: var(--v-confermato); color: var(--v-confermato-testo); }
+.v-pillola-confermato .v-punto { background: var(--v-azzurro); }
+.v-pillola-arrivato { background: var(--v-occupato); color: var(--v-verde-testo); }
+.v-pillola-arrivato .v-punto { background: var(--v-verde); }
+.v-pillola-non_presentato { background: var(--v-rosso-fondo); color: var(--v-rosso); }
+.v-pillola-non_presentato .v-punto { background: var(--v-rosso); }
+.v-pillola-disdetto { background: var(--v-chiuso); color: var(--v-testo-tenue); text-decoration: line-through; }
+.v-pillola-disdetto .v-punto { background: var(--v-segno-grigio); }
+.v-pillola-sala { background: var(--v-sala-fondo); color: var(--v-sala-testo); }
+.v-pillola-sala .v-punto { background: var(--v-sala); }
+/* il contatore accanto a una voce o a una linguetta («Da confermare 3») */
+.v-conta {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 var(--v-spazio-3);
+  border-radius: var(--v-raggio-2);
+  background: var(--v-primario); color: var(--v-testo-su-pieno);
+  font-size: var(--v-car-xs); line-height: var(--v-int-xs); font-weight: var(--v-peso-titolo);
+}
+
+/* ------------------------------------------------------------------ striscia dei numeri. È un ul.numeri (l'aggancio
+   dell'animata: animazioni.js fa entrare le voci e contare i numeri): qui ogni proprietà di ul.numeri, ul.numeri b e
+   li.allarme di oggi è riscritta. Il filo fra le voci è a sinistra di ognuna, e quello della prima voce di ogni riga
+   resta fuori dal riquadro (overflow nascosto, padding sinistro zero): nella tavola la prima voce non ha il filo */
+.v-striscia {
+  display: flex; flex-wrap: wrap; gap: var(--v-spazio-5) 0;
+  list-style: none; margin: 0; overflow: hidden;
+  padding: var(--v-spazio-6) var(--v-spazio-2) var(--v-spazio-6) 0;
+  background: var(--v-superficie);
+  border: 1px solid var(--v-riga); border-radius: var(--v-raggio-4);
+  box-shadow: var(--v-ombra-1);
+  color: var(--v-testo-tenue);
+}
+.v-striscia-voce {
+  flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--v-spazio-4);
+  margin: 0 0 0 -1px; padding: 0 var(--v-spazio-7) 0 var(--v-spazio-8);
+  border-left: 1px solid var(--v-riga);
+  white-space: nowrap; color: var(--v-testo-tenue);
+}
+.v-striscia-numero {
+  margin: 0;
+  font-family: var(--v-titoli); font-weight: var(--v-peso-medio);
+  font-size: var(--v-car-num); line-height: var(--v-int-num);
+  font-variant-numeric: tabular-nums; color: var(--v-testo);
+}
+.v-striscia-cosa { font-size: var(--v-car-m); line-height: var(--v-int-m); color: var(--v-testo-tenue); }
+.v-striscia-voce.v-allarme, .v-striscia-voce.v-allarme .v-striscia-numero, .v-striscia-voce.v-allarme .v-striscia-cosa {
+  color: var(--v-rosso);
+}
+
+/* ------------------------------------------------------------------ barra dei comandi, bottoni, campi */
+.v-barra-comandi {
+  position: relative; z-index: 40;   /* come .barra di oggi: la tendina di «Stampa e scarica» copre quello che viene dopo */
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-4);
+  margin: 0;                         /* anche quando la barra è il modulo di oggi (form.ricerca, form.filtri: 18px sotto) */
+  padding: var(--v-spazio-4) var(--v-spazio-5);
+  background: var(--v-superficie);
+  border: 1px solid var(--v-riga); border-radius: var(--v-raggio-4);
+  box-shadow: var(--v-ombra-1);
+}
+/* due barre una sotto l'altra: quella con la tendina aperta (mouse, fuoco o .aperto di gestionale.js) passa sopra */
+.v-barra-comandi:is(:hover, :focus-within), .v-barra-comandi:has(.aperto) { z-index: 41; }
+.v-barra-comandi form { display: contents; }
+.v-a-destra { margin-left: auto; }
+.v-stacco { margin-left: var(--v-spazio-4); }
+
+.v-bottone, .v-passo {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--v-spazio-4);
+  height: var(--v-alto); margin: 0; padding: 0 var(--v-spazio-5);
+  border: 1px solid var(--v-riga); border-radius: var(--v-raggio-3);
+  background: var(--v-superficie); color: var(--v-testo);
+  font: inherit; font-weight: var(--v-peso-forte); text-decoration: none; white-space: nowrap;
+  cursor: pointer;
+}
+.v-bottone:hover, .v-passo:hover { border-color: var(--v-primario-testo); color: var(--v-primario-testo); }
+.v-passo { width: var(--v-alto); padding: 0; }
+.v-bottone.v-principale { background: var(--v-primario); border-color: var(--v-primario); color: var(--v-testo-su-pieno); }
+.v-bottone.v-principale:hover { background: var(--v-primario-premuto); border-color: var(--v-primario-premuto); color: var(--v-testo-su-pieno); }
+.v-bottone.v-pericolo { border-color: var(--v-rosso-riga); color: var(--v-rosso); }
+.v-bottone.v-pericolo:hover { border-color: var(--v-rosso); color: var(--v-rosso); }
+/* il bottone piccolo (nelle righe delle tabelle): un nome suo, diverso dalla riga piccola di testo */
+.v-bottone.v-bottone-piccolo { height: var(--v-alto-piccolo); padding: 0 var(--v-spazio-4); font-size: var(--v-car-m); }
+/* spento: niente opacità (abbasserebbe il contrasto), fondo chiuso e testo tenue, che si leggono ancora */
+.v-bottone:disabled, .v-bottone[aria-disabled="true"],
+.v-bottone:disabled:hover, .v-bottone[aria-disabled="true"]:hover {
+  background: var(--v-chiuso); border-color: var(--v-riga); color: var(--v-testo-tenue); cursor: default;
+}
+.v-bottone svg, .v-passo svg { flex: none; width: 18px; height: 18px; }
+.v-bottone:focus-visible, .v-passo:focus-visible, .v-linguetta:focus-visible, .v-tendina select:focus-visible,
+.v-campo :is(input, select, textarea):focus-visible, .v-stampa .tendina a:focus-visible {
+  outline: 2px solid var(--v-fuoco); outline-offset: 2px;
+}
+
+/* la tendina di scelta (<label class="v-tendina"> con dentro il <select> di oggi e la freccia chevron-down) */
+.v-tendina { position: relative; display: inline-flex; align-items: center; margin: 0; }
+.v-tendina select {
+  height: var(--v-alto); margin: 0; padding: 0 36px 0 var(--v-spazio-5);
+  border: 1px solid var(--v-riga-campo); border-radius: var(--v-raggio-3);
+  background: var(--v-superficie); color: var(--v-testo);
+  font: inherit; font-weight: var(--v-peso-medio);
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+}
+.v-tendina > svg { position: absolute; right: var(--v-spazio-5); width: 16px; height: 16px; pointer-events: none; color: var(--v-testo-tenue); }
+
+.v-campo { display: flex; flex-direction: column; gap: var(--v-spazio-3); min-width: 0; margin: 0; }
+.v-campo > label, .v-campo > .v-etichetta {
+  margin: 0; font-size: var(--v-car-m); line-height: var(--v-int-m); font-weight: var(--v-peso-forte); color: var(--v-testo-medio);
+}
+.v-campo :is(input:not([type=checkbox]):not([type=radio]), select, textarea) {
+  width: 100%; min-height: var(--v-alto); margin: 0; padding: 0 var(--v-spazio-5);
+  border: 1px solid var(--v-riga-campo); border-radius: var(--v-raggio-3);
+  background: var(--v-superficie); color: var(--v-testo);
+  font: inherit;
+}
+.v-campo textarea { padding: var(--v-spazio-4) var(--v-spazio-5); }
+.v-campo .v-aiuto { margin: 0; font-size: var(--v-car-s); line-height: var(--v-int-s); color: var(--v-testo-tenue); }
+.v-campo :is(input, select, textarea)::placeholder { color: var(--v-testo-tenue); opacity: 1; }
+
+/* ------------------------------------------------------------------ linguette */
+.v-linguette {
+  align-self: flex-start; max-width: 100%;
+  display: flex; flex-wrap: wrap; gap: var(--v-spazio-1);
+  margin: 0; padding: var(--v-spazio-2);
+  background: var(--v-incasso); border-radius: var(--v-raggio-3);
+}
+.v-linguetta {
+  display: inline-flex; align-items: center; gap: var(--v-spazio-4);
+  height: var(--v-alto-piccolo); padding: 0 var(--v-spazio-6);
+  border-radius: var(--v-raggio-2);
+  background: transparent; color: var(--v-testo-medio);
+  font-size: var(--v-car-n); font-weight: var(--v-peso-forte); text-decoration: none; white-space: nowrap;
+}
+.v-linguetta svg { flex: none; width: 14px; height: 14px; }
+.v-linguetta:hover { color: var(--v-primario-testo); }
+.v-linguetta[aria-current] { background: var(--v-primario-tinta); color: var(--v-primario-testo); }
+
+/* ------------------------------------------------------------------ «Stampa e scarica»: la tendina di oggi (stessi
+   nomi di classe per gestionale.js e guida.js: gruppo-comandi, apri-gruppo, tendina), con l'aspetto nuovo. Le voci
+   con un'icona (gli Strumenti dei Turni) la tengono a sinistra, su due righe */
+.v-stampa { position: relative; display: inline-flex; margin: 0; }
+.v-stampa .apri-gruppo .v-freccia { display: inline-flex; color: var(--v-testo-tenue); }
+.v-stampa .apri-gruppo .v-freccia svg { width: 16px; height: 16px; }
+.v-stampa .tendina {
+  min-width: 300px; margin: 0; padding: var(--v-spazio-3);
+  background: var(--v-superficie); color: var(--v-testo);
+  border: 1px solid var(--v-riga); border-radius: var(--v-raggio-3);
+  box-shadow: var(--v-ombra-3);
+}
+.v-stampa .tendina :is(a, button) {
+  display: grid; grid-template-columns: 1fr; column-gap: var(--v-spazio-4);
+  width: 100%; margin: 0; padding: var(--v-spazio-4) var(--v-spazio-5);
+  border: 0; border-radius: var(--v-raggio-2);
+  background: transparent; color: var(--v-testo); text-align: left; text-decoration: none;
+  font: inherit; cursor: pointer;
+}
+.v-stampa .tendina :is(a, button):has(> svg) { grid-template-columns: 18px 1fr; }
+.v-stampa .tendina :is(a, button) > svg { grid-row: 1 / span 2; width: 18px; height: 18px; margin-top: var(--v-spazio-1); color: var(--v-testo-tenue); }
+.v-stampa .tendina :is(a, button) b { display: block; margin: 0; font-size: var(--v-car-n); font-weight: var(--v-peso-forte); }
+.v-stampa .tendina :is(a, button) small {
+  display: block; margin: 0; font-size: var(--v-car-s); line-height: var(--v-int-s); color: var(--v-testo-tenue);
+}
+.v-stampa .tendina :is(a, button):is(:hover, :focus) { background: var(--v-primario-tinta); color: var(--v-testo); outline: none; }
+/* sulla tinta la riga piccola passa al testo medio: in scuro il tenue scenderebbe a 4,1:1 con certi colori */
+.v-stampa .tendina :is(a, button):is(:hover, :focus) small { color: var(--v-testo-medio); }
+
+/* ------------------------------------------------------------------ riquadri di avviso dentro la pagina */
+.v-riquadro { margin: 0; padding: var(--v-spazio-5) var(--v-spazio-6); border: 1px solid var(--v-riga); border-radius: var(--v-raggio-3); }
+.v-riquadro-avviso { background: var(--v-avviso-fondo); border-color: var(--v-avviso-riga); color: var(--v-avviso-testo); }
+.v-riquadro-errore { background: var(--v-rosso-fondo); border-color: var(--v-rosso-riga); color: var(--v-rosso-forte); }
+.v-riquadro-ok { background: var(--v-ok-fondo); border-color: var(--v-ok-fondo); color: var(--v-ok-testo); }
+
+/* ------------------------------------------------------------------ la cornice (tappa 2): menu a sinistra, barra in
+   alto, linguette in cima al contenuto (base.html, _menu.html, _barra.html, _linguette.html; tavole Nefro-*).
+   Solo sullo schermo: in stampa la cornice sparisce e la pagina resta quella di prima (in fondo, @media print).
+   Le pagine di oggi stanno dentro <main> così come sono, con i loro margini e il loro fondo.
+   - Larghezze: da 1200 px il menu è largo 248 px, con il nome delle voci; sotto 1200 px solo le icone (72 px; il nome
+     resta per i lettori di schermo e nel title) e al posto del logo le iniziali della struttura; sotto 600 px (il
+     telefono) il menu torna in alto, su una riga di icone, e la pagina ha tutta la larghezza.
+   - Il menu resta fermo mentre la pagina scorre (sticky, alto quanto la finestra): se non ci sta (1366×657), scorre
+     per conto suo la parte delle voci; Aiuto e Configura restano in fondo, e la tendina Aiuto si apre a destra, fuori
+     dalla parte che scorre (dentro sarebbe tagliata).
+   - Il nav tiene la classe «menu» (la guida e le prove lo cercano), e con lei arrivano dallo strato le regole del menu
+     di prima (fondo blu, opacità, bordo sotto, 13 px, a capo; nel tema scuro il testo bianco): qui ogni proprietà che
+     quelle cambiano è riscritta, sul nav, sulle voci, sulla tendina e sul contatore. La tendina si apre ancora con le
+     regole di prima (passandoci sopra, con il fuoco, con .aperto di gestionale.js): qui mai «display» sulla tendina.
+   - Piani: la barra della pagina di oggi (.barra) è a 40 e 41; la barra in alto a 42, con i risultati della ricerca;
+     il menu a 45, con la tendina Aiuto sopra la pagina; i tasti rapidi a 70 e la guida da 900 restano sopra. */
+@media screen {
+  .v-cornice {
+    display: grid; grid-template-columns: 248px minmax(0, 1fr); grid-template-rows: auto auto 1fr;
+    min-height: 100vh;
+  }
+  .v-cornice > main { grid-column: 2; grid-row: 3; min-width: 0; }
+  /* il logo della pagina di oggi (.marchio nella sua barra): c'è già nel menu; resta in stampa */
+  .v-cornice .marchio { display: none; }
+  /* «Prima volta qui?» in basso a sinistra coprirebbe Aiuto e Configura: si sposta accanto al menu */
+  .v-cornice ~ .giro-invito { left: calc(248px + var(--v-spazio-6)); }
+
+  .v-lato {
+    grid-column: 1; grid-row: 1 / 4; align-self: start;
+    position: sticky; top: 0; z-index: 45;
+    box-sizing: border-box; height: 100vh; min-width: 0;
+    display: flex; flex-direction: column; gap: var(--v-spazio-3);
+    padding: 22px 14px var(--v-spazio-6);
+    background: var(--v-superficie-tenue); border-right: 1px solid var(--v-riga);
+    color: var(--v-testo-medio);
+    font: var(--v-car-n)/var(--v-int-n) var(--v-corpo); letter-spacing: var(--v-lettere);
+  }
+  .v-marchio { flex: none; display: flex; flex-direction: column; gap: var(--v-spazio-4); padding: var(--v-spazio-2) 2px var(--v-spazio-6); min-width: 0; }
+  /* il logo su un fondo chiaro anche nel tema scuro (--v-fondo-logo): i loghi sono fatti per il fondo bianco.
+     align-self: flex-start, perché in una colonna flex il logo si allungherebbe fino alla larghezza della colonna
+     mentre l'altezza resta al più 36 px: un logo quadrato diventava un'ellisse piatta (prove_cornice_browser.py, 4-bis) */
+  .v-marchio-logo {
+    display: block; align-self: flex-start; width: auto; height: auto; max-width: 216px; max-height: 36px;
+    padding: 3px 6px; margin-left: -6px; border-radius: var(--v-raggio-1); background: var(--v-fondo-logo);
+  }
+  .v-marchio-nome {
+    font-family: var(--v-titoli); font-weight: var(--v-peso-titolo);
+    font-size: var(--v-car-t3); line-height: var(--v-int-t3); color: var(--v-testo);
+    overflow-wrap: anywhere;
+  }
+  .v-marchio-sotto {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--v-spazio-3); padding-left: var(--v-spazio-2);
+    font-size: var(--v-car-s); line-height: var(--v-int-s); color: var(--v-testo-tenue);
+  }
+  .v-marchio-sotto b {
+    font-family: var(--v-titoli); font-weight: var(--v-peso-titolo); font-size: var(--v-car-l); color: var(--v-testo);
+  }
+
+  /* il nav: tutte le proprietà del .menu di prima (stile.css, tema-scuro.css) riscritte */
+  .v-menu {
+    flex: 1 1 auto; min-height: 0;
+    display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0;
+    margin: 0; padding: 0; background: transparent; font-size: inherit;
+  }
+  .v-menu-scorre { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--v-spazio-5); }
+  .v-menu-gruppo { display: flex; flex-direction: column; gap: var(--v-spazio-1); }
+  .v-menu-titolo { padding: var(--v-spazio-3) var(--v-spazio-5) var(--v-spazio-1); font-size: var(--v-car-s); line-height: var(--v-int-s); color: var(--v-testo-tenue); }
+  .v-menu-fondo {
+    flex: none; display: flex; flex-direction: column; gap: var(--v-spazio-1);
+    padding-top: var(--v-spazio-5); margin-top: var(--v-spazio-2); border-top: 1px solid var(--v-riga);
+  }
+  /* la voce (collegamento o pulsante della tendina): riscrive .menu a, .menu .apri-gruppo e html.scuro .menu a */
+  .v-voce {
+    position: relative; box-sizing: border-box;
+    display: flex; align-items: center; gap: var(--v-spazio-5);
+    width: 100%; height: var(--v-alto); margin: 0; padding: 0 var(--v-spazio-5);
+    border: 0; border-radius: var(--v-raggio-3);
+    background: transparent; color: var(--v-testo-medio); opacity: 1;
+    font: inherit; font-weight: var(--v-peso-medio); text-align: left; text-decoration: none; white-space: nowrap;
+    cursor: pointer;
+  }
+  .v-voce svg { flex: none; width: 20px; height: 20px; }
+  .v-voce-nome { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .v-voce:hover { background: var(--v-incasso); color: var(--v-testo); }
+  .v-voce[aria-current] { background: var(--v-primario-tinta); color: var(--v-primario-testo); font-weight: var(--v-peso-forte); }
+  .v-voce:focus-visible { outline: 2px solid var(--v-fuoco); outline-offset: -2px; }
+  /* il numero accanto a Segreteria (tiene la classe contatore di prima per l'animata: qui riscritta) */
+  .v-menu .v-conta { flex: none; margin: 0 0 0 auto; text-align: center; }
+  /* la tendina Aiuto: si apre a destra del menu, in su dal fondo; mai «display» qui (lo decidono le regole di prima) */
+  .v-gruppo { position: relative; display: block; }
+  .v-gruppo > .tendina {
+    top: auto; bottom: 0; left: 100%; right: auto; z-index: 50;
+    min-width: 300px; margin: 0; padding: var(--v-spazio-3);
+    background: var(--v-superficie); color: var(--v-testo);
+    border: 1px solid var(--v-riga); border-radius: var(--v-raggio-3);
+    box-shadow: var(--v-ombra-3);
+  }
+  .v-gruppo > .tendina a {
+    display: block; margin: 0; padding: var(--v-spazio-4) var(--v-spazio-5);
+    border: 0; border-radius: var(--v-raggio-2); box-shadow: none;
+    background: transparent; color: var(--v-testo); opacity: 1; text-decoration: none; white-space: normal;
+  }
+  .v-gruppo > .tendina a b { display: block; margin: 0; font-size: var(--v-car-n); font-weight: var(--v-peso-forte); }
+  .v-gruppo > .tendina a small { display: block; margin: 0; font-size: var(--v-car-s); line-height: var(--v-int-s); color: var(--v-testo-tenue); }
+  .v-gruppo > .tendina a:is(:hover, :focus) { background: var(--v-primario-tinta); color: var(--v-testo); outline: none; }
+  .v-gruppo > .tendina a:is(:hover, :focus) small { color: var(--v-testo-medio); }
+
+  /* la barra in alto: 18 px sopra, 44 di ricerca = 62, come nelle tavole. A sinistra i 18 px delle pagine di oggi
+     (.barra), che arrivano ai 36 delle tavole quando ogni area ha la sua testa nuova (tappe 4-9) */
+  .v-barra {
+    grid-column: 2; grid-row: 1; position: relative; z-index: 42; min-width: 0;
+    display: flex; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-5) 14px;
+    margin: 0; padding: 18px 18px 0;
+    color: var(--v-testo-tenue);
+    font: var(--v-car-n)/var(--v-int-n) var(--v-corpo); letter-spacing: var(--v-lettere);
+  }
+  .v-percorso {
+    flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-4);
+    margin: 0; font-size: var(--v-car-m); line-height: var(--v-int-m); color: var(--v-testo-tenue);
+  }
+  .v-percorso span + span::before { content: '›'; margin-right: var(--v-spazio-4); color: var(--v-testo-tenue); }
+  .v-percorso span:last-child { color: var(--v-testo); font-weight: var(--v-peso-forte); }
+  .v-cerca {
+    position: relative; flex: 0 1 320px; min-width: 0; box-sizing: border-box;
+    display: flex; align-items: center; gap: 10px;
+    height: var(--v-alto-grande); margin: 0 0 0 auto; padding: 0 14px;
+    background: var(--v-superficie); color: var(--v-testo-tenue);
+    border: 1px solid var(--v-riga); border-radius: var(--v-raggio-3);
+  }
+  .v-cerca:focus-within { border-color: var(--v-fuoco); box-shadow: 0 0 0 1px var(--v-fuoco); }
+  .v-cerca > svg { flex: none; width: 18px; height: 18px; }
+  .v-cerca input {
+    flex: 1 1 auto; min-width: 0; width: 100%; margin: 0; padding: 0;
+    border: 0; outline: 0; background: transparent; color: var(--v-testo);
+    font: inherit; font-size: var(--v-car-n);
+  }
+  .v-cerca input::placeholder { color: var(--v-testo-tenue); opacity: 1; }
+  .v-posto-campanella { flex: none; width: var(--v-alto-grande); height: var(--v-alto-grande); }
+
+  /* le linguette in cima al contenuto (il pezzo di _pezzi.html), allineate alle pagine di oggi */
+  .v-linguette-cornice { grid-column: 2; grid-row: 2; display: flex; min-width: 0; padding: 14px 18px 0; letter-spacing: var(--v-lettere); }
+  .v-linguette-cornice .v-linguetta:focus-visible { outline: 2px solid var(--v-fuoco); outline-offset: 2px; }
+}
+
+/* dai 600 px in su la barra in alto resta su una riga: fra 683 e 760 px il posto della campanella andava a capo da solo
+   e la barra diventava alta 118 px (una riga vuota tolta all'agenda); il percorso va a capo dentro il suo spazio */
+@media screen and (min-width: 600px) {
+  .v-barra { flex-wrap: nowrap; }
+}
+
+/* i Turni (mese e settimana): il riquadro che scorre è alto «la finestra meno 230 px» (stile.css), pensato per il menu
+   in alto di 35 px; nella cornice comincia 89 px più in basso (la barra in alto, e la testa della pagina più stretta
+   che va a capo) e finiva 70 px sotto il bordo della finestra, con la sua barra di scorrimento di lato. Sotto 761 px
+   stile.css lo lascia alto quanto vuole: lì niente. Le colonne, che a 1366 accanto al menu non entrano tutte, le
+   sistema la tappa 7 (DECISIONI-VESTE.md, Turni) */
+@media screen and (min-width: 761px) {
+  .v-cornice .scorri-turni { max-height: calc(100vh - 320px); }
+}
+
+/* sotto 1200 px: solo le icone, il nome per i lettori di schermo e nel title; le iniziali al posto del logo */
+@media screen and (max-width: 1199px) {
+  .v-cornice { grid-template-columns: 72px minmax(0, 1fr); }
+  .v-cornice ~ .giro-invito { left: calc(72px + var(--v-spazio-6)); }
+  .v-lato { padding: var(--v-spazio-6) var(--v-spazio-5); }
+  .v-marchio { position: relative; align-items: center; padding: 0 0 var(--v-spazio-4); }
+  .v-marchio > img { display: none; }
+  /* il nome della struttura non si vede (ci sono le iniziali) ma resta per i lettori di schermo */
+  .v-marchio > span {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
+  .v-marchio::before {
+    content: attr(data-iniziali);
+    display: flex; align-items: center; justify-content: center;
+    width: var(--v-alto-grande); height: var(--v-alto-grande); border-radius: var(--v-raggio-3);
+    background: var(--v-primario-tinta); color: var(--v-primario-testo);
+    font-family: var(--v-titoli); font-weight: var(--v-peso-titolo); font-size: var(--v-car-l);
+  }
+  .v-menu-titolo { display: none; }
+  .v-menu-scorre { gap: var(--v-spazio-4); }
+  .v-menu-gruppo + .v-menu-gruppo { padding-top: var(--v-spazio-4); border-top: 1px solid var(--v-riga); }
+  .v-voce { justify-content: center; gap: 0; padding: 0; }
+  .v-voce-nome {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
+  .v-menu .v-conta { position: absolute; top: -2px; right: -4px; min-width: 18px; height: 18px; padding: 0 var(--v-spazio-2); }
+}
+
+/* sotto 600 px (il telefono): il menu in alto, una riga di icone che va a capo; la pagina ha tutta la larghezza */
+@media screen and (max-width: 599px) {
+  .v-cornice { display: block; }
+  .v-cornice ~ .giro-invito { left: var(--v-spazio-6); }
+  .v-lato {
+    position: static; height: auto; flex-direction: row; align-items: center;
+    padding: var(--v-spazio-3) var(--v-spazio-4); border-right: 0; border-bottom: 1px solid var(--v-riga);
+  }
+  .v-marchio { display: none; }
+  .v-menu { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-1); }
+  .v-menu-scorre, .v-menu-gruppo, .v-menu-fondo { display: contents; }   /* tutte le voci in una riga che va a capo */
+  .v-voce { width: var(--v-alto); }
+  .v-gruppo > .tendina { top: 100%; bottom: auto; left: auto; right: 0; }
+  .v-barra { padding: var(--v-spazio-4) var(--v-spazio-5) 0; }
+  .v-cerca { flex: 1 1 100%; margin: 0; }
+  .v-posto-campanella { display: none; }
+  .v-linguette-cornice { padding: var(--v-spazio-4) var(--v-spazio-5) 0; }
+}
+
+/* ------------------------------------------------------------------ stampa: i comandi non vanno sulla carta */
+@media print {
+  .v-lato, .v-barra, .v-linguette-cornice { display: none; }   /* la cornice: la pagina stampata resta quella di prima */
+  .v-pagina { padding: 0; background: none; }
+  .v-barra-comandi, .v-linguette, .v-stampa { display: none; }
+  .v-scheda, .v-striscia, .v-tabella-contenitore { box-shadow: none; }
+}
+
+/* ------------------------------------------------------------------ chi è entrato da un altro PC (1.13, accessi.py)
+   Nella barra in alto, dopo la ricerca, solo dagli altri PC (templates/_utente_rete.html dentro _barra.html): l'icona,
+   il nome, «La mia password» ed «Esci» su una riga; «Entrato da un altro PC come» resta per i lettori di schermo e nel
+   title (scritto per intero, a 1366 px il percorso andava a capo). Un nome lungo si accorcia con i puntini. Fuori dalla
+   barra (nessuna pagina oggi) resta la riga intera. Con questa riga la barra resta alta 62 px anche fra 1024 e 1366 px
+   (revisione dell'unione: a 1280 e a 1200 il percorso andava su due righe e la barra passava a 66): la ricerca più stretta
+   (240 px, almeno 160), il nome al più 9em, e il percorso su una riga, dove si accorcia con i puntini solo il nome della
+   struttura. Senza ricerca (accessi.ricerca_utile) la riga va a destra, dove sarebbe stata la ricerca. */
+.v-utente-rete {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-3) var(--v-spazio-4);
+  margin: 0; font-size: var(--v-car-m); line-height: var(--v-int-m);
+}
+.v-utente-rete form { display: inline; margin: 0; }
+.v-barra .v-utente-rete { flex: none; flex-wrap: nowrap; gap: var(--v-spazio-3); white-space: nowrap; color: var(--v-testo-medio); }
+.v-barra .v-utente-rete > svg { flex: none; width: 18px; height: 18px; }
+.v-barra .v-utente-rete b {
+  display: inline-block; max-width: 9em; overflow: hidden; text-overflow: ellipsis;
+  color: var(--v-testo); font-weight: var(--v-peso-forte);
+}
+.v-barra .v-utente-come {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+.v-barra:not(:has(.v-cerca)) .v-utente-rete { margin-left: auto; }
+@media screen and (min-width: 600px) {
+  .v-barra:has(.v-utente-rete) .v-cerca { flex: 0 1 240px; min-width: 160px; }
+  .v-barra:has(.v-utente-rete) .v-percorso { flex-wrap: nowrap; }
+  .v-barra:has(.v-utente-rete) .v-percorso span { flex: none; white-space: nowrap; }
+  .v-barra:has(.v-utente-rete) .v-percorso span:first-child { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+}

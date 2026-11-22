@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import random
+import re
 import shutil
 import sys
 import tempfile
@@ -49,6 +50,14 @@ import servizi  # noqa: E402
 import viste  # noqa: E402
 from modelli import (crea_sessione, Struttura, Risorsa, Operatore, Turno, Assenza, Chiusura,  # noqa: E402
                      Modifica)
+from prove_dove import dove  # noqa: E402
+from prove_gemelli import manca  # noqa: E402
+from prove_cornice import CON_MENU, linguetta_accesa, voce_accesa  # noqa: E402
+
+
+def ambulatori_acceso(t):
+    return voce_accesa(t, 'menu-ambulatori')
+
 
 A.app.config['TESTING'] = True
 esiti, _area, _n = [], [''], [0]
@@ -69,8 +78,8 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        riga = traceback.extract_tb(sys.exc_info()[2])[-1].lineno
-        esiti.append(('ROTTO', _area[0], nome, '%s (riga %d)' % (str(e) or 'asserzione fallita', riga)))
+        riga = dove(e).rsplit(':', 1)[-1]          # la riga della prova, anche quando cade un aiuto (manca)
+        esiti.append(('ROTTO', _area[0], nome, '%s (riga %s)' % (str(e) or 'asserzione fallita', riga)))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 
@@ -574,7 +583,11 @@ def b_sala_settimana_e_mese():
     parte = t[t.index('<tbody class="parte-sala"'):]
     assert 'Sala operatoria 2' in parte and '2 interventi' in parte and '/sala/2026-12-07?struttura=1' in parte
     assert 'Esempietti <small>senza turno</small>' in parte or 'Esempietti Rita <small>senza turno</small>' in parte, parte[:400]
-    assert 'Sala vecchia' not in t and 'Fittizi' not in t
+    # la sala spenta e la paziente non ci sono; i gemelli: la pagina Sala dello stesso lunedi le mostra tutte e due
+    # (l'intervento delle 9 nella sala spenta, quelli di Fittizi), quindi i due «non c'è» vedono davvero qualcosa
+    sala_lun = testo(C.get('/sala/%s?struttura=1' % LUN.isoformat()))
+    manca(t, 'Sala vecchia', dove_ce=sala_lun, perche='la sala spenta non entra nella settimana')
+    manca(t, 'Fittizi', dove_ce=sala_lun, perche='mai i pazienti nella settimana degli ambulatori')
     # la programmazione di dicembre: righe della sala con gli interventi nelle ore del turno, la frase con quelli fuori
     pr = AM.programmazione(s, 2026, 12, st)
     sala = {(r['risorsa'].nome, r['operatore'].cognome, r['giorno']): r for r in pr['sala']['righe']}
@@ -622,7 +635,8 @@ def b_sala_settimana_e_mese():
     assert righe[i20][2] == 'solo sala operatoria' and righe[i20 + 1][2:] == ['Sala operatoria', 'Esempietti Rita', 'fuori turno', 1], righe[i20:i20 + 2]
     t = testo(C.get('/ambulatori/mese/2026-12?struttura=1'))
     assert 'in sala 8 turni, 7 interventi' in t and 'di cui 5 fuori dai turni' in t and 'solo sala operatoria' in t, t[:300]
-    assert 'Fittizi' not in t
+    manca(t, 'Fittizi', dove_ce=lambda: testo(C.get('/sala/%s?struttura=1' % LUN.isoformat())),
+          perche='mai i pazienti nella programmazione del mese (la pagina Sala invece li mostra)')
 
 
 prova('1.12.3: la sala operatoria nella settimana e nel mese, contro un calcolo a parte; ambulatori con gli stessi conti; '
@@ -748,7 +762,7 @@ def b_esportazioni():
         for parte in ('ambulatori', 'sala', 'tutto'):
             assert '/esportazioni/%s/%s/2026-12-09.xlsx?struttura=1' % (periodo, parte) in t, (periodo, parte)
     assert 'mercoledì 9 dicembre 2026' in t and '<small>dal 7 al 13 dicembre 2026</small>' in t and '<small>dicembre 2026</small>' in t
-    assert 'Esportazioni in Excel</b>' in t and 'class="gruppo attivo" data-guida="menu-ambulatori"' in t
+    assert linguetta_accesa(t) == 'Esportazioni in Excel' and ambulatori_acceso(t)
     # i collegamenti dalle altre pagine
     assert '/esportazioni?data=2026-12-07&amp;struttura=1' in testo(C.get('/giorno/2026-12-07?struttura=1'))
     t = testo(C.get('/ambulatori/settimana/2026-12-07?struttura=1'))
@@ -876,7 +890,9 @@ def b_per_medico():
     parte = t[t.index('<tbody class="parte-sala"'):]
     assert 'Gli interventi di Esempietti Rita quel giorno">2 interventi</a>' in parte
     assert 'Gli interventi di Galasso quel giorno">1 intervento</a>' in parte
-    assert 'senza chirurgo' not in parte and 'confermati o arrivati' in parte
+    # qui c'era anche «'senza chirurgo' not in parte», tolto (tappa 1): non poteva mai cadere, perché un intervento
+    # senza chirurgo non si può creare (Appuntamento.operatore_id è obbligatorio), quindi non c'è un gemello possibile
+    assert 'confermati o arrivati' in parte
 
 
 prova('1.12.5: il foglio «Per medico» di ogni esportazione contro un conto a parte (attivi, ambulatori e sala separati, '
@@ -954,7 +970,11 @@ def b_sala_casi_limite():
     t = testo(C.get('/ambulatori/mese/2026-12?struttura=1'))
     assert 'martedì 8</td>\n            <td colspan="4">chiusa: immacolata concezione' in t, t[t.find('martedì 8'):][:160]
     assert 'giovedì 10</td>\n            <td colspan="4">chiusa: manutenzione' in t, t[t.find('giovedì 10'):][:160]
-    assert 'fuori turno' in t and 'senza turno' not in t.split('details class="calendario-mese"')[1]
+    assert 'fuori turno' in t
+    # il calendario del mese dice «fuori turno»; il gemello: la pagina della settimana, sugli stessi dati, dice «senza turno»
+    manca(t.split('details class="calendario-mese"')[1], 'senza turno',
+          dove_ce=lambda: testo(C.get('/ambulatori/settimana/%s?struttura=1' % L2.isoformat())),
+          perche='nel calendario del mese si scrive «fuori turno»')
     _, wb = excel(C, '/esportazioni/mese/tutto/2026-12-01.xlsx?struttura=1')
     wc = wb['Calendario']
     per_data = {}
@@ -1148,10 +1168,15 @@ def c_altra_struttura():
     assert [r['risorsa'].nome for r in m['righe']] == ['Stanza Nord'] and m['righe'][0]['celle'][0]['presenze'][0]['operatore'].cognome == 'Galasso'
     s.close()
     # ... e dalla pagina, con ?struttura=
+    # i gemelli: le stesse pagine della prima struttura mostrano Ambulatorio 1
     t = testo(C.get('/ambulatori/settimana/%s?struttura=2' % LUN.isoformat()))
-    assert 'Stanza Nord' in t and 'Ambulatorio 1' not in t
+    assert 'Stanza Nord' in t
+    manca(t, 'Ambulatorio 1', dove_ce=lambda: testo(C.get('/ambulatori/settimana/%s?struttura=1' % LUN.isoformat())),
+          perche='le stanze della prima struttura non stanno nella settimana della seconda')
     t = testo(C.get('/ambulatori/mese/2026-12?struttura=2'))
-    assert 'Stanza Nord' in t and 'Ambulatorio 1' not in t
+    assert 'Stanza Nord' in t
+    manca(t, 'Ambulatorio 1', dove_ce=lambda: testo(C.get('/ambulatori/mese/2026-12?struttura=1')),
+          perche='le stanze della prima struttura non stanno nel mese della seconda')
 
 
 prova('gruppi per specialità (Senza specialità ultimo), ordine, date del mese tolti assenze, chiusura e Natale', c_gruppi_e_date)
@@ -1182,7 +1207,9 @@ def d_settimana():
     # 1.12.3: la sala operatoria in fondo, solo da guardare (si programma dalla pagina Sala)
     parte = t[t.index('<tbody class="parte-sala"'):t.index('</tbody>', t.index('<tbody class="parte-sala"'))]
     assert 'Sala operatoria' in parte and 'Esempietti' in parte and 'sala libera' in parte, parte[:300]
-    assert 'class="metti"' not in parte and 'togli-turno' not in parte, 'la sala non si cambia da qui'
+    assert 'class="metti"' not in parte, 'la sala non si cambia da qui'
+    # gemello: la «x» che toglie un turno c'è nella parte degli ambulatori della stessa pagina
+    manca(parte, 'togli-turno', dove_ce=t[:t.index('<tbody class="parte-sala"')], perche='la sala non si cambia da qui')
     assert 'Sala operatoria' not in t[:t.index('<tbody class="parte-sala"')].split('id="matrice-ambulatori"')[1]
     # i nomi aprono il turno, tornando qui
     s = S()
@@ -1206,8 +1233,8 @@ def d_settimana():
         # il modulo del «+» (stanza e poi giorno); quello della «x» ha prima il turno
         ha = ('name="risorsa" value="%d"><input type="hidden" name="data" value="%s"' % (I['Ambulatorio 2'], g.isoformat())) in t3
         assert ha == (g >= OGGI), (g, ha)
-    # il menu: il gruppo Ambulatori e' segnato attivo
-    assert 'Ambulatori<span class="freccia"' in t and 'class="gruppo attivo" data-guida="menu-ambulatori"' in t
+    # il menu: la voce Ambulatori e' accesa, con la sua linguetta (dalla tappa 2)
+    assert ambulatori_acceso(t) and linguetta_accesa(t) == 'Pianificazione della settimana', linguetta_accesa(t)
     # stampa e scarica
     assert ('/ambulatori/settimana/2026-12-07.xlsx?struttura=1' in t and 'tipo=1' in t
             and '/ambulatori/mese/2026-12?struttura=1' in t), t[t.find('Stampa e scarica'):][:600]
@@ -1222,7 +1249,7 @@ def d_mese():
     assert 'id="programmazione-ambulatori"' in t and 'Programmazione ambulatori · dicembre 2026' in t
     assert 'Cardiologia' in t and 'Dermatologia' in t and 'Senza specialità' in t
     assert 'non il 7 (assente: ferie)' in t and 'un giorno solo' in t and '14, 21, 28' in t
-    assert 'class="gruppo attivo" data-guida="menu-ambulatori"' in t
+    assert ambulatori_acceso(t)
     assert '/ambulatori/mese/2026-12.xlsx?struttura=1' in t
     assert 'Calendario del mese' in t and 'chiusa: manutenzione' in t and 'chiusa: immacolata concezione' in t
     assert 'nessun medico in turno' in t
@@ -1235,7 +1262,13 @@ def d_mese():
                       '/ambulatori/settimana/boh.xlsx', '/ambulatori/mese/boh.xlsx'):
         r = C.get(indirizzo)
         assert r.status_code == 200, (indirizzo, r.status_code)
-    assert OGGI.strftime('%Y-%m') in testo(C.get('/ambulatori/mese/boh')) or True
+    # il mese di oggi, letto dal titolo della pagina (i collegamenti al mese prima e dopo non bastano); gemello: un
+    # mese scritto bene dà il suo titolo, diverso
+    titolo = lambda u: re.search(r'<h1 class="giorno">(.*?)</h1>', testo(C.get(u)), re.S).group(1)
+    oggi_mese = '%s %d' % (servizi.MESI[OGGI.month - 1], OGGI.year)
+    assert titolo('/ambulatori/mese/boh').endswith(oggi_mese), titolo('/ambulatori/mese/boh')
+    altro = date(OGGI.year + 1, OGGI.month, 1)
+    assert titolo('/ambulatori/mese/%s' % altro.strftime('%Y-%m')).endswith('%s %d' % (servizi.MESI[altro.month - 1], altro.year))
     assert 'data-lunedi="%s"' % calendario.lunedi_di(OGGI).isoformat() in testo(C.get('/ambulatori/settimana/boh'))
 
 
@@ -1547,7 +1580,8 @@ def f_togli():
     # la settimana prima lo mostra ancora, quella dopo no
     assert 'Galasso' in testo(C.get('/ambulatori/settimana/2026-11-30')).split('</thead>')[1].split('<details')[0]
     pagina = testo(C.get('/ambulatori/settimana/2026-12-14'))
-    assert 'Galasso</a>' not in pagina
+    manca(pagina, 'Galasso</a>', dove_ce=lambda: testo(C.get('/ambulatori/settimana/2026-11-30')),
+          perche='turno chiuso al 13/12: la settimana prima lo mostra ancora, quella dopo no')
     # uno che comincia in quella settimana (o dopo) si elimina
     nuovo = turno(S, I['Galasso'], I['Ambulatorio 4'], 2, time(8), time(12), valido_da=date(2026, 12, 16))
     C.post('/ambulatori/togli', data={'turno': nuovo, 'data': '2026-12-14', 'struttura': 1}, headers=CASA)
@@ -1739,13 +1773,28 @@ def _appuntamenti_di_prova(S, I):
     s.close()
 
 
+def _intervento_in_sala(S, I, giorno):
+    """Un intervento alle 9 in sala operatoria, con una paziente inventata: serve ai gemelli dei «la sala non c'è»
+    del foglio del giorno. Cambia i conti del giorno, quindi va solo in fondo a una prova."""
+    from modelli import Paziente, Appuntamento
+    s = S()
+    pz = Paziente(cognome='Esempietti', nome='Lea', telefono='3330000009')
+    s.add(pz)
+    s.flush()
+    inizio = datetime.combine(giorno, time(9))
+    s.add(Appuntamento(risorsa_id=I['Sala operatoria'], operatore_id=I['Esempietti'], paziente_id=pz.id,
+                       inizio=inizio, fine=inizio + timedelta(minutes=60), stato='PRENOTATO'))
+    s.commit()
+    s.close()
+
+
 def s_foglio_del_giorno():
     S, I, C = mondo_pieno()
     _appuntamenti_di_prova(S, I)
     t = testo(C.get('/stampa/%s?struttura=1' % LUN.isoformat()))
     # testata e piede ripetuti su ogni foglio, numero di pagina nel margine
     assert 'class="testata-ripetuta"' in t and 'class="piede-ripetuto"' in t
-    # ogni stanza: conteggio, turno, assenti; la sala operatoria no
+    # ogni stanza: conteggio, turno, assenti; la sala operatoria no (solo con un intervento: il gemello in fondo)
     assert '<h2>Ambulatorio 1</h2>' in t and '<h2>Ambulatorio 2</h2>' in t and 'Sala operatoria' not in t
     assert '2 appuntamenti · <b>turno:</b> Lippiello Anna 15:00–20:00 · Galasso assente' in t, t[t.find('Ambulatorio 1'):][:400]
     assert '3 appuntamenti' in t, 'in testa solo gli attivi'
@@ -1755,7 +1804,9 @@ def s_foglio_del_giorno():
     assert '<th>Sedazione</th>' not in tabella2 and 'Totale importi' not in tabella2, 'Ambulatorio 2: niente extra e niente totale'
     # il totale degli importi della stanza e del giorno (solo gli attivi; il disdetto non c'e')
     assert 'Totale importi</td><td class="c-importo">130,00 €' in t and 'importi del giorno 130,00 €' in t
-    assert 'Fintini Ugo' in t and t.count('17:00–17:30') == 0, 'il disdetto non si stampa di serie'
+    assert 'Fintini Ugo' in t
+    manca(t, '17:00–17:30', dove_ce=lambda: testo(C.get('/stampa/%s?struttura=1&tutti=1' % LUN.isoformat())),
+          perche='il disdetto non si stampa di serie (con «tutti» sì)')
     # con tutti: il disdetto barrato, la colonna Stato, la legenda, il totale non lo conta
     t = testo(C.get('/stampa/%s?struttura=1&tutti=1' % LUN.isoformat()))
     assert 'stato-disdetto' in t and '<th>Stato</th>' in t and 'Disdetti in grigio' in t
@@ -1768,6 +1819,12 @@ def s_foglio_del_giorno():
     assert 'Sala operatoria' not in t and '<h2>Ambulatorio 1</h2>' not in t
     t = testo(C.get('/stampa/%s?struttura=1' % (LUN + timedelta(days=1)).isoformat()))
     assert 'Immacolata Concezione' in t and '<h2>' not in t, 'festivo chiuso: nessuna stanza'
+    # gemello dei due «'Sala operatoria' not in t» qui sopra (lunedi e mercoledi, con il solo turno in sala): con un
+    # intervento quel giorno la sala compare nello stesso foglio (in fondo, perché cambia i conti del giorno)
+    for g in (LUN, LUN + timedelta(days=2)):
+        _intervento_in_sala(S, I, g)
+        t = testo(C.get('/stampa/%s?struttura=1' % g.isoformat()))
+        assert 'Sala operatoria' in t, ("gemello: 'Sala operatoria' non c'è nemmeno con un intervento", g)
 
 
 def s_preferenze_di_stampa():
@@ -1779,7 +1836,8 @@ def s_preferenze_di_stampa():
     t = testo(C.get('/impostazioni'))
     assert 'name="tutti" value="1" checked' in t and 'value="spunta" checked' in t and 'value="nascita" checked' in t
     t = testo(C.get('/stampa/%s?struttura=1' % LUN.isoformat()))
-    # in ordine di ora: la riga dei medici di turno (senza la sala operatoria), le colonne scelte, il disdetto
+    # in ordine di ora: la riga dei medici di turno (senza la sala operatoria: il gemello in fondo), le colonne scelte,
+    # il disdetto
     assert '<b>Medici di turno:</b> Ambulatorio 1: Lippiello Anna 15:00–20:00' in t and 'Sala operatoria' not in t
     assert '<th class="c-nascita">Nascita</th>' in t and '06/05/1970' in t
     assert '<th class="c-spunta">Arrivato · pagato</th>' in t and t.count('class="casella"') >= 8
@@ -1787,7 +1845,9 @@ def s_preferenze_di_stampa():
     assert '<th>Telefono</th>' not in t and 'class="c-telefono">Telefono' in t
     # tutti=0 nell'indirizzo vince sulla preferenza
     t = testo(C.get('/stampa/%s?struttura=1&tutti=0' % LUN.isoformat()))
-    assert 'stato-disdetto' not in t and 'Solo appuntamenti attivi' not in t and 'Anche disdetti' in t
+    assert 'stato-disdetto' not in t and 'Anche disdetti' in t
+    manca(t, 'Solo appuntamenti attivi', dove_ce=lambda: testo(C.get('/stampa/%s?struttura=1&tutti=1' % LUN.isoformat())),
+          perche='il pulsante dice «Solo appuntamenti attivi» solo quando si stampano anche i disdetti')
     # l'elenco del giorno: il pulsante Stampa segue la preferenza, la tabella ha il thead, la nota si stampa
     from modelli import NotaGiorno
     s = S()
@@ -1795,10 +1855,20 @@ def s_preferenze_di_stampa():
     s.commit()
     s.close()
     t = testo(C.get('/giorno/%s/elenco?struttura=1' % LUN.isoformat()))
-    assert 'href="/stampa/%s?struttura=1"' % LUN.isoformat() in t and 'per=ora' not in t
+    assert 'href="/stampa/%s?struttura=1"' % LUN.isoformat() in t
+    # gemello: il foglio stesso scrive per=ora nei suoi pulsanti (la preferenza «in ordine di ora»); l'elenco del
+    # giorno invece porta al foglio senza scriverla nell'indirizzo
+    manca(t, 'per=ora', dove_ce=lambda: testo(C.get('/stampa/%s?struttura=1' % LUN.isoformat())),
+          perche='il pulsante Stampa dell\'elenco segue la preferenza senza scriverla')
     assert '<thead><tr><th>Ora</th>' in t and 'class="nota-stampa solo-stampa">Lippiello arriva alle 15:30' in t
     t = testo(C.get('/stampa/%s?struttura=1' % LUN.isoformat()))
     assert 'class="nota-stampa">Lippiello arriva alle 15:30' in t
+    # gemello di «'Sala operatoria' not in t» qui sopra (la riga dei medici di turno senza la sala): con un intervento
+    # in sala quel giorno, lo stesso foglio in ordine di ora scrive la sala nella colonna Stanza (in fondo, perché
+    # cambia i conti del giorno)
+    _intervento_in_sala(S, I, LUN)
+    t = testo(C.get('/stampa/%s?struttura=1' % LUN.isoformat()))
+    assert 'Sala operatoria' in t, "gemello: 'Sala operatoria' non c'è nemmeno con un intervento"
 
 
 prova('foglio del giorno: testata e piede ripetuti, conteggi e turni per stanza, colonne in più solo dove servono, totali, stanze libere, con tutti', s_foglio_del_giorno)
@@ -1906,11 +1976,11 @@ def l_pagina_e_json():
     S, I, C, live = _mondo_live()
     r = C.get('/riepilogo-live?struttura=1')
     t = testo(r)
-    assert r.status_code == 200 and 'Riepilogo live' in t and 'id="riepilogo-live"' in t and 'nav class="menu"' in t
+    assert r.status_code == 200 and 'Riepilogo live' in t and 'id="riepilogo-live"' in t and CON_MENU.search(t)
     assert 'Ambulatorio 1' in t and 'Le stanze adesso' in t and 'Mezze giornate libere' in t and 'Visite ora per ora' in t
-    assert 'class="gruppo attivo" data-guida="menu-ambulatori"' in t and 'Riepilogo live</b>' in t
+    assert ambulatori_acceso(t) and linguetta_accesa(t) == 'Riepilogo live'
     t = testo(C.get('/riepilogo-live?struttura=1&schermo=1'))
-    assert 'class="pagina-live schermo"' in t and 'nav class="menu"' not in t and 'Torna alla pagina normale' in t
+    assert 'class="pagina-live schermo"' in t and not CON_MENU.search(t) and 'data-cornice' not in t and 'Torna alla pagina normale' in t
     r = C.get('/riepilogo-live.json?struttura=1')
     assert r.status_code == 200 and r.headers['Cache-Control'] == 'no-store'
     d = json.loads(r.data.decode('utf-8'))
@@ -1923,9 +1993,15 @@ def l_pagina_e_json():
     grezzo = r.data.decode('utf-8')
     d = json.loads(grezzo)
     assert d['oggi']['totale'] == 3 and sum(len(x['linea']['visite']) for x in d['stanze']) == 3, d['oggi']
+    # i gemelli: ogni parola vietata c'è nella giornata di quel lunedi o nella scheda di uno dei due pazienti
+    from modelli import Paziente
+    s = S()
+    posti = [testo(C.get('/giorno/%s?struttura=1' % LUN.isoformat()))] + \
+        [testo(C.get('/pazienti/%d' % pid)) for pid in s.scalars(select(Paziente.id))]
+    s.close()
     for vietato in ('Testabianca', 'Rita', 'Provolo', 'Gino', '3339990001', '3339990002', 'example.com'):
-        assert vietato not in grezzo, vietato
-        assert vietato not in pagina, ('nella pagina', vietato)
+        manca(grezzo, vietato, dove_ce=posti, perche='nel JSON mai dati dei pazienti')
+        manca(pagina, vietato, dove_ce=posti, perche='nella pagina mai dati dei pazienti')
     assert 'Ambulatorio 1' in grezzo and 'stanze' in grezzo
     # senza struttura: la pagina «da configurare», il JSON un errore e non un 500
     S2, I2, C2 = mondo()
@@ -2009,7 +2085,7 @@ def l_chiaro():
         t = testo(C.get('/riepilogo-live?struttura=1'))
         d = json.loads(C.get('/riepilogo-live.json?struttura=1').data.decode('utf-8'))
     for pezzo in ('class="frase-live', 'class="pista-live"', 'class="libere-tab"', 'turno del medico', d['riassunto'],
-                  'data-giorno="%s"' % LUN.isoformat()):
+                  'data-giorno="%s %s"' % (LUN.isoformat(), comune.VERSIONE)):
         assert pezzo.replace("'", '&#39;') in t or pezzo in t, pezzo
     assert t.count('class="riga-live ') == len(d['stanze']) + 1, t.count('class="riga-live ')
     assert t.count('class="turno-live"') == sum(len(x['linea']['turni']) for x in d['stanze']) >= 1
@@ -2140,8 +2216,12 @@ def p_periodo():
     d = json.loads(C.get('/ambulatori/riepilogo.json?struttura=1&da=2026-01-01&a=2026-12-31').data)
     assert d['giorni_periodo'] == AM.MASSIMO_GIORNI_RIEPILOGO and d['da'] == '2026-01-01', (d['da'], d['a'])
     grezzo = C.get('/ambulatori/riepilogo.json?struttura=1&da=%s&a=%s' % (LUN, LUN + timedelta(days=6))).data.decode('utf-8')
+    # i gemelli: le stesse parole ci sono nelle schede dei due pazienti
+    s = S()
+    schede = [testo(C.get('/pazienti/%d' % pid)) for pid in s.scalars(select(Paziente.id))]
+    s.close()
     for vietato in ('Testabianca', 'Rita', 'Provolo', 'Gino', '3339990001', 'example.com'):
-        assert vietato not in grezzo, vietato
+        manca(grezzo, vietato, dove_ce=schede, perche='nel JSON del riepilogo mai dati dei pazienti')
     rr = C.get('/ambulatori/riepilogo.xlsx?struttura=1&da=%s&a=%s' % (LUN, LUN + timedelta(days=6)))
     assert rr.status_code == 200 and 'riepilogo-ambulatori-%s-%s.xlsx' % (LUN, LUN + timedelta(days=6)) in rr.headers['Content-Disposition']
     import openpyxl
@@ -2155,7 +2235,7 @@ def p_periodo():
     assert wb1.sheetnames == ['Riepilogo', 'Stanze', 'Medici'], wb1.sheetnames
     # il menu: quattro voci nel gruppo Ambulatori, l'ultima attiva su questa pagina
     t = testo(C.get('/ambulatori/riepilogo?struttura=1'))
-    assert 'Riepilogo del periodo</b>' in t and 'class="gruppo attivo" data-guida="menu-ambulatori"' in t
+    assert linguetta_accesa(t) == 'Riepilogo del periodo' and ambulatori_acceso(t)
 
 
 prova('riepilogo del periodo (1.12.2): stanze, medici e giorni contro gli insiemi di minuti, testi, pagine, Excel, JSON', p_periodo)
@@ -2287,8 +2367,12 @@ def p_periodo_revisione():
         for riga in ws.iter_rows(values_only=True):
             for v in riga:
                 assert not (isinstance(v, str) and any(x in v for x in ('Testabianca', 'Rita', '3339990001', 'example.com'))), (ws.title, v)
+    # i gemelli: le stesse parole ci sono nella scheda della paziente
+    s = S()
+    scheda = testo(C.get('/pazienti/%d' % s.scalars(select(Paziente.id).where(Paziente.cognome == 'Testabianca')).one()))
+    s.close()
     for vietato in ('Testabianca', 'Rita', '3339990001', 'example.com'):
-        assert vietato not in pagina, vietato
+        manca(pagina, vietato, dove_ce=scheda, perche='nel riepilogo mai dati della paziente')
     chiuse = {x[0]: x[1] for x in wb['Giorni'].iter_rows(values_only=True) if x[0]}
     assert chiuse['martedì 8/12'] == 'Immacolata Concezione, ma con turni o appuntamenti', chiuse['martedì 8/12']
     s = S()
@@ -2436,7 +2520,10 @@ def p_periodo_seconda_revisione():
         righe['mercoledì 16/12'][1] == 'Manutenzione' and righe['domenica 13/12'][1] == 'giorno di chiusura', righe
     # la domenica vuota: nessuna mezza giornata, il totale della tabella dice «—» come le righe
     pagina = testo(C.get('/ambulatori/riepilogo?struttura=1&da=%s&a=%s' % (LUN + timedelta(days=13), LUN + timedelta(days=13))))
-    assert '<th class="n">—</th></tr></tfoot>' in pagina and 'Esempio' not in pagina
+    assert '<th class="n">—</th></tr></tfoot>' in pagina
+    # gemello: la paziente c'è nella giornata del suo appuntamento di venerdi 18 (Ambulatorio 2, alle 10)
+    manca(pagina, 'Esempio', dove_ce=lambda: testo(C.get('/giorno/%s?struttura=1' % (LUN + timedelta(days=11)).isoformat())),
+          perche='mai i pazienti nel riepilogo')
 
 
 prova('riepilogo del periodo (1.12.2, dalla seconda revisione): stanza spenta con turni fino all\'ultimo appuntamento '
@@ -2562,27 +2649,34 @@ def p_periodo_sala():
     ts = testo(C.get('/riepilogo-live/statistiche?%s&parte=sala&schermo=1' % q))
     # si chiama come la pagina del menu Ambulatori, con gli stessi numeri («Statistiche» e' un'altra pagina, che conta
     # in un altro modo: dalla revisione della 1.12.6)
-    assert '<h1 class="giorno">Riepilogo del periodo' in ts and 'Statistiche' not in ts, 'il nome della pagina'
-    assert 'Le sale' in ts and '<nav class="menu"' not in ts and 'pagina-live' in ts
+    assert '<h1 class="giorno">Riepilogo del periodo' in ts, 'il nome della pagina'
+    # gemello: senza il modo schermo la stessa pagina ha il menu, con la sua voce «Statistiche»
+    manca(ts, 'Statistiche', dove_ce=lambda: testo(C.get('/riepilogo-live/statistiche?%s&parte=sala' % q)),
+          perche='il nome della pagina nella dashboard non è «Statistiche»')
+    assert 'Le sale' in ts and not CON_MENU.search(ts) and 'data-cornice' not in ts and 'pagina-live' in ts
     import re
     fuori = [h for h in re.findall(r'href="([^"]+)"', ts) if not h.startswith('/riepilogo-live') and not h.startswith('/static/')]
     assert not fuori, fuori
     assert 'riepilogo.xlsx' not in ts, 'niente Excel nella dashboard'
     tsn = testo(C.get('/riepilogo-live/statistiche?%s' % q))
     # senza il modo schermo (sul PC della clinica) c'e' il menu, e restano l'Excel e la stampa
-    assert '<nav class="menu"' in tsn and 'Le stanze' in tsn and '/ambulatori/riepilogo.xlsx?' in tsn and 'window.print()' in tsn
+    assert CON_MENU.search(tsn) and 'Le stanze' in tsn and '/ambulatori/riepilogo.xlsx?' in tsn and 'window.print()' in tsn
     js = C.get('/riepilogo-live/statistiche.json?%s&parte=sala' % q).get_json()
     # (il JSON e' calcolato all'ora vera, non a quella ferma della prova: si confrontano i conti che non ne dipendono)
     assert js['parte'] == 'sala' and js['totale']['totale'] == 6 and js['totale']['minuti_turno'] == r['totale']['minuti_turno'] \
         and [x['stanza'] for x in js['stanze']] == [x['stanza'] for x in r['stanze']], js['totale']
+    # i gemelli: il paziente (nome e telefono) c'è nella pagina Sala di quel lunedi, con i suoi interventi
+    sala_lun = testo(C.get('/sala/%s?struttura=1' % LUN.isoformat()))
     for pagina in (ts, tsn, str(js), testo(C.get('/ambulatori/riepilogo?%s&parte=sala' % q))):
-        assert 'Provolo' not in pagina and '3339990006' not in pagina, 'mai dati dei pazienti'
+        for vietato in ('Provolo', '3339990006'):
+            manca(pagina, vietato, dove_ce=sala_lun, perche='mai dati dei pazienti')
     # il riepilogo live porta al riepilogo del periodo della dashboard, anche nel modo schermo; un solo pulsante con
     # quel nome, e nessun pulsante «Statistiche» accanto alla voce del menu con lo stesso nome
     tl = testo(C.get('/riepilogo-live?struttura=1'))
     barra = tl.split('<div class="barra">')[1].split('</div>')[0]
-    assert '/riepilogo-live/statistiche?struttura=1' in barra and barra.count('Riepilogo del periodo') == 1 \
-        and 'Statistiche' not in barra, barra
+    assert '/riepilogo-live/statistiche?struttura=1' in barra and barra.count('Riepilogo del periodo') == 1, barra
+    # gemello: «Statistiche» c'è nella stessa pagina, prima della barra (la voce del menu)
+    manca(barra, 'Statistiche', dove_ce=tl.split('<div class="barra">')[0], perche='nessun pulsante «Statistiche» nella barra')
     tls = testo(C.get('/riepilogo-live?struttura=1&schermo=1'))
     assert 'schermo=1' in tls.split('/riepilogo-live/statistiche')[1][:60]
     # la dashboard nel modo schermo (quella della rete locale): nessun collegamento fuori dalla dashboard
@@ -2630,11 +2724,13 @@ def p_periodo_parole_una_sala():
     assert r['frase'] == 'Nel periodo non ci sono interventi né turni nella sala.', r['frase']
     s.close()
     q = 'struttura=1&da=%s&a=%s&parte=sala' % (LUN.isoformat(), LUN.isoformat())
+    sala_lun = testo(C.get('/sala/%s?struttura=1' % LUN.isoformat()))      # i gemelli: lì il paziente c'è
     for t in (testo(C.get('/ambulatori/riepilogo?%s' % q)), testo(C.get('/riepilogo-live/statistiche?%s&schermo=1' % q))):
         assert '<h2 class="sezione">La sala <small class="sotto-titolo">ore di turno, quanto è stata occupata' in t \
             and 'dai turni nella sala e dai loro interventi' in t and '2 interventi in 1 sala' in t, 'al singolare'
         assert 'i turni dei chirurghi nella sala,' in t, 'la nota in fondo al singolare'
-        assert 'Provolo' not in t and '3339990006' not in t, 'mai dati dei pazienti'
+        for vietato in ('Provolo', '3339990006'):
+            manca(t, vietato, dove_ce=sala_lun, perche='mai dati dei pazienti')
 
 
 prova('1.12.6, dalla revisione: con una sola sala le frasi al singolare, e «c\'è 1 ora» dopo la mezzanotte',
@@ -2664,10 +2760,12 @@ def p_periodo_parole_una_stanza():
     assert 'La stanza è stata occupata per' in r['frase'], r['frase']
     s.close()
     q = 'struttura=2&da=%s&a=%s' % (LUN.isoformat(), (LUN + timedelta(days=6)).isoformat())
+    giorno_lun = testo(C.get('/giorno/%s?struttura=2' % LUN.isoformat()))   # i gemelli: lì il paziente c'è
     for t in (testo(C.get('/ambulatori/riepilogo?%s' % q)), testo(C.get('/riepilogo-live/statistiche?%s&schermo=1' % q))):
         assert 'di turno nella stanza</li>' in t and 'nelle stanze' not in t and 'i turni dei medici nella stanza,' in t \
             and '<h2 class="sezione">La stanza <small' in t, 'al singolare'
-        assert 'Provolo' not in t and '3339990006' not in t, 'mai dati dei pazienti'
+        for vietato in ('Provolo', '3339990006'):
+            manca(t, vietato, dove_ce=giorno_lun, perche='mai dati dei pazienti')
     for indirizzo in ('/ambulatori/riepilogo.json', '/riepilogo-live/statistiche.json'):
         assert C.get('%s?%s' % (indirizzo, q)).get_json()['parole']['di_turno'] == 'di turno nella stanza', indirizzo
     # il riepilogo live della struttura con una sola stanza

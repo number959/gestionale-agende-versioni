@@ -9,6 +9,9 @@ sito accettazione@example.it, server mail.example.it):
   lo si scrive a mano; un indirizzo @gmail.com passa a Gmail;
 - la tendina del tipo, fuori dal modulo, si salva con il modulo;
 - nessun errore JavaScript, anche a schermo stretto.
+La cornice (i messaggi, le domande del browser) si cerca per ruolo e nome con
+gli aiuti di aiuti_browser.py, come un lettore di schermo (tappa 1 della base);
+una domanda del browser che nessuno aspettava fa cadere la prova.
 Salva le impostazioni email: usarla su un gestionale di prova, mai su quello
 vero (alla fine rimette la casella del sito della prova)."""
 import os
@@ -16,7 +19,11 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from aiuti_browser import messaggi, prepara_domande  # noqa: E402
+
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 
 
@@ -31,6 +38,7 @@ with sync_playwright() as p:
     ctx.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); "
                         "localStorage.setItem('gestionale-tema', 'chiaro'); } catch (e) {}")
     pg = ctx.new_page()
+    domande = prepara_domande(pg)            # subito: ogni domanda del browser passa da qui (nessuna e' attesa)
     err = []
     pg.on('pageerror', lambda e: err.append(str(e)))
     pg.on('console', lambda m: err.append(m.text) if m.type == 'error' else None)
@@ -102,7 +110,7 @@ with sync_playwright() as p:
     pg.click('#modulo-email button[type="submit"]')
     pg.wait_for_load_state()
     pg.wait_for_timeout(300)
-    testo_avvisi = ' '.join(pg.locator('.avviso').all_inner_texts())
+    testo_avvisi = messaggi(pg)
     ok('salvato con il tipo scelto', 'Impostazioni salvate' in testo_avvisi and pg.input_value('#email_tipo') == 'aruba'
        and valori() == ('smtps.aruba.it', '465', 'ssl') and pg.input_value('#email_utente') == 'info@studio-esempio.it',
        (testo_avvisi[:120], pg.input_value('#email_tipo'), valori()))
@@ -129,6 +137,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(300)
     ok('rimessa la casella della prova', pg.input_value('#email_tipo') == 'dominio' and valori()[0] == 'mail.example.it', valori())
     ok('nessun errore JavaScript', not err, err[:3])
+    ok('nessuna domanda del browser inattesa', not domande.inattese, domande.inattese)
     br.close()
 print('\n%d prove nel browser, %d superate' % (len(esiti), sum(esiti)))
 sys.exit(0 if all(esiti) else 1)

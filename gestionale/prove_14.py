@@ -7,6 +7,9 @@ fare e notifiche, ricerca rapida, agenda del medico, robustezza.
 Dove si puo' il risultato si confronta con un calcolo fatto a parte (un
 oracolo) e non con quello che il programma stesso ha prodotto."""
 import io
+from prove_dove import dove
+import prove_messaggi as PM
+from prove_gemelli import manca
 import json
 import os
 import random
@@ -30,6 +33,7 @@ import pazienti as PZ
 import backup
 import viste
 import app as A
+PM.segui(A.app)
 from modelli import (crea_sessione, Struttura, Risorsa, Operatore, Turno, Appuntamento, Prestazione,
                      Paziente, Attesa, Attivita, NotaGiorno, Documento, ModuloStampa, Tariffa, Assenza, Appunto,
                      STATI_ATTIVI, VERSIONE_SCHEMA, scrivi_impostazione)
@@ -59,7 +63,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 
@@ -73,7 +77,7 @@ def collega(S):
     A.Sessione = S
     A._registro = None
     viste._sessionmaker = lambda: S
-    return A.app.test_client()
+    return PM.segna(A.app.test_client())     # i messaggi di questo cliente non finiscono agli altri
 
 
 def mondo():
@@ -137,15 +141,7 @@ def html(r):
     return r.get_data(as_text=True)
 
 
-def avvisi(C, r=None):
-    from html import unescape
-    with C.session_transaction() as sess:
-        m = sess.get('_flashes', [])
-        sess['_flashes'] = []
-    testo = ' '.join(str(x[1]) for x in m)
-    if r is not None and r.status_code == 200:
-        testo += ' ' + ' '.join(unescape(x) for x in re.findall(r'class="avviso[^"]*">(.*?)</div>', html(r)))
-    return unescape(re.sub(r'<[^>]+>', '', testo))
+avvisi = PM.avvisi       # i messaggi presi da Flask (prove_messaggi.py); con una pagina 200 anche scritti lì
 
 
 def leggi(S, modello, ident):
@@ -901,6 +897,9 @@ def ch_chiusura():
     t = html(C.get('/chiusura/%s?struttura=1' % ieri))
     for aid in (a1, a2):
         assert 'value="%d"' % aid in t, 'manca %d fra quelli da chiudere' % aid
+        # gemello del «non c'è» qui sotto: la casella di chi va chiuso è scritta proprio così
+        assert 'name="scelti" value="%d"' % aid in t, \
+            'gemello: \'name="scelti" value="%d"\' non c\'è nemmeno dove deve esserci' % aid
     for aid in (a3, a4, altra):
         assert 'name="scelti" value="%d"' % aid not in t, '%d non va chiuso qui' % aid
     s = S()
@@ -978,6 +977,7 @@ def at_flusso():
     messaggio = avvisi(C)
     assert '2 in lista d\'attesa' in messaggio, 'avviso alla disdetta: %s' % messaggio
     t = html(C.get('/attesa/per/%d' % aid))
+    # Secondo vuole il pomeriggio: qui non c'è (il gemello è in fondo: per un posto delle 15 c'è)
     assert t.index('Primo') < t.index('Terzo') and 'Secondo' not in t, 'ordine o filtro sbagliati'
     assert 'wa.me/393331110001' in t and 'si%20%C3%A8%20liberato' in t, 'WhatsApp per il posto libero'
     s = S()
@@ -995,6 +995,11 @@ def at_flusso():
     t = html(C.get('/attesa'))
     assert 'Terzo' in t and 'Primo' not in t
     assert 'Primo' in html(C.get('/attesa?chiuse=1'))
+    # gemello di «'Secondo' not in t»: nella stessa pagina, per un posto del pomeriggio, Secondo c'è.
+    # In fondo, perché aggiunge un appuntamento.
+    pomeriggio = nuovo_app(S, I['Ambulatorio 1'], I['Lippiello'], MAR, 15, 0, paziente=p0, prest=I['Controllo'])
+    assert 'Secondo' in html(C.get('/attesa/per/%d' % pomeriggio)), \
+        "gemello: 'Secondo' non c'è nemmeno dove deve esserci (un posto delle 15)"
 
 
 prova('adatta_a contro l\'oracolo, 300 combinazioni', at_adatta_oracolo)
@@ -1294,6 +1299,7 @@ def do_moduli():
     assert testo == atteso, '\n%s\n%s' % (testo, atteso)
     assert applicabili == ['Per tutti', 'Preparazione colonscopia'], applicabili
     t = html(C.get('/appuntamento/%d' % aid))
+    # il modulo dell'EGDS non c'è su una colonscopia (il gemello è in fondo: su un'EGDS c'è)
     assert 'Preparazione colonscopia' in t and 'Solo EGDS' not in t
     t = html(C.get('/appuntamento/%d/modulo/%d' % (aid, mid)))
     assert 'Firma del paziente' in t and 'Rossi Marta' in t
@@ -1303,6 +1309,11 @@ def do_moduli():
     assert '<script>alert(1)' not in t and '&lt;script&gt;' in t
     r = C.post('/moduli/nuovo', data={'azione': 'esempio'})
     assert r.status_code == 302 and conta(S, ModuloStampa) == 4
+    # gemello di «'Solo EGDS' not in t»: sulla pagina di un appuntamento EGDS lo stesso modulo c'è.
+    # In fondo, perché aggiunge un appuntamento.
+    egds = nuovo_app(S, I['Sala endoscopia'], I['Galasso'], MAR, 11, 0, paziente=p, prest=I['EGDS'])
+    assert 'Solo EGDS' in html(C.get('/appuntamento/%d' % egds)), \
+        "gemello: 'Solo EGDS' non c'è nemmeno dove deve esserci (un appuntamento EGDS)"
 
 
 prova('documenti: PDF, PNG, JPG sì; eseguibili, vuoti, enormi no; intestazioni; unione', do_documenti)
@@ -1625,7 +1636,8 @@ def ap_dal_file_alla_prenotazione():
     # la giornata lo mostra, il menu lo conta
     t = html(C.get('/giorno/%s?struttura=1' % MAR.isoformat()))
     assert 'Da confermare per questo giorno (1)' in t and 'appunto=%d' % xid in t
-    assert re.search(r'Da confermare<span class="contatore">1</span>', t)
+    from prove_cornice import contatore_della_voce
+    assert contatore_della_voce(t, 'menu-segreteria') == 1, contatore_della_voce(t, 'menu-segreteria')
     # Prenota: il modulo gia' compilato
     t = html(C.get('/appuntamento?appunto=%d&data=%s&ora=10:00&risorsa=%d&struttura=1' % (xid, MAR.isoformat(), I['Sala endoscopia'])))
     assert 'value="Caruso"' in t and 'value="%d"' % pid in t and 'name="appunto" value="%d"' % xid in t
@@ -1646,7 +1658,8 @@ def ap_dal_file_alla_prenotazione():
     aid = a.id
     s.close()
     t = html(C.get('/giorno/%s?struttura=1' % MAR.isoformat()))
-    assert 'Da confermare per questo giorno' not in t and 'class="contatore"' not in t
+    assert 'Da confermare per questo giorno' not in t and contatore_della_voce(t, 'menu-segreteria') is None
+    assert 'data-guida="menu-segreteria"' in t          # il gemello: la voce c'è, senza numero
     # eliminato l'appuntamento, l'appunto resta chiuso ma senza legame
     C.post('/appuntamento/%d' % aid, data={'azione': 'elimina', 'struttura': '1'})
     s = S()
@@ -1736,9 +1749,25 @@ def ap_notifiche_e_anagrafiche():
     s.close()
 
 
+def ap_messaggi_nella_pagina():
+    """I messaggi presi da Flask arrivano anche nella pagina: quello di un errore nella pagina ridisegnata, quello
+    di un salvataggio nella pagina dopo il rinvio, e una volta sola."""
+    S, C = mondo()
+    r = C.post('/pazienti/nuovo', data={'cognome': 'Fittizi', 'telefono': '12-34', 'canale': 'SMS'})
+    assert r.status_code == 200 and 'almeno 6 cifre' in avvisi(C, r, 'errore'), 'errore non detto'  # e scritto nella pagina
+    r = C.post('/pazienti/nuovo', data={'cognome': 'Fittizi', 'telefono': '3330001111', 'canale': 'SMS'})
+    assert r.status_code == 302, avvisi(C)
+    dopo = html(C.get(r.headers['Location']))          # prima di avvisi(), che svuota la sessione
+    assert 'Scheda salvata: Fittizi' in avvisi(C, categoria='ok'), 'conferma non data'
+    assert 'Scheda salvata: Fittizi' in dopo, 'conferma non scritta nella pagina dopo il rinvio'
+    assert 'Scheda salvata' not in html(C.get(r.headers['Location'])), 'la conferma torna a ogni pagina'
+    assert avvisi(C) == '', 'messaggi in più'
+
+
 prova('dal file alla prenotazione: conflitto, giornata, modulo compilato, chiusura', ap_dal_file_alla_prenotazione)
 prova('a mano, controlli, prenotazione di piu\' appunti insieme', ap_a_mano_e_insieme)
 prova('notifiche, unione ed eliminazione delle schede, medici', ap_notifiche_e_anagrafiche)
+prova('messaggi presi da Flask, scritti nella pagina ridisegnata e in quella dopo il rinvio', ap_messaggi_nella_pagina)
 
 
 area('foglio del giorno e tema scuro')
@@ -1752,11 +1781,17 @@ def st_colonne_e_orientamento():
               importo_cent=8000, extra=json.dumps({'Sedazione': 'Sì'}))
     def intestazioni(r):
         return re.findall(r'<th[^>]*>([^<]*)</th>', html(r).split('<thead>')[1].split('</thead>')[0])
+
+    def gira(r):        # il solo pulsante che gira il foglio (gli altri pulsanti tengono l'orientamento scelto)
+        m = re.search(r'<a [^>]*>Foglio (?:verticale|orizzontale)</a>', html(r))
+        assert m, 'manca il pulsante che gira il foglio'
+        return m.group(0)
     # di serie: tutte le colonne, orizzontale, una tabella per stanza
     r = C.get('/stampa/%s?struttura=1' % MAR.isoformat())
     assert intestazioni(r) == ['Ora', 'Paziente', 'Telefono', 'Prestazione', 'Medico', 'Tipo · convenzione',
                                'Importo', 'Sedazione', 'Note'], intestazioni(r)
     assert 'size: A4 portrait' not in html(r) and 'foglio-orizzontale' in html(r) and '<h2>Ambulatorio 1</h2>' in html(r)
+    tutte = html(r)          # con tutte le colonne: importo e sedazione ci sono (gemello dei «non c'è» più sotto)
     # scelte in Impostazioni: telefono e note, verticale, in ordine di ora
     r = C.post('/impostazioni', data={'azione': 'stampa', 'colonne': ['note', 'telefono', 'inventata'],
                                       'orientamento': 'verticale', 'ordine': 'ora'})
@@ -1768,11 +1803,18 @@ def st_colonne_e_orientamento():
     r = C.get('/stampa/%s?struttura=1' % MAR.isoformat())
     assert intestazioni(r) == ['Ora', 'Stanza', 'Paziente', 'Telefono', 'Note'], intestazioni(r)
     assert '@page { size: A4 portrait' in html(r) and 'foglio-verticale' in html(r)
-    assert '3470007001' in html(r) and 'porta gli esami' in html(r) and '80,00' not in html(r) and 'Sì' not in html(r)
+    assert '3470007001' in html(r) and 'porta gli esami' in html(r)
+    manca(html(r), '80,00', dove_ce=tutte, perche='importo stampato senza la sua colonna')
+    manca(html(r), 'Sì', dove_ce=tutte, perche='sedazione stampata senza la sua colonna')
+    giro_dal_verticale = gira(r)      # dal foglio verticale il pulsante porta all'orizzontale
     # dalla pagina di stampa si cambia al volo, senza toccare le impostazioni
     r = C.get('/stampa/%s?struttura=1&orientamento=orizzontale&per=stanza' % MAR.isoformat())
     assert 'size: A4 portrait' not in html(r) and '<h2>Ambulatorio 1</h2>' in html(r)
-    assert 'orientamento=orizzontale' not in html(r) or 'Foglio verticale' in html(r)
+    # prima era «'orientamento=orizzontale' not in html(r) or 'Foglio verticale' in html(r)»: passava con una sola
+    # delle due, e la prima non vale mai su tutta la pagina (gli altri pulsanti tengono orientamento=orizzontale).
+    # Ora tutte e due, la prima sul solo pulsante che gira il foglio, con il gemello sul foglio verticale.
+    assert 'Foglio verticale' in html(r), 'dal foglio orizzontale manca «Foglio verticale»'
+    manca(gira(r), 'orientamento=orizzontale', dove_ce=giro_dal_verticale, perche='il pulsante non gira il foglio')
     r = C.get('/stampa/%s?struttura=1&orientamento=storto&per=boh' % MAR.isoformat())
     assert r.status_code == 200 and 'size: A4 portrait' in html(r)
     # nessuna colonna scelta: restano ora e paziente

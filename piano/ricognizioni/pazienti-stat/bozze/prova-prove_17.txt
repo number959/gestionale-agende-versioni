@@ -1,0 +1,11 @@
+forma e lettura del codice                        3 prove  tutte a posto
+calcolo                                           4 prove  tutte a posto
+confronto con i dati                              1 prove  tutte a posto
+luoghi di nascita                                 4 prove  tutte a posto
+scheda del paziente                               7 prove  tutte a posto
+prenotazione                                      3 prove  tutte a posto
+pazienti gia' in archivio                         4 prove  tutte a posto
+importazione, unione, moduli, pagine              7 prove  tutte a posto
+
+33 prove totali, 33 superate, 0 da sistemare
+uscita 0

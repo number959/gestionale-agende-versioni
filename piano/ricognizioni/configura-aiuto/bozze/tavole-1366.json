@@ -1,0 +1,751 @@
+{
+ "Conf1-Anagrafiche": {
+  "main": [
+   248,
+   62,
+   1118,
+   4394
+  ],
+  "titoloLinguetta": [
+   284,
+   253,
+   1046,
+   31
+  ],
+  "linguette": [
+   284,
+   191,
+   838,
+   44
+  ],
+  "figli": [
+   [
+    "div",
+    "",
+    [
+     284,
+     84,
+     1046,
+     89
+    ],
+    ""
+   ],
+   [
+    "nav",
+    "Pagine di Configura",
+    [
+     284,
+     191,
+     838,
+     44
+    ],
+    ""
+   ],
+   [
+    "div",
+    "Anagrafichestanze, medici e turni",
+    [
+     284,
+     253,
+     1046,
+     58
+    ],
+    ""
+   ],
+   [
+    "section",
+    "sez-strutture",
+    [
+     284,
+     333,
+     1046,
+     233
+    ],
+    ""
+   ],
+   [
+    "section",
+    "sez-medici",
+    [
+     284,
+     588,
+     1046,
+     421
+    ],
+    ""
+   ],
+   [
+    "section",
+    "sez-turni",
+    [
+     284,
+     1030,
+     1046,
+     1220
+    ],
+    ""
+   ],
+   [
+    "section",
+    "sez-turni-giorno",
+    [
+     284,
+     2272,
+     1046,
+     139
+    ],
+    ""
+   ],
+   [
+    "section",
+    "sez-assenze",
+    [
+     284,
+     2433,
+     1046,
+     139
+    ],
+    ""
+   ],
+   [
+    "section",
+    "sez-chiusure",
+    [
+     284,
+     2593,
+     1046,
+     186
+    ],
+    ""
+   ],
+   [
+    "section",
+    "sez-stanze",
+    [
+     284,
+     2801,
+     1046,
+     468
+    ],
+    ""
+   ],
+   [
+    "section",
+    "sez-prestazioni",
+    [
+     284,
+     3290,
+     1046,
+     1126
+    ],
+    ""
+   ]
+  ],
+  "primaSchermata": [
+   "Anagrafichestanze, medici e tu",
+   "Strutture",
+   "Logo\n            Nome\n        ",
+   "Medici",
+   "Cognome e nome\n              S"
+  ],
+  "alto": 4456
+ },
+ "Conf2-Medico": {
+  "main": [
+   248,
+   62,
+   1118,
+   768
+  ],
+  "titoloLinguetta": [
+   284,
+   253,
+   1046,
+   28
+  ],
+  "linguette": [
+   284,
+   191,
+   838,
+   44
+  ],
+  "figli": [
+   [
+    "div",
+    "",
+    [
+     284,
+     84,
+     1046,
+     89
+    ],
+    ""
+   ],
+   [
+    "nav",
+    "Pagine di Configura",
+    [
+     284,
+     191,
+     838,
+     44
+    ],
+    ""
+   ],
+   [
+    "div",
+    "Modifica medico",
+    [
+     284,
+     253,
+     1046,
+     67
+    ],
+    ""
+   ],
+   [
+    "div",
+    "Email automatiche ai suoi pazienti",
+    [
+     284,
+     338,
+     1046,
+     452
+    ],
+    "615.594px 410.391px"
+   ]
+  ],
+  "primaSchermata": [
+   "Modifica medico",
+   "Cognome\n              \n       ",
+   "Email automatiche ai suoi pazi",
+   "Tariffario"
+  ],
+  "alto": 845
+ },
+ "Conf3-Gruppo": {
+  "main": [
+   248,
+   62,
+   1118,
+   1381
+  ],
+  "titoloLinguetta": [
+   284,
+   253,
+   1046,
+   31
+  ],
+  "linguette": [
+   284,
+   191,
+   838,
+   44
+  ],
+  "figli": [
+   [
+    "div",
+    "",
+    [
+     284,
+     84,
+     1046,
+     89
+    ],
+    ""
+   ],
+   [
+    "nav",
+    "Pagine di Configura",
+    [
+     284,
+     191,
+     838,
+     44
+    ],
+    ""
+   ],
+   [
+    "div",
+    "Strutture del gruppoil database delle pr",
+    [
+     284,
+     253,
+     1046,
+     58
+    ],
+    ""
+   ],
+   [
+    "section",
+    "Il database delle prestazioni",
+    [
+     284,
+     329,
+     1046,
+     166
+    ],
+    ""
+   ],
+   [
+    "section",
+    "sez-strutture",
+    [
+     284,
+     517,
+     1046,
+     818
+    ],
+    ""
+   ],
+   [
+    "section",
+    "",
+    [
+     284,
+     1353,
+     1046,
+     50
+    ],
+    ""
+   ]
+  ],
+  "primaSchermata": [
+   "Strutture del gruppoil databas",
+   "Le strutture",
+   "Struttura\n                Citt"
+  ],
+  "alto": 1443
+ },
+ "Conf4-Invii": {
+  "main": [
+   248,
+   62,
+   1118,
+   6890
+  ],
+  "titoloLinguetta": [
+   284,
+   253,
+   1046,
+   28
+  ],
+  "linguette": [
+   284,
+   191,
+   838,
+   44
+  ],
+  "figli": [
+   [
+    "div",
+    "",
+    [
+     284,
+     84,
+     1046,
+     89
+    ],
+    ""
+   ],
+   [
+    "nav",
+    "Pagine di Configura",
+    [
+     284,
+     191,
+     838,
+     44
+    ],
+    ""
+   ],
+   [
+    "div",
+    "Email e WhatsApp ai pazienti",
+    [
+     284,
+     253,
+     1046,
+     55
+    ],
+    ""
+   ],
+   [
+    "nav",
+    "Come stanno email e WhatsApp",
+    [
+     284,
+     326,
+     1046,
+     58
+    ],
+    ""
+   ],
+   [
+    "section",
+    "t-regole",
+    [
+     284,
+     412,
+     1046,
+     920
+    ],
+    ""
+   ],
+   [
+    "section",
+    "t-email",
+    [
+     284,
+     1368,
+     1046,
+     683
+    ],
+    ""
+   ],
+   [
+    "section",
+    "t-promemoria",
+    [
+     284,
+     2087,
+     1046,
+     341
+    ],
+    ""
+   ],
+   [
+    "section",
+    "t-whatsapp",
+    [
+     284,
+     2464,
+     1046,
+     860
+    ],
+    ""
+   ],
+   [
+    "section",
+    "t-registro",
+    [
+     284,
+     3360,
+     1046,
+     3552
+    ],
+    ""
+   ]
+  ],
+  "primaSchermata": [
+   "Email e WhatsApp ai pazienti",
+   "Email automatiche alla prenota",
+   "Gallo Marco · Cardiologia",
+   "Email\n                Prestazi"
+  ],
+  "alto": 6952
+ },
+ "Conf5-Importa": {
+  "main": [
+   248,
+   62,
+   1118,
+   657
+  ],
+  "titoloLinguetta": [
+   284,
+   253,
+   1046,
+   28
+  ],
+  "linguette": [
+   284,
+   191,
+   838,
+   44
+  ],
+  "figli": [
+   [
+    "div",
+    "",
+    [
+     284,
+     84,
+     1046,
+     89
+    ],
+    ""
+   ],
+   [
+    "nav",
+    "Pagine di Configura",
+    [
+     284,
+     191,
+     838,
+     44
+    ],
+    ""
+   ],
+   [
+    "div",
+    "Importa da Excel o CSV",
+    [
+     284,
+     253,
+     1046,
+     76
+    ],
+    ""
+   ],
+   [
+    "div",
+    "Cosa riconosce",
+    [
+     284,
+     347,
+     1046,
+     332
+    ],
+    "513px 513px"
+   ]
+  ],
+  "primaSchermata": [
+   "Importa da Excel o CSV",
+   "File (.xlsx o .csv, al massimo",
+   "Cosa riconosce"
+  ],
+  "alto": 845
+ },
+ "Conf6-Impostazioni": {
+  "main": [
+   248,
+   62,
+   1118,
+   3356
+  ],
+  "titoloLinguetta": [
+   284,
+   253,
+   1046,
+   28
+  ],
+  "linguette": [
+   284,
+   191,
+   838,
+   44
+  ],
+  "figli": [
+   [
+    "div",
+    "",
+    [
+     284,
+     84,
+     1046,
+     89
+    ],
+    ""
+   ],
+   [
+    "nav",
+    "Pagine di Configura",
+    [
+     284,
+     191,
+     838,
+     44
+    ],
+    ""
+   ],
+   [
+    "h2",
+    "",
+    [
+     284,
+     253,
+     1046,
+     28
+    ],
+    ""
+   ],
+   [
+    "div",
+    "",
+    [
+     284,
+     299,
+     1046,
+     112
+    ],
+    ""
+   ],
+   [
+    "section",
+    "aspetto-tema",
+    [
+     284,
+     437,
+     1046,
+     131
+    ],
+    ""
+   ],
+   [
+    "section",
+    "stampa",
+    [
+     284,
+     594,
+     1046,
+     357
+    ],
+    ""
+   ],
+   [
+    "section",
+    "checklist",
+    [
+     284,
+     977,
+     1046,
+     344
+    ],
+    ""
+   ],
+   [
+    "section",
+    "backup",
+    [
+     284,
+     1347,
+     1046,
+     1493
+    ],
+    ""
+   ],
+   [
+    "section",
+    "messaggi",
+    [
+     284,
+     2867,
+     1046,
+     511
+    ],
+    ""
+   ]
+  ],
+  "primaSchermata": [
+   "Impostazioni",
+   "Aspetto",
+   "Foglio del giorno"
+  ],
+  "alto": 3418
+ },
+ "Conf7-Aggiornamenti": {
+  "main": [
+   248,
+   62,
+   1118,
+   1106
+  ],
+  "titoloLinguetta": [
+   284,
+   253,
+   1046,
+   28
+  ],
+  "linguette": [
+   284,
+   191,
+   838,
+   44
+  ],
+  "figli": [
+   [
+    "div",
+    "",
+    [
+     284,
+     84,
+     1046,
+     89
+    ],
+    ""
+   ],
+   [
+    "nav",
+    "Pagine di Configura",
+    [
+     284,
+     191,
+     838,
+     44
+    ],
+    ""
+   ],
+   [
+    "div",
+    "Aggiornamenti",
+    [
+     284,
+     253,
+     1046,
+     76
+    ],
+    ""
+   ],
+   [
+    "section",
+    "Stato degli aggiornamenti",
+    [
+     284,
+     347,
+     1046,
+     231
+    ],
+    ""
+   ],
+   [
+    "section",
+    "indirizzo",
+    [
+     284,
+     604,
+     1046,
+     288
+    ],
+    ""
+   ],
+   [
+    "section",
+    "titolo-a-mano",
+    [
+     284,
+     918,
+     1046,
+     168
+    ],
+    ""
+   ],
+   [
+    "p",
+    "",
+    [
+     284,
+     1106,
+     1046,
+     22
+    ],
+    ""
+   ]
+  ],
+  "primaSchermata": [
+   "Aggiornamenti",
+   "Da dove arrivano"
+  ],
+  "alto": 1168
+ }
+}

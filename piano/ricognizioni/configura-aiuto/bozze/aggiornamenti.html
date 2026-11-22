@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{#- BOZZA tappa 9 (tavola Conf7-Aggiornamenti). Una colonna: il riquadro dello stato (filo blu), «Da dove arrivano» e
+    «Aggiornare a mano» con il titolo SOPRA la scheda, i due collegamenti in fondo fuori dalle schede. Restano identici:
+    id stato-aggiornamento, avanzamento, indirizzo, indirizzo-aggiornamenti, rimetti-predefinito; data-in-corso e
+    data-indirizzo (lo script qui sotto e prove_16_browser.py); i data-guida; i tre moduli e i loro campi nascosti;
+    <form method="post" id="rimetti-predefinito" hidden> scritto così (prove_16.py:352 lo cerca carattere per carattere). -#}
+{% from "_configura.html" import testa_configura, titolo_linguetta with context %}
+{% block titolo %}Aggiornamenti{% endblock %}
+{% block corpo %}
+<div class="v-pagina c-configura pagina-aggiornamenti">
+  {{ testa_configura('aggiornamenti') }}
+  <div class="c-testa-linguetta">
+  {{ titolo_linguetta('Aggiornamenti') }}
+  <p class="v-sotto c-riga-limitata">Quando esce una versione nuova il programma lo dice da solo, e <b>Aggiorna adesso</b> la installa in circa un minuto. Appuntamenti, pazienti e impostazioni restano dove sono.</p>
+  </div>
+
+  {% if fallito %}
+  <div class="avviso errore">L'aggiornamento alla versione {{ fallito.a }} non è riuscito: il programma è rimasto alla {{ versione }}, con tutti i dati.{% if fallito.log %} Dettagli per l'assistenza in <code>{{ fallito.log }}</code>.{% endif %} Si può riprovare qui sotto, oppure avviare il Setup nuovo a mano.</div>
+  {% endif %}
+
+  <section class="riquadro stato-aggiornamento v-scheda c-filo-blu" id="stato-aggiornamento" data-guida="aggiornamento-stato"
+           data-in-corso="{{ 1 if stato.in_corso else 0 }}" data-indirizzo="{{ url_for('aggiornamenti.stato_json') }}">
+    <p class="versione-installata">Versione installata: <b>{{ versione }}</b>{% if variante == 'animata' %} (con animazioni){% endif %}</p>
+    {#- 1.12.6: si vede subito se il controllo da solo è acceso #}
+    <p class="controllo-automatico" data-guida="aggiornamento-automatico">Controllo automatico degli aggiornamenti: {% if controllo.acceso %}<b class="acceso">acceso</b>, poco dopo l'avvio e poi ogni sei ore{% if controllo.ultimo %} (ultimo controllo riuscito il {{ controllo.ultimo.strftime('%d/%m alle %H:%M') }}){% endif %}. Quando una versione nuova è pronta compare un avviso con «Clicca qui per installare».{% else %}<b class="spento">spento</b>: il programma non cerca da solo le versioni nuove.{% endif %}</p>
+    {% if not base %}
+      <p>Gli aggiornamenti automatici sono <b>spenti</b>: manca l'indirizzo da cui prenderli (qui sotto, <i>Da dove arrivano</i>).{% if predefinito %} <i>Rimetti l'indirizzo predefinito</i> li riaccende.{% endif %} Intanto si aggiorna a mano, con il Setup nuovo.</p>
+    {% elif stato.in_corso %}
+      <p class="in-corso" role="status">Controllo in corso… <span id="avanzamento">{% if m and stato.totale %}scaricamento della versione {{ m.versione }}: {{ '%.1f'|format(stato.scaricati / 1048576) }} MB su {{ '%.1f'|format(stato.totale / 1048576) }}{% endif %}</span></p>
+    {% elif m and pronto %}
+      <h2 class="pronta">È pronta la versione {{ m.versione }}</h2>
+      {% if novita_nuove %}
+      <div class="novita-in-arrivo">
+        {% for v in novita_nuove %}
+        {% if novita_nuove|length > 1 %}<h3>Versione {{ v.versione }}</h3>{% endif %}
+        <ul>{% for x in v.voci %}<li><b>{{ x.titolo }}.</b> {{ x.testo }}</li>{% endfor %}</ul>
+        {% endfor %}
+        <p class="nota-riga">Dopo l'aggiornamento ogni novità ha il suo video, in Aiuto → Novità.</p>
+      </div>
+      {% endif %}
+      <form method="post" action="{{ url_for('aggiornamenti.aggiorna') }}" class="aggiorna-adesso" data-guida="aggiorna-adesso">
+        <button class="bottone primario grande v-bottone v-principale" type="submit">Aggiorna adesso</button>
+        <p class="nota-riga">Prima il programma fa una copia di sicurezza dei dati; poi si chiude, si aggiorna e si riapre da solo, in circa un minuto. Meglio farlo quando non si sta prenotando.</p>
+      </form>
+    {% elif m %}
+      <h2>È uscita la versione {{ m.versione }}</h2>
+      <p>Non è ancora stata scaricata{% if stato.errore %}: <span class="errore-testo">{{ stato.errore }}</span>{% endif %}. Il programma riprova da solo; oppure <i>Controlla adesso</i>.</p>
+    {% elif stato.errore %}
+      <p class="errore-testo">Ultimo controllo non riuscito ({{ stato.errore_il.strftime('%d/%m alle %H:%M') if stato.errore_il else '' }}): {{ stato.errore }}.</p>
+      <p class="nota-riga">Il programma riprova da solo ogni sei ore.{% if pagina_versioni %} Se continua a non riuscire, si aggiorna a mano: <a href="{{ pagina_versioni }}" target="_blank" rel="noopener">la pagina delle versioni</a> nel browser, da cui scaricare <code>{{ nome_setup }}</code> e avviarlo sopra il programma (i dati restano).{% endif %}</p>
+    {% elif stato.controllato_il %}
+      <p>Il programma è aggiornato: non c'è una versione più nuova (controllato il {{ stato.controllato_il.strftime('%d/%m alle %H:%M') }}).</p>
+    {% else %}
+      <p>Il programma controlla da solo poco dopo l'avvio, poi ogni sei ore.</p>
+    {% endif %}
+    {% if base and not stato.in_corso %}
+    <form method="post" class="in-linea controlla-adesso"><input type="hidden" name="azione" value="controlla"><button class="bottone v-bottone" type="submit">Controlla adesso</button></form>
+    {% endif %}
+  </section>
+
+  <h3 class="v-titolo-sezione" id="indirizzo">Da dove arrivano</h3>
+  <form method="post" class="riquadro indirizzo-aggiornamenti v-scheda" data-guida="aggiornamenti-indirizzo">
+    <input type="hidden" name="azione" value="indirizzo">
+    <div class="campo v-campo"><label for="indirizzo-aggiornamenti">Indirizzo degli aggiornamenti</label>
+      <input id="indirizzo-aggiornamenti" name="indirizzo" value="{{ scritto }}" maxlength="400" spellcheck="false" autocomplete="off"
+             placeholder="https://github.com/utente/progetto   oppure   \\server\aggiornamenti"></div>
+    {% if usa_predefinito %}<p class="nota-riga predefinito-in-uso"><b>È l'indirizzo predefinito</b>, le versioni del Gestionale Agende su GitHub: non serve cambiarlo.</p>{% endif %}
+    <p class="nota-riga">Si può scrivere la pagina delle versioni di un progetto GitHub (basta l'indirizzo del progetto: il programma prende sempre l'ultima versione pubblicata), un altro indirizzo https, oppure una cartella condivisa. Lì il programma cerca il file <code>{{ manifesto }}</code>, pubblicato insieme al Setup. Vuoto: aggiornamenti automatici spenti.</p>
+    <div class="azioni c-azioni"><button class="bottone primario v-bottone v-principale" type="submit">Salva l'indirizzo</button>
+      {% if predefinito and not usa_predefinito %}<button class="bottone v-bottone" type="submit" form="rimetti-predefinito" data-guida="rimetti-predefinito">Rimetti l'indirizzo predefinito</button>{% endif %}</div>
+  </form>
+  {% if predefinito and not usa_predefinito %}
+  <form method="post" id="rimetti-predefinito" hidden><input type="hidden" name="azione" value="predefinito"></form>
+  {% endif %}
+
+  <h3 class="v-titolo-sezione">Aggiornare a mano</h3>
+  <div class="v-scheda">
+  <p>Senza internet, o su un altro PC: doppio clic sul Setup nuovo (<code>{{ nome_setup }}</code>), poi <b>Avanti</b> e <b>Fine</b>. Non serve disinstallare: il Setup dice quale versione c'è e quale arriva, e i dati restano.{% if pagina_versioni %} Il Setup si scarica dal browser, da <a href="{{ pagina_versioni }}" target="_blank" rel="noopener">la pagina delle versioni</a>.{% endif %}</p>
+  <p class="nota-riga certificati-in-uso">Per l'assistenza: i certificati dei siti di cui il programma si fida sono {{ certificati }}. Se la rete della clinica ha un proxy o un antivirus che riscrive i certificati, il suo si mette nel file <code>certificati.pem</code> nella cartella dei dati, accanto al database.</p>
+  </div>
+  <p class="collegamenti-aggiornamenti"><a href="{{ url_for('aggiornamenti.novita_pagina') }}">Le novità di questa versione</a> · <a href="{{ url_for('guida.articolo', slug='aggiornare') }}">La guida, con il video</a></p>
+</div>
+<script>
+/* mentre controlla o scarica, la pagina segue l'avanzamento e si ricarica alla fine */
+(function () {
+  var box = document.getElementById('stato-aggiornamento');
+  if (!box || box.getAttribute('data-in-corso') !== '1') { return; }
+  var mb = function (n) { return (n / 1048576).toFixed(1); };
+  var giro = function () {
+    fetch(box.getAttribute('data-indirizzo'), { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.in_corso) { window.location.reload(); return; }
+        var a = document.getElementById('avanzamento');
+        if (a && d.disponibile && d.totale) {
+          a.textContent = 'scaricamento della versione ' + d.disponibile + ': ' + mb(d.scaricati) + ' MB su ' + mb(d.totale);
+        }
+        setTimeout(giro, 1000);
+      })
+      .catch(function () { setTimeout(giro, 3000); });
+  };
+  setTimeout(giro, 800);
+})();
+</script>
+{% endblock %}

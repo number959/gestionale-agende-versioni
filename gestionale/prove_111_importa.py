@@ -25,6 +25,8 @@ quello della segnalazione: PROVE_SOLO='[5]' rifa' solo quella.
 Dove si puo' il risultato si confronta con un calcolo fatto a parte (un
 oracolo) e non con quello che il programma stesso ha prodotto."""
 import io
+from prove_dove import dove
+from prove_gemelli import manca
 import logging
 import os
 import re
@@ -69,7 +71,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 
@@ -223,7 +225,11 @@ def i01_orari_numeri():
         for i, o in enumerate(orari):
             righe.append([D0, o, PAZIENTI[i], '33312345%02d' % i, 'GALASSO', 'Ambulatorio 1'])
         indirizzo, t = carica(C, xlsx(righe), 'agenda.xlsx')
-        assert "manca l'ora" not in t, 'anteprima: "manca l\'ora" per gli orari %s' % orari
+        # gemello: lo stesso foglio con una riga senza ora, nello stesso mondo, e l'anteprima lo dice (caricare un
+        # file per l'anteprima non scrive niente: l'importazione qui sotto resta quella del primo)
+        _, senza_ora = carica(C, xlsx([righe[0], [D0, None, PAZIENTI[0], '3331234599', 'GALASSO', 'Ambulatorio 1']]),
+                              'senza_ora.xlsx')
+        manca(t, "manca l'ora", senza_ora, 'anteprima: "manca l\'ora" per gli orari %s' % orari)
         importa_ora(C, indirizzo)
         s = S()
         apps = s.scalars(select(Appuntamento).order_by(Appuntamento.inizio)).all()
@@ -407,7 +413,11 @@ def i09_titoli_medico():
     for i, (cella, _) in enumerate(celle):
         righe.append([D0, time(8 + i), PAZIENTI[i % len(PAZIENTI)], '33312348%02d' % i, cella, 'Ambulatorio 1'])
     indirizzo, t = carica(C, xlsx(righe), 'agenda.xlsx')
-    assert 'Medici nuovi' not in t, 'anteprima: medici nuovi per dei titoli'
+    # gemello: un medico che non c'e' davvero, nello stesso mondo, e l'anteprima lo propone come nuovo (solo
+    # l'anteprima: non si importa)
+    _, nuovo = carica(C, xlsx([righe[0], [D0, time(8), PAZIENTI[0], '3331234598', 'Dott. Sconosciuti',
+                                          'Ambulatorio 1']]), 'nuovo.xlsx')
+    manca(t, 'Medici nuovi', nuovo, 'anteprima: medici nuovi per dei titoli')
     importa_ora(C, indirizzo)
     assert quanti(S, Operatore) == 2, 'medici: %d invece di 2' % quanti(S, Operatore)
     trovati = [m for _, _, _, m, _ in agenda(S)]
@@ -525,8 +535,11 @@ def i11_reimportare_da_confermare():
         fine = importa_ora(C, indirizzo)
         assert quanti(S, Appuntamento) == 2 and quanti(S, Appunto) == 2, 'giro %d: %d appuntamenti, %d da confermare' % (
             giro, quanti(S, Appuntamento), quanti(S, Appunto))
-        if giro > 1:
-            assert '(in conflitto o incomplete)' not in fine, 'giro %d: la pagina finale conta da confermare nuovi' % giro
+        if giro == 1:
+            fine_primo_giro = fine          # il gemello: la prima volta le due righe diventano da confermare nuovi
+        else:
+            manca(fine, '(in conflitto o incomplete)', fine_primo_giro,
+                  'giro %d: la pagina finale conta da confermare nuovi' % giro)
     # uno chiuso dalla segreteria ("non serve piu'") non torna
     s = S()
     xid = s.scalars(select(Appunto).order_by(Appunto.id)).first().id

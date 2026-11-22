@@ -4,10 +4,17 @@ stesso PC, il caso piu' vicino) prova a mandare moduli al gestionale in tre
 modi, e il gestionale li deve rifiutare tutti; i moduli delle sue pagine
 invece passano. Da lanciare sui dati di prova:
 
-    python prove_sicurezza_browser.py http://127.0.0.1:5000
+    python prove_sicurezza_browser.py http://127.0.0.1:5001
 
 Non cambia niente nel database: le richieste rifiutate non scrivono e quella
-buona rimette il testo che c'era."""
+buona rimette il testo che c'era.
+
+Già che c'è, la zona dei messaggi (tappa 1 della base, 22/11/2026): la conferma
+del salvataggio (dopo il rinvio) e un errore (nella pagina ridisegnata, la scheda
+con il telefono sbagliato non si crea) si vedono una volta sola, dentro la zona,
+rossi solo se sono errori, e ricaricando la pagina non tornano. Le prove senza
+browser prendono i messaggi da Flask (prove_messaggi.py); dove si vedono lo dice
+questa."""
 import functools
 import http.server
 import os
@@ -19,7 +26,12 @@ from html import unescape
 
 from playwright.sync_api import sync_playwright
 
-B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
+# la zona dei messaggi (role="status" aria-label="Messaggi" in base.html) e il controllo del messaggio stanno negli
+# aiuti comuni delle prove nel browser: se la veste cambia la zona, si cambia lì
+from aiuti_browser import nella_zona, zona_messaggi  # noqa: E402
+
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 
 
@@ -118,12 +130,27 @@ with sync_playwright() as p:
         campo.locator('xpath=ancestor::form').locator('button[type="submit"]').first.click()
     salvato = testo_promemoria()
     controlla('modulo del gestionale: salvato', salvato == originale + ' (prova)', 'testo ora %r' % salvato)
+    controlla('salvato: «Testo dei messaggi salvato» nella zona dei messaggi', *nella_zona(pg, 'Testo dei messaggi salvato', False))
     pg.goto(B + '/impostazioni')
     campo = pg.locator('textarea[name="testo"]')
     campo.fill(originale)
     with pg.expect_navigation():
         campo.locator('xpath=ancestor::form').locator('button[type="submit"]').first.click()
     controlla('testo rimesso com\'era', testo_promemoria() == prima)
+    controlla('rimesso: di nuovo il messaggio nella zona', *nella_zona(pg, 'Testo dei messaggi salvato', False))
+    pg.reload()
+    # per ruolo si vedono solo i pezzi visibili: anche il testo, che si trova pure nascosto, non deve esserci
+    controlla('ricaricata la pagina il messaggio non torna',
+              zona_messaggi(pg).count() == 0 and pg.get_by_text('Testo dei messaggi salvato').count() == 0,
+              (zona_messaggi(pg).count(), pg.get_by_text('Testo dei messaggi salvato').count()))
+    # un errore: la pagina ridisegnata (200) con il messaggio rosso; la scheda con il telefono sbagliato non si crea
+    pg.goto(B + '/pazienti/nuovo')
+    pg.fill('#cognome', 'Fittizi')
+    pg.fill('#telefono', '12-34')                  # type="tel" senza pattern: il browser lo lascia passare
+    with pg.expect_navigation():
+        pg.locator('form.modulo-paziente button.primario[type="submit"]').click()
+    controlla('errore: «almeno 6 cifre» nella zona dei messaggi, rosso', *nella_zona(pg, 'almeno 6 cifre', True))
+    controlla('errore: il modulo ripropone quello scritto', pg.input_value('#telefono') == '12-34', pg.input_value('#telefono'))
     b.close()
 server.shutdown()
 print('%d / %d' % (sum(1 for e in esiti if e[0]), len(esiti)))

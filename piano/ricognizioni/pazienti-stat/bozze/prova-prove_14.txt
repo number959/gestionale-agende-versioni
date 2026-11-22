@@ -1,0 +1,21 @@
+aggiornamento dalla 1.3                           2 prove  tutte a posto
+importazione: riconoscimento                      4 prove  tutte a posto
+importazione: agenda                              5 prove  tutte a posto
+importazione: rubrica pazienti                    2 prove  tutte a posto
+chiusura della giornata                           1 prove  tutte a posto
+lista d'attesa                                    2 prove  tutte a posto
+spostamenti e serie                               3 prove  tutte a posto
+cassa e listino                                   2 prove  tutte a posto
+documenti e moduli                                2 prove  tutte a posto
+provenienza, note del giorno, cose da fare, notifiche  5 prove  tutte a posto
+importazione: file veri della clinica (ricostruiti con nomi inventati)  3 prove  tutte a posto
+appunti da confermare                             4 prove  tutte a posto
+foglio del giorno e tema scuro                    2 prove  1 DA SISTEMARE
+robustezza                                        2 prove  tutte a posto
+
+Dettaglio:
+  ROTTO  [foglio del giorno e tema scuro] tema scuro: caricato, fogli da stampare chiari, file generato allineato
+         prove_14.py:1836 · asserzione fallita
+
+39 prove totali, 38 superate, 1 da sistemare
+uscita 1

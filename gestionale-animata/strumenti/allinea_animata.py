@@ -23,14 +23,15 @@ QUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NORMALE = QUI
 ANIMATA = os.path.join(os.path.dirname(QUI), 'gestionale-animata')
 
-PROPRI = {'CREA_SETUP.bat', 'LEGGIMI.md', 'installer.iss', 'templates/base.html', 'templates/griglia.html',
-          'templates/impostazioni.html'}
+# dalla tappa 1 della base i modelli sono tutti comuni: le righe della sola animata stanno dietro
+# {% if variante == 'animata' %} (variante: aggiornamenti.VARIANTE, da funzioni_modelli in app.py)
+PROPRI = {'CREA_SETUP.bat', 'LEGGIMI.md', 'installer.iss'}
 SOLO_ANIMATA = ('static/animazioni.css', 'static/animazioni.js', 'static/animazioni/', 'prove_animazioni.py',
                 'prove_icone_animate.py')
 RIGENERATI = ('static/guida/', 'static/video/')
 CARTELLE_ESCLUSE = {'__pycache__', 'build', 'dist', 'Output', '.venv', '.git', 'prove_animazioni_foto'}
 ESTENSIONI_ESCLUSE = ('.db', '.db-wal', '.db-shm', '.pyc', '.log', '.conflitto')
-FILE_ESCLUSI = {'campagna-progresso.txt'}
+FILE_ESCLUSI = {'campagna-progresso.txt', 'firma_prova.json'}       # firma_prova.json: la scrive crea_prova.py
 
 
 def file_di(radice):

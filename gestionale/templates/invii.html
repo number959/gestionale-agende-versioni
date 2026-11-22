@@ -10,7 +10,7 @@
     <a href="#regole" class="spia {{ 'accesa' if regole|selectattr('attiva')|list else 'spenta' }}">Email automatiche: {{ regole|selectattr('attiva')|list|length }} attiv{{ 'a' if regole|selectattr('attiva')|list|length == 1 else 'e' }}</a>
     <a href="#promemoria" class="spia {{ 'accesa' if cfg.promemoria_attivo == '1' else 'spenta' }}">Promemoria: {{ ('ogni giorno alle ' ~ cfg.promemoria_ora) if cfg.promemoria_attivo == '1' else 'spenti' }}</a>
     <a href="#whatsapp" class="spia {{ 'accesa' if whatsapp_pronto else 'spenta' }}">WhatsApp automatico: {{ 'pronto' if whatsapp_pronto else 'da configurare' }}</a>
-    <a href="#registro" class="spia neutra">Registro</a>
+    <a href="#registro" class="spia neutra" data-guida="invii-registro">Registro</a>
   </div>
 
   {# ------------------------------------------------------------------ regole #}
@@ -25,7 +25,7 @@
   {% endif %}
   {% for medico, lista in gruppi %}
   <div class="gruppo-regole" id="regole-{{ medico.id if medico else 'tutti' }}">
-    <h3>{% if medico %}{{ medico.etichetta }}{% if medico.specialita %} <span class="senza">· {{ medico.specialita }}</span>{% endif %}{% if not medico.attivo %} <span class="senza">(non attivo)</span>{% endif %}{% else %}Per tutti i medici{% endif %}</h3>
+    <h3 data-guida="regole-medico">{% if medico %}{{ medico.etichetta }}{% if medico.specialita %} <span class="senza">· {{ medico.specialita }}</span>{% endif %}{% if not medico.attivo %} <span class="senza">(non attivo)</span>{% endif %}{% else %}Per tutti i medici{% endif %}</h3>
     {% if not medico %}<p class="aiuto">Partono per gli appuntamenti di qualunque medico, tranne dove il medico ha una sua email per la stessa prestazione.</p>{% endif %}
     <table class="elenco">
       <tr><th>Email</th><th>Prestazioni</th><th>Allegati</th><th>Stato</th></tr>
@@ -33,7 +33,7 @@
       <tr>
         <td><a href="{{ url_for('invii.regola', rid=r.id) }}"><b>{{ r.nome }}</b></a><div class="nota-riga">{{ r.oggetto }}</div>
           {%- if n %}
-          {%- for altra, dove in n.sostituisce %}<div class="nota-riga">Al posto di «{{ altra.nome }}» (per tutti i medici): {{ dove }}.</div>{% endfor %}
+          {%- for altra, dove in n.sostituisce %}<div class="nota-riga" data-guida="regole-al-posto-di">Al posto di «{{ altra.nome }}» (per tutti i medici): {{ dove }}.</div>{% endfor %}
           {%- for altra, dove in n.sostituita %}<div class="nota-riga">Non parte per {{ dove }}: lì c'è «{{ altra.nome }}».</div>{% endfor %}
           {%- for altra, dove in n.insieme %}<div class="nota-riga testo-avviso">Parte insieme a «{{ altra.nome }}» per {{ dove }}: il paziente riceve due email.</div>{% endfor %}
           {%- endif %}</td>
@@ -56,7 +56,7 @@
     <span class="nota-riga">Un medico con informative diverse ha la sua email, con i suoi PDF. Per partire da un'email già fatta: aprirla e, in fondo, Duplica per un altro medico.</span>
   </form>
 
-  {# ------------------------------------------------------------------- email #}
+  {% if puo('sistema') %}{# ---------------------------------------------- email (solo dal PC principale) #}
   <h2 class="sezione" id="email">Account email della struttura</h2>
   <p>Le email ai pazienti partono da questa casella e le risposte arrivano lì. Va bene <b>qualsiasi casella email</b>: quella del sito della clinica, Aruba, Gmail o un altro fornitore. Si sceglie il tipo e il programma propone server, porta e sicurezza.</p>
   {% set casella = caselle|selectattr('codice', 'equalto', tipo_email)|first %}
@@ -142,7 +142,8 @@
     <label class="largo">Manda una prova a <input type="email" name="a" maxlength="120" required value="{{ cfg.email_utente }}" style="width:300px"></label>
     <button class="bottone" type="submit"{% if not email_pronta %} disabled title="Prima salvare indirizzo, password e server della casella"{% endif %}>Manda la prova</button>
   </form>
-
+{% else %}  <h2 class="sezione" id="email">Account email della struttura</h2>
+  <p class="nota-riga">La casella da cui partono le email si configura solo dal PC della segreteria.</p>{% endif %}
   {# --------------------------------------------------------------- promemoria #}
   <h2 class="sezione" id="promemoria">Promemoria del giorno prima</h2>
   <p>Ogni giorno, dall'ora scelta, il programma manda il promemoria a chi ha un appuntamento il prossimo giorno di lavoro (il venerdì anche per sabato, domenica e lunedì, se il sabato è chiuso). Con WhatsApp automatico configurato va su WhatsApp al cellulare del paziente; altrimenti per email a chi ce l'ha. Chi non vuole promemoria (casella nella scheda) non riceve niente; gli altri restano da chiamare nella pagina <a href="{{ url_for('viste.conferme') }}">Conferme</a>, che mostra anche cosa è partito.</p>
@@ -164,7 +165,7 @@
     <div class="azioni"><button class="bottone primario" type="submit">Salva i promemoria</button></div>
   </form>
 
-  {# ----------------------------------------------------------------- whatsapp #}
+  {% if puo('sistema') %}{# ------------------------------------------- whatsapp (solo dal PC principale) #}
   <h2 class="sezione" id="whatsapp">WhatsApp automatico</h2>
   <p>Per mandare WhatsApp da solo, il programma usa la piattaforma WhatsApp Business di Meta: non l'app WhatsApp del telefono, che non permette invii automatici. Senza questa configurazione i pulsanti WhatsApp della pagina Conferme continuano ad aprire il messaggio già scritto, da mandare con un clic.</p>
   <details class="riquadro" data-guida="whatsapp-requisiti"{% if not whatsapp_pronto %} open{% endif %}>
@@ -214,10 +215,11 @@
   </form>
   <form method="post" class="riquadro filtri" data-attesa="Invio in corso…">
     <input type="hidden" name="azione" value="prova_whatsapp">
-    <label class="largo">Manda una prova al cellulare <input type="tel" name="a" maxlength="30" required style="width:180px"></label>
+    <label class="largo">Manda una prova al cellulare <input type="tel" name="a" data-guida="whatsapp-prova" maxlength="30" required style="width:180px"></label>
     <button class="bottone" type="submit"{% if not whatsapp_pronto %} disabled title="Prima salvare token, ID del numero e nome del modello"{% endif %}>Manda la prova</button>
   </form>
-
+{% else %}  <h2 class="sezione" id="whatsapp">WhatsApp automatico</h2>
+  <p class="nota-riga">Il collegamento con WhatsApp (token e numero) si configura solo dal PC della segreteria.</p>{% endif %}
   {# ----------------------------------------------------------------- registro #}
   <h2 class="sezione" id="registro">Registro</h2>
   <p>Gli ultimi messaggi, in coda o partiti. Un messaggio non partito per la rete si riprova da solo (dopo 2, 10, 30 minuti, 2 e 6 ore); per un errore da correggere (password, indirizzo sbagliato) si corregge e si preme <b>Riprova</b>.</p>

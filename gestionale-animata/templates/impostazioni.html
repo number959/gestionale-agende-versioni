@@ -11,6 +11,7 @@
     <a class="bottone" href="{{ url_for('invii.pagina') }}">Email e WhatsApp</a>
     <a class="bottone" href="{{ url_for('segreteria.sposta_blocco') }}">Sposta gli appuntamenti di un medico</a>
     <a class="bottone" href="{{ url_for('autoriparazione') }}">Controllo del programma</a>
+    <a class="bottone" href="{{ url_for('accessi.pagina') }}">Aree e accessi</a>
     <a class="bottone" href="#" onclick="document.getElementById('aiuto-tasti').hidden=false;return false">Tasti rapidi</a>
   </div>
 
@@ -26,6 +27,7 @@
     <p class="nota-riga" style="margin-bottom:0">Vale per questo PC. "Come Windows" segue Impostazioni → Personalizzazione → Colori → Modalità. Le stampe restano sempre chiare.</p>
   </div>
 
+  {% if variante == 'animata' -%}
   <h2 class="sezione" id="aspetto">Animazioni</h2>
   <div class="riquadro">
     <p class="aiuto" style="margin-top:0">Pagine che entrano scorrendo, appuntamenti che compaiono uno dopo l'altro, la linea rossa dell'ora attuale nella giornata di oggi, notifiche con il tempo che resta. La scelta vale per questo PC.</p>
@@ -37,6 +39,7 @@
     <p class="nota-riga" id="animazioni-ridotte" hidden>In Windows è attivo "movimento ridotto" (Impostazioni → Accessibilità → Effetti visivi → Effetti animazione spenti): le animazioni restano ferme, la linea dell'ora rimane.</p>
   </div>
 
+  {% endif -%}
   <h2 class="sezione" id="stampa">Foglio del giorno</h2>
   <p>Cosa esce con <b>Stampa</b> dalla giornata. Ora e paziente ci sono sempre; la stanza, se il foglio è in ordine di ora.</p>
   <form method="post" class="riquadro">
@@ -86,7 +89,7 @@
       <label class="largo">Cartella <input type="text" name="cartella" value="{{ scelta }}" placeholder="{{ predefinita }}" style="width:420px"></label>
       <button class="bottone" type="submit">Salva cartella</button>
     </form>
-    <form method="post" class="in-linea"><input type="hidden" name="azione" value="backup_ora"><button class="bottone primario" type="submit">Fai un backup adesso</button></form>
+    <form method="post" class="in-linea"><input type="hidden" name="azione" value="backup_ora"><button class="bottone primario" type="submit" data-guida="backup-adesso">Fai un backup adesso</button></form>
   </div>
 
   {% if copie %}

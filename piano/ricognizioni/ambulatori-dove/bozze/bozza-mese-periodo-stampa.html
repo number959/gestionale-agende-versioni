@@ -1,0 +1,40 @@
+{#- BOZZA (tappa 8). «Stampa e scarica» di Programmazione e Riepilogo del periodo, dove oggi ci sono bottoni sparsi.
+    Obiettivo: stesse voci, stessi indirizzi NELLO STESSO ORDINE di oggi (il lanciatore confronta liste ordinate:
+    confronta_rami.py:216-231), stessi data-guida su pezzi VISIBILI (guida.js:19-31 salta gli elementi nascosti:
+    un data-guida dentro la tendina chiusa darebbe «Elementi non trovati» nelle immagini della guida). -#}
+
+{#- ===== ambulatori_mese.html, righe 21-32 di oggi → una tendina sola.
+    Oggi, nell'ordine: «Pianificazione della settimana» (resta bottone nella barra, come nella tavola),
+    «Scarica in Excel» [data-guida=programmazione-excel], «Altre esportazioni» [data-guida=programmazione-altre]
+    con sala del mese / ambulatori e sala del mese / Tutte le esportazioni, «Stampa» (button onclick).
+    Proposta: data-guida="programmazione-excel" sul contenitore, data-guida="programmazione-altre" sul bottone che apre:
+    tutti e due visibili, nello stesso ordine di oggi. La parola «Altre esportazioni» sparisce (la tendina si chiama
+    «Stampa e scarica»): è la conseguenza delle due decisioni di s1.md («Stampa e scarica» e «Tutte le esportazioni»). -#}
+<div class="gruppo-comandi v-stampa" data-guida="programmazione-excel">
+  <button type="button" class="v-bottone apri-gruppo" aria-haspopup="true" aria-expanded="false"
+          data-guida="programmazione-altre">{{ icona('printer') }}Stampa e scarica<span class="v-freccia" aria-hidden="true">…</span></button>
+  <div class="tendina" role="menu">
+    <a href="{{ url_for('ambulatori.mese_excel', aaaamm=aaaamm, struttura=sid) }}"><b>Scarica in Excel</b></a>
+        {#- la tavola aggiunge «il file degli ambulatori: programmazione e calendario»: riga NUOVA, solo se approvata -#}
+    {% if vista.sala.sale %}<a href="…mese/sala…"><b>La sala operatoria del mese</b><small>giorno per giorno, i turni dei chirurghi e gli interventi</small></a>
+    <a href="…mese/tutto…"><b>Ambulatori e sala del mese</b><small>tutto insieme, in fogli separati</small></a>{% endif %}
+    <a href="{{ url_for('esportazioni.pagina', data=primo.isoformat(), struttura=sid) }}"><b>Tutte le esportazioni</b><small>giorno, settimana e mese: ambulatori, sala o tutto insieme</small></a>
+    <a href="#" onclick="window.print(); return false"><b>Stampa</b><small>questa pagina</small></a>
+        {#- LA TAVOLA 2 HA DIMENTICATO «Stampa» (vociStampa ha 4 voci) ma la sua nota dice che c'è: resta.
+            Oggi è un <button>: come <a href="#"> (come nella Pianificazione, riga 31) si raggiunge con le frecce
+            (gestionale.js:756-765 cerca solo «.tendina a») ma aggiunge un collegamento «#» nel lanciatore;
+            «questa pagina» è la riga di oggi della Pianificazione -#}
+  </div>
+</div>
+{#- La nota di riga 37 dice «la sala è in «Altre esportazioni»»: la tavola scrive «la sala ha le sue voci in «Stampa e
+    scarica»». È una frase che descrive i comandi di oggi (s2.md la permette) ma non è fra le cinque di s1.md:
+    da mettere nell'elenco dei cambiamenti con il via di Giovanni. -#}
+
+{#- ===== ambulatori_riepilogo.html, righe 29-38 di oggi.
+    Oggi: [cruscotto] «Torna al riepilogo live» (data-guida=statistiche-torna) · [non schermo] «Scarica in Excel»
+    (data-guida=periodo-excel) · «Stampa» (button) · [non cruscotto] «Riepilogo live» (bottone).
+    Proposta: «Stampa e scarica» con data-guida="periodo-excel" sul contenitore; voci «Scarica in Excel», «Stampa».
+    La tavola dà due righe nuove («…xlsx: fogli …», «la pagina com'è, su A4 orizzontale, senza linguette e scelta del
+    periodo»): solo se approvate; altrimenti nessuna riga o «questa pagina».
+    «Riepilogo live» (bottone di oggi, non nella tavola che lo toglieva): RESTA fino a M6 — è anche una linguetta, ma il
+    bottone è un collegamento del lanciatore. Nel modo schermo: nessuna delle due cose (prove_112.py:2652-2656). -#}

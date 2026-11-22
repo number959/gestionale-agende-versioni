@@ -99,13 +99,13 @@
     {% if riepilogo.prossimo %}<p>Prossimo: <a href="{{ url_for('appuntamento', aid=riepilogo.prossimo.id) }}">{{ riepilogo.prossimo.inizio.strftime('%d/%m/%Y alle %H:%M') }}</a>, {{ riepilogo.prossimo.operatore.etichetta }}.</p>{% endif %}
     {% if riepilogo.ultimo %}<p>Ultima volta: {{ riepilogo.ultimo.inizio.strftime('%d/%m/%Y') }}{% if riepilogo.ultimo.prestazione %}, {{ riepilogo.ultimo.prestazione.nome }}{% endif %}.</p>{% endif %}
     {% for x in attese %}<p>In lista d'attesa dal {{ x.creato_il.strftime('%d/%m') }}{% if x.prestazione %} per {{ x.prestazione.nome }}{% endif %}. <a href="{{ url_for('segreteria.attesa_scheda', xid=x.id) }}">Apri</a></p>{% endfor %}
-    <p><a href="{{ url_for('segreteria.attesa_scheda', paziente_id=p.id) }}">Metti in lista d'attesa</a></p>
-    {% if cose %}<h2>Da fare</h2><ul>{% for x in cose %}<li>{{ x.per_il.strftime('%d/%m') }}: {{ x.testo }}</li>{% endfor %}</ul>{% endif %}
+    {% if puo_cambiare('segreteria') %}<p><a href="{{ url_for('segreteria.attesa_scheda', paziente_id=p.id) }}">Metti in lista d'attesa</a></p>{% endif %}
+    {% if cose %}<h2>Da fare</h2><ul>{% for x in cose %}<li>{{ x.per_il.strftime('%d/%m') }}: {{ x.testo }}</li>{% endfor %}</ul>{% endif %}{% if puo_cambiare('segreteria') %}
     <form method="post" action="{{ url_for('segreteria.cose_da_fare') }}">
       <input type="hidden" name="paziente_id" value="{{ p.id }}"><input type="hidden" name="torna" value="{{ url_for('pazienti.scheda', pid=p.id) }}">
       <div class="campo"><label for="cosa">Ricordami di…</label><input type="text" id="cosa" name="testo" maxlength="300" required placeholder="richiamare per il referto"></div>
       <div class="campo"><input type="date" name="per_il" value="{{ oggi.isoformat() }}" aria-label="Il giorno"> <button class="bottone piccolo" type="submit">Aggiungi</button></div>
-    </form>
+    </form>{% endif %}
   </div>
   {% endif %}
   </div>

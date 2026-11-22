@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{#- BOZZA tappa 6 (tavola Seg3-Chiusura). Stessi moduli, campi e collegamenti, nello stesso ordine. Restano: la casella
+    'name="scelti" value="N"' scritta così (prove_14.py:901), button[value="arrivati"] (guida.py:247), data-tasto
+    precedente/successivo/oggi, data-seleziona-tutti (gestionale.js:445), «primario» su «Segna … arrivati»
+    (Ctrl+Invio, gestionale.js:531), lista-giorno ed elenco (animazioni.js). La striscia prende il posto di ul.numeri:
+    nell'animata animazioni.js:135 va allargato a .v-striscia-numero (i numeri che contano). -#}
+{% from "_pezzi.html" import barra_comandi, passo, striscia, tabella, scheda %}
+{% from "_area.html" import testa_segreteria with context %}
+{% block titolo %}Chiusura del {{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="v-pagina v-seg">
+{{ testa_segreteria() }}
+<div class="v-seg-titolo"><h2 class="v-titolo-sezione">Chiusura · {{ titolo }}</h2> <span class="v-sotto">{{ aperti|length }} da chiudere</span></div>
+{% call barra_comandi() %}
+  {{ passo(url_for('segreteria.chiusura', iso=ieri, struttura=sid), 'indietro', 'Giorno precedente', 'precedente') }}
+  {{ passo(url_for('segreteria.chiusura', iso=domani, struttura=sid), 'avanti', 'Giorno successivo', 'successivo') }}
+  <a class="v-bottone" data-tasto="oggi" href="{{ url_for('segreteria.chiusura', iso=oggi_iso, struttura=sid) }}">Oggi</a>
+  {% if strutture|length > 1 %}
+  <form method="get" class="v-in-riga"><span class="v-tendina"><select name="struttura" onchange="this.form.submit()" aria-label="Struttura">
+    {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+  </select></span></form>
+  {% endif %}
+  <span class="v-a-destra"></span>
+  <a class="v-bottone" href="{{ url_for('viste.elenco_giorno', iso=g.isoformat(), struttura=sid) }}">Elenco</a>
+  <a class="v-bottone" href="{{ url_for('cassa.cassa_giorno', iso=g.isoformat(), struttura=sid) }}">Cassa del giorno</a>
+{% endcall %}
+{%- set _voci = [
+  {'numero': conteggi.ARRIVATO, 'cosa': 'arrivat' ~ ('o' if conteggi.ARRIVATO == 1 else 'i')},
+  {'numero': conteggi.NON_PRESENTATO, 'cosa': 'non presentat' ~ ('o' if conteggi.NON_PRESENTATO == 1 else 'i'), 'allarme': conteggi.NON_PRESENTATO > 0},
+  {'numero': conteggi.DISDETTO, 'cosa': 'disdett' ~ ('o' if conteggi.DISDETTO == 1 else 'i')},
+  {'numero': aperti|length, 'cosa': 'ancora da segnare'},
+] + ([{'numero': ancora_da_venire, 'cosa': 'non ancora finit' ~ ('o' if ancora_da_venire == 1 else 'i')}] if ancora_da_venire else []) %}
+{{ striscia(_voci) }}
+
+{% if futuro %}
+<p class="vuoto v-scheda v-seg-vuoto">È un giorno futuro: si chiude quando è passato.</p>
+{% elif aperti %}
+<p class="nota v-sotto">Appuntamenti già finiti e ancora <b>prenotati</b> o <b>confermati</b>: vanno segnati come arrivati o non presentati, altrimenti le statistiche sulle mancate presenze non tornano.</p>
+<form method="post">
+  <input type="hidden" name="struttura" value="{{ sid }}">
+  {% call tabella(classe='elenco lista-giorno') %}
+    <thead><tr><th><input type="checkbox" checked data-seleziona-tutti="scelti" aria-label="Seleziona tutti"></th><th>Ora</th><th>Paziente</th><th>Prestazione</th><th>Medico · stanza</th><th>Stato</th></tr></thead>
+    <tbody>
+    {% for a in aperti %}
+    <tr>
+      <td><input type="checkbox" name="scelti" value="{{ a.id }}" checked aria-label="Seleziona"></td>
+      <td class="ora-lista"><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}">{{ a.inizio.strftime('%H:%M') }}</a></td>
+      <td>{% if a.paziente %}<a href="{{ url_for('pazienti.scheda', pid=a.paziente.id) }}">{{ a.paziente.etichetta }}</a>{% else %}<span class="senza">senza paziente</span>{% endif %}</td>
+      <td>{{ a.prestazione.nome if a.prestazione else '' }}</td>
+      <td>{{ a.operatore.etichetta }}<div class="nota-riga">{{ a.risorsa.nome }}</div></td>
+      <td>{{ a.etichetta_stato }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  {% endcall %}
+  <div class="azioni v-seg-azioni">
+    <button class="v-bottone v-principale primario" type="submit" name="azione" value="arrivati">Segna i selezionati come arrivati</button>
+    <button class="v-bottone v-pericolo stato-non_presentato" type="submit" name="azione" value="non_presentati">Segna i selezionati come non presentati</button>
+  </div>
+</form>
+{% else %}
+<p class="vuoto v-scheda v-seg-vuoto">Niente da chiudere: tutti gli appuntamenti finiti hanno già uno stato.</p>
+{% endif %}
+
+{% if da_incassare %}
+{% call scheda('Arrivati con un importo e non ancora incassati', livello=2, classe='riquadro-elenco v-seg-da-incassare') %}
+  <ul>{% for a in da_incassare %}<li><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}#incasso">{{ a.inizio.strftime('%H:%M') }} {{ a.paziente.etichetta if a.paziente else '' }}</a> — {{ a.importo_testo }} €</li>{% endfor %}</ul>
+  <p><a href="{{ url_for('cassa.cassa_giorno', iso=g.isoformat(), struttura=sid) }}">Apri la cassa del giorno</a></p>
+{% endcall %}
+{% endif %}
+
+{% if arretrati %}
+{% call scheda('Altri giorni ancora da chiudere', livello=2, classe='riquadro-elenco v-seg-arretrati') %}
+  <ul>{% for giorno, n in arretrati.items() %}<li><a href="{{ url_for('segreteria.chiusura', iso=giorno.isoformat(), struttura=sid) }}">{{ giorno_breve(giorno) }}</a>: {{ n }} appuntament{{ 'o' if n == 1 else 'i' }}</li>{% endfor %}</ul>
+{% endcall %}
+{% endif %}
+</div>
+{% endblock %}

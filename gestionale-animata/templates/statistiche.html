@@ -18,7 +18,7 @@
     <label>Al <input type="date" name="al" value="{{ al.isoformat() }}"></label>
     <button class="bottone primario" type="submit">Aggiorna</button>
     <a class="bottone" href="{{ url_for('viste.statistiche_excel', struttura=sid, dal=dal.isoformat(), al=al.isoformat()) }}">Scarica in Excel</a>
-    <a class="bottone" href="{{ url_for('cruscotto.riepilogo', aaaamm=dal.strftime('%Y-%m'), struttura=sid if strutture|length > 1 else none) }}">Riepilogo del mese per medico</a>
+    <a class="bottone" href="{{ url_for('cruscotto.riepilogo', aaaamm=dal.strftime('%Y-%m'), struttura=sid if strutture|length > 1 else none) }}" data-guida="statistiche-riepilogo-medici">Riepilogo del mese per medico</a>
   </form>
 
   <ul class="numeri grandi">
@@ -27,8 +27,8 @@
     <li><b>{{ dati.disdetti }}</b> disdetti</li>
     <li{% if dati.tasso_assenze and dati.tasso_assenze > 10 %} class="allarme"{% endif %}><b>{{ dati.non_presentati }}</b> non presentati{% if dati.tasso_assenze is not none %} ({{ perc(dati.tasso_assenze, 1) }}){% endif %}</li>
     <li><b>{{ dati.pazienti_nuovi }}</b> pazienti nuovi</li>
-    {% if dati.importo_cent %}<li><b>{{ euro(dati.importo_cent) }}</b> euro indicati</li>{% endif %}
-    {% if dati.incassato_cent %}<li><b>{{ euro(dati.incassato_cent) }}</b> euro incassati</li>{% endif %}
+    {% if dati.importo_cent and puo('cassa') %}<li><b>{{ euro(dati.importo_cent) }}</b> euro indicati</li>{% endif %}
+    {% if dati.incassato_cent and puo('cassa') %}<li><b>{{ euro(dati.incassato_cent) }}</b> euro incassati</li>{% endif %}
   </ul>
 
   <h2 class="sezione">Saturazione delle stanze</h2>
@@ -45,11 +45,11 @@
   {% if dati.per_medico %}
   {% set massimo = dati.per_medico|map(attribute='appuntamenti')|max %}
   <table class="elenco">
-    <tr><th>Medico</th><th class="largo">Appuntamenti</th><th>Ore</th><th>Ore di turno</th><th>Disdetti</th><th>Non presentati</th><th>Importi</th></tr>
+    <tr><th>Medico</th><th class="largo">Appuntamenti</th><th>Ore</th><th>Ore di turno</th><th>Disdetti</th><th>Non presentati</th>{% if puo('cassa') %}<th>Importi</th>{% endif %}</tr>
     {% for m in dati.per_medico %}
     <tr><td>{{ m.operatore.etichetta }}</td><td>{{ barra(m.appuntamenti, massimo) }} {{ m.appuntamenti }}</td>
       <td>{{ ore(m.minuti) }}</td><td>{{ ore(m.turno_minuti) }}</td><td>{{ m.disdetti }}</td>
-      <td>{{ m.assenti }}{% if m.tasso_assenze is not none and m.assenti %} ({{ perc(m.tasso_assenze) }}){% endif %}</td><td>{{ euro(m.importo_cent) }}</td></tr>
+      <td>{{ m.assenti }}{% if m.tasso_assenze is not none and m.assenti %} ({{ perc(m.tasso_assenze) }}){% endif %}</td>{% if puo('cassa') %}<td>{{ euro(m.importo_cent) }}</td>{% endif %}</tr>
     {% endfor %}
   </table>
   {% else %}<p class="vuoto">Nessun appuntamento nel periodo.</p>{% endif %}
@@ -58,9 +58,9 @@
   {% if dati.per_prestazione %}
   {% set massimo = dati.per_prestazione|map(attribute='appuntamenti')|max %}
   <table class="elenco">
-    <tr><th>Prestazione</th><th class="largo">Appuntamenti</th><th>Ore</th><th>Importi</th></tr>
+    <tr><th>Prestazione</th><th class="largo">Appuntamenti</th><th>Ore</th>{% if puo('cassa') %}<th>Importi</th>{% endif %}</tr>
     {% for p in dati.per_prestazione %}
-    <tr><td>{{ p.nome }}</td><td>{{ barra(p.appuntamenti, massimo) }} {{ p.appuntamenti }}</td><td>{{ ore(p.minuti) }}</td><td>{{ euro(p.importo_cent) }}</td></tr>
+    <tr><td>{{ p.nome }}</td><td>{{ barra(p.appuntamenti, massimo) }} {{ p.appuntamenti }}</td><td>{{ ore(p.minuti) }}</td>{% if puo('cassa') %}<td>{{ euro(p.importo_cent) }}</td>{% endif %}</tr>
     {% endfor %}
   </table>
   {% else %}<p class="vuoto">Nessun appuntamento nel periodo.</p>{% endif %}

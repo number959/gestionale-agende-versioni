@@ -117,7 +117,8 @@
       document.body.appendChild(scatola);
     }
     var a = nuovo('div', 'avviso-turni livello-' + livello);
-    if (livello === 'errore') { a.setAttribute('role', 'alert'); }
+    // come in dove.js: gli errori si annunciano subito, gli altri avvisi quando il lettore di schermo ha finito
+    a.setAttribute('role', livello === 'errore' ? 'alert' : 'status');
     var testo = nuovo('div', 'parole-avviso');
     righe.slice(0, 6).forEach(function (r) { testo.appendChild(nuovo('p', null, r)); });
     a.appendChild(testo);
@@ -468,6 +469,9 @@
     });
     elenco(tab.querySelectorAll('td.cop')).forEach(function (td) { perCopertura[td.getAttribute('data-c')] = td; });
     if (!M.length || !M[0].length) { return; }
+    // solo guardare (dagli altri PC, accessi.solo_guardare): la griglia si legge, ma il clic e i tasti non aprono la
+    // scelta e non mandano niente; il motivo lo mettono nel title e nella riga in cima alla pagina gestionale.js
+    if (tab.hasAttribute('data-solo-guardare')) { return; }
     tab.setAttribute('aria-multiselectable', 'true');
 
     var fuoco = null;
@@ -876,6 +880,12 @@
   (function () {
     var vg = $('vista-giorno');
     if (!vg || !Scelta) { return; }
+    if (vg.hasAttribute('data-solo-guardare')) {
+      // solo guardare: come nella griglia, niente scelta e niente tasti; «Turno a…» spento, con il motivo
+      var spenta = $('aggiungi-persona');
+      if (spenta) { spenta.disabled = true; spenta.title = vg.getAttribute('data-solo-guardare'); }
+      return;
+    }
     var indirizzo = vg.getAttribute('data-indirizzo');
     var struttura = vg.getAttribute('data-struttura') || '';
     var giorno = vg.getAttribute('data-giorno');

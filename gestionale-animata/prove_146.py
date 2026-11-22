@@ -7,6 +7,7 @@
 - "respinte": il comportamento segnalato e' voluto o gia' protetto; la prova
   fissa quello giusto, cosi' una "correzione" futura che lo rompe si vede."""
 import os
+from prove_dove import dove
 import re
 import shutil
 import sys
@@ -50,7 +51,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 

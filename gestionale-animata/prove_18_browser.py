@@ -18,6 +18,10 @@ avviato con i dati di prova (strumenti/demo.py):
   una modifica si sta ancora salvando (programma lento) annulla quella, nella
   griglia e nella vista del giorno; con il filtro per area il codice scritto
   compare e il turno nascosto di un'altra area resta.
+La cornice (la tendina «Strumenti», i messaggi, le domande del browser) si
+cerca per ruolo e nome con gli aiuti di aiuti_browser.py, come un lettore di
+schermo (tappa 1 della base); ogni domanda passa da rispondi(), e una domanda
+che nessuno aspettava fa cadere la prova.
 Cambia i turni di un mese lontano scelto a caso (si puo' rifare sullo stesso
 gestionale): usarla su un gestionale di prova, mai su quello vero."""
 import os
@@ -28,9 +32,11 @@ from datetime import date, datetime, time, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import calendario  # noqa: E402
+from aiuti_browser import apri_comandi, messaggi, nome_voce, prepara_domande, rispondi  # noqa: E402
 from playwright.sync_api import sync_playwright
 
-B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 OGGI = date.today()
 # un mese lontano, ogni volta diverso: le celle partono vuote (PROVE_MESE=AAAA-MM per sceglierlo)
@@ -60,12 +66,10 @@ with sync_playwright() as p:
     ctx = br.new_context(viewport={'width': 1366, 'height': 768}, locale='it-IT')
     ctx.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); } catch (e) {}")
     pg = ctx.new_page()
+    domande = prepara_domande(pg)            # subito: ogni domanda del browser passa da qui
     err = []
     pg.on('pageerror', lambda e: err.append(str(e)))
     pg.on('console', lambda m: err.append(m.text) if m.type == 'error' else None)
-    conferme = []
-    annulla = [False]          # True: alla prossima domanda si risponde «Annulla»
-    pg.on('dialog', lambda d: (conferme.append(d.message), d.dismiss() if annulla[0] else d.accept()))
 
     def quieta():
         pg.wait_for_function("() => !document.querySelector('.in-attesa')", timeout=8000)
@@ -230,6 +234,21 @@ with sync_playwright() as p:
     else:
         ok("la notte del cambio dell'ora di ottobre: 11 ore vere di riposo, nessun avviso",
            'ore di riposo' not in avviso('avviso') and cella(A1, 25).locator('.segno-riposo').count() == 0, avviso('avviso'))
+        # gemello nello stesso giro (il ramo di sopra non gira in questo mese): una notte normale dello stesso mese,
+        # pomeriggio il 29 e mattina il 30 (10 ore), con la terza persona dell'elenco, che nessun'altra prova tocca
+        A3 = nomi[2].split()[0]
+        chiudi_avvisi()
+        cella(A3, 29).click()
+        pop.locator('.scelta-tipo[data-codice="P"]').click()
+        quieta()
+        pg.keyboard.press('ArrowRight')
+        pg.keyboard.press('m')
+        pg.keyboard.press('Enter')
+        quieta()
+        pg.wait_for_timeout(150)
+        ok('(gemello) una notte normale con poco riposo: avviso e segno nella cella',
+           'ore di riposo' in avviso('avviso') and cella(A3, 30).locator('.segno-riposo').count() == 1,
+           (avviso('avviso'), codici(cella(A3, 29)), codici(cella(A3, 30))))
 
     # ------------------------------------------------ solo tastiera nella scelta
     cella(A1, 27).focus()
@@ -330,6 +349,14 @@ with sync_playwright() as p:
     pg.keyboard.press('Escape')
     pg.keyboard.press('g')
     quieta()
+    # gemello del «'Mattina' non c'è» qui sotto: nella stessa vista del giorno, la riga di A1 il 7 (la M messa con la
+    # tastiera all'inizio) ha «Mattina» nella stessa etichetta
+    pid1 = riga(A1).get_attribute('data-persona')
+    g7 = (MESE + timedelta(days=6)).isoformat()
+    pg.goto(B + '/personale/turni/giorno/' + g7)
+    pista7 = pg.locator('.pista[data-k="%s_%s"]' % (pid1, g7))
+    etichetta = (pista7.get_attribute('aria-label') or '') if pista7.count() else ''
+    ok('giorno (gemello): dove c\'è la M l\'etichetta della riga dice «Mattina»', 'Mattina' in etichetta, etichetta)
     g20 = (MESE + timedelta(days=19)).isoformat()
     pg.goto(B + '/personale/turni/giorno/' + g20)
     pista = pg.locator('.pista[data-k="%s_%s"]' % (pid5, g20))
@@ -365,23 +392,26 @@ with sync_playwright() as p:
 
     # ------------------------------------------------ la settimana: copia e schema
     lun = lunedi_dopo(MESE + timedelta(days=1))
-    pg.goto(B + '/personale/turni/settimana/' + lun.isoformat())
-    ok('settimana: il turno con l\'orario', '7–14' in pg.inner_text('#griglia-turni') or True)
+    # la settimana con il giorno 5, dove sopra si è messa la Mattina: le celle piene scrivono anche l'orario
+    pg.goto(B + '/personale/turni/settimana/' + (MESE + timedelta(days=4) - timedelta(days=(MESE + timedelta(days=4)).weekday())).isoformat())
+    piene = [c.split() for c in pg.locator('#griglia-turni td.cella.piena').all_inner_texts()]
+    mattine = [c for c in piene if c and c[0] == 'M']           # le assenze (MA, FE…) non hanno orario
+    ok('settimana: il turno con l\'orario', mattine and all(c[1:] == ['7–14'] for c in mattine), piene[:6])
     pg.goto(B + '/personale/turni/settimana/' + (lun + timedelta(days=7)).isoformat())
     prima_n = pg.locator('#griglia-turni td.cella.piena').count()
-    pg.click('.gruppo-comandi .apri-gruppo')
+    copia = apri_comandi(pg, 'Strumenti').get_by_role('menuitem', name=nome_voce('Copia la settimana prima'))
     with pg.expect_navigation():
-        pg.click('[data-copia-settimana]')
-    t = pg.inner_text('.avvisi') if pg.locator('.avvisi').count() else ''
-    ok('copia della settimana prima (dopo la conferma)', conferme and 'Copiati' in t and
-       pg.locator('#griglia-turni td.cella.piena').count() > prima_n, (t, conferme[-1:]))
+        with rispondi(pg) as d:
+            copia.click()
+    t = messaggi(pg)
+    ok('copia della settimana prima (dopo la conferma)', (d.testo or '').startswith('Copiare qui i turni della settimana prima?')
+       and 'Copiati' in t and pg.locator('#griglia-turni td.cella.piena').count() > prima_n, (t, d.testo))
     pg.goto(B + '/personale/turni/settimana/' + (lun + timedelta(days=14)).isoformat())
     riga(A1).locator('td.cella').nth(0).click()
     pg.keyboard.press('Escape')
     riga(A2).locator('td.cella').nth(6).click(modifiers=['Shift'])
     pg.keyboard.press('Escape')
-    pg.click('.gruppo-comandi .apri-gruppo')
-    pg.click('[data-apri-schema]')
+    apri_comandi(pg, 'Strumenti').get_by_role('menuitem', name=nome_voce('Schema a rotazione…')).click()
     fin = pg.locator('#finestra-schema')
     spuntate = pg.locator('#finestra-schema input[name=persone]:checked').count()
     ok('schema a rotazione: si apre con le persone e i giorni scelti nella griglia', fin.is_visible() and spuntate == 2 and
@@ -401,7 +431,7 @@ with sync_playwright() as p:
     ok('le frecce nella finestra non cambiano settimana', pg.url == url)
     with pg.expect_navigation():
         pg.click('#finestra-schema button[type=submit]')
-    t = pg.inner_text('.avvisi') if pg.locator('.avvisi').count() else ''
+    t = messaggi(pg)
     m = re.search(r'Schema applicato: (\d+) turni messi(?:, (\d+) celle saltate)?', t)
     ok('schema applicato: messe le celle vuote, saltate quelle gia\' piene', m and int(m.group(1)) +
        int(m.group(2) or 0) == 14 and int(m.group(1)) > 0, t)
@@ -458,21 +488,19 @@ with sync_playwright() as p:
     with pg.expect_navigation():
         pg.locator('table.elenco-persone tr', has_text="D'Esempio Anna").last.locator('a', has_text='Modifica').click()
     scheda = pg.url
-    n = len(conferme)
-    annulla[0] = True
-    pg.click('.elimina-persona button[type=submit]')
-    pg.wait_for_timeout(500)
-    annulla[0] = False
-    ok("D'Esempio Anna: «Elimina» fa la domanda con il nome intero", conferme[n:] == ["Eliminare D'Esempio Anna?"],
-       conferme[n:])
+    elimina = pg.get_by_role('button', name='Elimina', exact=True)       # exact: non «Elimina il …»
+    with rispondi(pg, si=False) as d:
+        elimina.click()
+    ok("D'Esempio Anna: «Elimina» fa la domanda con il nome intero", d.testo == "Eliminare D'Esempio Anna?", d.testo)
     r = pg.goto(scheda)
     resta = r.status == 200 and pg.input_value('#cognome') == "D'Esempio"
     ok('... e con «Annulla» la persona resta', resta, r.status)
     eliminata = ''
     if resta:
         with pg.expect_navigation():
-            pg.click('.elimina-persona button[type=submit]')
-        eliminata = pg.inner_text('.avvisi') if pg.locator('.avvisi').count() else ''
+            with rispondi(pg) as d:
+                elimina.click()
+        eliminata = messaggi(pg)
     ok('... con «OK» si elimina (i dati di prova restano come prima)', 'Persona eliminata' in eliminata and
        pg.request.get(scheda).status == 404, eliminata)
     pg.goto(B + '/oggi')
@@ -482,6 +510,7 @@ with sync_playwright() as p:
     piccolo = br.new_context(viewport={'width': 390, 'height': 844}, locale='it-IT', reduced_motion='reduce')
     piccolo.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); } catch (e) {}")
     q = piccolo.new_page()
+    domande_q = prepara_domande(q)           # anche qui: una domanda inattesa non passa in silenzio
     q.on('pageerror', lambda e: err.append(str(e)))
     q.goto(B + '/personale/turni/mese/' + AAAAMM)
     q.locator('#griglia-turni td.cella').nth(40).click()
@@ -498,6 +527,8 @@ with sync_playwright() as p:
         pg.goto(B + u)
         pg.wait_for_timeout(300)
     ok('nessun errore JavaScript', not err, err[:3])
+    ok('nessuna domanda del browser inattesa', not domande.inattese and not domande_q.inattese,
+       domande.inattese + domande_q.inattese)
     br.close()
 print('\n%d prove nel browser, %d superate' % (len(esiti), sum(esiti)))
 sys.exit(0 if all(esiti) else 1)

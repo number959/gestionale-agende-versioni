@@ -785,7 +785,7 @@ ultime tre ore e chi era arrivato stamattina senza essere segnato non stava da n
   inventati.
 - **Avviso degli aggiornamenti** (1.12.6, stessa richiesta: «prevedi un popup che informa che c'è un nuovo
   aggiornamento e un tasto clicca qui per installare»): `aggiornamenti.popup_aggiornamento`, in
-  `_popup_aggiornamento.html` incluso nei due `base.html`. Solo nel programma installato (`installato()`: altrove
+  `_popup_aggiornamento.html` incluso in `base.html`. Solo nel programma installato (`installato()`: altrove
   «Aggiorna adesso» non si può, e così la demo e le immagini della guida restano senza), con la versione nuova già
   scaricata e integra, non mentre parte, mai nella dashboard (anche quella vista dagli altri PC), nelle stampe, nella
   guida e nella pagina degli aggiornamenti. «Clicca qui per installare» è il POST di «Aggiorna adesso»; «Più tardi»
@@ -1799,6 +1799,166 @@ dell'errore del server (il disco pieno e il database occupato con il loro messag
 Per le prove: `GESTIONALE_PORTA` cambia la porta del programma (al PC della clinica non c'è: le
 prove non toccano mai la 5000).
 
+## Accesso dagli altri PC della rete
+
+Dalla 1.13, richiesta di Giovanni del 22/11/2026: «dammi la possibilità di scegliere quale modulo rendere disponibile
+sugli altri PC della rete in locale a quale utente e quale no». Tutto sta in `accessi.py`; la guida è *Far usare il
+programma dagli altri PC* (gruppo Configurazione).
+
+**Per chi lo usa.** È spento di partenza: il PC della segreteria apre il programma da http://127.0.0.1:5000 come
+sempre, senza password e con tutte le pagine, e con l'accesso spento le sue pagine sono quelle di prima, byte per byte.
+Si accende dal PC della segreteria, *Configura → Aree e accessi* (la settima linguetta di Configura; c'è anche il
+bottone in *Impostazioni*): la spunta «Gli altri PC della rete possono aprire il programma», la porta (5080 di partenza) e Salva. Da
+quel momento il programma ascolta anche su tutte le schede di rete del PC, su quella porta, e la pagina dice
+l'indirizzo da aprire negli altri PC (`http://NOME-DEL-PC:5080/`, o con i numeri del PC). La prima volta Windows chiede se
+il programma può usare la rete: «Reti private» sì, «Reti pubbliche» no, «Consenti accesso» (serve un amministratore);
+la rete della clinica deve essere segnata «Privata» in Windows. Se la domanda non compare, la pagina dà il comando da
+scrivere nel Prompt dei comandi come amministratore:
+
+```
+netsh advfirewall firewall add rule name="Gestionale Agende (rete della clinica)" dir=in action=allow protocol=TCP localport=5080 profile=private
+netsh advfirewall firewall delete rule name="Gestionale Agende (rete della clinica)"
+```
+
+Poi gli utenti: uno per persona, con un nome e una password per il primo accesso (al primo accesso la persona ne
+sceglie una sua: almeno 10 caratteri, non fra quelle che si indovinano subito, meglio una frase di tre o quattro
+parole). Per ogni parte del programma (Agenda, Pazienti, Segreteria, Cassa, Sala operatoria, Turni, Ambulatori e
+dashboard, Statistiche e report, Dove si fa, Email e WhatsApp, Anagrafiche, Guida e aiuto): «non disponibile», «solo
+guardare» (si aprono le pagine e si scaricano i file, non si salva niente) o «guardare e modificare». Il Sistema
+(aggiornamenti, copie e ripristino, controllo del programma, impostazioni, la casella email e WhatsApp, la pagina degli
+accessi) resta sempre e solo sul PC della segreteria. Dall'altro PC si entra con nome e password; nella barra in alto
+si vede con quale nome si è entrati, con «La mia password» ed «Esci», e il menu e le linguette mostrano solo le pagine
+che quell'utente può aprire. Una parte non data risponde con una pagina in italiano che
+dice a chi chiedere. Nel riquadro di ogni utente: le parti, «Può entrare» (togliendo la spunta esce subito da tutti i
+PC), la password nuova se l'ha dimenticata, «Fai uscire», «Togli» (con la domanda). Chi sbaglia la password 5 volte da un
+PC aspetta un quarto d'ora; un PC che sbaglia 30 volte con nomi qualsiasi aspetta un quarto d'ora per tutti i nomi;
+«Sblocca» in *Tentativi sbagliati* (anche il PC). In fondo gli ultimi accessi e salvataggi dagli altri PC degli ultimi 7
+giorni. Un utente ha al massimo 5 sessioni aperte (entrando la sesta, si chiude la più vecchia) e la sessione vale solo
+dal PC da cui si è entrati: da un altro PC si rientra con nome e password. Dentro le parti, quello che è di un'altra
+parte resta di quella: senza la Cassa niente importi, convenzioni e incassi (stampa e Excel del giorno, elenco,
+chiusura); senza l'Agenda, in un'assenza o una chiusura solo il numero degli appuntamenti da spostare, senza nomi; la
+ricerca dei pazienti (con telefono, email, codice fiscale) a chi ha i Pazienti o può prenotare (Agenda, Segreteria o Dove
+si fa da modificare); con la sola Cassa si incassa anche con bonifico o con un importo scritto, dalla cassa del giorno;
+con la Segreteria da modificare, nelle Conferme, «Confermato», «Disdetto» e «Manda» il promemoria. In *Statistiche e
+report* ci sono anche nomi e telefoni dei pazienti, importi e incassi (riepilogo dei medici ed esportazioni): la pagina
+lo dice accanto alla parte.
+
+Il collegamento è in chiaro (http, non https): nome, password e dati passano senza protezione nella rete della clinica.
+Va bene solo nella rete interna del personale, mai in una Wi-Fi aperta ai pazienti o da fuori; la protezione https,
+con il portiere Caddy, è un passo successivo. Gli schermi della dashboard: con la spunta «Il Modo schermo… si apre senza
+password» aprono `http://NOME-DEL-PC:5080/riepilogo-live?schermo=1` senza Caddy; se Caddy resta, nel suo Caddyfile
+`127.0.0.1:5000` diventa `127.0.0.1:5080` (con l'accesso spento Caddy funziona come prima, verso la 5000).
+
+**Come funziona dentro.**
+- *Dalla rete* è una richiesta arrivata dalla presa della rete (`AscoltoRete`, un secondo server di waitress con fili
+  suoi, acceso e spento a programma aperto: `MarcaRete` segna ogni richiesta), con un'intestazione di un portiere
+  (X-Forwarded-For, Forwarded, X-Real-Ip, X-Forwarded-Host) o da un indirizzo non del PC. Per le intestazioni il server
+  principale non le toglie più (`clear_untrusted_proxy_headers=False`). I limiti di waitress: moduli fino a 13 MB (oltre
+  413 da waitress) su tutti e due i server; sul PC principale (`LIMITI_SERVER`) 20 collegamenti e un collegamento fermo
+  da 30 secondi si chiude (mai uno con una richiesta in corso); sulla presa della rete (`LIMITI_RETE`) 100 collegamenti,
+  10 secondi, e al massimo 12 aperti insieme dallo stesso indirizzo (`COLLEGAMENTI_PER_PC`, `canale_con_limite`: il
+  tredicesimo si chiude subito; gli indirizzi del PC stesso, cioè un portiere, non contano). Così un PC solo, senza
+  password, non tiene più occupati tutti i collegamenti con richieste mai finite.
+- *La guardia* (`controlla_accesso`, prima di ogni richiesta): ogni pagina ha la sua area in `CENSIMENTO` (una che manca è
+  rifiutata come il Sistema, e la prova cade); il Sistema mai; le parti del Sistema dentro le pagine di un'area
+  (`SISTEMA_DENTRO`: i moduli della casella email e di WhatsApp di `/invii`) rispondono 403, e la pagina le nasconde
+  (`{% if puo('sistema') %}`); «solo guardare» lascia passare solo GET e HEAD. Un modulo di una pagina può valere anche
+  per un'altra area (`ANCHE_PER`: «Manda» il promemoria di `/invii/appuntamento` anche per la Segreteria, solo quello), e
+  cambiare lo stato di un appuntamento vale per Agenda o Segreteria. La ricerca dei pazienti (`RICERCA_PAZIENTI`) senza i
+  Pazienti vuole Agenda, Segreteria o Dove si fa da modificare (`livello_ricerca_pazienti`); le pagine di chi guarda non
+  hanno il campo (`puo_cercare_pazienti()` nei modelli), e Dove si fa non mostra il paziente dell'indirizzo. Il nome con
+  cui si chiama il PC (Host):
+  uno dei suoi nomi (`nomi_del_pc`, rifatti ogni minuto), uno scritto in «Altri nomi», o un indirizzo in numeri sulla
+  porta della rete (il DNS rebinding passa sempre da un nome); l'origine dei moduli come sul PC.
+- *Utenti e sessioni*: fra le impostazioni (`rete_utenti`, JSON con l'impronta della password di werkzeug: nessuna
+  tabella nuova, lo schema resta il 12); le sessioni sul server (`sessioni-rete.json` accanto a `chiave-sessione`), così
+  «Esci», «Fai uscire», la password cambiata e l'utente spento chiudono davvero, e dopo un riavvio chi era entrato
+  resta dentro. Al massimo 5 sessioni per utente (`MASSIMO_SESSIONI`), il file riscritto al più ogni 3 secondi entrando
+  (`SALVA_SESSIONI_OGNI`, poi un filo a parte lo scrive); la sessione ricorda da quale PC si è entrati e da un altro si
+  chiude (nel registro «sessione usata da un altro PC»). La chiave dei cookie è casuale, una per installazione; la presa
+  della rete non si accende con una chiave corta o con quella fissa di prima.
+- *I tentativi* (`Tentativi`): 5 sbagliati per PC e nome, 30 per PC con nomi qualsiasi (`TENTATIVI_PC`), 20 per nome da
+  qualsiasi PC con l'attesa che raddoppia. Il tentativo si conta prima di provare la password, sotto un lucchetto
+  (`prenota`: tanti mandati insieme non ne fanno provare di più), le voci hanno un tetto e si sfoltiscono al più una volta
+  al minuto, `bloccati()` fa un passaggio solo; a un PC bloccato si risponde subito, senza leggere il database.
+- *Accendere e spegnere*: la porta si salva solo se l'ascolto parte (una porta occupata lascia quella di prima e lo
+  dice: «già usata da un altro programma», o per Windows «riservata»); mai la 5000 né le 5001-5009. Dopo un ripristino
+  e dopo una riparazione gli accessi restano quelli di prima (sotto, «Una copia rimessa…») e `applica` rimette l'ascolto
+  come dicono. All'avvio (`all_avvio`, da
+  `app.principale` dopo che il PC principale è in ascolto, dentro un try) con la porta ancora occupata si riprova ogni
+  mezzo minuto per cinque minuti in un filo a parte, poi lo scrive in *Controllo del programma*: la rete non ferma mai
+  l'avvio del PC principale.
+- *La casella email*: la password salvata vale solo per il server, la porta, la sicurezza e il nome utente per cui è
+  stata scritta; cambiato uno di questi senza riscriverla, si toglie con l'avviso (`invii.casella_cambiata`). Così
+  nessuno, nemmeno dal PC, la può mandare a un altro server cambiando solo il server.
+- *Il registro*: `accessi/accessi-AAAA-MM-GG.log` accanto al database, un file per giorno (più vecchi di 400 giorni si
+  cancellano all'avvio), senza caratteri di controllo e senza « | » nei nomi; entrate, uscite, errori di password,
+  ogni salvataggio, ogni rifiuto, e le schede, i documenti e gli Excel aperti. I tentativi sbagliati dallo stesso PC: al
+  massimo una riga al minuto, con quanti erano (`annota_sbagliato`); la pagina legge solo la coda dei file
+  (`coda_del_file`).
+- *I file Excel caricati* (Importa da Excel, tariffari, strutture del gruppo): prima di aprirli si guarda quanto diventano
+  scompattati (`comune.controlla_excel_compresso`: oltre 60 MB, o un pezzo grande compresso più di 100 volte, «file
+  troppo grande» o «non sembra un foglio normale»); Importa da Excel legge in sola lettura, tenendo solo le righe che
+  servono (`importa._leggi_foglio`, con il lettore dei fogli di openpyxl anche per le celle unite: dà le stesse righe di
+  prima, e `prove_accessi.py` le confronta con la lettura di prima, copiata nella prova). Prima un file di 189 KB con
+  milioni di celle portava il programma, uno solo anche per il PC della segreteria, oltre 1 GB di memoria.
+- *Nella prova* (`prova.py`) l'accesso dagli altri PC si prova sulla 5085, mai sulla 5080 della clinica né sulle porte
+  del programma vero e della prova, con un cookie suo; non si accende da solo all'avvio.
+- *Mai «import app» da un modulo del programma* (revisione del 22/11, grave): nell'eseguibile, e con «python app.py»,
+  app.py gira come «__main__». Il primo «from app import …» dentro accessi.py caricava una seconda copia di app.py, che
+  rifaceva tutti i collega() con Sessione=None: da quel momento ogni pagina rispondeva 500, anche sul PC della
+  segreteria (dopo la pagina «Aree e accessi», una richiesta del portiere o una da un altro PC). Le prove non lo vedevano
+  perché avviavano il programma con «import app». Ora `accessi.installa(app, ses, LUCCHETTO, lambda: Sessione)` riceve
+  quello che serve, come `viste.collega`; in più app.py, se gira come «__main__», si registra anche come «app»
+  (`sys.modules`). `prove_accessi.py` controlla i sorgenti (`a_nessun_modulo_importa_app`: nessun modulo raggiunto
+  dagli import di app.py, o di prova.py, importa il suo programma) e avvia il programma vero come «__main__»
+  (`y_come_l_eseguibile`, e `AVVIO_VERO` con `runpy.run_path(..., run_name='__main__')`).
+- *Una copia rimessa non riporta indietro gli accessi* (decisione del 22/11, piano/ESECUZIONE.md): utenti, password,
+  parti, accensione e porta sono impostazioni di sicurezza, non dati della clinica. Dopo il ripristino dalle
+  Impostazioni restano quelle di prima (`accessi.istantanea` prima, `accessi.rimetti` dopo, e il messaggio lo dice);
+  dopo una riparazione (il custode, *Controllo del programma*, l'avvio) quelle del file `accessi-rete.json` accanto al
+  database, fuori dalle copie, riscritto a ogni cambio (`accessi.ricorda`); senza il file la rete resta spenta finché la
+  segreteria non controlla. In ogni altro momento vale il database (all'avvio il file si riscrive da lì).
+- *Il firewall*: con «Annulla» o «No» alla domanda di Windows (e sempre se chi usa il PC non è amministratore) Windows
+  crea regole che bloccano il programma, e una regola che blocca vince su quelle che permettono (documentazione di
+  Microsoft): il solo «add rule … action=allow» non apriva niente. La pagina lo spiega e, in «Per l'assistenza», dà
+  `netsh advfirewall firewall delete rule name=all program="<percorso del programma>"` (toglie tutte le sue regole, anche
+  quelle che bloccano) e la regola per programma e porta, `profile=private,domain` (`accessi.comandi_firewall`, il
+  percorso da `sys.executable`). Sotto «Acceso» la pagina dice l'ultima richiesta arrivata da un altro PC, o che non ne è
+  arrivata nessuna (`AscoltoRete.ultimo_da_fuori`): con il firewall che blocca, prima diceva solo «Acceso». Il bottone che
+  fa la regola con il consenso di Windows (UAC) non c'è ancora: si fa quando si può provare su un Windows vero.
+- *Solo guardare*: nelle pagine che vanno alla rete ogni `<form method="post">` che l'utente non può salvare prende
+  `data-solo-guardare` (`accessi.segna_moduli`, in `dopo_la_risposta`), e `gestionale.js` ne spegne campi e bottoni con
+  la spiegazione e una riga in cima alla pagina; la guardia resta. Le caselle della checklist della Sala sono spente
+  con `not puo_cambiare('sala')`, e un 403 di uno script mostra il motivo che dà il programma.
+- *Le altre parti dentro le pagine (secondo giro)*: nella scheda del paziente cose da fare e lista d'attesa solo con la
+  Segreteria; la ricerca dei pazienti dà l'anagrafica intera solo a chi ha Pazienti o Agenda (agli altri nome, nascita
+  e telefono); prezzo di listino nella scheda della prestazione solo a chi può cambiare la Cassa, il tariffario del
+  medico solo con la Cassa; gli appunti da confermare nella griglia e nell'elenco del giorno solo con la Segreteria; nelle
+  tendine degli Ambulatori le esportazioni di Statistiche e report solo con quella parte. *Statistiche e report*
+  (predefinito deciso, Giovanni può cambiarlo): nomi, telefoni ed email dei pazienti solo a chi ha anche Pazienti o
+  Agenda, importi e incassi solo con la Cassa, nelle pagine e negli Excel (statistiche, riepilogo dei medici con la sua
+  email già scritta, esportazione del giorno: `servizi.esporta_giorno(con_pazienti=)`, `cruscotto.togli_colonne`), con
+  le colonne tolte e non vuote; sul PC tutto come prima.
+- *La pagina*: spegnere l'accesso fa uscire tutti (le sessioni restano solo nei riavvii); il riquadro rosso di una porta
+  solo se la rete deve essere accesa e non è in ascolto (l'errore della volta va nel messaggio); un nuovo utente
+  rifiutato torna con quello che si era scritto, tranne la password, e il motivo accanto al modulo; le password date
+  dalla segreteria si vedono mentre si scrivono; il rifiuto manda a *Configura → Aree e accessi* (`PERCORSO_PAGINA`:
+  dall'unione con la tappa 2 è la linguetta; prima diceva *Configura → Impostazioni → Aree e accessi*); Caddy, i comandi del firewall e gli altri nomi
+  del PC stanno in riquadri chiusi «Per l'assistenza»; gli utenti sono chiusi, con le parti in una riga; la barra
+  «Entrato da un altro PC» ha il suo stile (`.v-utente-rete` in `veste.css`; dall'unione con la tappa 2 sta nella barra
+  in alto).
+- *Menu e accessi insieme* (dall'unione con la tappa 2, 22/11): `accessi.py` registra «Aree e accessi» come settima
+  linguetta di Configura (`menu.registra_sezioni` le dà la sezione «accessi», `menu.registra_linguetta` con la
+  condizione `sul_pc_principale`), e `app.py` dà al menu la condizione per pagina `accessi.si_apre`
+  (`menu.condizione_per_pagina`): dalla rete voci, linguette, voci della tendina Aiuto e collegamenti nascosti dei tasti
+  ci sono solo se la loro pagina si apre per l'utente, con l'area presa dal censimento (`accessi.area_della_pagina`; il
+  Sistema mai). Una funzione sola, nessuna lista a mano: una pagina nuova basta scriverla nel censimento. Una voce la
+  cui pagina non si apre porta alla prima delle sue linguette che si apre, senza il suo tasto (Configura, a chi ha
+  solo Email e WhatsApp, porta lì; Ambulatori, a chi ha solo Statistiche e report, alle Esportazioni in Excel), e senza
+  linguette che si aprono non c'è. «Ambulatori → Esportazioni in Excel» sparisce a chi non ha Statistiche e report. Sul
+  PC principale la condizione è sempre vera e il menu è quello della tappa 2, byte per byte.
+
 ## Dove stanno i dati
 
 `%LOCALAPPDATA%\GestionaleAgende\agende.db`, insieme a `gestionale.log`. Il programma
@@ -1913,6 +2073,7 @@ la transazione si annulla e il database resta com'era. Il registro riporta ogni 
 | `templates/_icone.html`, `static/icone/LICENZE.txt` | Le icone (Lucide, licenza ISC) scritte dentro le pagine, con le licenze (anche Radix Colors, MIT, per i colori dei turni) |
 | `importa.py` | Importazione da Excel e CSV: riconoscimento, anteprima, esecuzione |
 | `marchio.py` | Controllo e pulizia del logo, colore proposto, contrasto |
+| `menu.py` | Il menu in un elenco (dalla tappa 2 della base): voci, linguette, tendina Aiuto e collegamento nascosto del tasto E, ognuno con la sua pagina, gli argomenti che porta (struttura, giorno, mese), parola, icona, sezioni che lo accendono, condizione, tasto e guida; `registra_voce`, `registra_linguetta` e `registra_sezioni` per i moduli; la condizione per pagina (`condizione_per_pagina`, da `app.py`: `accessi.si_apre`) che dalla rete toglie quello che l'utente non può aprire. Lo disegna la cornice: `templates/_menu.html` (il menu a sinistra), `_barra.html` (la barra in alto) e `_linguette.html` (le linguette, con il pezzo di `_pezzi.html`), messi da `base.html` in contenitori con `data-cornice` |
 | `servizi.py` | Griglia (con le fasce dei turni), turni effettivi (assenze, chiusure, festivi), conflitti (fasce intere), disponibilità, statistiche, export in Excel |
 | `modelli.py` | Le tabelle del database e il suo aggiornamento da una versione all'altra |
 | `comune.py` | Le funzioni di servizio di tutte le pagine: numeri e date dall'indirizzo, ritorno sicuro, struttura scelta, JSON, Excel da scaricare, collegamenti email |
@@ -2382,33 +2543,47 @@ python prove_16.py           # 47 prove sulla 1.6: Aggiorna adesso da una cartel
                              # sistema, file delle versioni storpiati, Setup rovinati),
                              # installazione, esito al riavvio, novità, videoguide, installer e file delle versioni,
                              # indirizzo predefinito su GitHub e Rimetti (senza rete)
-python prove_15_browser.py http://127.0.0.1:5000   # 14 controlli nel browser sulle pagine della 1.5 e sui caratteri
-python prove_16_browser.py http://127.0.0.1:5001   # 19 controlli: finestra dei video, pagina Aggiornamenti che si
+python prove_15_browser.py http://127.0.0.1:5001   # 15 controlli nel browser sulle pagine della 1.5 e sui caratteri
+python prove_16_browser.py http://127.0.0.1:5001   # 21 controlli: finestra dei video, pagina Aggiornamenti che si
                              # ricarica da sola, pagina d'attesa, notifica, Rimetti l'indirizzo predefinito (cambia
                              # l'indirizzo degli aggiornamenti: su un gestionale di prova a parte)
-python prove_17_browser.py http://127.0.0.1:5001   # 16 controlli: codice fiscale mentre si scrive, calcolo,
+python prove_17_browser.py http://127.0.0.1:5001   # 18 controlli: codice fiscale mentre si scrive, calcolo,
                              # suggerimenti del luogo, prenotazione, pagina di controllo (salva pazienti di prova)
-python prove_tendine_browser.py http://127.0.0.1:5001   # 150 controlli: le tendine sopra la pagina e le notifiche, a 1366x657
-python prove_18_browser.py http://127.0.0.1:5001   # 59 controlli sui turni: griglia, tastiera (anche due codici scritti
+python prove_tendine_browser.py http://127.0.0.1:5001   # 283 controlli: le tendine sopra la pagina e le notifiche, a 1366x657;
+                             # dalla tappa 2 anche menu, barra e linguette che non coprono niente
+python prove_cornice_browser.py http://127.0.0.1:5001   # 625 controlli: la cornice nuova (tappa 2) sulle 53
+                             # pagine senza parametri a 1366x657 e su una pagina per ogni forma con parametri (circa
+                             # 200), ogni pagina raggiunta con soli clic dalla home, una voce e una linguetta accese
+                             # (la voce sempre in vista), i tasti G E C D e il tasto Tab, la stampa, il menu che scorre
+                             # per conto suo, il menu a sole icone sotto 1200 px, la barra su una riga, il riquadro
+                             # dei Turni dentro la finestra (non salva niente)
+python prove_18_browser.py http://127.0.0.1:5001   # 61 controlli sui turni: griglia, tastiera (anche due codici scritti
                              # di seguito senza aspettare), annulla e rifai, scelta del turno (dove si apre, mai
                              # coperta), schema, giorno a ore, schermo stretto, movimento ridotto, la domanda prima
                              # di eliminare una persona con l'apostrofo nel nome («Annulla» la lascia)
-python prove_19_browser.py http://127.0.0.1:5001   # 37 controlli su Dove si fa: ricerca mentre si scrive, frecce, scheda della
+python prove_19_browser.py http://127.0.0.1:5001   # 42 controlli su Dove si fa: ricerca mentre si scrive, frecce, scheda della
                              # struttura, messaggio cambiato, Copia, WhatsApp e Stampa, registro con Annulla, paziente,
                              # ricerca rapida, schermo stretto, tema scuro (segna pazienti indirizzati di prova)
-python prove_191_browser.py http://127.0.0.1:5001   # 22 controlli sull'email della 1.9.1: tipo di casella con server,
+python prove_191_browser.py http://127.0.0.1:5001   # 23 controlli sull'email della 1.9.1: tipo di casella con server,
                              # porta, sicurezza e istruzioni proposti, server che segue l'indirizzo, @gmail.com che passa
                              # a Gmail, tendina del tipo salvata con il modulo, schermo stretto (salva le impostazioni
                              # email della prova e poi rimette quelle di partenza)
-python prove_110_browser.py http://127.0.0.1:5001   # 20 controlli sulle fasce dei turni (il martedi della prova):
+python prove_110_browser.py http://127.0.0.1:5001   # 21 controlli sulle fasce dei turni (il martedi della prova):
                              # righe e celle alte quanto le loro fasce, ore nelle fasce libere, clic che apre il modulo
                              # a quell'ora, guida sullo schermo, agenda del medico, modulo del turno, tema scuro
-python prove_guida_browser.py http://127.0.0.1:5000   # 53 controlli nel browser, sui dati di prova
-python prove_sicurezza_browser.py http://127.0.0.1:5000   # 5 controlli: moduli mandati da un altro sito
+python prove_112_browser.py http://127.0.0.1:5001   # 81 controlli sugli ambulatori: matrice, «+» e «×» (mette e
+                             # toglie un turno di prova), i due Excel, programmazione, esportazioni, riepilogo live e
+                             # del periodo, la dashboard nel modo schermo
+python prove_tariffari_browser.py http://127.0.0.1:5001   # 16 controlli: il prezzo del tariffario nella
+                             # prenotazione, carica ed elimina un tariffario di prova
+python prove_mattoni_browser.py http://127.0.0.1:5001   # 7 prove sui mattoni della veste, sul catalogo dei pezzi
+                             # (lo avvia da sé su una porta libera: l'indirizzo non lo usa)
+python prove_guida_browser.py http://127.0.0.1:5001   # 62 controlli nel browser, sui dati di prova
+python prove_sicurezza_browser.py http://127.0.0.1:5001   # 10 controlli: moduli mandati da un altro sito
 python campagna.py           # 2550 casi generati, anche sulle pagine della 1.4, circa due minuti
 ```
 
-In tutto 973 prove più 2550 casi generati e 382 controlli nel browser, tutte verdi su Python 3.13 (alla 1.9 anche su 3.11 e 3.14).
+In tutto 1384 prove (36 raccolte) più 2550 casi generati e 1045 controlli nel browser (14 raccolte), tutte verdi su Python 3.13 il 22/11/2026 (alla 1.9 anche su 3.11 e 3.14).
 Vanno rilanciate dopo ogni modifica; ognuna crea un database usa e getta. Alcune delle più
 vecchie escono con codice 0 anche se una prova non va: conta la riga finale («0 da
 sistemare»), che è quella che legge `tutte_le_prove.py`.
@@ -2446,6 +2621,574 @@ invariante; raggruppa i guasti per causa e riporta la semenza che li riproduce.
 tabella *strutture* della 1.1, preso dal database che quella versione creava. Con
 `DETTAGLIO=1` stampa anche le note delle prove superate, e la campagna i motivi dei
 moduli rifiutati.
+
+### La rete di prove per la veste nuova (tappa 1 della base)
+
+La veste nuova cambia classi, colori e posti delle cose, ma non deve cambiare quello che il programma fa. Prima di
+toccare l'aspetto, le prove sono state rese indipendenti dall'aspetto, e ogni controllo nuovo ha un gemello che lo
+vede cadere su un programma rotto apposta (un «mutante», fatto sempre su una copia):
+
+- **i messaggi** (`flash()`) in `prove_14.py` e `prove_funzioni.py` si prendono da Flask quando il programma li fa
+  (`prove_messaggi.py`); dove si vedono lo controlla `prove_sicurezza_browser.py`;
+- **i controlli «non c'è»** hanno il loro gemello (`prove_gemelli.py`: `manca`, `protetto`, `sparisce`,
+  `manca_nel_browser`): un controllo che dice «la parola X non c'è» passa anche se la pagina è vuota, il gemello
+  guarda che X ci sia dove deve esserci;
+- **le pagine senza menu** (stampe, Modo schermo, pezzi chiesti dalla pagina) restano senza menu: `prove_senza_menu.py`;
+- **i tre modelli comuni** (`base.html`, `griglia.html`, `impostazioni.html`) sono uguali nelle due cartelle, e
+  `prove_pagine.py` controlla che ogni pagina abbia un solo `<main id="principale">` e che le righe della sola animata
+  stiano solo lì;
+- **le variabili dei modelli** sono rigide nelle prove (`GESTIONALE_PROVE_RIGIDE=1`, messo da `tutte_le_prove.py`,
+  `prove_dove.py` e `demo.py`): una variabile che manca ferma la pagina invece di scrivere niente;
+- **i passi della guida** indicano un punto della pagina solo con `[data-guida="…"]` o con un id (`prove_guida.py`);
+- **le prove nel browser** cercano menu, tendine, ricerca rapida, messaggi e domande per ruolo e nome, come un
+  lettore di schermo (`aiuti_browser.py`); prima di togliere un selettore vecchio, `strumenti/equivalenza_selettori.py`
+  ha visto che quello nuovo trova lo stesso elemento (413 confronti, tutti uguali, il 22/11/2026). Ogni pagina aperta
+  registra le domande del browser (`prepara_domande`), quelle volute passano da `rispondi`, e una domanda che nessuno
+  aspettava fa cadere la prova. L'indirizzo arriva solo da `indirizzo_di_prova`, che si ferma senza indirizzo o con
+  la porta 5000; `tutte_le_prove.py` non lancia una raccolta nel browser che non passa da lì;
+- **il confronto con il ramo principale** (`strumenti/confronta_rami.py`): stesse pagine, moduli, collegamenti, segni
+  (`data-tasto`, `data-guida`, `role`, `aria-*`, `data-prova`), testi, JSON ed Excel, più i 9 fogli da stampare in PDF
+  pixel per pixel (`strumenti/fogli_pdf.py`). I cambiamenti voluti stanno, uno per uno con il perché, in
+  `strumenti/cambiamenti_approvati.txt`. Dalla tappa 2: collegamenti, segni, testi e campi dei moduli si confrontano
+  senza ordine, come insiemi con le quantità (`--con-ordine` per vedere anche le cose spostate); la cornice (menu,
+  barra in alto, linguette, campanella, messaggi, tasti rapidi: i contenitori con `data-cornice`, e nel programma di
+  oggi `nav.menu`, `#notifiche`, `#aiuto-tasti`, `.avvisi`) si toglie da ogni pagina e si confronta una volta a parte,
+  voce per voce, con la voce accesa di ogni pagina e gli indirizzi interi; le 8 pagine che si stampano con Ctrl+P
+  (mese, settimana, cassa, cassa del mese, settimana, mese e riepilogo degli ambulatori, mese dei turni) si
+  confrontano in PDF come i 9 fogli: 17 in tutto.
+
+```
+python strumenti/demo.py --porta 5001                      # in un'altra finestra
+python strumenti/equivalenza_selettori.py http://127.0.0.1:5001   # i selettori vecchi e nuovi trovano lo stesso elemento
+python strumenti/confronta_rami.py                         # alla fine: «0 diverse» e «0 diversi o mancanti»
+```
+
+Il 22/11/2026, a tappa 1 chiusa: tutte le prove senza browser e nel browser verdi nelle due cartelle, e il confronto
+con il ramo principale con 607 pagine e 20 fogli da stampare, nessuno diverso oltre ai cambiamenti approvati.
+Il 22/11/2026, primo passo della tappa 2 (il lanciatore pronto per la cornice nuova), dalle due cartelle: 607 pagine,
+nessuna diversa; la cornice, confrontata una volta su 454 pagine, senza differenze; 49 fogli e pagine che si stampano
+(i 17 tipi) in PDF, nessuno diverso. I tre mutanti, fatti su copie, sono presi: una voce del menu tolta solo dentro
+`data-cornice` (6 differenze della cornice, pagine uguali), un collegamento tolto (6 pagine diverse anche senza
+ordine), un colore cambiato solo in stampa su /mese (4 fogli diversi). I gemelli passano: la cornice di oggi segnata
+con `data-cornice` senza togliere niente, due collegamenti scambiati di posto (diversi solo con `--con-ordine`), lo
+stesso colore cambiato solo a schermo.
+
+### Il menu in un elenco: `menu.py` (tappa 2 della base)
+
+Dalla tappa 2 le voci del menu non sono più scritte a mano in `templates/_menu.html`: stanno in `menu.py`, con la
+pagina dove portano (la funzione per `url_for`), gli argomenti che portano dalla pagina aperta (struttura, giorno e
+mese, come prima), la parola, l'icona, le sezioni che le accendono, la condizione (la Sala solo se c'è una sala
+operatoria), `data-tasto` e `data-guida`. Con le voci ci sono le linguette di ogni area (Agenda: Giorno, Settimana,
+Mese, Elenco; Segreteria; Ambulatori; Configura) con la riga piccola di oggi, la tendina Aiuto e il collegamento
+nascosto del tasto E. I moduli aggiungeranno le loro voci con `registra_voce`, senza toccare i modelli: rifiuta una
+sezione, una chiave o un tasto già presi, così ogni pagina accende sempre una voce sola. Il primo passo non cambia niente
+di quello che si vede: il modello disegna il menu di oggi con le stesse voci (`menu.disegno_di_oggi`: Giorno, Settimana
+e Mese in fila, le altre nelle tendine, ogni tasto sul collegamento che porta alla stessa pagina), uguale byte per byte. Il terzo passo (qui sotto) lo ha tolto: le stesse voci, disegnate nella cornice nuova.
+
+`prove_menu.py` (nel giro senza browser) prova che ogni voce, linguetta e collegamento si costruisce con `url_for`; che
+ogni pagina senza parametri accende una voce sola e al più una linguetta, nell'elenco e nel menu disegnato (classe
+`attivo` e `aria-current` insieme); che da una pagina della seconda struttura, in un giorno che non è oggi, ogni voce e
+linguetta porta ancora struttura e giorno (un difetto così c'è stato: vedi «"Nuovo appuntamento" dalla seconda
+struttura» fra i difetti); che parole, indirizzi, tasti e guide sono quelli di oggi, voce per voce, contro il menu del
+ramo principale disegnato sulla stessa pagina (`prove_menu_principale.html`, la copia ferma del suo `_menu.html`); e che
+la voce di un modulo, aggiunta con `registra_voce`, compare da sola nel menu. Le sole parole nuove («Agenda» per la voce
+e «Elenco» per la quarta linguetta, dal piano e dalle tavole) sono scritte nella prova con il perché. `prove_guida.py`
+legge i `data-guida` delle voci anche da `menu.py`.
+
+Il 22/11/2026, secondo passo della tappa 2 (`menu.py`, senza cambiare l'aspetto), dalle due cartelle: tutte le prove
+senza browser (36 raccolte, `prove_menu.py` compresa) e nel browser (13 nella normale, 15 nell'animata) verdi; il
+confronto con il ramo principale con 607 pagine, nessuna diversa oltre ai cambiamenti approvati, anche con
+`--con-ordine`, la cornice senza differenze e 49 fogli e pagine che si stampano in PDF, nessuno diverso; le foto di 35
+pagine (172 foto) identiche a quelle del principale (nell'animata una sola diversa, uguale al rumore fra due foto del
+principale: `/riepilogo-live?schermo=1` in scuro, che il menu non lo ha); l'HTML di 447 pagine del giro uguale byte per
+byte a quello di prima. I 16 mutanti, fatti su copie, sono presi: una linguetta con l'argomento sbagliato, gli indirizzi
+scritti a mano invece che da `url_for`, due voci accese (nell'elenco e nel disegno), una linguetta «fuori» accesa, la
+classe `attivo` senza `aria-current`, Turni senza la struttura, il giorno che torna a oggi, la ricerca rapida senza la
+struttura, una parola, una riga piccola, i tasti C ed E tolti, un `data-guida` tolto da `menu.py` (lo prende
+`prove_guida.py`), la copia ferma del principale cambiata, `registra_voce` che accetta una sezione già presa.
+
+### La cornice nuova: menu a sinistra, barra in alto, linguette (tappa 2 della base)
+
+Dal terzo passo della tappa 2 le pagine di oggi stanno dentro la cornice delle tavole Nefro-*: il menu a sinistra, la
+barra in alto e le linguette dell'area in cima al contenuto. Le pagine non cambiano: stessi indirizzi, moduli, campi,
+bottoni e dati; cambia solo quello che hanno intorno.
+
+- **Il menu** (`templates/_menu.html`, da `menu.py`): largo 248 px, con il logo della struttura (o il suo nome se non
+  ha logo) e sotto «Agende» con il nome; le voci con la loro icona di Lucide (nove nuove in `_icone.html`, da
+  `strumenti/genera_icone.py`; una, `bell`, è già lì per la campanella della tappa 3 e nessuna pagina la usa), alte 40 px, in tre gruppi: «Agende» (Oggi, Agenda, Sala), «Aree» (Pazienti, Turni,
+  Ambulatori, Dove si fa, Segreteria con il numero da confermare, Cassa, Statistiche) e in fondo Aiuto (che resta una
+  tendina, con le quattro voci di prima, e si apre a destra del menu) e Configura. Resta fermo mentre la pagina scorre;
+  a 1366×657 non ci sta tutto e scorre per conto suo la parte delle voci, mentre Aiuto e Configura restano in fondo;
+  la voce della pagina aperta è sempre in vista (`gestionale.js` sposta la parte delle voci, mai la pagina: senza,
+  Statistiche e Cassa stavano sotto il bordo). Sotto 1200 px solo le icone (72 px; il nome resta per i lettori di schermo e compare sotto il mouse) e al posto del
+  logo le iniziali della struttura (il nome resta per i lettori di schermo); sotto 600 px (il telefono) il menu torna
+  in alto, su una riga di icone. Resta un solo `<nav class="menu" aria-label="Pagine">`, che serve alla guida; il
+  menu intero, con il logo (`alt=""`: il nome è scritto sotto), è un `<aside aria-label="Menu">`. Il logo
+  tiene le sue proporzioni dentro 216×36 px (`align-self: flex-start`: nella colonna del marchio si sarebbe allargato
+  fino a 216 px).
+- **La barra in alto** (`_barra.html`, alta 62 px): il percorso (struttura › voce › linguetta; la struttura solo per
+  le aree che ne hanno una; i segni › li disegna il foglio di stile), la ricerca rapida di prima (stesso campo, stessi
+  pezzi chiesti mentre si scrive, stesso tasto /) e il posto della campanella, che arriva nella tappa 3: fino ad allora
+  le notifiche restano quelle di prima, in basso a destra (nella pagina vengono dopo il contenuto, `_notifiche.html`:
+  con il tasto Tab si passa dal menu alla ricerca, alle linguette e alla pagina, e solo dopo alle notifiche). Dai 600 px
+  in su la barra resta su una riga: il percorso va a capo dentro il suo spazio.
+- **Le linguette** (`_linguette.html`, con il pezzo linguette di `_pezzi.html`): Agenda (Giorno · Settimana · Mese ·
+  Elenco), Segreteria, Ambulatori e Configura passano dalle tendine alle linguette, con gli stessi indirizzi; la riga
+  piccola di prima è il suggerimento sotto il mouse. Nella Segreteria l'Elenco del giorno ha la freccina: si apre
+  nell'Agenda (e lì accende l'Agenda, non più la Segreteria). Per ora `base.html` le mette in cima al contenuto, nel
+  blocco `linguette`, sopra il titolo della pagina; nelle tappe 4-9 ogni area le sposta sotto il suo titolo, come
+  nelle tavole. È uno scostamento voluto dalla decisione «Cornice (2-3)» («le linguette stanno sotto l'h1»), rinviato
+  alle tappe 4-9 e scritto in `piano/DECISIONI-VESTE.md`: le teste delle pagine cambiano lì, area per area.
+- **I tasti**: G sull'Agenda, C sulla Segreteria (porta alle Conferme), D su Dove si fa, E su un collegamento nascosto
+  della cornice (l'Elenco del giorno); gli altri restano nelle pagine.
+- **Colori**: quelli della struttura con le varianti di `marchio.tema` (la voce accesa sul suo fondo tenue si legge
+  con ogni colore: `prove_mattoni.py` lo prova su 444 colori, in chiaro e in scuro); nessun colore scritto a mano nei
+  file nuovi; tema scuro dai gettoni. Il logo della pagina (in cima a 34 pagine) a schermo si nasconde, perché c'è già
+  nel menu; in stampa resta. «Prima volta qui?» della guida si sposta accanto al menu.
+- **In stampa** la cornice sparisce e la pagina comincia dal bordo, come prima (la griglia della cornice vale solo a
+  schermo).
+- **Dove si fa**: la scheda della struttura comincia sotto la barra in alto (prima sotto il menu, che ora è alto quanto
+  la finestra: sarebbe finita fuori dallo schermo); scorrendo la pagina sale in cima.
+- **Animata**: la riga bianca sotto le voci del menu in alto non c'è più (nel menu chiaro a sinistra non si vedrebbe);
+  restano il fondo che cambia piano, la tendina che scende e il numero che rimbalza.
+
+Le regole del menu di prima (`.menu` di `stile.css` e `tema-scuro.css`) arrivano ancora sul nav, che tiene la classe
+`menu`: `veste.css` le riscrive tutte, proprietà per proprietà; la tendina Aiuto si apre ancora con le loro regole.
+
+Le prove: `prove_menu.py` legge anche la cornice disegnata (le voci e le linguette accese sono le stesse di `menu.py`,
+ogni collegamento è una voce di `menu.py`, le icone ci sono, il primo `data-tasto` di G, E, C e D porta dove deve);
+`prove_tendine_browser.py` controlla che menu, barra e linguette non coprano niente della pagina e che niente copra le
+loro voci, a 1366×657, 1024 e 683, in cima e in fondo alla pagina, su tutte le pagine del menu e delle linguette, che
+i quattro tasti portino alla pagina giusta e che in stampa la cornice sparisca; `prove_19_browser.py` che la scheda di
+Dove si fa sia dentro la finestra; `prove_guida_browser.py` la tendina Aiuto e il tasto C. Ognuna con il suo gemello.
+Le prove nel browser trovano menu, voci e linguette con gli aiuti di `aiuti_browser.py` (`vai_dal_menu` passa dalla voce
+e dalla linguetta), quelle senza browser con `prove_cornice.py`. In `strumenti/equivalenza_selettori.py` le coppie della
+cornice di prima (le tendine Segreteria, Ambulatori e Configura, la classe `attivo`) non hanno più senso: con la cornice
+nuova lo strumento le salta da sé, lo dice, e resta verde sulle parti di pagina. Il lanciatore confronta la cornice a
+parte: i cambiamenti voluti (le voci che diventano linguette, la ricerca nella barra, «Agende», «Aree», il percorso, le
+voci accese) sono in `strumenti/cambiamenti_approvati.txt`, con il perché; dalla tappa 2 una regola può valere solo per
+la cornice (`chiave@cornice`) o solo per un tipo di pagina (`accese@/giorno/N-N-N/elenco?struttura`).
+
+Il 22/11/2026, terzo passo della tappa 2 (la cornice nuova), dalle due cartelle: tutte le prove senza browser (36
+raccolte) verdi; nel browser 13 raccolte nella normale e 15 nell'animata, tutte verdi (`prove_tendine_browser.py` 283
+controlli, `prove_guida_browser.py` 62, `prove_112_browser.py` 81, `prove_19_browser.py` 42); il confronto con il ramo
+principale dalle due cartelle con 607 pagine e nessuna diversa (anche con `--con-ordine`), la cornice senza differenze fuori dai cambiamenti
+approvati (457 parti approvate, 30 regole di cui 24 solo per la cornice) e 49 fogli e pagine che si stampano in PDF,
+nessuno diverso; `strumenti/equivalenza_selettori.py` 215 confronti, 215 uguali; le foto di 31 pagine (tutte quelle
+del menu e delle linguette) a 1366×657, 1024 e 683, in chiaro e in scuro, nelle due varianti (372 foto), senza errori
+JavaScript. Le prove senza browser che leggevano il menu di prima nell'HTML (`prove_14.py`, `prove_143.py`,
+`prove_15.py`, `prove_16.py`, `prove_19.py`, `prove_112.py`, `prove_guida.py`, `strumenti/prove_installato.py`) ora lo
+leggono con `prove_cornice.py`: due controlli «non c'è» sarebbero passati da soli (cercavano `<nav class="menu">` e
+`>Sala</a>`, che la cornice nuova non scrive più), e i loro gemelli se ne sono accorti. I 13 mutanti, fatti su copie,
+sono presi: il collegamento nascosto del tasto E tolto, una linguetta accesa anche in un'altra pagina (`registra_linguetta`
+la rifiuta), le linguette senza `aria-current` o fuori da `data-cornice`, una voce che torna a oggi, la voce accesa senza
+`aria-current`, il contatore senza numero, un'icona che non c'è, il logo della pagina nascosto fuori dalla cornice, un
+colore scritto a mano nella barra; nel browser la scheda di Dove si fa sotto il menu (come faceva `dove.js`), la cornice
+che resta in stampa, la barra in alto ferma sopra la pagina.
+
+Il quarto passo della tappa 2 sono le prove della cornice nuova, ognuna con il suo mutante preso.
+`prove_cornice_browser.py` (nel browser, subito dopo `prove_tendine_browser.py`; non salva niente) apre a 1366×657 tutte
+le pagine senza parametri di `indirizzi.txt` che rispondono con una pagina intera (53; i pezzi chiesti dalle pagine, i
+JSON e gli Excel li salta e li conta). Per ognuna controlla:
+
+- la cornice nuova al suo posto: il menu a sinistra, largo 248 px e alto quanto la finestra; la barra in alto, alta 62
+  px, con la ricerca; la pagina accanto e sotto. Solo la guida da stampare (`/aiuto/stampa`) resta senza cornice;
+- nessun errore JavaScript e nessun errore nella console;
+- una voce accesa e, se la pagina ha le linguette, una linguetta sola (e le linguette ci sono in tutte le pagine di
+  Agenda, Segreteria, Ambulatori e Configura);
+- il menu che scorre per conto suo: scorrendolo la pagina non si muove, l'ultima voce si raggiunge, Aiuto e Configura
+  restano in fondo; scorrendo la pagina il menu resta fermo; niente della cornice esce dal bordo destro e la pagina non
+  viene spinta di lato. *Nuova persona* dei Turni scorre di lato per il suo contenuto (la radio larga, come prima, da
+  sistemare nella tappa 7): la prova lo scrive come nota;
+- in stampa la cornice non si vede e la pagina comincia dal bordo, larga quanto il foglio.
+
+Poi, partendo dalla home e solo con clic, raggiunge ogni pagina: le 30 che stavano nel menu di prima (una lista scritta
+nella prova, non presa da `menu.py`) dal menu e dalle linguette, e dopo ogni clic controlla che nella pagina nuova sia
+accesa proprio la voce o la linguetta cliccata; le altre 28 con un clic in più dentro una di quelle pagine. Solo
+`/sposta/avvisi` si apre soltanto dopo uno spostamento, che salva: la prova la apre direttamente. I tasti G, E, C e D,
+premuti da cinque pagine (tre della seconda struttura, in un giorno che non è oggi), portano alla pagina giusta e lì
+accendono la voce e la linguetta giuste; dalla seconda struttura ogni voce e linguetta che porta la struttura la porta
+ancora. A 1199, 1024 e 683 px il menu è a sole icone (largo al più 80 px; i nomi non si vedono, ma si trovano per ruolo e
+nome e stanno nel title; al posto del logo le iniziali); a 1200 px è largo, con i nomi. Ogni pagina registra le domande
+del browser, e nessuna è attesa. I 18 gemelli guastano apposta la pagina (il menu tolto, due voci o due linguette accese,
+il menu in stampa, la colonna del menu vuota in stampa, il menu che non scorre o non resta fermo, l'ultima voce che non
+si raggiunge, un pezzo largo nel menu, la pagina spinta di lato, un errore JavaScript, una linguetta che porta altrove, il
+tasto G tolto, una voce senza la struttura, i nomi visibili nel menu stretto, una domanda inattesa, una pagina della
+Segreteria senza linguette) e il controllo lo vede. Nell'animata le misure si prendono quando la pagina ha finito di
+entrare: mentre entra, un pezzo spostato in giù allunga la pagina e in fondo il menu salirebbe di 10 px; il modo stampa fa
+ripartire le animazioni, per questo la stampa si guarda per ultima.
+
+`prove_menu.py` ora vuole una linguetta accesa (non più «al più una») in ogni pagina di una voce che ha le linguette, e
+legge la struttura anche solo dal disegno, senza `menu.py` (tranne Pazienti e Configura, scritti nella prova).
+
+Il 22/11/2026, quarto passo della tappa 2 (le prove), dalle due cartelle: tutte le prove senza browser verdi (36 raccolte,
+1384 prove e 2550 casi della campagna); nel browser 14 raccolte nella normale (1045 controlli) e 16 nell'animata (1110),
+tutte verdi (`prove_cornice_browser.py` 385 controlli in tutte e due; nell'animata `prove_110_browser.py` è caduta una
+volta, con il confronto fra i rami acceso insieme, sul «libero» che compare passando il mouse, ed è passata nei tre giri
+rifatti da sola); il confronto con il ramo principale dalle due cartelle con 607 pagine e nessuna diversa (196 solo per i
+cambiamenti approvati), la cornice senza differenze (457 parti approvate) e 49 fogli e pagine che si stampano in PDF,
+nessuno diverso. I sei mutanti, fatti su copie, sono presi (prima tutte verdi): Turni senza la struttura in `menu.py`
+(`prove_menu.py` 2 prove su 7, `prove_cornice_browser.py` 3 controlli), Statistiche sempre accesa in `_menu.html` (3 su 7;
+107 controlli), il tasto G tolto in `menu.py` (3 su 7; 5, e `prove_tendine_browser.py` 1), il menu rimesso in stampa in
+`veste.css` (52; `prove_tendine_browser.py` 4), il menu stretto solo sotto 1024 px invece che sotto 1200 (6, a 1199 e a
+1024 px), Lista d'attesa che porta alla Prima disponibilità (2 su 7; 3). Rifatti anche tre mutanti delle raccolte della
+tappa 1, che con la cornice nuova prendono ancora il difetto: il clic su una tendina che non la apre, ora Aiuto e
+«Stampa e scarica» (`prove_tendine_browser.py` 124 controlli, `prove_guida_browser.py` 3), Esc che non chiude la tendina
+Aiuto (`prove_guida_browser.py` 1), il menu nel modo schermo del riepilogo live (`prove_112_browser.py` 2).
+
+### La revisione della tappa 2: correzioni e cose rimandate
+
+Tre revisori (equivalenza con il ramo principale, uso, piano) hanno guardato la tappa 2; ogni problema è stato
+riprodotto prima di toccarlo. Corretti, ognuno con la sua prova e il suo gemello o mutante:
+
+- **il lanciatore** confronta gli indirizzi della cornice di ogni pagina per forma (`indirizzi_per_forma`), non più
+  per voce: le voci che hanno cambiato nome (Giorno → Agenda, le voci delle tendine che diventano linguette e perdono
+  la riga piccola) non si appaiavano mai, e un errore di struttura o di giorno su di loro passava. In più, su ogni
+  pagina con il menu nuovo, una sola voce accesa e al più una linguetta (`accese_fuori_posto`), senza regole che lo
+  approvino (la regola «aggiunto accese@cornice menu «Agenda»» da sola accettava l'Agenda accesa ovunque);
+- **il percorso della barra in alto** ha la sua prova (`prove_menu.py`): la struttura della pagina letta dal database,
+  la voce e la linguetta accese lette dal disegno;
+- **la voce accesa** del menu sempre in vista a 1366×657 (Statistiche stava tutta sotto il bordo, Cassa a metà);
+- **i Turni**: il riquadro che scorre finisce dentro la finestra (prima 70 px sotto il bordo, con la sua barra di
+  scorrimento di lato fuori vista);
+- **la barra in alto** resta su una riga dai 600 px in su (fra 683 e 760 px il posto della campanella andava a capo:
+  118 px invece di 62);
+- **il contorno del fuoco** della tastiera nel menu e sulle linguette è il colore della struttura come testo
+  (`--v-fuoco`): con un verde o un azzurro scendeva sotto 3:1; `prove_mattoni.py` lo prova su 444 colori;
+- **tasto Tab e lettori di schermo**: le notifiche vengono dopo la pagina (`_notifiche.html`), il menu è un
+  `<aside aria-label="Menu">` con il logo `alt=""`, e nel menu stretto il nome della struttura resta per i lettori;
+- **la linguetta Elenco** dell'Agenda ha il suo title («tutti gli appuntamenti in ordine di ora»), e `prove_menu.py`
+  controlla che ogni linguetta porti la riga piccola del menu di prima;
+- **`menu.py` per i moduli**: una linguetta si può accendere per pagina (`pagine=`, per le quattro linguette della
+  Cassa nella tappa 6, tutte sulla sezione «cassa»); la condizione vale anche per linguette, voci della tendina e
+  collegamenti nascosti (con il loro tasto); `registra_voce` rifiuta una voce senza icona o con un'icona che non c'è
+  in `_icone.html`; le notizie su come era il menu di prima (servivano solo alle prove) stanno in `prove_menu.py`;
+- **`prove_cornice_browser.py`** apre anche una pagina per ogni forma d'indirizzo con parametri (la scheda del
+  paziente, l'appuntamento, Sposta, le guide, i giorni e le strutture…), presa dai collegamenti: cornice, voce accesa,
+  nessun errore JavaScript, niente che scorre di lato per colpa della cornice.
+
+Rimandati, con il motivo (da dire a Giovanni):
+
+- **le linguette sotto il titolo della pagina** (decisione «Cornice (2-3)»): nelle tappe 4-9, con le teste nuove delle
+  pagine; ora stanno sopra il titolo. Scritto in `piano/DECISIONI-VESTE.md`;
+- **le colonne dei Turni a 1366** (restano fuori, da scorrere, il 30 e Ore, Notti, Fest., Ass.: accanto al menu ci sono
+  1082 px, il mese ne vuole 1284): nella tappa 7, con le larghezze già decise (giorni 24 px, Ore 56, gli altri 30: 890
+  px, e quello che resta alla colonna dei nomi);
+- **le mezz'ore del Giorno**: a 1366×657 se ne vedono intere 5 (nel principale 7); la tappa 5 ha come traguardo «le
+  mezz'ore di oggi meno una» con la testa compatta (le linguette nella testa della pagina);
+- **l'Elenco del giorno** scorre di lato sotto 1250 px (11 px a 1242, cioè 1366 con lo zoom di Chrome al 110%; 53 px a
+  1024), il principale solo sotto 1002 px: nella tappa 5 (la colonna dei bottoni); la soglia del menu stretto (1200 px)
+  è una decisione presa;
+- **Riepilogo live** (la linea del tempo esce di 66 px a 1366) nella tappa 8; **la griglia del Giorno** (8 px) nella
+  tappa 5: le pagine dentro la cornice restano quelle di oggi, con i loro margini;
+- **le frasi della guida** che descrivono la cornice di prima («Menu Mese» due volte, «la casella Cerca nel menu», «il
+  numero arancione» della Segreteria, il passo «Il giorno» che illumina la voce Agenda): nella tappa 10, con le
+  immagini e i video della guida. La guida da stampare (`/aiuto/stampa`) è uno dei 9 fogli che il lanciatore confronta
+  in PDF pixel per pixel, e in questa tappa deve restare identica; i passi trovano tutti il loro punto;
+- **la zona delle notifiche** è una regione «Notifiche» anche quando è vuota: la campanella della tappa 3 la sostituisce
+  (le prove nel browser la cercano proprio per ruolo e nome);
+- **un modulo con una linguetta in Configura** (M2, «Aree e accessi») ha bisogno di una sua sezione dentro la voce
+  Configura: `registra_linguetta` rifiuta una linguetta che si accende fuori dalla sua voce, e oggi non c'è un modo di
+  aggiungere una sezione a una voce già registrata (da fare in M1-M2).. Fatto all'unione con l'accesso dagli altri PC
+  (22/11): `menu.registra_sezioni` dà a una voce una sezione per la linguetta di un modulo, e «Aree e accessi» si accende
+  sulla sezione «accessi» (sotto, «L'unione della tappa 2 con l'accesso dagli altri PC»)
+
+Il 22/11/2026, dopo le correzioni, dalle due cartelle: tutte le prove senza browser verdi (36 raccolte, in 717 e 711 s;
+`prove_menu.py` 11 prove, `prove_mattoni.py` 22); nel browser 14 raccolte nella normale (1285 controlli,
+`prove_cornice_browser.py` 625, con 202 pagine con parametri) e 16 nell'animata (1350), tutte verdi (nell'animata, con
+le due cartelle provate insieme, `prove_cornice_browser.py` è caduta una volta sul menu che in fondo alla pagina dei
+turni del giorno sale di 10 px mentre la pagina entra, il caso già scritto qui sopra, ed è passata da sola: 625 su 625);
+il confronto con il ramo principale dalle due cartelle con 607 pagine e nessuna diversa (196 solo per i cambiamenti
+approvati), la cornice senza differenze (457 parti approvate, 31 regole di cui 25 solo per la cornice) e 49 fogli e
+pagine che si stampano in PDF, nessuno diverso. I mutanti della revisione, fatti su copie, sono presi: le linguette
+delle tendine che portano alla struttura 1 (M1) e l'Agenda accesa anche nelle pagine di Pazienti (M3) dal lanciatore
+(71 differenze della cornice, prima 0) e da `prove_menu.py` (6 prove su 11); il percorso con la struttura della prima
+pagina (M2) da `prove_menu.py` (1 su 11); nel browser, su un gestionale di prova fatto da una copia, la voce accesa non
+portata in vista, il riquadro dei Turni alto come prima, la barra che va a capo e le notifiche prima della pagina
+(`prove_cornice_browser.py`, 23 controlli).
+
+La verifica finale della tappa 2 (22/11/2026), fatta da capo senza guardare i resoconti, ha trovato un difetto che
+nessuna prova vedeva: **il logo della struttura nel menu era tirato in largo**. Il marchio è una colonna flex, e il
+logo (largo «auto», al più 216×36 px) si allungava fino alla larghezza della colonna mentre l'altezza restava al più
+36 px: il logo dei dati di prova (6 a 1) usciva largo il 13% in più, uno quadrato (come quello inventato del pacchetto
+di prova) diventava un'ellisse piatta. Corretto con `align-self: flex-start` su `.v-marchio-logo` (`veste.css`).
+`prove_cornice_browser.py` (4-bis) misura il logo a 1366 e a 1200 px: quello dei dati di prova e, sostituiti solo nel
+browser con `page.route` (non si salva niente), uno quadrato, uno alto e uno larghissimo devono avere le proporzioni
+del file e stare in 216×36 px; il gemello rimette il difetto (`align-self: stretch`) e lo vede. Il mutante, su una
+copia senza la correzione, rompe 6 controlli su 634 (tutti i loghi tranne il larghissimo, che il difetto non tocca).
+
+### L'unione della tappa 2 con l'accesso dagli altri PC (22/11/2026)
+
+I due lavori erano partiti dallo stesso punto (b52870b): la tappa 2 (la cornice nuova, `menu.py`) e l'accesso dagli
+altri PC (`accessi.py`, ramo `ccr-interfaccia`). L'unione tiene tutte e due le parti, file per file (`app.py`:
+`menu.collega` e `accessi.installa`; `gestionale.js`: la voce accesa in vista e i moduli da solo guardare; il lanciatore:
+la cornice senza ordine e le regole «nuova» e «foglio», con la cornice di una pagina nuova solo nel catalogo di qui;
+tutte le regole approvate e tutte le raccolte nuove dei due lati), e poi le fa lavorare insieme:
+
+- **«Aree e accessi» è la settima linguetta di Configura**, registrata da `accessi.py` con `menu.registra_linguetta`
+  su una sezione sua («accessi», data alla voce Configura con `menu.registra_sezioni`, la funzione che mancava ai moduli,
+  qui sopra fra i rimandati) e con la condizione `sul_pc_principale`. Il bottone in *Impostazioni* resta. Il rifiuto e
+  la pagina d'attesa dicono `PERCORSO_PAGINA`, «Configura → Aree e accessi», e così la guida «Far usare il programma
+  dagli altri PC» (il riassunto e il primo passo; il passo indica la voce Configura con `data-guida`). L'immagine e il
+  video di quella guida mostrano ancora il bottone di Impostazioni: si rifanno nella tappa 10 con le altre (nessuna
+  prova li vuole uguali al testo).
+- **Dalla rete il menu mostra solo le pagine dell'utente**: la condizione per pagina di `menu.py`
+  (`menu.condizione_per_pagina`, data da `app.py`: `accessi.si_apre`) vale per voci, linguette, voci della tendina Aiuto
+  e collegamenti nascosti dei tasti, con l'area della pagina presa dal censimento (`accessi.area_della_pagina`: il Modo
+  schermo con il menu vuole Ambulatori e dashboard, il Sistema mai). Una funzione sola, nessuna lista a mano. Una voce la
+  cui pagina non si apre porta alla prima delle sue linguette che si apre, senza il suo tasto (Configura a chi ha solo
+  Email e WhatsApp, Ambulatori a chi ha solo Statistiche e report, Segreteria a chi ha solo l'Agenda: Prima
+  disponibilità), e senza linguette che si aprono non c'è. «Ambulatori → Esportazioni in Excel» sparisce a chi non ha
+  Statistiche e report. Sul PC principale la condizione è sempre vera: il menu è quello della tappa 2, byte per byte
+  (`z_menu_per_area` lo confronta con il menu senza condizione).
+- **La cornice dalla rete**: il nome, «La mia password» ed «Esci» stanno nella barra in alto, dopo la ricerca
+  (`_utente_rete.html` dentro `_barra.html`, `data-cornice="barra"`), non più sopra la pagina; si vedono l'icona e il
+  nome, «Entrato da un altro PC come» resta per i lettori di schermo e nel title (scritto per intero, a 1366 px il
+  percorso andava a capo). L'accesso, la propria password, il rifiuto (una pagina a sé) e il Modo schermo non hanno la
+  cornice, e nemmeno quella riga. Sotto 1024 px la barra dalla rete va su più righe dentro di sé (a 683 px 114 px: il
+  percorso a capo), senza far scorrere la pagina di lato.
+
+Le prove: in `prove_accessi.py` `z_menu_per_area` (per ognuna delle 12 aree un utente che ha solo quella, dalla sua
+prima pagina, segue ogni voce e linguetta della cornice: tutte 200, almeno una della sua area, niente tolto che per lui
+si apre; sul PC il menu identico a quello senza condizione, con le 7 linguette di Configura; gemello: senza la
+condizione le voci delle altre aree portano al 403), `z_menu_voce_al_posto` e `z_cornice_dalla_rete`; in
+`prove_menu.py` `m_condizione_per_pagina` (la condizione su un menu costruito, e `registra_sezioni` con i suoi rifiuti);
+in `prove_accessi_browser.py` la linguetta dal menu, la riga dell'utente nella barra su una riga a 1366 e 1024 px (il
+gemello la sposta sopra la pagina), il menu dalla rete seguito tutto, le pagine senza cornice. I mutanti, fatti su una
+copia in /dev/shm, sono presi tutti: la condizione per pagina tolta alle linguette, alla tendina Aiuto, ai collegamenti
+nascosti o alle voci, la voce al posto con il suo tasto, `app.py` che non la dà al menu, la condizione propria di «Aree
+e accessi» tolta, la riga dell'utente sopra la pagina, il percorso di prima nel rifiuto.
+
+Il 22/11/2026, dopo l'unione e l'integrazione, dalle due cartelle: tutte le prove senza browser verdi (37 raccolte, in
+765 e 762 s; `prove_accessi.py` 57 prove, `prove_menu.py` 12); nel browser, con le due cartelle provate insieme (porte
+5501 e 5502), 15 raccolte nella normale (1366 controlli; `prove_cornice_browser.py` 652, `prove_accessi_browser.py` 46)
+e 17 nell'animata (1431), tutte verdi; il confronto con il ramo principale dalle due cartelle con 610 pagine e nessuna
+diversa (206 solo per i cambiamenti approvati, 43 regole di cui 26 solo per la cornice), la cornice senza differenze
+(457 parti approvate) e 49 fogli e pagine che si stampano in PDF, nessuno diverso (la guida da stampare con le 2 pagine
+della guida nuova, approvata dalla sua regola «foglio»); `allinea_animata.py`: 262 file comuni, tutti uguali.
+
+### La revisione dell'unione: correzioni e cose rimandate (22/11/2026)
+
+Due revisori hanno guardato l'unione (niente perso dai due lati; l'accesso dagli altri PC con la cornice nuova) e hanno
+trovato 8 problemi. Ognuno è stato riprodotto prima di toccarlo (sul gestionale di prova, con utenti inventati e
+le pagine aperte dall'indirizzo di questo PC fuori da 127.*, come da un altro PC). Corretti, ognuno con la sua prova e
+il suo gemello o mutante:
+
+- **il commento di `base.html` e `CLAUDE.md`** dicevano «le 11 pagine senza menu»: sono 13 (i 9 fogli da stampare, le 2
+  della dashboard nel Modo schermo, l'accesso e la propria password dagli altri PC). `prove_senza_menu.py` vuole lo
+  stesso numero dei modelli in tutti e due (il gemello: con 11 cade);
+- **il lanciatore lancia ogni raccolta della cartella**: nessuno controllava `SENZA_BROWSER` e `NEL_BROWSER`, e togliere
+  `prove_accessi.py` dall'elenco (proprio la riga del conflitto) lasciava «36 prove lanciate: tutte andate».
+  `tutte_le_prove.fuori_elenco()` vuole in un elenco ogni `prove*.py` che non è un aiuto (`AIUTI`: `prove_cornice.py`,
+  `prove_dove.py`, `prove_gemelli.py`, `prove_messaggi.py`) e ogni file che scrive la riga finale di una raccolta; lo
+  dice all'inizio di ogni giro completo (riga «elenco delle raccolte», KO se non torna) e lo prova `prove_mattoni.py`
+  (il gemello toglie una riga per volta dai due elenchi, un aiuto dal suo, scrive un nome in due elenchi, e in una
+  cartella finta una raccolta con un altro nome e un aiuto con la riga finale);
+- **il giro della guida sullo schermo** (Aiuto → «Guida di questa pagina», l'invito «Fai il giro» in Oggi) finiva con
+  «La guida con le immagini», verso `/aiuto/<guida>`, che è dell'area «Guida e aiuto»: chi non l'aveva finiva su un 403.
+  `guida.passi_json` ora dà l'articolo vuoto se `guida.articolo` non si apre, e `guida.js` mostra il collegamento solo
+  se c'è (`z_rv_guida_con_le_immagini_solo_con_la_guida`, per tutte le 46 guide; gemelli: con la Guida e sul PC
+  l'articolo c'è, e aperto a mano senza la Guida è un 403);
+- **i Turni da guardare**: la riga diceva «I campi e i bottoni per salvare sono spenti», ma la griglia restava attiva (il
+  clic apriva la scelta, una lettera mandava il salvataggio, rifiutato con un 403) e c'erano «Aggiungi» e gli Strumenti
+  che cambiano. Ora la griglia della settimana e del mese e la vista del giorno hanno `data-solo-guardare` con il motivo
+  (`accessi.solo_guardare('turni')`, vuoto sul PC e per chi può salvare): `turni.js` non apre la scelta e non ascolta i
+  tasti («Turno a…» spento), `gestionale.js` mette il motivo nel title e nella riga in cima; «Aggiungi», «Schema a
+  rotazione…», «Copia la settimana prima» e la riga «Clic su una cella…» non ci sono (Stampa e Scarica in Excel sì).
+  Prove: `z_rv_turni_solo_guardare` (gemelli: con «modificare» e sul PC tutto c'è, e sul PC l'HTML è identico) e, nel
+  browser, `prove_accessi_browser.py`: clic su una cella e tasto M, nessuna scelta e nessun POST; il gemello dal PC
+  salva il turno e Ctrl+Z lo toglie;
+- **il nome della parte per le pagine di più aree**: il cambio di stato vale per Agenda o Segreteria, e la riga «solo
+  guardare», il title dei bottoni e il rifiuto dicevano sempre «Agenda», anche a chi ha solo la Segreteria. Ora
+  `accessi.nome_della_parte` dice la parte da cui viene il livello, in `livello_modulo` e in `controlla_accesso`
+  (`z_rv_nome_della_parte_doppia`; gemello: con la sola Agenda si dice ancora «Agenda»);
+- **la ricerca rapida dalla rete**: a chi non ha Agenda, Pazienti né Dove si fa rispondeva sempre «Nessun risultato.»,
+  anche per un paziente che c'è (i risultati si tolgono dopo, nel filtro). Ora nella barra c'è solo se almeno una delle
+  pagine dei suoi risultati si apre (`accessi.ricerca_utile`, `PAGINE_RICERCA_RAPIDA`); l'«if» sta dentro le righe di
+  `_barra.html`, e sul PC l'HTML è quello di prima. `z_rv_ricerca_solo_se_serve` prende le pagine dagli `url_for` di
+  `cerca_tutto` e di `dovesifa.per_ricerca_rapida` e dai risultati veri sul PC; tre utenti senza quelle aree non hanno
+  la ricerca, tre con una sola sì;
+- **la barra in alto dalla rete** andava su due righe (66 px invece di 62) anche a 1280 e a 1200 px sulle pagine con il
+  percorso lungo (Ambulatori › Pianificazione della settimana, Segreteria › Chiusura della giornata…), e con un nome
+  lungo anche Segreteria › Conferme. Ora, solo con la riga dell'utente: la ricerca larga 240 px (almeno 160), il nome al
+  più 9em, e il percorso su una riga, dove si accorcia con i puntini solo il nome della struttura. Sul PC niente cambia.
+  `prove_accessi_browser.py` misura la barra (62 px) a 1366, 1280, 1200, 1199 e 1024 px su sei pagine, con un utente
+  dal nome di 38 lettere; il gemello rimette lo stile di prima e a 1280 la vede andare a capo.
+
+Rimandato, da decidere con Giovanni (scritto in `piano/DECISIONI-VESTE.md`, Configura):
+
+- **le linguette di Configura a 1200 e a 1024 px** sul PC principale: sono 7, e «Aree e accessi» va da sola sulla seconda
+  riga (le 7 pagine di Configura scendono di 38 px); lo stesso succede alle 7 della Segreteria. Accorciare la parola non
+  basta (a 1024 px anche «Accessi» va a capo: servirebbe meno spazio fra tutte le linguette, in tutte le aree).
+
+Resta com'era, da sapere: chi ha l'Agenda senza i Pazienti ha la ricerca rapida (trova giorni e medici), ma cercando
+il nome di un paziente legge «Nessun risultato.».
+
+Le verifiche, il 22/11/2026, dalle due cartelle: tutte le prove senza browser verdi (37 raccolte, in 789 e 780 s, con la
+riga nuova «elenco delle raccolte» OK; `prove_accessi.py` 61 prove, `prove_mattoni.py` 24, `prove_senza_menu.py` 16); nel
+browser 15 raccolte nella normale (1370 controlli; `prove_accessi_browser.py` 50) e 17 nell'animata (1435), tutte verdi
+(nell'animata le stesse raccolte, nello stesso ordine e con lo stesso giudizio della riga finale, lanciate una per una
+con un TMPDIR corto: sotto la cartella del giro del lanciatore il percorso del socket di Chromium passa i 107
+caratteri); il confronto con il ramo principale dalle due cartelle con 610 pagine e nessuna diversa (206 solo per i
+cambiamenti approvati, le stesse 43 regole: sul PC principale niente è cambiato), la cornice senza differenze (457 parti
+approvate) e 49 fogli e pagine che si stampano in PDF, nessuno diverso (1 approvato, la guida da stampare);
+`allinea_animata.py`: 262 file comuni, tutti uguali. I mutanti, ognuno su una copia in /dev/shm, sono presi tutti:
+«11 pagine» nel commento (`prove_senza_menu.py`); `prove_accessi.py` tolto da `SENZA_BROWSER` (`prove_mattoni.py`, e la
+riga «elenco delle raccolte» KO in testa al giro); l'articolo della guida sempre dato, la griglia dei Turni senza segno,
+«Schema a rotazione…» a chi guarda, il nome sempre della prima area, la ricerca sempre, `PAGINE_RICERCA_RAPIDA` senza
+Dove si fa (`prove_accessi.py`, una prova ciascuno); nel browser, su gestionali di prova fatti dalle copie, `turni.js`
+senza il ritorno per «solo guardare» (il clic e la M mandano il salvataggio: 3 controlli su 50) e `veste.css` senza le
+regole nuove (la barra a 66 px, con il nome lungo già a 1366: 1 su 50).
+
+La verifica finale dell'unione (22/11/2026, indipendente: ogni numero rifatto da capo, senza fidarsi dei resoconti). Il
+ramo pulito e `allinea_animata.py` con 262 file comuni, tutti uguali. Riga per riga, ogni riga aggiunta da uno dei due
+lati (dal commit di partenza comune) c'è ancora, o è stata riscritta apposta (la riga dell'utente spostata nella barra in
+alto, il percorso «Configura → Aree e accessi», il conto delle pagine senza menu). Tutte le prove senza browser verdi
+nelle due cartelle (37 raccolte, in 792 e 796 s); nel browser tutte le raccolte con il lanciatore, 15 nella normale (1370
+controlli) e 17 nell'animata (1435), su un gestionale di prova per cartella; `prove_accessi_browser.py` (50) e
+`prove_cornice_browser.py` (652) due volte di fila sullo stesso gestionale di prova, dopo tutte le altre, verdi;
+`confronta_rami.py` dalle due cartelle: 610 pagine, nessuna diversa (206 solo per i cambiamenti approvati), la cornice
+senza differenze, 49 fogli e pagine che si stampano in PDF, nessuno diverso. Nell'animata il lanciatore va con il TMPDIR
+di sistema (`/tmp`): con uno più lungo, anche `/dev/shm/u1`, la cartella del giro porta il socket di Chromium oltre i
+107 caratteri (solo su Linux; su Windows Chromium non usa quel socket).
+
+Un giro a mano con le prese vere, nelle due cartelle: il gestionale di prova su 127.0.0.1, l'accesso acceso dalla
+linguetta *Configura → Aree e accessi*, due utenti inventati (Agenda da modificare e Pazienti da guardare; Turni e Sala da
+guardare e Cassa da modificare), ognuno con il suo browser e tutti e due insieme, dall'indirizzo della scheda di rete
+del PC (come da un altro PC). La porta del PC principale da lì non si apre; accesso e password nuova senza cornice; menu,
+linguette, tendina Aiuto e collegamenti dei tasti con le sole pagine che si aprono, seguiti tutti (tutti 200); la ricerca
+rapida solo a chi serve; i rifiuti in italiano, senza cornice, con «Torna alle pagine disponibili» verso la sua prima
+pagina; la scheda di un paziente in «solo guardare» (moduli spenti, il POST mandato a mano rifiutato); i Turni da
+guardare senza salvataggi; la nota del giorno salvata e vista dal PC; «Fai uscire» dal PC mentre l'altro resta dentro;
+Esci; il registro con i due nomi e l'indirizzo; spegnendo, la porta chiusa davvero. 47 controlli, tutti andati.
+
+Una prova caduta, e corretta: nell'animata, con il computer carico, `prove_110_browser.py` cadeva ogni tanto («"libero"
+accanto all'ora solo al passaggio del mouse»; riprodotto 1 volta su 12, mentre girava `confronta_rami.py`). La causa:
+le notifiche in basso a destra arrivano dopo la pagina (`gestionale.js` le chiede dopo 800 ms; nell'animata entrano da
+destra) e, con il menu a sinistra, la cella della prova (la prima fascia libera della sala endoscopia) sta anche sotto
+di loro: una notifica arrivata mentre il mouse era sulla cella la copriva e le toglieva il :hover (il browser diceva il
+mouse sulla notifica). Il programma non cambia (le notifiche vanno nella campanella con la tappa 3): la prova nasconde
+le notifiche prima del passaggio del mouse. Gemello: la prova di prima con una notifica messa sopra la cella subito dopo
+il passaggio del mouse cade sempre, quella nuova no; il mutante (il :hover della cella tolto) la fa cadere. Dopo la
+correzione 16 giri su 16 verdi mentre girava `confronta_rami.py`.
+
+### Il pacchetto di prova (dalla tappa 1 della base)
+
+Il gestionale di oggi, da provare sul PC di Giovanni prima che arrivi in clinica, senza toccare il programma della
+clinica: un file solo, `GestionaleProva-tappa1-<commit>-<giorno>.exe`, con accanto `LEGGIMI-PROVA.txt` (la mezza pagina
+su SmartScreen, come si riconosce, come si chiude). Il punto di partenza è `prova.py`, con una ricetta sua
+(`gestionale-prova.spec`): le pagine sono quelle del programma, con in più una cornice arancione «Versione di prova ·
+tappa · commit · giorno · dati inventati · Chiudi la prova» e «PROVA» davanti al titolo. I dati sono quelli di
+`strumenti/demo.py`, che ora stanno in `strumenti/dati_prova.py` (`fai_dati`), con nomi, indirizzo e logo della clinica
+e i due medici inventati (`nomi_inventati`: Clinica Esempio, Dr. Provetti e Dr. Saggiatori); si rifanno al primo avvio
+del giorno, con un pacchetto nuovo o se il database non è integro. La prova ha la sua cartella
+(`%LOCALAPPDATA%\GestionaleAgendeProva`, mai `...\GestionaleAgende`), la porta 5050 (5051-5059; la 5000-5009 si
+rifiuta), chiave e cookie suoi e un nome suo per `/salute`; email, WhatsApp, registrazione del numero, aggiornamenti,
+Setup, copie, ripristino, cartella dei backup, riavvio e custode dicono di no (`chiudi_le_porte`), e le importazioni
+lavorano nella sua cartella.
+
+```
+python prove_dati_prova.py        # i dati di prova con l'orologio fermo in quattro momenti, contro dati_prova_atteso.txt
+python prove_prova.py             # ogni sostituzione, la guardia sui sorgenti, le pagine identiche tolta la cornice, e la
+                                  # prova avviata davvero: nessuna connessione verso fuori, la cartella vera finta intatta
+CREA_PROVA.bat                    # nella cartella gestionale-animata: dist\GestionaleProva-…exe e LEGGIMI-PROVA.txt
+bash strumenti/wine/costruisci.sh --prova ../gestionale-animata          # lo stesso nel Windows finto, in dist/windows
+python3 strumenti/wine/prova_isolamento.py ../gestionale-animata/dist/windows/GestionaleProva-….exe
+                                  # accanto al programma installato: la sua cartella identica, niente invii, porte diverse
+```
+
+`demo.py` senza opzioni fa gli stessi dati di prima (confrontati riga per riga con l'orologio fermo in 11 momenti, il
+22/11/2026); con `--nomi-inventati` anche i nomi della prova. Un cambio voluto dei dati si scrive con
+`python prove_dati_prova.py --scrivi`, nello stesso commit. Una funzione nuova che va su internet o lancia un programma fa
+cadere `prove_prova.py` finché non la si sostituisce in `prova.chiudi_le_porte` (o la si ammette in `prove_prova.py` con
+il perché). Mai un Setup per la prova (`installer.iss` ha lo stesso AppId del programma della clinica e lo sostituirebbe)
+e mai il nome `Gestionale.exe` (`FERMA.bat` e il Setup chiudono per nome). Il primo giro in Wine ha trovato un difetto
+che su Linux non si vedeva: Python 3.14, quello di `CREA_PROVA.bat`, controlla gli aiuti delle opzioni già all'avvio, e
+il % di «%LOCALAPPDATA%» fermava il doppio clic con una finestra d'errore; ora `prove_prova.py` legge l'aiuto.
+
+### La veste nuova: i mattoni (dalla tappa 1-bis)
+
+Prima delle pagine nuove, i pezzi con cui si faranno, senza cambiare di un pixel le pagine di oggi.
+
+- **Lo strato.** In `base.html` i fogli di oggi (`stile.css`, nell'animata `animazioni.css`, `tema-scuro.css`) arrivano
+  con `@import url(…) layer(vecchio)` dentro un `<style>`, nell'ordine di ogni variante, e anche il `:root` con il colore
+  della struttura sta nello strato. Dopo vengono `gettoni.css` e `veste.css`, fuori dallo strato: una regola fuori vince
+  sempre su una dentro, qualunque sia il suo peso, così in scuro un campo nuovo non prende il fondo di `html.scuro
+  input`. Il piano diceva un file `static/vecchio.css`; gli `@import` in `base.html` tengono l'ordine dell'animata con un
+  modello solo (un `vecchio.css` uguale nelle due cartelle non potrebbe) e lasciano `tema-scuro.css` scritto nella pagina
+  (`prove_14.py`). Il `:root` fuori dallo strato vincerebbe su `html.scuro { --primario-scuro }` di `tema-scuro.css`: in
+  scuro i collegamenti di oggi diventerebbero blu scuro (provato: 12 pagine su 18 cambiano, fino a 17.003 pixel). I
+  fogli da stampare restano con i link di oggi, senza strato e senza fogli nuovi. `@import` con `layer()` vuole Chrome o
+  Edge 99 o più nuovi (ce l'hanno anche i 109, gli ultimi per Windows 7); il programma usa già `color-mix()`, che vuole
+  il 111.
+- **I gettoni** (`static/gettoni.css`): variabili con un nome di ruolo (`--v-fondo`, `--v-superficie`, `--v-testo`,
+  `--v-testo-tenue`, `--v-riga`, gli stati, l'errore…) dalla tavola dei colori del gruppo, con il valore scuro sotto
+  `@media screen { html.scuro }`, e le scale: 9 spazi, 4 raggi e il tondo, 9 grandezze di carattere (il corpo resta
+  14 px), 3 altezze dei comandi. Il colore della struttura non è scritto: `marchio.tema` calcola, accanto alle cinque
+  varianti di sempre, `tinta`, `bordo`, `profondo` e `testo` (il colore scurito finché si legge 4,5:1 sulla tinta e sui
+  fondi chiari), e `base.html` le scrive nello strato. Il bordo dei campi è #B3BDCB (1,9:1, come oggi; la tavola ha
+  #D8DFEB, 1,34:1). Tre stati cambiano aspetto rispetto a oggi, come nella tavola approvata: Non presentato rosso (oggi
+  marrone), Confermato azzurro (oggi verde), Disdetto grigio-blu leggibile (oggi 2,9:1).
+- **I pezzi** (`templates/_pezzi.html`, aspetto in `static/veste.css`, classi con il prefisso `v-`): intestazione,
+  scheda, tabella, pillola dello stato, contatore, striscia dei numeri (un `ul.numeri`, anche con più numeri in una voce,
+  perché l'animata li fa contare), barra dei comandi, frecce, tendina con la freccia `chevron-down`, linguette (con
+  `title` e icona), «Stampa e scarica» (voci in un elenco o scritte nella pagina, come gli Strumenti dei Turni) e
+  l'importo in euro (`euro()`, lo stesso testo dei tre modi di oggi). Bottone piccolo (`v-bottone-piccolo`) e riga
+  piccola di testo (`v-testo-piccolo`) hanno nomi diversi; i pezzi che tengono una classe di oggi ne azzerano i margini.
+  Icone nuove: `chevron-down` e `id-card` (`strumenti/genera_icone.py`, Lucide 1.55.0).
+- **Il catalogo** (`python strumenti/catalogo_pezzi.py`, `http://127.0.0.1:5141/catalogo-pezzi`; `?colore=1C4184` con
+  il blu delle tavole): ogni pezzo negli stati che ha, i gettoni con i loro contrasti e le scale, su dati, nomi e logo
+  inventati. Sta in `strumenti/` e non entra nell'eseguibile; `--foto CARTELLA` fa le foto a 1366, 1024 e 683 px in
+  chiaro e in scuro, e dice se la pagina scorre di lato o ha errori.
+- **Le prove.** `prove_mattoni.py` (20 prove, 10 con il loro mutante): contrasti di 36 coppie testo/fondo su 444 colori
+  della struttura, in chiaro e in scuro (la più bassa 4,50, il testo bianco sul primario che `marchio.leggibile` porta
+  proprio a 4,5); valori scuri; nessun colore scritto a mano nei file nuovi (anche con uno dei 148 nomi del CSS, come
+  `teal`); lo strato; il prefisso (un `.v-` solo dentro `:not()`, o in una sola scelta di `:where()`, non basta: lo ha
+  trovato la revisione della tappa); i pezzi con le
+  variabili rigide; le icone; `euro()` su 3009 importi; `marchio.tema`; l'autoriparazione (`risorse_presenti` controlla
+  anche `gettoni.css` e `veste.css`, e `prove_installato.py` li chiede). `prove_mattoni_browser.py` (nel giro nel
+  browser) avvia da sé il catalogo e vuole i colori dei gettoni su campo, tendina, bottoni e collegamenti in chiaro e in
+  scuro, i margini delle classi di oggi tenute dai pezzi azzerati (`elenco`, `vuoto`, `ricerca`, `numeri`), niente
+  scorrimento di lato e la tendina «Stampa e scarica» mai coperta, anche da una seconda barra (il primo giro di foto del
+  catalogo l'aveva trovata coperta); i suoi gemelli tolgono lo strato, il margine zero della barra e la regola che porta
+  sopra la barra aperta. `prove_pagine.py` legge i fogli anche negli `@import`. `prove_guida.py`
+  accetta i nomi passati ai pezzi (`guida='nome'`).
+- **Le foto prima e dopo**: `python strumenti/foto_pagine.py --principale <ramo o commit>`: il database di `demo.py` del
+  principale, poi i due programmi uno alla volta sulla stessa cartella, con l'orologio fermo (nel programma e nel
+  browser), 35 pagine a 1366×657 e intere, in chiaro e in scuro, più tendine aperte, fuoco della tastiera, messaggi a
+  scomparsa e stampa; le foto diverse si rifanno sul principale per misurare il rumore.
+
+### L'accesso dagli altri PC (dalla 1.13)
+
+`prove_accessi.py` (senza browser): il censimento con una pagina finta senza area; la matrice area × livello × pagina ×
+metodo, dalla rete e dal PC; le pagine di ogni area e tutti gli indirizzi chiesti dai loro script; i cinque modi di
+arrivare dalla rete; Sistema, Modo schermo, sessioni, tentativi, messaggi e registro, password, scritture e letture fra
+aree; le prese vere (portiere, ascolto acceso, spento, riacceso, porta occupata, chiave fissa); i limiti dei due server
+(un modulo di 14 MB: 413 da waitress); la casella email e WhatsApp nel Sistema e la password tolta cambiando server; gli
+indirizzi in numeri; la pagina con il registro letto dai file; e il programma vero (`app.principale`) in un processo a
+parte, con `GESTIONALE_PORTA`: la rete accesa dalla pagina, le richieste dall'indirizzo di questo PC fuori da 127.* (come
+un altro PC) e da 127.0.0.1, la porta principale che dall'altro indirizzo non si raggiunge, l'accesso con la password da
+cambiare, Agenda che salva, Cassa «solo guardare» che no, Pazienti e Sistema negati, la rete spenta che chiude davvero
+la porta, il riavvio con la porta della rete occupata (il PC principale parte, la rete appena la porta si libera, chi
+era entrato è ancora dentro). Ogni prova ha il suo gemello, e ogni controllo nuovo è stato provato con un mutante su
+una copia del programma.
+
+Le prove del secondo giro della revisione (22/11, i 14 problemi che il primo giro non aveva visto): `y_come_l_eseguibile`
+(il programma vero come «__main__»: dopo la pagina Aree e accessi, il portiere con la rete spenta e le richieste da un
+altro PC, Oggi, Pazienti, Cassa e Impostazioni rispondono 200; e la pagina dice l'ultima richiesta da un altro PC),
+`a_nessun_modulo_importa_app` e le `z_nv_…`: la scheda del paziente senza la Segreteria, la ricerca ridotta per ogni area
+e livello, prezzo e tariffario con la Cassa, la checklist spenta, le tendine degli Ambulatori, i moduli segnati
+confrontati con la guardia su tutte le pagine di ogni area, gli appunti del giorno, la copia rimessa (ripristino,
+riparazione, avvio), il firewall, lo spegnimento che fa uscire, il riquadro della porta, il nuovo utente rifiutato, il
+rifiuto e la pagina, e Statistiche e report (pagine ed Excel per quattro utenti e il PC).
+
+`prove_accessi_browser.py` (nel browser, sul gestionale di prova): il giro della segreteria, da Impostazioni ad *Aree e
+accessi*, l'accesso acceso su una porta libera, un utente con Agenda da modificare e Cassa da guardare; da un'altra
+scheda sull'indirizzo della rete: password sbagliata, primo accesso, password nuova, la nota del giorno salvata, «Salva il
+listino» spento con la riga «Solo guardare», le caselle della checklist della Sala spente, Pazienti negata con «Torna alle
+pagine disponibili», «Esci»; dal PC il registro, «Togli» con la domanda, l'accesso spento e la porta chiusa; prima, un
+utente rifiutato che torna con il nome e le parti scritte, e il motivo di un 403 della checklist nel messaggio. Alla fine il
+gestionale di prova torna com'era.
 
 ## Difetti trovati e corretti
 
@@ -2873,6 +3616,9 @@ falliscono, cioè il difetto c'era davvero.
 | Una prova di `prove_15.py` che falliva a caso (21/11/2026) | `i_thread` accende il thread degli invii, che resta acceso fino alla fine delle prove; l'area dell'indirizzo della segreteria (1.12.6), aggiunta dopo, a volte trovava la sua email già partita dal thread e `j_segreteria_ovunque` falliva. Un difetto della prova, non del programma | L'area della 1.12.6 spostata prima di quella del thread, che resta l'ultima (lo dice una nota nel file); le prove sono le stesse, 72. Dieci giri di fila tutti verdi; con mezzo secondo di attesa dopo la prenotazione l'ordine di prima fallisce, quello nuovo no |
 | Tre prove nel browser senza `CHROMIUM` (21/11/2026) | `prove_sicurezza_browser.py`, `prove_animazioni.py` (solo nell'animata) e `strumenti/prova_aggiorna_adesso.py` aprivano Chromium senza `executable_path=os.environ.get('CHROMIUM')`, a differenza di tutte le altre prove e degli strumenti delle guide: in una sessione nel cloud dove la libreria Playwright di Python cerca un Chromium più nuovo di quello installato si fermavano dopo un secondo | Aprono Chromium come le altre; senza `CHROMIUM` (su Windows e in `prove.yml`) tutto resta come prima |
 | La «cornice» di `prove_sicurezza_browser.py` che falliva a caso (21/11/2026) | Con le due cartelle provate insieme la prova a volte non vedeva la risposta 403 alla richiesta della cornice da un altro sito: il testo restava giusto, ma Playwright non vedeva né la richiesta né la risposta (6 giri su 14 sotto carico, con una copia della prova che registrava anche le richieste fallite). Chrome fa girare la cornice chiusa in una sandbox in un processo suo, e il modulo partiva appena la cornice era pronta, prima che Playwright la seguisse. Aspettare di più non bastava; e il primo modo di riprovare non serviva, perché riapriva lo stesso indirizzo con la stessa ancora e il browser restava nella stessa pagina, senza rifare l'attacco (lo ha trovato la revisione della 1.12.7). Un difetto della prova, non del programma | Il modulo della cornice parte dopo un secondo (14 giri su 14 sotto lo stesso carico), e senza il 403 visto la prova riprova fino a tre volte, ogni volta da un indirizzo nuovo, con lo stesso criterio di prima (testo uguale e risposta 403; se il testo cambia fallisce subito): con il primo tentativo perso apposta, il secondo rifà l'attacco e vede il 403. Con il controllo della provenienza tolto dal gestionale la prova è rossa, cornice compresa |
+| La prova del thread di `prove_15.py` che falliva a caso (22/11/2026) | `i_thread` aspettava che l'email arrivasse al finto server di posta e subito controllava che nel database fosse «INVIATO»; il thread scrive lo stato un attimo dopo l'invio, e con il computer carico (le due cartelle provate insieme, più altri lavori) l'ha trovata ancora «IN_CORSO» una volta. Un difetto della prova, non del programma | La prova aspetta, fino a 10 secondi, sia l'email sia lo stato scritto; 5 giri di fila con sei processi che occupano il computer, tutti verdi |
+| Accesso dagli altri PC, revisione dei tre revisori (22/11/2026, prima di consegnarlo) | Riprodotti uno per uno, prima di correggerli. Con le sole Anagrafiche, un'assenza o una chiusura mostravano nomi e telefoni degli appuntamenti da spostare (con una chiusura di un anno, tutti); con Agenda, Segreteria o Dove si fa anche solo da guardare la ricerca dei pazienti dava tutta l'anagrafica; senza la Cassa la stampa e l'Excel del giorno, l'elenco e la chiusura mostravano importi e convenzioni; dalla lista d'attesa e dagli appunti la Segreteria cambiava la scheda di un paziente; le Conferme davano 403 alla Segreteria; con la sola Cassa non si incassava con bonifico; chiunque sulla rete, provando nomi sempre nuovi, rendeva lenta per minuti la pagina «Aree e accessi» e riempiva il registro; un .xlsx di 189 KB portava il programma oltre 1 GB di memoria; un PC solo teneva occupati tutti i collegamenti della rete; il cookie valeva da qualsiasi PC; passavano password come «1234567890a» o «clinicaposillipo1»; 40 tentativi insieme ne facevano provare 8; le sessioni di un utente non avevano limite | Ognuna con la sua prova e il suo gemello in `prove_accessi.py` (le prove `z_…`) e un mutante che la fa cadere: lista solo con l'Agenda; ricerca senza i Pazienti solo a chi può prenotare (`RICERCA_PAZIENTI`); importi e convenzioni solo con la Cassa (`con_cassa` nell'Excel del giorno); `aggiorna=puo_cambiare('pazienti')` anche in lista d'attesa e appunti; stato per Agenda o Segreteria, promemoria anche per la Segreteria (`ANCHE_PER`); il modulo di incasso nella cassa del giorno; `Tentativi` con il limite per PC, il tetto alle voci, `bloccati()` in un passaggio, `prenota` sotto il lucchetto, la risposta subito a un PC bloccato; registro raggruppato e letto dal fondo; `controlla_excel_compresso` e Importa da Excel in sola lettura; 12 collegamenti per PC sulla rete; sessione legata al PC, al massimo 5 per utente; password con almeno 6 lettere, 4 diverse, non fatte solo di parole vietate. Statistiche e report: deciso nel secondo giro (riga sotto) |
+| Accesso dagli altri PC, secondo giro della revisione (22/11/2026, i 14 problemi che il primo giro non aveva visto) | Nell'eseguibile, e con «python app.py», dopo la pagina «Aree e accessi», una richiesta del portiere o una da un altro PC ogni pagina rispondeva 500, anche sul PC della segreteria (il primo «from app import» di accessi.py caricava una seconda copia di app.py). Poi: la copia di ieri rimessa riportava indietro utenti, password e rete senza dirlo; le istruzioni del firewall dopo «Annulla» non aprivano niente (Windows crea regole di blocco); chi aveva solo i Pazienti vedeva cose da fare e lista d'attesa; da Dove si fa la ricerca dava l'anagrafica intera; con le sole Anagrafiche si cambiava il prezzo di listino; la checklist si spuntava in «solo guardare» con un messaggio falso; voci di «Scarica» e bottoni per salvare che portavano al 403 perdendo quello che si era scritto; gli appunti della Segreteria nella griglia di chi ha solo l'Agenda; spegnere la rete non faceva uscire; l'errore rosso della porta occupata restava per sempre; un utente rifiutato faceva rifare tutto il modulo; il rifiuto mandava a un percorso che nel menu non c'è | `accessi.installa(app, ses, LUCCHETTO, fabbrica)` e app.py registrato come «app» quando gira come «__main__»; prova sui sorgenti e programma vero come «__main__»; gli accessi non tornano indietro con una copia (`accessi-rete.json`, `rimetti`); comandi del firewall per programma (togli tutte le sue regole, poi la regola per la porta) e l'ultima richiesta da un altro PC; ogni pezzo di un'altra parte dietro la sua (`puo`, `puo_cambiare`, ricerca ridotta); i moduli che non si possono salvare segnati e spenti (`segna_moduli`, `gestionale.js`); spegnere = tutti fuori; pagina con quello che si era scritto, «Per l'assistenza», utenti chiusi. Statistiche e report: pazienti con Pazienti o Agenda, importi con la Cassa (predefinito deciso). Ognuna con la sua prova `z_nv_…` (o `y_come_l_eseguibile`) e il suo gemello, e un mutante su una copia |
 | Il clic su «Stampa e scarica» coperto dalla tendina del menu (21/11/2026) | In `prove_112_browser.py`, nell'animata, una volta sola in tutti i giri del 21 novembre, la tendina «Ambulatori» del menu era aperta sopra il pulsante e il clic non arrivava (30 secondi e poi rosso). La causa l'ha trovata la revisione della 1.12.7, ed è della prova: nell'animata la tendina «Stampa e scarica» entra con un'animazione di 0,18 secondi, Playwright vede la voce «non ferma», fa scorrere la pagina per mostrarla e lascia il mouse in cima alla finestra; al clic dopo riporta la pagina in cima, il gruppo «Ambulatori» del menu finisce sotto il mouse fermo e apre la sua tendina sopra il pulsante. Nella normale, senza animazione, non succede | Prima di aprire «Stampa e scarica» la prova porta il mouse in un punto neutro della pagina, dove il menu non può finire, e controlla che nessuna tendina del menu sia aperta; se lo è, lo dice, con la tendina e il perché (mouse sopra, focus dentro o classe «aperto») |
 | Wine non partiva più nelle sessioni nel cloud (21/11/2026) | Wine 9.0 di Ubuntu si chiudeva appena partito, con «free(): invalid pointer», se la variabile `TMPDIR` era impostata, anche a `/tmp`: nella sessione del 21 novembre lo era, il 1° novembre no. `strumenti/wine/costruisci.sh` finiva con un `crea_exe.log` vuoto | `strumenti/wine/ambiente.sh` toglie `TMPDIR` prima di usare Wine, che allora usa `/tmp` da solo |
 

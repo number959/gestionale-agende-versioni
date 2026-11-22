@@ -29,17 +29,70 @@ import time
 
 QUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SENZA_BROWSER = ['prove.py', 'prove2.py', 'prove100.py', 'prove200.py', 'prove_14.py', 'prove_143.py',
+SENZA_BROWSER = ['prove_indirizzi.py', 'prove_accessi.py', 'prove_canarino.py', 'prove_pagine.py', 'prove_mattoni.py', 'prove_senza_menu.py', 'prove_menu.py', 'prove_live_json.py', 'prove_dati_prova.py', 'prove_prova.py', 'prove.py', 'prove2.py', 'prove100.py', 'prove200.py', 'prove_14.py', 'prove_143.py',
                  'prove_145.py', 'prove_146.py', 'prove_anagrafiche.py', 'prove_funzioni.py', 'prove_guida.py',
                  'prove_personalizzazione.py', 'prove_15.py', 'prove_16.py', 'prove_17.py', 'prove_18.py',
                  'prove_19.py', 'prove_191.py', 'prove_110.py', 'prove_autoriparazione.py', 'prove_111.py', 'prove_111_importa.py', 'prove_111_turni.py',
                  'prove_112.py', 'prove_112_excel.py', 'prove_tariffari.py', 'campagna.py']
 # in quest'ordine: prima quelle che non cambiano niente, per ultima quella che cambia l'indirizzo degli aggiornamenti
-NEL_BROWSER = ['prove_guida_browser.py', 'prove_sicurezza_browser.py', 'prove_animazioni.py', 'prove_icone_animate.py',
-               'prove_tendine_browser.py', 'prove_15_browser.py', 'prove_17_browser.py', 'prove_18_browser.py',
+NEL_BROWSER = ['prove_guida_browser.py', 'prove_sicurezza_browser.py', 'prove_mattoni_browser.py', 'prove_animazioni.py', 'prove_icone_animate.py',
+               'prove_tendine_browser.py', 'prove_cornice_browser.py', 'prove_15_browser.py', 'prove_17_browser.py', 'prove_18_browser.py',
                'prove_19_browser.py', 'prove_191_browser.py', 'prove_110_browser.py', 'prove_112_browser.py',
-               'prove_tariffari_browser.py',
+               'prove_tariffari_browser.py', 'prove_accessi_browser.py',
                'prove_16_browser.py']
+# Gli aiuti che le raccolte importano: non scrivono la riga finale e non si lanciano da soli. Ogni altro prove*.py della
+# cartella, e ogni file che scrive la riga finale di una raccolta, sta in SENZA_BROWSER o in NEL_BROWSER (revisione
+# dell'unione con l'accesso dagli altri PC: una riga persa risolvendo un conflitto qui non la vedeva nessuno, e le prove
+# restavano tutte verdi). Lo controllano fuori_elenco(), qui all'inizio di ogni giro completo, e prove_mattoni.py.
+AIUTI = ['prove_cornice.py', 'prove_dove.py', 'prove_gemelli.py', 'prove_messaggi.py']
+# le righe finali che giudica() sa leggere, come le scrivono le raccolte («N / M» anche con print(n, '/', m))
+RIGA_FINALE = re.compile(r"da sistemare|prove nel browser, |'%d / %d'|'/', len\(|Nessun guasto")
+
+
+def senza_porta_vera(nome):
+    """Una raccolta nel browser che legge l'indirizzo lo prende solo da aiuti_browser.indirizzo_di_prova(sys.argv), che si ferma
+    senza indirizzo o con la porta 5000: fino alla tappa 1 della base, lanciate senza argomento, andavano sulla 5000,
+    cioè sul programma vero, e ci salvavano dati."""
+    with open(os.path.join(QUI, nome), encoding='utf-8') as f:
+        testo = f.read()
+    if re.search(r"['\"]https?://[^'\"]*:5000", testo):
+        return False
+    # chi non legge l'indirizzo (prove_mattoni_browser.py avvia da sé il catalogo su una porta libera) va bene così
+    return 'indirizzo_di_prova(sys.argv)' in testo or not re.search(r'sys\.argv\[1', testo)
+
+
+def fuori_elenco(cartella=QUI, senza_browser=None, nel_browser=None, aiuti=None):
+    """Quello che non torna fra i file di prova della cartella e i tre elenchi qui sopra (vuoto se tutto torna): una
+    raccolta che nessun elenco lancia (ogni prove*.py che non è un aiuto, e ogni .py che scrive la riga finale di una
+    raccolta), un aiuto che scrive la riga finale, un nome in due elenchi, un nome lanciato che non scrive la riga finale
+    (giudica() non lo saprebbe leggere), un aiuto che non c'è. I nomi dei due elenchi che mancano nella cartella vanno
+    bene: NEL_BROWSER ha anche le prove della sola animata."""
+    senza_browser = SENZA_BROWSER if senza_browser is None else senza_browser
+    nel_browser = NEL_BROWSER if nel_browser is None else nel_browser
+    aiuti = AIUTI if aiuti is None else aiuti
+    problemi = []
+    tutti = list(senza_browser) + list(nel_browser) + list(aiuti)
+    for n in sorted({x for x in tutti if tutti.count(x) > 1}):
+        problemi.append('%s è scritto in più di un elenco' % n)
+    lanciati = set(senza_browser) | set(nel_browser)
+    for n in sorted(os.listdir(cartella)):
+        percorso = os.path.join(cartella, n)
+        if not n.endswith('.py') or not os.path.isfile(percorso):
+            continue
+        with open(percorso, encoding='utf-8', errors='replace') as f:
+            riga_finale = bool(RIGA_FINALE.search(f.read()))
+        if n in aiuti:
+            if riga_finale:
+                problemi.append('%s è fra gli aiuti, ma scrive la riga finale di una raccolta' % n)
+        elif n in lanciati:
+            if not riga_finale:
+                problemi.append('%s si lancia, ma non scrive la riga finale di una raccolta' % n)
+        elif n.startswith('prove') or riga_finale:
+            problemi.append('%s non è in SENZA_BROWSER né in NEL_BROWSER (né fra gli AIUTI): non si lancerebbe mai' % n)
+    for n in aiuti:
+        if not os.path.exists(os.path.join(cartella, n)):
+            problemi.append('%s è fra gli aiuti, ma nella cartella non c\'è' % n)
+    return problemi
 
 
 def giudica(nome, codice, uscita):
@@ -82,6 +135,10 @@ def main():
     if a.solo_browser and not a.browser:
         print('--solo-browser vuole anche --browser URL')
         return 2
+    if a.browser and re.search(r':5000(?:/|$)', a.browser.strip()):
+        print('La porta 5000 è quella del programma vero: le prove nel browser salvano dati e vanno solo su un '
+              'gestionale di prova (python strumenti/demo.py --porta 5001).')
+        return 2
     elenco = [] if a.solo_browser else [(n, []) for n in SENZA_BROWSER]
     if a.browser:
         elenco += [(n, [a.browser.rstrip('/')]) for n in NEL_BROWSER]
@@ -99,13 +156,27 @@ def main():
     temporanei = os.path.join(giro, 'temporanei')
     os.makedirs(temporanei)
     ambiente = dict(os.environ, TMPDIR=temporanei, TEMP=temporanei, TMP=temporanei,
-                    PYTHONIOENCODING='utf-8', PYTHONUTF8='1')
+                    PYTHONIOENCODING='utf-8', PYTHONUTF8='1',
+                    GESTIONALE_PROVE_RIGIDE=os.environ.get('GESTIONALE_PROVE_RIGIDE', '1'))
     print('Prove di %s con Python %s (registri in %s)\n' % (QUI, sys.version.split()[0], giro), flush=True)
     risultati = []
     inizio_tutto = time.monotonic()
+    if not a.solo:
+        # prima di tutto: ogni raccolta della cartella è in un elenco (altrimenti non si lancerebbe, senza dirlo)
+        problemi = fuori_elenco()
+        if problemi:                        # conta solo se non torna: «N prove lanciate» resta il numero delle raccolte
+            risultati.append((False, 'elenco delle raccolte'))
+        print('%s %-28s     0 s  %s' % ('KO' if problemi else 'OK', 'elenco delle raccolte',
+                                       '; '.join(problemi) if problemi else 'ogni raccolta della cartella si lancia'),
+              flush=True)
     for nome, argomenti in elenco:
         inizio = time.monotonic()
         registro = os.path.join(giro, nome.replace('.py', '.log'))
+        if argomenti and not senza_porta_vera(nome):
+            risultati.append((False, nome))
+            print('KO %-28s     0 s  non prende l\'indirizzo da aiuti_browser.indirizzo_di_prova (che rifiuta la '
+                  'porta 5000): non lanciata' % nome, flush=True)
+            continue
         try:
             r = subprocess.run([sys.executable, nome] + argomenti, cwd=QUI, env=ambiente, timeout=a.limite,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

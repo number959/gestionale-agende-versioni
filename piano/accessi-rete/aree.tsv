@@ -1,0 +1,153 @@
+endpoint	metodi	indirizzo	regola	area	perché
+appuntamento	GET,POST	/appuntamento	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Agenda	prenotazione e modifica; ATTENZIONE: il modulo contiene anche importo (Cassa), checklist (Sala), messaggi (Comunicazioni), documenti, e crea o aggiorna la scheda del paziente anche a chi ha Pazienti in «solo guardare»
+appuntamento	GET,POST	/appuntamento/<int:aid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Agenda	prenotazione e modifica; ATTENZIONE: il modulo contiene anche importo (Cassa), checklist (Sala), messaggi (Comunicazioni), documenti, e crea o aggiorna la scheda del paziente anche a chi ha Pazienti in «solo guardare»
+cambia_stato	POST	/appuntamento/<int:aid>/stato	accesso + area: serve «guardare e modificare»	Agenda	arrivato, non presentato, disdetto dalla griglia
+cruscotto.oggi	GET	/oggi	accesso + area: basta «solo guardare»	Agenda	la pagina Oggi; ATTENZIONE: mostra anche pezzi di Sala, Turni, Segreteria, Cassa (totale incassato) e l'allarme dei backup: nella bozza ogni riquadro è dietro la sua area; con M6 la dashboard passa al modulo Ambulatori e dashboard
+documenti.stampa_modulo	GET	/appuntamento/<int:aid>/modulo/<int:mid>	accesso + area: basta «solo guardare»	Agenda	modulo da stampare compilato per un appuntamento
+esporta	GET	/esporta/<iso>	accesso + area: basta «solo guardare»	Agenda	planning del giorno in Excel (dalla Giornata)
+giorno	GET	/giorno/<iso>	accesso + area: basta «solo guardare»	Agenda	pagina o azione dell'agenda (giornate, prenotazioni, stampe del giorno)
+segreteria.agenda_medico	GET	/agenda-medico/<iso>	accesso + area: basta «solo guardare»	Agenda	foglio del giorno per medico, con i pazienti
+segreteria.avvisa_spostati	GET	/sposta/avvisi	accesso + area: basta «solo guardare»	Agenda	dopo lo spostamento: chi avvisare (nomi e telefoni)
+segreteria.salva_nota	POST	/note-giorno	accesso + area: serve «guardare e modificare»	Agenda	nota del giorno di una struttura
+segreteria.serie	GET,POST	/serie/<codice>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Agenda	serie di appuntamenti ripetuti; POST disdice la serie
+segreteria.sposta	GET,POST	/appuntamento/<int:aid>/sposta	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Agenda	pagina o azione dell'agenda (giornate, prenotazioni, stampe del giorno)
+segreteria.sposta_blocco	GET,POST	/sposta	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Agenda	sposta tutti gli appuntamenti di un medico (oggi il bottone è in Impostazioni)
+viste.disponibilita	GET	/disponibilita	accesso + area: basta «solo guardare»	Agenda	prima disponibilità di un medico (nel menu sta sotto Segreteria, ma è per prenotare)
+viste.elenco_giorno	GET	/giorno/<iso>/elenco	accesso + area: basta «solo guardare»	Agenda	elenco del giorno (nel menu sotto Segreteria, ma è una vista dell'agenda come Settimana e Mese, M7)
+viste.mese	GET	/mese/<aaaamm>	accesso + area: basta «solo guardare»	Agenda	pagina o azione dell'agenda (giornate, prenotazioni, stampe del giorno)
+viste.promemoria	GET	/appuntamento/<int:aid>/promemoria	accesso + area: basta «solo guardare»	Agenda	foglietto per il paziente allo sportello
+viste.settimana	GET	/settimana/<iso>	accesso + area: basta «solo guardare»	Agenda	pagina o azione dell'agenda (giornate, prenotazioni, stampe del giorno)
+viste.stampa	GET	/stampa/<iso>	accesso + area: basta «solo guardare»	Agenda	pagina o azione dell'agenda (giornate, prenotazioni, stampe del giorno)
+ambulatori.inizio	GET	/ambulatori/	accesso + area: basta «solo guardare»	Ambulatori e dashboard	modulo Ambulatori e dashboard (ambulatori.py)
+ambulatori.mese	GET	/ambulatori/mese/<aaaamm>	accesso + area: basta «solo guardare»	Ambulatori e dashboard	modulo Ambulatori e dashboard (ambulatori.py)
+ambulatori.mese_excel	GET	/ambulatori/mese/<aaaamm>.xlsx	accesso + area: basta «solo guardare»	Ambulatori e dashboard	modulo Ambulatori e dashboard (ambulatori.py)
+ambulatori.metti	POST	/ambulatori/metti	accesso + area: serve «guardare e modificare»	Ambulatori e dashboard	mette un medico in una stanza (scrive i turni)
+ambulatori.riepilogo	GET	/ambulatori/riepilogo	accesso + area: basta «solo guardare»	Ambulatori e dashboard	modulo Ambulatori e dashboard (ambulatori.py)
+ambulatori.riepilogo_excel	GET	/ambulatori/riepilogo.xlsx	accesso + area: basta «solo guardare»	Ambulatori e dashboard	modulo Ambulatori e dashboard (ambulatori.py)
+ambulatori.riepilogo_json	GET	/ambulatori/riepilogo.json	accesso + area: basta «solo guardare»	Ambulatori e dashboard	modulo Ambulatori e dashboard (ambulatori.py)
+ambulatori.settimana	GET	/ambulatori/settimana/<iso>	accesso + area: basta «solo guardare»	Ambulatori e dashboard	modulo Ambulatori e dashboard (ambulatori.py)
+ambulatori.settimana_excel	GET	/ambulatori/settimana/<iso>.xlsx	accesso + area: basta «solo guardare»	Ambulatori e dashboard	modulo Ambulatori e dashboard (ambulatori.py)
+ambulatori.togli	POST	/ambulatori/togli	accesso + area: serve «guardare e modificare»	Ambulatori e dashboard	toglie un medico (chiude il turno)
+cassa.cassa_giorno	GET	/cassa/<iso>	accesso + area: basta «solo guardare»	Cassa	modulo Cassa: incassi, listino, tariffari (importi)
+cassa.cassa_mese	GET	/cassa/mese/<aaaamm>	accesso + area: basta «solo guardare»	Cassa	modulo Cassa: incassi, listino, tariffari (importi)
+cassa.cassa_mese_excel	GET	/cassa/mese/<aaaamm>/excel	accesso + area: basta «solo guardare»	Cassa	modulo Cassa: incassi, listino, tariffari (importi)
+cassa.listino	GET,POST	/cassa/listino	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Cassa	modulo Cassa: incassi, listino, tariffari (importi)
+cassa.pagamento	POST	/appuntamento/<int:aid>/pagamento	accesso + area: serve «guardare e modificare»	Cassa	incasso o annullamento di un pagamento di un appuntamento
+tariffari.anteprima	GET,POST	/cassa/tariffari/anteprima/<token>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Cassa	anteprima del tariffario caricato; POST azione=annulla toglie solo il file provvisorio, gli altri POST salvano
+tariffari.elenco	GET,POST	/cassa/tariffari	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Cassa	elenco; POST carica un tariffario (anteprima) o ne crea uno
+tariffari.scheda	GET,POST	/cassa/tariffari/<int:tid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Cassa	modulo Cassa: incassi, listino, tariffari (importi)
+tariffari.stampa	GET	/cassa/tariffari/<int:tid>/stampa	accesso + area: basta «solo guardare»	Cassa	modulo Cassa: incassi, listino, tariffari (importi)
+invii.allegato	GET	/invii/allegati/<int:aid>	accesso + area: basta «solo guardare»	Comunicazioni	allegato di una regola (informative PDF)
+invii.appuntamento	POST	/invii/appuntamento/<int:aid>	accesso + area: serve «guardare e modificare»	Comunicazioni	manda adesso l'email o il promemoria di un appuntamento
+invii.pagina	GET,POST	/invii	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Comunicazioni	Email e WhatsApp; i POST salvano la casella, mandano la prova (effetto fuori: un messaggio vero), registrano il numero WhatsApp
+invii.regola	GET,POST	/invii/regole/<int:rid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Comunicazioni	regola delle email automatiche; POST prova manda un'email vera
+invii.regola	GET,POST	/invii/regole/nuova	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Comunicazioni	regola delle email automatiche; POST prova manda un'email vera
+anagrafiche.assenza	GET,POST	/anagrafiche/assenze/<int:xid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+anagrafiche.assenza	GET,POST	/anagrafiche/assenze/nuova	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+anagrafiche.chiusura	GET,POST	/anagrafiche/chiusure/<int:xid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+anagrafiche.chiusura	GET,POST	/anagrafiche/chiusure/nuova	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+anagrafiche.elenco	GET	/anagrafiche	accesso + area: basta «solo guardare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+anagrafiche.medico	GET,POST	/anagrafiche/medici/<int:oid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+anagrafiche.medico	GET,POST	/anagrafiche/medici/nuovo	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+anagrafiche.prestazione	GET,POST	/anagrafiche/prestazioni/<int:pid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+anagrafiche.prestazione	GET,POST	/anagrafiche/prestazioni/nuova	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+anagrafiche.stanza	GET,POST	/anagrafiche/stanze/<int:rid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+anagrafiche.stanza	GET,POST	/anagrafiche/stanze/nuova	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+anagrafiche.struttura	GET,POST	/anagrafiche/strutture/<int:sid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	struttura (anche il logo caricato)
+anagrafiche.struttura	GET,POST	/anagrafiche/strutture/nuova	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	struttura (anche il logo caricato)
+anagrafiche.turno	GET,POST	/anagrafiche/turni/<int:tid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	turni dei medici in agenda (aprono le fasce prenotabili)
+anagrafiche.turno	GET,POST	/anagrafiche/turni/nuovo	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	turni dei medici in agenda (aprono le fasce prenotabili)
+documenti.moduli	GET	/moduli	accesso + area: basta «solo guardare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+documenti.modulo	GET,POST	/moduli/<int:mid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+documenti.modulo	GET,POST	/moduli/nuovo	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Configura: anagrafiche, importazione, moduli da stampare
+importa.anteprima	GET,POST	/importa/<token>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	anteprima dell'importazione; POST senza azione=importa rifà solo l'anteprima (sola lettura, ma inutile senza poter importare); con azione=importa copia di sicurezza e importazione
+importa.carica	GET,POST	/importa	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Configura e anagrafiche	Importa da Excel: il POST carica il file e prepara l'anteprima (DA DECIDERE con Giovanni: anche solo dal PC principale, fa una copia e cambia tanti dati insieme)
+importa.scarti	GET	/importa/<token>/scarti.xlsx	accesso + area: basta «solo guardare»	Configura e anagrafiche	righe non importate in Excel (file provvisorio con token di 32 cifre esadecimali)
+dovesifa.anteprima	GET,POST	/dove-si-fa/strutture/importa/<token>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Dove si fa	anteprima del database delle prestazioni; POST azione=importa copia e importa, gli altri POST rifanno l'anteprima
+dovesifa.cerca_json	GET	/dove-si-fa/cerca.json	accesso + area: basta «solo guardare»	Dove si fa	modulo Dove si fa (dovesifa.py), anche le Strutture del gruppo che ne sono la configurazione
+dovesifa.indirizza	POST	/dove-si-fa/indirizza	accesso + area: serve «guardare e modificare»	Dove si fa	segna nel registro un paziente indirizzato (JSON da dove.js)
+dovesifa.pagina	GET	/dove-si-fa/	accesso + area: basta «solo guardare»	Dove si fa	modulo Dove si fa (dovesifa.py), anche le Strutture del gruppo che ne sono la configurazione
+dovesifa.registro	GET	/dove-si-fa/registro	accesso + area: basta «solo guardare»	Dove si fa	modulo Dove si fa (dovesifa.py), anche le Strutture del gruppo che ne sono la configurazione
+dovesifa.registro_excel	GET	/dove-si-fa/registro/<mese>.xlsx	accesso + area: basta «solo guardare»	Dove si fa	modulo Dove si fa (dovesifa.py), anche le Strutture del gruppo che ne sono la configurazione
+dovesifa.risultati	GET	/dove-si-fa/risultati	accesso + area: basta «solo guardare»	Dove si fa	modulo Dove si fa (dovesifa.py), anche le Strutture del gruppo che ne sono la configurazione
+dovesifa.scheda	GET	/dove-si-fa/scheda/<int:gid>	accesso + area: basta «solo guardare»	Dove si fa	modulo Dove si fa (dovesifa.py), anche le Strutture del gruppo che ne sono la configurazione
+dovesifa.stampa	GET	/dove-si-fa/stampa	accesso + area: basta «solo guardare»	Dove si fa	stampa dei risultati (senza parametri risponde 404)
+dovesifa.struttura	GET,POST	/dove-si-fa/strutture/<int:gid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Dove si fa	modulo Dove si fa (dovesifa.py), anche le Strutture del gruppo che ne sono la configurazione
+dovesifa.strutture	GET,POST	/dove-si-fa/strutture	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Dove si fa	Configura → Strutture del gruppo; POST carica il database delle prestazioni
+dovesifa.togli	POST	/dove-si-fa/indirizzati/<int:iid>/togli	accesso + area: serve «guardare e modificare»	Dove si fa	modulo Dove si fa (dovesifa.py), anche le Strutture del gruppo che ne sono la configurazione
+aggiornamenti.novita_pagina	GET	/aiuto/novita	accesso + area: basta «solo guardare»	Guida e aiuto	UNICA GET CHE SCRIVE: segna «novita_vista» fra le impostazioni; nella bozza dalla rete non scrive
+guida.articolo	GET	/aiuto/<slug>	accesso + area: basta «solo guardare»	Guida e aiuto	guida e novità: nessun dato dei pazienti
+guida.indice	GET	/aiuto	accesso + area: basta «solo guardare»	Guida e aiuto	guida e novità: nessun dato dei pazienti
+guida.passi_json	GET	/aiuto/<slug>/passi.json	accesso + area: basta «solo guardare»	Guida e aiuto	passi della guida sullo schermo
+guida.stampa	GET	/aiuto/stampa	accesso + area: basta «solo guardare»	Guida e aiuto	guida e novità: nessun dato dei pazienti
+accessi.accesso	GET,POST	/accesso	libera	libera	NUOVA: pagina di accesso con nome e password (solo dalla rete; sul PC rimanda a /)
+accessi.esci	POST	/esci	libera	libera	NUOVA: esce (POST, con il controllo dell'origine)
+home	GET	/	libera	libera	la radice: sul PC porta a Oggi; dalla rete (dopo l'accesso) alla prima area disponibile dell'utente
+logo	GET	/logo/<int:sid>	libera	libera	il logo della struttura: nessun dato; serve alla pagina di accesso e al Modo schermo (lo lascia passare anche il portiere Caddy)
+static	GET	/static/<path:filename>	libera	libera	file del programma (css, js, caratteri, immagini e video della guida fatti con dati inventati): servono anche alla pagina di accesso
+documenti.carica_documento	POST	/pazienti/<int:pid>/documenti	accesso + area: serve «guardare e modificare»	Pazienti	carica un documento (fino a 10 MB)
+documenti.elimina_documento	POST	/documenti/<int:did>/elimina	accesso + area: serve «guardare e modificare»	Pazienti	archivio dei pazienti: schede, documenti, codici fiscali
+documenti.mostra_documento	GET	/documenti/<int:did>	accesso + area: basta «solo guardare»	Pazienti	documento allegato del paziente (PDF o immagine); già con nosniff e CSP per le immagini
+pazienti.cerca_json	GET	/pazienti/cerca	accesso + area: basta «solo guardare»	Pazienti	archivio dei pazienti: schede, documenti, codici fiscali
+pazienti.codice_fiscale_json	GET	/pazienti/codice-fiscale	accesso + area: basta «solo guardare»	Pazienti	archivio dei pazienti: schede, documenti, codici fiscali
+pazienti.codici_fiscali	GET,POST	/pazienti/codici-fiscali	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Pazienti	GET: esame dell'archivio; POST «calcola»: copia di sicurezza e codici scritti in tanti pazienti
+pazienti.elenco	GET	/pazienti	accesso + area: basta «solo guardare»	Pazienti	archivio dei pazienti: schede, documenti, codici fiscali
+pazienti.luoghi_json	GET	/pazienti/luoghi	accesso + area: basta «solo guardare»	Pazienti	archivio dei pazienti: schede, documenti, codici fiscali
+pazienti.scheda	GET,POST	/pazienti/<int:pid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Pazienti	archivio dei pazienti: schede, documenti, codici fiscali
+pazienti.scheda	GET,POST	/pazienti/nuovo	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Pazienti	archivio dei pazienti: schede, documenti, codici fiscali
+pazienti.unisci_pagina	GET,POST	/pazienti/<int:pid>/unisci	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Pazienti	unisce due pazienti (POST)
+sala.checklist	POST	/appuntamento/<int:aid>/checklist	accesso + area: serve «guardare e modificare»	Sala	spunta della checklist (fetch da gestionale.js)
+sala.chirurghi	GET,POST	/sala/chirurghi	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Sala	chirurghi della sala
+sala.giornata	GET	/sala/<iso>	accesso + area: basta «solo guardare»	Sala	modulo Sala operatoria (sala.py)
+sala.lista_operatoria	GET	/lista-operatoria/<iso>	accesso + area: basta «solo guardare»	Sala	modulo Sala operatoria (sala.py)
+sala.posti_letto	GET	/posti-letto	accesso + area: basta «solo guardare»	Sala	modulo Sala operatoria (sala.py)
+sala.salva_voci	POST	/sala/checklist-voci	accesso + area: serve «guardare e modificare»	Sala	voci della checklist pre-operatoria
+live.dati	GET	/riepilogo-live.json	libera se «Modo schermo senza password», altrimenti accesso + Ambulatori e dashboard	Modo schermo	JSON del Modo schermo: solo conti (prove_live_json.py)
+live.pagina	GET	/riepilogo-live	libera se «Modo schermo senza password», altrimenti accesso + Ambulatori e dashboard	Modo schermo	Modo schermo / riepilogo live: solo conti, mai nomi (prove_canarino.py); oggi passa dal portiere Caddy
+live.statistiche	GET	/riepilogo-live/statistiche	libera se «Modo schermo senza password», altrimenti accesso + Ambulatori e dashboard	Modo schermo	riepilogo del periodo dentro la dashboard: solo conti
+live.statistiche_json	GET	/riepilogo-live/statistiche.json	libera se «Modo schermo senza password», altrimenti accesso + Ambulatori e dashboard	Modo schermo	JSON del riepilogo del periodo della dashboard: solo conti
+segreteria.appunto_azione	POST	/da-confermare/<int:xid>/<azione>	accesso + area: serve «guardare e modificare»	Segreteria	chiude, riapre, elimina un appunto
+segreteria.attesa	GET	/attesa	accesso + area: basta «solo guardare»	Segreteria	modulo Segreteria: conferme, da confermare, chiusura, da fare, lista d'attesa
+segreteria.attesa_per	GET	/attesa/per/<int:aid>	accesso + area: basta «solo guardare»	Segreteria	modulo Segreteria: conferme, da confermare, chiusura, da fare, lista d'attesa
+segreteria.attesa_scheda	GET,POST	/attesa/<int:xid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Segreteria	modulo Segreteria: conferme, da confermare, chiusura, da fare, lista d'attesa
+segreteria.attesa_scheda	GET,POST	/attesa/nuova	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Segreteria	modulo Segreteria: conferme, da confermare, chiusura, da fare, lista d'attesa
+segreteria.chiusura	GET,POST	/chiusura/<iso>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Segreteria	chiusura della giornata: arrivati e non presentati
+segreteria.cosa_fatta	POST	/cose-da-fare/<int:xid>/<azione>	accesso + area: serve «guardare e modificare»	Segreteria	Fatto / Domani di una cosa da fare (anche dai bottoni delle notifiche)
+segreteria.cose_da_fare	GET,POST	/cose-da-fare	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Segreteria	modulo Segreteria: conferme, da confermare, chiusura, da fare, lista d'attesa
+segreteria.da_confermare	GET,POST	/da-confermare	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Segreteria	modulo Segreteria: conferme, da confermare, chiusura, da fare, lista d'attesa
+segreteria.prenota_appunti	POST	/da-confermare/prenota	accesso + area: serve «guardare e modificare»	Segreteria	mette in agenda gli appunti scelti
+viste.conferme	GET	/conferme	accesso + area: basta «solo guardare»	Segreteria	modulo Segreteria: conferme, da confermare, chiusura, da fare, lista d'attesa
+accessi.pagina	GET,POST	/aree-e-accessi	solo PC principale (dalla rete sempre 403)	Sistema (solo PC principale)	NUOVA: Configura → Aree e accessi, parte «accesso dagli altri PC»: decide chi entra, quindi solo dal PC principale
+aggiornamenti.aggiorna	POST	/aggiornamenti/aggiorna	solo PC principale (dalla rete sempre 403)	Sistema (solo PC principale)	Aggiorna adesso: avvia il Setup e CHIUDE il programma (è l'unica «chiusura» via pagina)
+aggiornamenti.pagina	GET,POST	/aggiornamenti	solo PC principale (dalla rete sempre 403)	Sistema (solo PC principale)	Aggiornamenti: indirizzo, Controlla adesso
+aggiornamenti.piu_tardi	POST	/aggiornamenti/piu-tardi	solo PC principale (dalla rete sempre 403)	Sistema (solo PC principale)	nasconde il popup dell'aggiornamento (scrive un'impostazione)
+aggiornamenti.stato_json	GET	/aggiornamenti/stato.json	solo PC principale (dalla rete sempre 403)	Sistema (solo PC principale)	stato del download dell'aggiornamento (per la pagina degli aggiornamenti)
+autoriparazione	GET,POST	/autoriparazione	solo PC principale (dalla rete sempre 403)	Sistema (solo PC principale)	Controllo del programma: ripara e svuota i file rovinati
+salute	GET	/salute	solo PC principale (dalla rete sempre 403)	Sistema (solo PC principale)	la usa autoripara.entra su 127.0.0.1 (pid, versione, fili fermi): mai dalla rete; dalla rete 403 prima di aprire il database
+viste.impostazioni	GET,POST	/impostazioni	solo PC principale (dalla rete sempre 403)	Sistema (solo PC principale)	Impostazioni: cartella e copie di sicurezza, elenco delle copie con i percorsi; dentro anche testo dei messaggi e foglio del giorno (quando la pagina si divide in tappa 9 quelle due parti possono andare in Comunicazioni e Configura)
+viste.ripristina	POST	/impostazioni/ripristina	solo PC principale (dalla rete sempre 403)	Sistema (solo PC principale)	rimette una copia al posto del database
+viste.scarica_backup	GET	/impostazioni/backup/<nome>	solo PC principale (dalla rete sempre 403)	Sistema (solo PC principale)	scarica una copia INTERA del database (tutti i pazienti)
+cruscotto.riepilogo	GET	/riepilogo-medici/<aaaamm>	accesso + area: basta «solo guardare»	Statistiche e report	riepilogo del mese per medico, con importi previsti e incassati (DA DECIDERE: Statistiche o anche Cassa)
+cruscotto.riepilogo_excel	GET	/riepilogo-medici/<aaaamm>/excel	accesso + area: basta «solo guardare»	Statistiche e report	come sopra in Excel
+esportazioni.pagina	GET	/esportazioni	accesso + area: basta «solo guardare»	Statistiche e report	oggi nel menu Ambulatori; per la decisione M5 va in Statistiche e report
+esportazioni.scarica	GET	/esportazioni/<periodo>/<parte>/<iso>.xlsx	accesso + area: basta «solo guardare»	Statistiche e report	le nove esportazioni in Excel (con i pazienti negli elenchi degli ambulatori)
+viste.statistiche	GET	/statistiche	accesso + area: basta «solo guardare»	Statistiche e report	modulo Statistiche e report (M5: le esportazioni passano qui)
+viste.statistiche_excel	GET	/statistiche/excel	accesso + area: basta «solo guardare»	Statistiche e report	modulo Statistiche e report (M5: le esportazioni passano qui)
+segreteria.cerca_tutto	GET	/cerca-tutto.json	accesso; contenuto filtrato per area	trasversale	ricerca rapida del menu: pazienti con telefono, medici, giorno, Dove si fa; dalla rete si tolgono i risultati delle aree non disponibili
+segreteria.notifiche	GET	/notifiche.json	accesso; contenuto filtrato per area	trasversale	le notifiche raccolgono cose di più aree (da fare con il nome del paziente, conferme, sala, invii, aggiornamenti, backup, autoriparazione): dalla rete si tolgono quelle che portano a pagine non disponibili, e i bottoni (POST) di aree senza «modificare»
+personale.cambia	POST	/personale/turni/cambia	accesso + area: serve «guardare e modificare»	Turni	cambia celle dei turni (JSON da turni.js)
+personale.copia	POST	/personale/turni/copia-settimana	accesso + area: serve «guardare e modificare»	Turni	modulo Turni del personale (personale.py)
+personale.giorno	GET	/personale/turni/giorno/	accesso + area: basta «solo guardare»	Turni	modulo Turni del personale (personale.py)
+personale.giorno	GET	/personale/turni/giorno/<iso>	accesso + area: basta «solo guardare»	Turni	modulo Turni del personale (personale.py)
+personale.medici_dall_agenda	POST	/personale/persone/medici-dall-agenda	accesso + area: serve «guardare e modificare»	Turni	aggiunge i medici dell'agenda al personale
+personale.mese	GET	/personale/turni/mese/	accesso + area: basta «solo guardare»	Turni	modulo Turni del personale (personale.py)
+personale.mese	GET	/personale/turni/mese/<aaaamm>	accesso + area: basta «solo guardare»	Turni	modulo Turni del personale (personale.py)
+personale.mese_excel	GET	/personale/turni/mese/<aaaamm>.xlsx	accesso + area: basta «solo guardare»	Turni	modulo Turni del personale (personale.py)
+personale.persona	GET,POST	/personale/persone/<int:pid>	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Turni	modulo Turni del personale (personale.py)
+personale.persona	GET,POST	/personale/persone/nuova	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Turni	modulo Turni del personale (personale.py)
+personale.persone	GET	/personale/persone	accesso + area: basta «solo guardare»	Turni	modulo Turni del personale (personale.py)
+personale.schema	POST	/personale/turni/schema	accesso + area: serve «guardare e modificare»	Turni	modulo Turni del personale (personale.py)
+personale.settimana	GET	/personale/turni/settimana/	accesso + area: basta «solo guardare»	Turni	modulo Turni del personale (personale.py)
+personale.settimana	GET	/personale/turni/settimana/<iso>	accesso + area: basta «solo guardare»	Turni	modulo Turni del personale (personale.py)
+personale.tipi_turno	GET,POST	/personale/tipi	accesso + area: GET con «solo guardare», POST con «guardare e modificare»	Turni	modulo Turni del personale (personale.py)
+personale.turni	GET	/personale/turni	accesso + area: basta «solo guardare»	Turni	modulo Turni del personale (personale.py)

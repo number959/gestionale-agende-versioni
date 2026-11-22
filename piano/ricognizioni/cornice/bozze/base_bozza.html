@@ -1,0 +1,63 @@
+{#- BOZZA per le tappe 2 e 3 (non e' nel repository): la struttura dei blocchi di base.html, una per le due
+    cartelle. Classi nuove con il prefisso «vn-» (veste nuova; il prefisso lo fissa la 1-bis). Restano: nav.menu (guida,
+    prove), gli id ricerca-rapida, risultati-rapidi, notifiche, aiuto-tasti, la zona .avvisi con .avviso dentro
+    (prove_sicurezza_browser.py ZONA, animazioni.js), data-pagina / data-aiuto / data-guide del body. -#}
+<!doctype html>
+<html lang="it">
+<head>
+  … come oggi (caratteri, stile.css + tema-scuro.css → vecchio.css nel layer dalla 1-bis, poi gettoni.css e veste.css)
+  {% if variante == 'animata' %}animazioni.css + script «anim»{% endif %}
+</head>
+<body{% block classe_body %}{% endblock %} data-pagina="…" data-aiuto="…" data-guide="…">
+{#- le 11 pagine senza menu svuotano solo {% block menu %} come oggi: la cornice intera (barra, linguette,
+    campanella) si vede solo se il blocco menu non e' vuoto, cosi' i loro modelli non cambiano -#}
+{%- set _menu = self.menu()|trim -%}
+{%- if _menu %}
+<div class="vn-cornice">
+  <aside class="vn-lato">
+    <a class="vn-marchio" href="{{ url_for('cruscotto.oggi', struttura=_sid) }}">{% include "_marchio.html" %} <b>Agende</b> <span>{{ nome struttura }}</span></a>
+    {{ _menu }}            {#- <nav class="menu" aria-label="Pagine"> … un solo nav, i tre gruppi dentro senza altri <nav> -#}
+  </aside>
+  <div class="vn-colonna">
+    {% block barra %}
+    <header class="vn-barra">
+      <p class="vn-percorso">{{ struttura }} › {{ voce }}{% if linguetta %} › {{ linguetta }}{% endif %}{% block percorso %}{% endblock %}</p>
+      <div class="vn-cerca" role="search" data-guida="menu-cerca">
+        <input type="search" id="ricerca-rapida" placeholder="Cerca (tasto /)" autocomplete="off"
+               aria-label="Cerca un paziente, un medico, un giorno o una prestazione" data-indirizzo="…">
+        <div class="risultati-rapidi" id="risultati-rapidi" hidden></div>
+      </div>
+      {#- tappa 2: qui solo il posto; tappa 3: la campanella -#}
+      <button type="button" class="vn-campanella" id="campanella" aria-expanded="false" aria-controls="notifiche"
+              aria-label="Avvisi: 0" hidden>…{{ icona('bell') }}<span class="vn-numero" aria-hidden="true"></span></button>
+      <section id="notifiche" class="vn-avvisi-pannello" aria-label="Avvisi" hidden
+               data-indirizzo="{{ url_for('segreteria.notifiche', struttura=_sid) }}">…</section>
+    </header>
+    {% endblock %}
+    {% block linguette %}{{ linguette(sezione) }}{% endblock %}  {#- tappa 2: dalla bozza di menu.py; le aree le spostano nella loro barra -#}
+    <main id="contenuto">
+      {% block corpo %}{% endblock %}
+    </main>
+  </div>
+</div>
+{%- else %}
+<main id="contenuto">{% block corpo %}{% endblock %}</main>   {#- in Jinja un blocco si scrive una volta: in pratica
+    corpo va fuori dall'if e cambiano solo i contenitori intorno (vedi rischi) -#}
+{%- endif %}
+{#- tappa 3: i messaggi in basso, sempre (anche nelle pagine senza menu, come oggi) -#}
+{% with messaggi = get_flashed_messages(with_categories=true) %}
+<div class="avvisi vn-messaggi" aria-live="polite">
+  {% for categoria, testo in messaggi %}<div class="avviso …"{% if categoria == 'errore' %} role="alert"{% endif %}>{{ testo }} <button type="button" class="vn-chiudi" aria-label="Chiudi l'avviso">×</button></div>{% endfor %}
+</div>
+{% endwith %}
+{#- tappa 3: una sola domanda per tutta la pagina -#}
+<dialog class="vn-domanda" id="domanda" aria-labelledby="domanda-testo">
+  <form method="dialog"><p id="domanda-testo"></p>
+    <button value="no" class="bottone" autofocus>…no…</button> <button value="si" class="bottone pericolo">…sì…</button></form>
+</dialog>
+<div id="aiuto-tasti" class="aiuto-tasti" hidden>… come oggi (oggi sta in _menu.html: va qui solo se la cornice c'è) …</div>
+{% include "_popup_aggiornamento.html" %}
+<script src="gestionale.js"></script><script src="guida.js"></script>
+{% if variante == 'animata' %}<script src="animazioni.js"></script>{% endif %}
+</body>
+</html>

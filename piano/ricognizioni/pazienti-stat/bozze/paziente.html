@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% from "_pezzi.html" import intestazione, tabella, pillola %}
+{% block titolo %}{{ p.etichetta if p else 'Nuovo paziente' }}{% endblock %}
+{% block corpo %}
+{#- BOZZA tappa 4 (veste 1.13), tavola Paz2-Scheda; stesso modello per «Nuovo paziente» (senza tavola: solo il modulo,
+    la colonna destra resta vuota come oggi). Ordine come la tavola, che è l'ordine di oggi: titolo, collegamenti,
+    «Contatta:», riquadro dei doppioni, due colonne (modulo | «In breve»), Appuntamenti, Documenti con «Allega».
+    Restano per forza:
+    - i quattro moduli, nell'ordine di oggi (scheda, «Ricordami di…», un «Elimina» per documento, «Allega»), con gli
+      stessi campi nello stesso ordine, i nascosti torna e paziente_id, il bottone «Elimina» con name=azione
+      value=elimina e formnovalidate;
+    - gli id usati da gestionale.js:124-283 e dalle prove: cognome, nome, sesso, data_nascita, luogo_nascita_testo
+      (con data-indirizzo), luogo_nascita, suggerimenti-luogo (con hidden), codice_fiscale (con data-controllo),
+      esito-cf (JS riscrive className = 'esito-cf …': niente classi nuove su questo <p>), telefono, telefono2, email,
+      indirizzo, canale, provenienza, inviato_da, note, cosa, documenti;
+    - il campo nascosto cf_calcolato lo aggiunge JS nel genitore di #codice_fiscale: il campo resta dentro il <form>;
+    - data-guida paziente-dove, luogo-nascita, codice-fiscale (guida.py:173-178, prove_17.py:826-828);
+    - form.modulo-paziente con button.primario (prove_17_browser.py:154, prove_sicurezza_browser.py:161, Ctrl+Invio);
+    - ul.numeri e li.allarme di «In breve» (animata: animazioni.js:93, 135); tr.stato-<stato> sulle righe;
+    - <option value="M" selected> scritto così (prove_17.py:478 cerca il testo esatto).
+    Il file si sceglie con il bottone del browser (in italiano «Scegli file»): la tavola lo ridisegna con testi suoi,
+    qui no (sarebbero testi nuovi). -#}
+<div class="pagina larga v-pagina v-paziente">
+  {% call intestazione(p.etichetta if p else 'Nuovo paziente') %}
+  <p class="sotto v-sotto"><a href="{{ url_for('pazienti.elenco') }}">Torna ai pazienti</a>
+    {%- if p %} · <a href="{{ url_for('appuntamento', paziente_id=p.id) }}">Prenota un appuntamento</a>
+    · <a href="{{ url_for('viste.disponibilita', paziente_id=p.id) }}">Cerca il primo posto libero</a>
+    · <a href="{{ url_for('dovesifa.pagina', paziente=p.id) }}" data-guida="paziente-dove">Dove si fa una prestazione</a>
+    · <a href="{{ url_for('pazienti.unisci_pagina', pid=p.id) }}">Unisci un doppione</a>{% endif %}</p>
+  {% if p and collegamenti %}
+  <p class="contatti v-sotto v-contatti">Contatta:
+    {% if collegamenti.tel %}<a href="{{ collegamenti.tel }}">Chiama {{ collegamenti.tel_numero }}</a>{% endif %}
+    {% if collegamenti.whatsapp %}<a href="{{ collegamenti.whatsapp }}" target="_blank">WhatsApp</a>{% endif %}
+    {% if collegamenti.email %}<a href="{{ collegamenti.email }}">Email</a>{% endif %}
+  </p>
+  {% endif %}
+  {% endcall %}
+
+  {% if possibili %}
+  <section class="v-scheda v-filo-giallo">
+    <h2 class="v-scheda-titolo">Potrebbe essere già in anagrafica</h2>
+    <ul class="v-elenco-puntato">
+      {% for x in possibili %}
+      <li><a href="{{ url_for('pazienti.scheda', pid=x.id) }}">{{ x.etichetta }}</a>{% if x.data_nascita %}, nato il {{ x.data_nascita.strftime('%d/%m/%Y') }}{% endif %}{% if x.telefono %}, tel. {{ x.telefono }}{% endif %}{% if x.email %}, {{ x.email }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+    <p class="v-scheda-sotto">Se è un'altra persona, spuntare la casella in fondo e salvare di nuovo.</p>
+  </section>
+  {% endif %}
+
+  <div class="due-colonne v-paziente-colonne">
+  <form method="post" class="modulo-paziente v-scheda v-modulo">
+    <input type="hidden" name="torna" value="{{ torna }}">
+    <div class="campo meta v-campo"><label for="cognome">Cognome</label>
+      <input type="text" id="cognome" name="cognome" value="{{ campi.cognome }}" maxlength="60" required></div>
+    <div class="campo meta v-campo"><label for="nome">Nome</label>
+      <input type="text" id="nome" name="nome" value="{{ campi.nome }}" maxlength="60"></div>
+    <div class="campo meta v-campo"><label for="sesso">Sesso</label>
+      <select id="sesso" name="sesso">
+        <option value="">—</option>
+        <option value="F"{% if campi.sesso == 'F' %} selected{% endif %}>Femmina</option>
+        <option value="M"{% if campi.sesso == 'M' %} selected{% endif %}>Maschio</option>
+      </select></div>
+    <div class="campo meta v-campo"><label for="data_nascita">Data di nascita</label>
+      <input type="date" id="data_nascita" name="data_nascita" value="{{ campi.data_nascita }}" min="1900-01-01" max="{{ oggi.isoformat() }}"></div>
+    <div class="campo meta luogo-nascita v-campo" data-guida="luogo-nascita"><label for="luogo_nascita_testo">Luogo di nascita</label>
+      <input type="text" id="luogo_nascita_testo" name="luogo_nascita_testo" value="{{ campi.luogo_nascita_testo }}" maxlength="80"
+             autocomplete="off" spellcheck="false" placeholder="comune o stato estero" data-indirizzo="{{ url_for('pazienti.luoghi_json') }}">
+      <input type="hidden" id="luogo_nascita" name="luogo_nascita" value="{{ campi.luogo_nascita }}">
+      <div class="suggerimenti" id="suggerimenti-luogo" hidden></div></div>
+    <div class="campo meta campo-cf v-campo" data-guida="codice-fiscale"><label for="codice_fiscale">Codice fiscale</label>
+      <input type="text" id="codice_fiscale" name="codice_fiscale" value="{{ campi.codice_fiscale }}" maxlength="20" spellcheck="false"
+             autocapitalize="characters" autocomplete="off" style="text-transform:uppercase" data-controllo="{{ url_for('pazienti.codice_fiscale_json') }}">
+      <p class="esito-cf" id="esito-cf" role="status" aria-live="polite"></p></div>
+    <div class="campo meta v-campo"><label for="telefono">Cellulare / telefono</label>
+      <input type="tel" id="telefono" name="telefono" value="{{ campi.telefono }}" maxlength="30"></div>
+    <div class="campo meta v-campo"><label for="telefono2">Altro telefono</label>
+      <input type="tel" id="telefono2" name="telefono2" value="{{ campi.telefono2 }}" maxlength="30"></div>
+    <div class="campo v-campo"><label for="email">Email</label>
+      <input type="email" id="email" name="email" value="{{ campi.email }}" maxlength="120"></div>
+    <div class="campo v-campo"><label for="indirizzo">Indirizzo</label>
+      <input type="text" id="indirizzo" name="indirizzo" value="{{ campi.indirizzo }}" maxlength="200" placeholder="via e numero civico, CAP, città"></div>
+    <div class="campo meta v-campo"><label for="canale">Per i promemoria preferisce</label>
+      <select id="canale" name="canale">
+        {% for codice, etichetta in canali %}<option value="{{ codice }}"{% if campi.canale == codice %} selected{% endif %}>{{ etichetta }}</option>{% endfor %}
+      </select></div>
+    <div class="campo meta spunta allinea-basso v-spunta"><label><input type="checkbox" name="promemoria" value="1"{% if campi.promemoria %} checked{% endif %}> Accetta i promemoria</label></div>
+    <div class="campo meta v-campo"><label for="provenienza">Come ci ha conosciuto</label>
+      <select id="provenienza" name="provenienza">
+        {% for codice, etichetta in provenienze %}<option value="{{ codice }}"{% if campi.provenienza == codice %} selected{% endif %}>{{ etichetta }}</option>{% endfor %}
+      </select></div>
+    <div class="campo meta v-campo"><label for="inviato_da">Inviato da</label>
+      <input type="text" id="inviato_da" name="inviato_da" value="{{ campi.inviato_da }}" maxlength="80" placeholder="medico o persona che lo manda"></div>
+    <div class="campo v-campo"><label for="note">Note</label>
+      <textarea id="note" name="note" rows="3" maxlength="2000">{{ campi.note }}</textarea></div>
+    {% if possibili %}
+    <div class="campo spunta v-spunta"><label><input type="checkbox" name="doppione_confermato" value="1"> È un'altra persona: salva comunque</label></div>
+    {% endif %}
+    <div class="azioni v-azioni">
+      <button class="primario v-bottone v-principale" type="submit">Salva scheda</button>
+      {% if p and not appuntamenti %}
+      <button class="elimina v-bottone v-pericolo v-a-destra" type="submit" name="azione" value="elimina" formnovalidate
+              onclick="return confirm('Eliminare questa scheda?')">Elimina</button>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if p %}
+  <section class="riepilogo-paziente v-scheda v-in-breve" aria-labelledby="titolo-in-breve">
+    <h2 class="v-scheda-titolo" id="titolo-in-breve">In breve</h2>
+    <ul class="numeri v-in-breve-numeri">
+      <li><b>{{ riepilogo.visite }}</b> {{ 'visita' if riepilogo.visite == 1 else 'visite' }}</li>
+      <li><b>{{ riepilogo.futuri|length }}</b> in programma</li>
+      <li><b>{{ riepilogo.disdetti }}</b> {{ 'disdetto' if riepilogo.disdetti == 1 else 'disdetti' }}</li>
+      <li{% if riepilogo.assenze_anno >= 2 %} class="allarme"{% endif %}><b>{{ riepilogo.assenze_anno }}</b> {{ 'assenza' if riepilogo.assenze_anno == 1 else 'assenze' }} nell'ultimo anno</li>
+    </ul>
+    {% if p.eta is not none %}<p>{{ p.eta }} anni.</p>{% endif %}
+    {% if riepilogo.prossimo %}<p>Prossimo: <a href="{{ url_for('appuntamento', aid=riepilogo.prossimo.id) }}">{{ riepilogo.prossimo.inizio.strftime('%d/%m/%Y alle %H:%M') }}</a>, {{ riepilogo.prossimo.operatore.etichetta }}.</p>{% endif %}
+    {% if riepilogo.ultimo %}<p>Ultima volta: {{ riepilogo.ultimo.inizio.strftime('%d/%m/%Y') }}{% if riepilogo.ultimo.prestazione %}, {{ riepilogo.ultimo.prestazione.nome }}{% endif %}.</p>{% endif %}
+    {% for x in attese %}<p>In lista d'attesa dal {{ x.creato_il.strftime('%d/%m') }}{% if x.prestazione %} per {{ x.prestazione.nome }}{% endif %}. <a href="{{ url_for('segreteria.attesa_scheda', xid=x.id) }}">Apri</a></p>{% endfor %}
+    <p><a href="{{ url_for('segreteria.attesa_scheda', paziente_id=p.id) }}">Metti in lista d'attesa</a></p>
+    {% if cose %}<div class="v-separa"><h3 class="v-scheda-sottotitolo">Da fare</h3><ul class="v-elenco-puntato">{% for x in cose %}<li>{{ x.per_il.strftime('%d/%m') }}: {{ x.testo }}</li>{% endfor %}</ul></div>{% endif %}
+    <form method="post" action="{{ url_for('segreteria.cose_da_fare') }}" class="v-separa v-ricordami">
+      <input type="hidden" name="paziente_id" value="{{ p.id }}"><input type="hidden" name="torna" value="{{ url_for('pazienti.scheda', pid=p.id) }}">
+      <div class="campo v-campo"><label for="cosa">Ricordami di…</label><input type="text" id="cosa" name="testo" maxlength="300" required placeholder="richiamare per il referto"></div>
+      <div class="campo v-riga-comandi"><input type="date" name="per_il" value="{{ oggi.isoformat() }}" aria-label="Il giorno"> <button class="v-bottone" type="submit">Aggiungi</button></div>
+    </form>
+  </section>
+  {% endif %}
+  </div>
+
+  {% if p %}
+  <section class="v-blocco" aria-labelledby="titolo-appuntamenti">
+  <h2 class="v-titolo-sezione" id="titolo-appuntamenti">Appuntamenti</h2>
+  {% if appuntamenti %}
+  {% call tabella(classe='elenco v-appuntamenti') %}
+    <thead><tr><th>Quando</th><th>Medico</th><th>Prestazione</th><th>Stanza</th><th>Stato</th><th>Note</th></tr></thead>
+    <tbody>
+    {% for a in appuntamenti %}
+    <tr class="stato-{{ a.stato|lower }}">
+      <td><a href="{{ url_for('appuntamento', aid=a.id) }}">{{ a.inizio.strftime('%d/%m/%Y %H:%M') }}</a></td>
+      <td>{{ a.operatore.etichetta }}</td>
+      <td>{{ a.prestazione.nome if a.prestazione else '' }}{% if a.tipo %} · {{ a.etichetta_tipo }}{% endif %}</td>
+      <td>{{ a.risorsa.nome }}</td>
+      <td>{{ pillola(a.stato, a.etichetta_stato) }}</td>
+      <td>{{ a.note or '' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  {% endcall %}
+  {% else %}
+  <p class="vuoto v-vuoto">Nessun appuntamento.</p>
+  {% endif %}
+  </section>
+
+  <section class="v-blocco" aria-labelledby="documenti">
+  <h2 class="v-titolo-sezione" id="documenti">Documenti</h2>
+  <div class="v-scheda v-attaccata">
+  {% if documenti %}
+  {% call tabella(classe='elenco') %}
+    <thead><tr><th>Documento</th><th>Descrizione</th><th>Caricato il</th><th></th></tr></thead>
+    <tbody>
+    {% for d in documenti %}
+    <tr><td><span class="documento-tipo v-etichetta-file">{{ 'PDF' if d.tipo == 'application/pdf' else 'foto' }}</span><a href="{{ url_for('documenti.mostra_documento', did=d.id) }}" target="_blank">{{ d.nome }}</a> <span class="v-piccolo v-in-riga">{{ (d.dimensione / 1024)|round|int }} KB</span></td>
+      <td>{{ d.descrizione or '' }}</td><td>{{ d.caricato_il.strftime('%d/%m/%Y') }}</td>
+      <td class="azione"><a class="v-bottone v-piccolo" href="{{ url_for('documenti.mostra_documento', did=d.id, scarica='1') }}">Scarica</a>
+        <form method="post" action="{{ url_for('documenti.elimina_documento', did=d.id) }}" class="in-linea"><button class="v-bottone v-piccolo v-pericolo" type="submit" onclick="return confirm('Eliminare il documento?')">Elimina</button></form></td></tr>
+    {% endfor %}
+    </tbody>
+  {% endcall %}
+  {% endif %}
+  <form method="post" action="{{ url_for('documenti.carica_documento', pid=p.id) }}" enctype="multipart/form-data" class="v-allega">
+    <label class="v-campo">File (PDF, JPG o PNG, al massimo 10 MB)<br><input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required></label>
+    <label class="v-campo v-largo">Descrizione<br><input type="text" name="descrizione" maxlength="200" placeholder="impegnativa, referto, consenso firmato…"></label>
+    <button class="v-bottone" type="submit">Allega</button>
+  </form>
+  </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

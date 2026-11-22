@@ -1,0 +1,47 @@
+--- originale/segreteria.py	2026-11-22 03:46:49.420183237 +0000
++++ copia/segreteria.py	2026-11-22 03:48:32.027599902 +0000
+@@ -89,6 +89,10 @@
+     return dict(sorted(conteggio.items()))
+ 
+ 
++# le parole dello stato dopo «segnato/segnati come» (singolare, plurale): chiusura della giornata
++SEGNATI_COME = {'ARRIVATO': ('arrivato', 'arrivati'), 'NON_PRESENTATO': ('non presentato', 'non presentati')}
++
++
+ @bp.route('/chiusura/<iso>', methods=['GET', 'POST'])
+ def chiusura(iso):
+     s = ses()
+@@ -114,9 +118,10 @@
+                             s, a, nuovo, arrivo='adesso' if g == oggi else None):
+                         fatti += 1
+                 s.commit()
++            # 1.13 (frase approvata): lo stato va al plurale con il numero, «2 appuntamenti segnati come arrivati.»
++            uno = fatti == 1
+             flash('%d appuntament%s segnat%s come %s.' % (
+-                fatti, 'o' if fatti == 1 else 'i', 'o' if fatti == 1 else 'i',
+-                ETICHETTA_STATO[nuovo].lower()), 'ok')
++                fatti, 'o' if uno else 'i', 'o' if uno else 'i', SEGNATI_COME[nuovo][0 if uno else 1]), 'ok')
+         return redirect(url_for('segreteria.chiusura', iso=g.isoformat(), struttura=st.id))
+     aperti = aperti_del_giorno(s, g, st.id) if g <= oggi else []
+     tutti = servizi.elenco_giorno(s, g, st.id)
+@@ -830,7 +835,8 @@
+                   'Ricaricare la pagina e riprovare.', 'errore')
+             return redirect(torna)
+     if fatti:
+-        flash('%d appuntament%s messi in agenda.' % (fatti, 'o' if fatti == 1 else 'i'), 'ok')
++        # 1.13 (frase approvata): «1 appuntamento messo in agenda.», «2 appuntamenti messi in agenda.»
++        flash('%d appuntament%s mess%s in agenda.' % (fatti, 'o' if fatti == 1 else 'i', 'o' if fatti == 1 else 'i'), 'ok')
+     if notizie:
+         invii.sveglia()
+     # lo stesso avviso per piu' appuntamenti si dice una volta
+--- originale/templates/attesa.html	2026-11-22 03:46:49.398434445 +0000
++++ copia/templates/attesa.html	2026-11-22 03:48:32.028021051 +0000
+@@ -17,7 +17,7 @@
+     <tr><th>Dal</th><th>Paziente</th><th>Per</th><th>Quando</th><th>Note</th><th></th></tr>
+     {% for x in richieste %}
+     <tr{% if not x.aperta %} class="spento"{% endif %}>
+-      <td>{{ x.creato_il.strftime('%d/%m/%Y') }}<div class="nota-riga">{{ (oggi - x.creato_il.date()).days }} giorni</div></td>
++      <td>{{ x.creato_il.strftime('%d/%m/%Y') }}<div class="nota-riga">{% set giorni = (oggi - x.creato_il.date()).days %}{{ giorni }} giorn{{ 'o' if giorni == 1 else 'i' }}</div></td>
+       <td><a href="{{ url_for('pazienti.scheda', pid=x.paziente_id) }}">{{ x.paziente.etichetta }}</a><div class="nota-riga">{{ x.paziente.telefono or '' }}</div></td>
+       <td>{{ x.prestazione.nome if x.prestazione else 'qualsiasi prestazione' }}<div class="nota-riga">{{ x.operatore.etichetta if x.operatore else 'qualsiasi medico' }}{% if x.struttura %} · {{ x.struttura.nome }}{% endif %}</div></td>
+       <td>{% if x.dal %}dal {{ x.dal.strftime('%d/%m') }} {% endif %}{% if x.entro %}entro il {{ x.entro.strftime('%d/%m') }}{% endif %}{% if not x.dal and not x.entro %}appena possibile{% endif %}

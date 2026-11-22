@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Terza suite. Molte prove generate a matrice: se una rompe, il nome dice quale caso."""
 import os
+from prove_dove import dove
+from prove_gemelli import protetto
 import tempfile
 import random
 import time as clock
@@ -32,7 +34,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome,
                       traceback.format_exc().strip().splitlines()[-1]))
@@ -469,11 +471,17 @@ for testo in PAYLOAD:
             s.close()
             assert resp.status_code == 200, 'griglia HTTP %d' % resp.status_code
             assert esp.status_code == 200, 'export HTTP %d' % esp.status_code
-            # il testo del paziente non deve arrivare in pagina con i suoi marcatori
+            # il testo del paziente non deve arrivare in pagina con i suoi marcatori; il gemello (dentro protetto):
+            # c'e' nella forma protetta da Jinja, quindi il testo e' davvero arrivato fino alla pagina
             if '<' in memorizzato or '>' in memorizzato:
-                assert memorizzato not in html, 'testo del paziente non filtrato'
+                protetto(html, memorizzato, 'testo del paziente non filtrato')
             assert '<script>alert' not in html, 'script eseguibile in pagina'
             assert 'onerror=alert(1)>' not in html, 'handler attivo in pagina'
+            # gemelli dei due controlli qui sopra: con il cognome che li contiene, nella pagina ci sono protetti
+            if memorizzato == '<script>alert(1)</script>':
+                protetto(html, '<script>alert', 'il cognome del paziente nella giornata')
+            elif memorizzato == '<img src=x onerror=alert(1)>':
+                protetto(html, 'onerror=alert(1)>', 'il cognome del paziente nella giornata')
             # un'espressione valutata darebbe 49 al posto del testo: il testo deve
             # comparire tale e quale. Cercare "49" in tutta la pagina non basta:
             # puo' stare in un numero qualsiasi (la versione del logo, per esempio)

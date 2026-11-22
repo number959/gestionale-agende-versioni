@@ -1,0 +1,24 @@
+FACOLTATIVO, tappa 7 secondo passo: una classe per i codici di 3 e 4 caratteri, nei DUE disegni della cella insieme
+(gestionale/CLAUDE.md:306-308). Senza questa classe, con le celle da 24 px e il corpo 11 px, sono tagliati MAL (22,7 px su 21), L104 (24,6), WWW, MMMM; REP sta (20,7). Misure in misure_codici.json.
+Con la classe: interi tutti i codici fino a 2 caratteri e quelli di 3-4 con lettere normali (REP, MAL, L104);
+restano tagliati solo i codici di 3-4 lettere larghe (WWW, MMMM), tagliati anche oggi (sim_mese_oggi.py).
+Stesso posto nella lista delle classi nei due file: la prova «le due celle uguali» confronta le classi in ordine.
+
+--- templates/_personale_cella.html
++++ templates/_personale_cella.html
+-<span class="turno{% if v.categoria in ('ASSENZA', 'RIPOSO') %} senza-orario{% endif %}{% if v.categoria == 'REPERIBILITA' %} reperibile{% endif %}{% if not v.codice %} a-mano{% endif %}{% if v.diverso %} diverso{% endif %}{% if c.turni|length > 1 %} doppio{% endif %}" style=…
++<span class="turno{% if v.categoria in ('ASSENZA', 'RIPOSO') %} senza-orario{% endif %}{% if v.categoria == 'REPERIBILITA' %} reperibile{% endif %}{% if not v.codice %} a-mano{% endif %}{% if v.diverso %} diverso{% endif %}{% if v.codice and v.codice|length > 2 %} lungo-{{ [v.codice|length, 4]|min }}{% endif %}{% if c.turni|length > 1 %} doppio{% endif %}" style=…
+
+--- static/turni.js  (chipCella, riga 79)
++++ static/turni.js
+     if (v.diverso) { classi += ' diverso'; }
++    if (v.codice && v.codice.length > 2) { classi += ' lungo-' + Math.min(4, v.codice.length); }
+     if (doppio) { classi += ' doppio'; }
+
+La prova nuova (prove_18_browser.py, primo passo della tappa, passa già sulla pagina di oggi):
+per ogni caso — codice, orario scritto a mano, due turni, orario diverso (pallino), reperibilità, riposo breve,
+settimana larga con orario e area — si mette il turno dalla griglia (lo disegna chipCella), si legge la cella come
+struttura (tag, classi in ordine, --c, --t, data-id, data-desc, data-area, testo), si ricarica la pagina (la disegna
+contenuto()) e si rilegge: devono essere uguali. Mutante: togliere « diverso» da uno dei due → la prova cade.
+Poi «il codice si legge intero»: per ogni .turno della griglia del mese a 1366×657, larghezza del testo (b, o le due
+righe di b.orario-stretto) ≤ larghezza interna del tassello; e il tassello non esce dalla cella.

@@ -1,0 +1,470 @@
+{
+ "tavola Turni1-Mese 1366": {
+  "larghezza": 1366,
+  "scroll_x": 1383,
+  "alto_pagina": 1884,
+  "griglia": {
+   "x": 284,
+   "y": 485,
+   "w": 1046,
+   "h": 1359
+  },
+  "griglia_scroll_w": 1098,
+  "contenitore": {
+   "x": 284,
+   "y": 485,
+   "w": 1046,
+   "h": 1359
+  },
+  "contenitore_scroll_w": 1099,
+  "cella": {
+   "x": 425,
+   "y": 583,
+   "w": 26,
+   "h": 40
+  },
+  "nome": {
+   "x": 285,
+   "y": 542,
+   "w": 257,
+   "h": 36
+  },
+  "tot": null
+ },
+ "tavola Turni2-Settimana 1366": {
+  "larghezza": 1366,
+  "scroll_x": 1366,
+  "alto_pagina": 2237,
+  "griglia": {
+   "x": 284,
+   "y": 485,
+   "w": 1046,
+   "h": 1712
+  },
+  "griglia_scroll_w": 1044,
+  "contenitore": {
+   "x": 284,
+   "y": 485,
+   "w": 1046,
+   "h": 1712
+  },
+  "contenitore_scroll_w": 1046,
+  "cella": {
+   "x": 435,
+   "y": 589,
+   "w": 97,
+   "h": 57
+  },
+  "nome": {
+   "x": 285,
+   "y": 548,
+   "w": 257,
+   "h": 36
+  },
+  "tot": null
+ },
+ "tavola Turni3-Giorno 1366": {
+  "larghezza": 1366,
+  "scroll_x": 1403,
+  "alto_pagina": 2140,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "tavola Turni4-Persone 1366": {
+  "larghezza": 1366,
+  "scroll_x": 1366,
+  "alto_pagina": 1991,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "tavola Turni5-Persona 1366": {
+  "larghezza": 1366,
+  "scroll_x": 1366,
+  "alto_pagina": 1125,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "tavola Turni6-Tipi 1366": {
+  "larghezza": 1366,
+  "scroll_x": 1366,
+  "alto_pagina": 1615,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "pagina mese 1366": {
+  "larghezza": 1366,
+  "scroll_x": 1366,
+  "alto_pagina": 678,
+  "griglia": {
+   "x": 19,
+   "y": 212,
+   "w": 1328,
+   "h": 1490
+  },
+  "griglia_scroll_w": 1328,
+  "contenitore": {
+   "x": 18,
+   "y": 211,
+   "w": 1330,
+   "h": 427
+  },
+  "contenitore_scroll_w": 1328,
+  "cella": {
+   "x": 193,
+   "y": 298,
+   "w": 33,
+   "h": 41
+  },
+  "nome": {
+   "x": 19,
+   "y": 212,
+   "w": 174,
+   "h": 43
+  },
+  "tot": {
+   "x": 1186,
+   "y": 298,
+   "w": 56,
+   "h": 41
+  }
+ },
+ "pagina settimana 1366": {
+  "larghezza": 1366,
+  "scroll_x": 1366,
+  "alto_pagina": 678,
+  "griglia": {
+   "x": 19,
+   "y": 212,
+   "w": 1328,
+   "h": 1804
+  },
+  "griglia_scroll_w": 1328,
+  "contenitore": {
+   "x": 18,
+   "y": 211,
+   "w": 1330,
+   "h": 427
+  },
+  "contenitore_scroll_w": 1328,
+  "cella": {
+   "x": 191,
+   "y": 299,
+   "w": 131,
+   "h": 52
+  },
+  "nome": {
+   "x": 19,
+   "y": 212,
+   "w": 172,
+   "h": 44
+  },
+  "tot": {
+   "x": 1106,
+   "y": 299,
+   "w": 94,
+   "h": 52
+  }
+ },
+ "pagina giorno 1366": {
+  "larghezza": 1366,
+  "scroll_x": 1366,
+  "alto_pagina": 1888,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "pagina persone 1366": {
+  "larghezza": 1366,
+  "scroll_x": 1366,
+  "alto_pagina": 1684,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "pagina persona-nuova 1366": {
+  "larghezza": 1366,
+  "scroll_x": 2171,
+  "alto_pagina": 813,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "pagina tipi 1366": {
+  "larghezza": 1366,
+  "scroll_x": 1366,
+  "alto_pagina": 1703,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "tavola Turni1-Mese 1440": {
+  "larghezza": 1440,
+  "scroll_x": 1440,
+  "alto_pagina": 1884,
+  "griglia": {
+   "x": 284,
+   "y": 485,
+   "w": 1120,
+   "h": 1359
+  },
+  "griglia_scroll_w": 1118,
+  "contenitore": {
+   "x": 284,
+   "y": 485,
+   "w": 1120,
+   "h": 1359
+  },
+  "contenitore_scroll_w": 1120,
+  "cella": {
+   "x": 445,
+   "y": 583,
+   "w": 26,
+   "h": 40
+  },
+  "nome": {
+   "x": 285,
+   "y": 542,
+   "w": 257,
+   "h": 36
+  },
+  "tot": null
+ },
+ "tavola Turni2-Settimana 1440": {
+  "larghezza": 1440,
+  "scroll_x": 1440,
+  "alto_pagina": 2237,
+  "griglia": {
+   "x": 284,
+   "y": 485,
+   "w": 1120,
+   "h": 1712
+  },
+  "griglia_scroll_w": 1118,
+  "contenitore": {
+   "x": 284,
+   "y": 485,
+   "w": 1120,
+   "h": 1712
+  },
+  "contenitore_scroll_w": 1120,
+  "cella": {
+   "x": 435,
+   "y": 589,
+   "w": 108,
+   "h": 57
+  },
+  "nome": {
+   "x": 285,
+   "y": 548,
+   "w": 257,
+   "h": 36
+  },
+  "tot": null
+ },
+ "tavola Turni3-Giorno 1440": {
+  "larghezza": 1440,
+  "scroll_x": 1440,
+  "alto_pagina": 2140,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "tavola Turni4-Persone 1440": {
+  "larghezza": 1440,
+  "scroll_x": 1440,
+  "alto_pagina": 1991,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "tavola Turni5-Persona 1440": {
+  "larghezza": 1440,
+  "scroll_x": 1440,
+  "alto_pagina": 1125,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "tavola Turni6-Tipi 1440": {
+  "larghezza": 1440,
+  "scroll_x": 1440,
+  "alto_pagina": 1577,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "pagina mese 1440": {
+  "larghezza": 1440,
+  "scroll_x": 1440,
+  "alto_pagina": 1021,
+  "griglia": {
+   "x": 19,
+   "y": 212,
+   "w": 1402,
+   "h": 1490
+  },
+  "griglia_scroll_w": 1402,
+  "contenitore": {
+   "x": 18,
+   "y": 211,
+   "w": 1404,
+   "h": 770
+  },
+  "contenitore_scroll_w": 1402,
+  "cella": {
+   "x": 202,
+   "y": 298,
+   "w": 35,
+   "h": 41
+  },
+  "nome": {
+   "x": 19,
+   "y": 212,
+   "w": 183,
+   "h": 43
+  },
+  "tot": {
+   "x": 1251,
+   "y": 298,
+   "w": 59,
+   "h": 41
+  }
+ },
+ "pagina settimana 1440": {
+  "larghezza": 1440,
+  "scroll_x": 1440,
+  "alto_pagina": 1021,
+  "griglia": {
+   "x": 19,
+   "y": 212,
+   "w": 1402,
+   "h": 1804
+  },
+  "griglia_scroll_w": 1402,
+  "contenitore": {
+   "x": 18,
+   "y": 211,
+   "w": 1404,
+   "h": 770
+  },
+  "contenitore_scroll_w": 1402,
+  "cella": {
+   "x": 200,
+   "y": 299,
+   "w": 138,
+   "h": 52
+  },
+  "nome": {
+   "x": 19,
+   "y": 212,
+   "w": 181,
+   "h": 44
+  },
+  "tot": {
+   "x": 1166,
+   "y": 299,
+   "w": 99,
+   "h": 52
+  }
+ },
+ "pagina giorno 1440": {
+  "larghezza": 1440,
+  "scroll_x": 1440,
+  "alto_pagina": 1888,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "pagina persone 1440": {
+  "larghezza": 1440,
+  "scroll_x": 1440,
+  "alto_pagina": 1684,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "pagina persona-nuova 1440": {
+  "larghezza": 1440,
+  "scroll_x": 2282,
+  "alto_pagina": 1000,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ },
+ "pagina tipi 1440": {
+  "larghezza": 1440,
+  "scroll_x": 1440,
+  "alto_pagina": 1703,
+  "griglia": null,
+  "griglia_scroll_w": null,
+  "contenitore": null,
+  "contenitore_scroll_w": null,
+  "cella": null,
+  "nome": null,
+  "tot": null
+ }
+}

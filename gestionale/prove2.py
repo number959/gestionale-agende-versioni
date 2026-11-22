@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Secondo giro: modifica, eliminazione, celle impilate, mezzanotte, concorrenza vera."""
 import os, threading, traceback, urllib.request
+from prove_dove import dove
 import tempfile
 from datetime import datetime, date, time, timedelta
 from sqlalchemy import select
@@ -19,7 +20,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK  ', nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', nome, str(e)))
+        esiti.append(('ROTTO', nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', nome, traceback.format_exc().strip().splitlines()[-1]))
 

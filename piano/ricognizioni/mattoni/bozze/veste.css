@@ -1,0 +1,255 @@
+/* La veste nuova (1.13): i pezzi comuni di templates/_pezzi.html.
+   Regole:
+   - tutte le classi cominciano con «v-» (veste); nessun selettore senza prefisso, tranne le classi che servono al
+     JavaScript di oggi e che i pezzi tengono apposta (primario, gruppo-comandi, apri-gruppo, tendina);
+   - nessun colore scritto qui: solo var(--v-...) di gettoni.css (la prova lo controlla);
+   - caratteri, spazi, raggi, ombre e altezze dei comandi dalle scale di gettoni.css; le poche misure proprie di un
+     pezzo (altezza della pillola, punto, contatore) sono scritte una volta sola, qui;
+   - questo file sta fuori dallo strato «vecchio» (base.html): vince su stile.css, animazioni.css e tema-scuro.css
+     senza !important; restano più forti solo i loro !important ([hidden], stampa, «riduci movimento»).
+   Il tema scuro non ha regole qui: lo fanno i gettoni, che cambiano valore sotto html.scuro. */
+
+/* ------------------------------------------------------------------ base dei pezzi */
+.v-pagina, .v-scheda, .v-barra-comandi, .v-striscia, .v-linguette, .v-tabella-contenitore, .v-intestazione {
+  box-sizing: border-box;
+  letter-spacing: var(--v-lettere);
+}
+.v-pagina *, .v-pagina *::before, .v-pagina *::after { box-sizing: border-box; }
+.v-pagina {
+  display: flex; flex-direction: column; gap: var(--v-spazio-7);
+  padding: var(--v-spazio-7) var(--v-spazio-9);
+  min-width: 0;
+  background: var(--v-fondo); color: var(--v-testo);
+  font: var(--v-car-n)/var(--v-int-n) var(--v-corpo);
+}
+:where(.v-pagina) a:not([class]) { color: var(--v-collegamento); }
+:where(.v-pagina) a:not([class]):hover { color: var(--v-primario-premuto); }
+
+/* ------------------------------------------------------------------ intestazione della pagina */
+.v-intestazione { display: flex; flex-direction: column; gap: var(--v-spazio-2); min-width: 0; }
+.v-sopra { font-size: var(--v-car-m); line-height: var(--v-int-m); color: var(--v-testo-tenue); }
+.v-titolo {
+  margin: 0;
+  font-family: var(--v-titoli); font-weight: var(--v-peso-medio);
+  font-size: var(--v-car-t1); line-height: var(--v-int-t1); letter-spacing: -0.01em;
+  color: var(--v-testo);
+}
+.v-titolo-sezione {
+  margin: 0;
+  font-family: var(--v-titoli); font-weight: var(--v-peso-medio);
+  font-size: var(--v-car-t2); line-height: var(--v-int-t2);
+  color: var(--v-testo);
+}
+.v-sotto { margin: 0; font-size: var(--v-car-l); line-height: var(--v-int-l); color: var(--v-testo-tenue); }
+.v-sotto a { color: var(--v-collegamento); }
+
+/* ------------------------------------------------------------------ scheda */
+.v-scheda {
+  display: flex; flex-direction: column; gap: var(--v-spazio-5);
+  min-width: 0;
+  padding: var(--v-spazio-7) var(--v-spazio-8);
+  background: var(--v-superficie); color: var(--v-testo);
+  border: 1px solid var(--v-riga); border-radius: var(--v-raggio-4);
+  box-shadow: var(--v-ombra-1);
+}
+.v-scheda-testa { display: flex; flex-direction: column; gap: var(--v-spazio-1); }
+.v-scheda-titolo {
+  margin: 0;
+  font-family: var(--v-titoli); font-weight: var(--v-peso-forte);
+  font-size: var(--v-car-t3); line-height: var(--v-int-t3);
+  color: var(--v-testo);
+}
+.v-scheda-sotto { margin: 0; font-size: var(--v-car-m); line-height: var(--v-int-m); color: var(--v-testo-tenue); }
+.v-scheda.v-attaccata { padding: 0; overflow: hidden; }            /* una tabella che tocca i bordi */
+.v-scheda.v-attaccata > .v-scheda-testa { padding: var(--v-spazio-7) var(--v-spazio-8) 0; }
+.v-scheda.v-sabbia { background: var(--v-sabbia); border-color: var(--v-sabbia); color: var(--v-avviso-testo); }
+
+/* ------------------------------------------------------------------ tabella */
+.v-tabella-contenitore {
+  max-width: 100%; overflow-x: auto;
+  background: var(--v-superficie);
+  border: 1px solid var(--v-riga); border-radius: var(--v-raggio-4);
+  box-shadow: var(--v-ombra-1);
+}
+.v-scheda .v-tabella-contenitore { border: 0; border-radius: 0; box-shadow: none; }
+table.v-tabella {
+  width: 100%; margin: 0; border-collapse: collapse;   /* margin: se la tabella tiene «elenco» per animazioni.js, stile.css:283 le darebbe 26px sotto */
+  background: transparent; color: var(--v-testo);
+  font-size: var(--v-car-n); line-height: var(--v-int-n);
+}
+table.v-tabella th, table.v-tabella td {
+  padding: var(--v-spazio-4) var(--v-spazio-6);
+  border: 0; border-top: 1px solid var(--v-riga);
+  text-align: left; vertical-align: top;
+}
+table.v-tabella thead th {
+  border-top: 0;
+  background: var(--v-incasso); color: var(--v-testo-medio);
+  font-size: var(--v-car-m); line-height: var(--v-int-m); font-weight: var(--v-peso-forte);
+  white-space: nowrap;
+}
+table.v-tabella td { color: var(--v-testo-medio); }
+table.v-tabella td:first-child { color: var(--v-testo); }
+table.v-tabella .v-numero { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.v-tabella tr.v-totale td { background: var(--v-incasso); color: var(--v-testo); font-weight: var(--v-peso-titolo); }
+table.v-tabella tr.v-spento td { color: var(--v-testo-tenue); }
+table.v-tabella td small, table.v-tabella .v-piccolo {
+  display: block; font-size: var(--v-car-s); line-height: var(--v-int-s); color: var(--v-testo-tenue);
+}
+
+/* ------------------------------------------------------------------ pillole dello stato (sempre parola + punto, mai solo colore) */
+.v-pillola {
+  display: inline-flex; align-items: center; gap: var(--v-spazio-3);
+  height: 26px; padding: 0 var(--v-spazio-5);
+  border: 1px solid transparent; border-radius: var(--v-raggio-pieno);
+  font-size: var(--v-car-s); line-height: var(--v-int-s); font-weight: var(--v-peso-forte);
+  white-space: nowrap;
+}
+.v-punto { flex: none; width: 7px; height: 7px; border-radius: var(--v-raggio-pieno); background: currentColor; }
+.v-pillola-prenotato { background: var(--v-superficie); border: 1px dashed var(--v-segno-grigio); color: var(--v-testo-tenue); }
+.v-pillola-prenotato .v-punto { background: var(--v-segno-grigio); }
+.v-pillola-confermato { background: var(--v-confermato); color: var(--v-confermato-testo); }
+.v-pillola-confermato .v-punto { background: var(--v-azzurro); }
+.v-pillola-arrivato { background: var(--v-occupato); color: var(--v-verde-testo); }
+.v-pillola-arrivato .v-punto { background: var(--v-verde); }
+.v-pillola-non_presentato { background: var(--v-rosso-fondo); color: var(--v-rosso); }
+.v-pillola-non_presentato .v-punto { background: var(--v-rosso); }
+.v-pillola-disdetto { background: var(--v-chiuso); color: var(--v-testo-tenue); text-decoration: line-through; }
+.v-pillola-disdetto .v-punto { background: var(--v-segno-grigio); }
+.v-pillola-sala { background: var(--v-sala-fondo); color: var(--v-sala-testo); }
+.v-pillola-sala .v-punto { background: var(--v-sala); }
+/* il contatore accanto a una voce o a una linguetta («Da confermare 3») */
+.v-conta {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 var(--v-spazio-3);
+  border-radius: var(--v-raggio-2);
+  background: var(--v-primario); color: var(--v-testo-su-pieno);
+  font-size: var(--v-car-xs); line-height: var(--v-int-xs); font-weight: var(--v-peso-titolo);
+}
+
+/* ------------------------------------------------------------------ striscia dei numeri */
+.v-striscia {
+  display: flex; flex-wrap: wrap; row-gap: var(--v-spazio-5);
+  padding: var(--v-spazio-6) var(--v-spazio-2);
+  background: var(--v-superficie);
+  border: 1px solid var(--v-riga); border-radius: var(--v-raggio-4);
+  box-shadow: var(--v-ombra-1);
+}
+.v-striscia-voce {
+  flex: 1 1 auto; display: flex; align-items: baseline; gap: var(--v-spazio-4);
+  padding: 0 var(--v-spazio-7); white-space: nowrap;
+}
+.v-striscia-voce + .v-striscia-voce { border-left: 1px solid var(--v-riga); }
+.v-striscia-numero {
+  font-family: var(--v-titoli); font-weight: var(--v-peso-medio);
+  font-size: var(--v-car-num); line-height: var(--v-int-num);
+  font-variant-numeric: tabular-nums; color: var(--v-testo);
+}
+.v-striscia-cosa { font-size: var(--v-car-m); line-height: var(--v-int-m); color: var(--v-testo-tenue); }
+.v-striscia-voce.v-allarme .v-striscia-numero, .v-striscia-voce.v-allarme .v-striscia-cosa { color: var(--v-rosso); }
+
+/* ------------------------------------------------------------------ barra dei comandi, bottoni, campi */
+.v-barra-comandi {
+  position: relative; z-index: 40;   /* come .barra di oggi: la tendina di «Stampa e scarica» copre quello che viene dopo */
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-4);
+  padding: var(--v-spazio-4) var(--v-spazio-5);
+  background: var(--v-superficie);
+  border: 1px solid var(--v-riga); border-radius: var(--v-raggio-4);
+  box-shadow: var(--v-ombra-1);
+}
+.v-barra-comandi form { display: contents; }
+.v-a-destra { margin-left: auto; }
+.v-stacco { margin-left: var(--v-spazio-4); }
+
+.v-bottone, .v-passo {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--v-spazio-4);
+  height: var(--v-alto); padding: 0 var(--v-spazio-5);
+  border: 1px solid var(--v-riga); border-radius: var(--v-raggio-3);
+  background: var(--v-superficie); color: var(--v-testo);
+  font: inherit; font-weight: var(--v-peso-forte); text-decoration: none; white-space: nowrap;
+  cursor: pointer;
+}
+.v-bottone:hover, .v-passo:hover { border-color: var(--v-primario-testo); color: var(--v-primario-testo); }
+.v-passo { width: var(--v-alto); padding: 0; }
+.v-bottone.v-principale { background: var(--v-primario); border-color: var(--v-primario); color: var(--v-testo-su-pieno); }
+.v-bottone.v-principale:hover { background: var(--v-primario-premuto); border-color: var(--v-primario-premuto); color: var(--v-testo-su-pieno); }
+.v-bottone.v-pericolo { border-color: var(--v-rosso-riga); color: var(--v-rosso); }
+.v-bottone.v-pericolo:hover { border-color: var(--v-rosso); color: var(--v-rosso); }
+.v-bottone.v-piccolo { height: var(--v-alto-piccolo); padding: 0 var(--v-spazio-4); border-radius: var(--v-raggio-3); font-size: var(--v-car-m); }
+.v-bottone svg, .v-passo svg { flex: none; }
+.v-bottone:focus-visible, .v-passo:focus-visible, .v-linguetta:focus-visible, .v-tendina select:focus-visible,
+.v-campo :is(input, select, textarea):focus-visible {
+  outline: 2px solid var(--v-fuoco); outline-offset: 2px;
+}
+
+.v-tendina { position: relative; display: inline-flex; align-items: center; }
+.v-tendina select {
+  height: var(--v-alto); padding: 0 36px 0 var(--v-spazio-5);
+  border: 1px solid var(--v-riga-campo); border-radius: var(--v-raggio-3);
+  background: var(--v-superficie); color: var(--v-testo);
+  font: inherit; font-weight: var(--v-peso-medio);
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+}
+.v-tendina > svg { position: absolute; right: var(--v-spazio-5); pointer-events: none; color: var(--v-testo-tenue); }
+
+.v-campo { display: flex; flex-direction: column; gap: var(--v-spazio-3); min-width: 0; }
+.v-campo > label, .v-campo > .v-etichetta { font-size: var(--v-car-m); line-height: var(--v-int-m); font-weight: var(--v-peso-forte); color: var(--v-testo-medio); }
+.v-campo :is(input:not([type=checkbox]):not([type=radio]), select, textarea) {
+  width: 100%; min-height: var(--v-alto); padding: 0 var(--v-spazio-5);
+  border: 1px solid var(--v-riga-campo); border-radius: var(--v-raggio-3);
+  background: var(--v-superficie); color: var(--v-testo);
+  font: inherit;
+}
+.v-campo textarea { padding: var(--v-spazio-4) var(--v-spazio-5); }
+.v-campo .v-aiuto { margin: 0; font-size: var(--v-car-s); line-height: var(--v-int-s); color: var(--v-testo-tenue); }
+.v-campo :is(input, select, textarea)::placeholder { color: var(--v-testo-tenue); opacity: 1; }
+
+/* ------------------------------------------------------------------ linguette */
+.v-linguette {
+  align-self: flex-start; max-width: 100%;
+  display: flex; flex-wrap: wrap; gap: var(--v-spazio-1);
+  padding: var(--v-spazio-2);
+  background: var(--v-incasso); border-radius: var(--v-raggio-3);
+}
+.v-linguetta {
+  display: inline-flex; align-items: center; gap: var(--v-spazio-4);
+  height: var(--v-alto-piccolo); padding: 0 var(--v-spazio-6);
+  border-radius: var(--v-raggio-2);
+  background: transparent; color: var(--v-testo-medio);
+  font-size: var(--v-car-n); font-weight: var(--v-peso-forte); text-decoration: none; white-space: nowrap;
+}
+.v-linguetta:hover { color: var(--v-primario-testo); }
+.v-linguetta[aria-current] { background: var(--v-primario-tinta); color: var(--v-primario-testo); }
+
+/* ------------------------------------------------------------------ «Stampa e scarica»: la tendina di oggi (stessi
+   nomi di classe per gestionale.js e guida.js: gruppo-comandi, apri-gruppo, tendina), con l'aspetto nuovo */
+.v-stampa { position: relative; display: inline-flex; }
+.v-stampa .apri-gruppo .v-freccia { display: inline-flex; color: var(--v-testo-tenue); }
+.v-stampa .tendina {
+  min-width: 300px; padding: var(--v-spazio-3);
+  background: var(--v-superficie); color: var(--v-testo);
+  border: 1px solid var(--v-riga); border-radius: var(--v-raggio-3);
+  box-shadow: var(--v-ombra-3);
+}
+.v-stampa .tendina a {
+  display: flex; flex-direction: column; gap: 0;
+  padding: var(--v-spazio-4) var(--v-spazio-5);
+  border: 0; border-radius: var(--v-raggio-2);
+  background: transparent; color: var(--v-testo); text-decoration: none;
+}
+.v-stampa .tendina a b { font-weight: var(--v-peso-forte); }
+.v-stampa .tendina a small { font-size: var(--v-car-s); line-height: var(--v-int-s); color: var(--v-testo-tenue); }
+.v-stampa .tendina a:hover, .v-stampa .tendina a:focus { background: var(--v-primario-tinta); outline: none; }
+
+/* ------------------------------------------------------------------ riquadri di avviso dentro la pagina */
+.v-riquadro { padding: var(--v-spazio-5) var(--v-spazio-6); border: 1px solid var(--v-riga); border-radius: var(--v-raggio-3); }
+.v-riquadro-avviso { background: var(--v-avviso-fondo); border-color: var(--v-avviso-riga); color: var(--v-avviso-testo); }
+.v-riquadro-errore { background: var(--v-rosso-fondo); border-color: var(--v-rosso-riga); color: var(--v-rosso-forte); }
+.v-riquadro-ok { background: var(--v-ok-fondo); border-color: var(--v-ok-fondo); color: var(--v-ok-testo); }
+
+/* ------------------------------------------------------------------ stampa: i comandi non vanno sulla carta */
+@media print {
+  .v-pagina { padding: 0; background: none; }
+  .v-barra-comandi, .v-linguette, .v-stampa { display: none; }
+  .v-scheda, .v-striscia, .v-tabella-contenitore { box-shadow: none; }
+}

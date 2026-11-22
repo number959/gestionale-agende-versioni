@@ -16,6 +16,7 @@ Niente rete vera: le email vanno a un finto server di posta su 127.0.0.1 (lo
 stesso di prove_15.py, con STARTTLS, SSL e accesso con password), gli altri
 errori si provano con un finto smtplib. Dati inventati."""
 import base64
+from prove_dove import dove
 import email
 import json
 import os
@@ -69,7 +70,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e)[:600] or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e)[:600] or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 
@@ -389,11 +390,21 @@ def b_dominio():
     assert invii.svela(c['email_password']) == 'la mia password', 'spazi dentro la password tolti o spazi ai lati rimasti'
     assert c['email_accesso'] == '' and c['email_senza_password'] == '0'
     assert 'Email: pronte' in testo(C.get('/invii'))
-    # il server scritto a mano resta
+    # salvata di nuovo la stessa casella, senza riscrivere la password: la password resta
+    C.post('/invii', data=modulo(email_tipo='dominio', email_utente='segreteria@clinica-esempio.it',
+                                 email_server='mail.clinica-esempio.it', email_porta='465', email_sicurezza='ssl'))
+    assert invii.svela(salvate(S)['email_password']) == 'la mia password', 'la stessa casella ha perso la password'
+    # il server scritto a mano resta; senza riscrivere la password, quella salvata si toglie (1.13, correzione 3 della
+    # revisione degli accessi dalla rete: non deve partire verso un server diverso da quello per cui è stata scritta)
     C.post('/invii', data=modulo(email_tipo='dominio', email_utente='segreteria@clinica-esempio.it',
                                  email_server='server12.hosting.example', email_porta='465', email_sicurezza='ssl'))
     c = salvate(S)
-    assert c['email_server'] == 'server12.hosting.example' and invii.svela(c['email_password']) == 'la mia password', c
+    assert c['email_server'] == 'server12.hosting.example' and c['email_password'] == '', c
+    assert 'password salvata è stata tolta' in avvisi(C, 'avviso'), 'manca l\'avviso della password tolta'
+    C.post('/invii', data=modulo(email_tipo='dominio', email_utente='segreteria@clinica-esempio.it',
+                                 email_server='server12.hosting.example', email_porta='465', email_sicurezza='ssl',
+                                 email_password='la mia password'))
+    assert invii.svela(salvate(S)['email_password']) == 'la mia password', 'riscritta, la password non si salva'
 
 
 def b_aruba_e_gmail():

@@ -1,6 +1,6 @@
 """Prove nel browser della 1.7, su un gestionale gia' avviato con i dati di
 prova (vedi LEGGIMI, «Prove»):
-    python prove_17_browser.py http://127.0.0.1:5000
+    python prove_17_browser.py http://127.0.0.1:5001
 - scritto il codice fiscale si riempiono data, sesso e luogo di nascita, e
   sotto il campo compare «Codice fiscale corretto»;
 - un codice sbagliato: niente mentre si scrivono i primi caratteri, il
@@ -13,6 +13,9 @@ prova (vedi LEGGIMI, «Prove»):
   luogo, e il codice si controlla;
 - la pagina Controllo dei codici fiscali;
 - nessun errore JavaScript.
+La cornice (i messaggi, le domande del browser) si cerca per ruolo e nome con
+gli aiuti di aiuti_browser.py, come un lettore di schermo (tappa 1 della base);
+una domanda del browser che nessuno aspettava fa cadere la prova.
 Salva pazienti nuovi nel gestionale su cui gira: usarla su un gestionale di
 prova, mai su quello vero."""
 import os
@@ -24,9 +27,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from playwright.sync_api import sync_playwright
 
 import codice_fiscale as CF
+from aiuti_browser import messaggi, prepara_domande
 from datetime import date
 
-B = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000'
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 # un cognome nuovo a ogni giro: la prova si puo' rifare sullo stesso gestionale senza trovare doppioni
 NUOVO = 'Testanuova' + ''.join(random.choice('BCDFGLMNPRSTVZ') + random.choice('AEIOU') for _ in range(2)).lower()
@@ -43,6 +48,7 @@ with sync_playwright() as p:
     ctx = br.new_context(viewport={'width': 1366, 'height': 900})
     ctx.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); } catch (e) {}")
     pg = ctx.new_page()
+    domande = prepara_domande(pg)            # subito: ogni domanda del browser passa da qui (nessuna e' attesa)
     err = []
     pg.on('pageerror', lambda e: err.append(str(e)))
     pg.on('console', lambda m: err.append(m.text) if m.type == 'error' else None)
@@ -79,10 +85,14 @@ with sync_playwright() as p:
     pg.wait_for_timeout(700)
     ok('mentre si scrivono i primi caratteri nessun errore', 'non' not in esito().lower() or esito().startswith('Dal codice'),
        esito())
+    # «non» non basta: l'errore di un codice ancora corto («Il codice fiscale ha 8 caratteri: ne servono 16.») non lo
+    # contiene. Si cerca la frase dell'errore, che il gemello qui sotto trova uscendo dal campo (stessa pagina, stesso esito)
+    ok('mentre si scrivono i primi caratteri niente «ne servono 16»', 'ne servono 16' not in esito(), esito())
     pg.keyboard.type('A01F839X', delay=15)
     ok('al sedicesimo carattere: il motivo', aspetta_esito('sarebbe «W»'), esito())
     pg.fill('#codice_fiscale', 'FNTPRV80A01')
     pg.press('#codice_fiscale', 'Tab')
+    # gemello di «niente "ne servono 16"» qui sopra
     ok('uscendo dal campo con un codice corto: il motivo', aspetta_esito('ne servono 16'), esito())
 
     # ------------------------------------------------ calcolo dai dati
@@ -148,7 +158,7 @@ with sync_playwright() as p:
        (pg.input_value('#luogo_nascita'), pg.input_value('#codice_fiscale')))
     with pg.expect_navigation():
         pg.click('form.modulo-paziente button.primario[type="submit"]')
-    messaggio = pg.text_content('body') or ''
+    messaggio = messaggi(pg)
     ok('salvato: «Codice fiscale calcolato dai dati»', 'Codice fiscale calcolato dai dati: %s' % calcolato in messaggio,
        messaggio[:300])
 
@@ -179,6 +189,7 @@ with sync_playwright() as p:
         pg.goto(B + u)
         pg.wait_for_timeout(400)
     ok('nessun errore JavaScript', not err, err[:3])
+    ok('nessuna domanda del browser inattesa', not domande.inattese, domande.inattese)
     br.close()
 print('\n%d prove nel browser, %d superate' % (len(esiti), sum(esiti)))
 sys.exit(0 if all(esiti) else 1)

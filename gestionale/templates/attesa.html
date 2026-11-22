@@ -10,7 +10,7 @@
       {% for o in medici %}<option value="{{ o.id }}"{% if medico and o.id == medico.id %} selected{% endif %}>{{ o.etichetta }}</option>{% endfor %}
     </select></label>
     <label><input type="checkbox" name="chiuse" value="1"{% if tutte %} checked{% endif %} onchange="this.form.submit()"> anche le richieste chiuse</label>
-    <a class="bottone primario" href="{{ url_for('segreteria.attesa_scheda', struttura=sid) }}">Aggiungi alla lista</a>
+    <a class="bottone primario" href="{{ url_for('segreteria.attesa_scheda', struttura=sid) }}" data-guida="attesa-nuova">Aggiungi alla lista</a>
   </form>
   {% if richieste %}
   <table class="elenco">

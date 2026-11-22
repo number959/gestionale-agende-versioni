@@ -8,6 +8,8 @@ per questo che non si erano accorte che dall'interfaccia non si potevano
 inserire.
 """
 import os
+from prove_dove import dove
+from prove_gemelli import manca, protetto
 import random
 import re
 import threading
@@ -41,7 +43,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome,
                       traceback.format_exc().strip().splitlines()[-1]))
@@ -152,7 +154,10 @@ def pa_modulo_senza_medici():
     r = C.get('/appuntamento?data=%s' % MARTEDI.isoformat())
     assert r.status_code == 200, 'HTTP %d' % r.status_code
     assert 'Manca ancora un medico' in html(r), 'nessuna spiegazione'
-    assert '<form method="post">' not in html(r), 'il modulo con il menu medici vuoto e ancora visibile'
+    # il modulo e' <form method="post" id="modulo-appuntamento" ...>: si cerca il suo id (fino al 22/11/2026 si
+    # cercava '<form method="post">', che non compare mai, nemmeno con i medici: il controllo passava da solo).
+    # Il gemello, lo stesso id nella pagina con un medico, e' in pc_dal_nulla_alla_prenotazione
+    assert 'id="modulo-appuntamento"' not in html(r), 'il modulo con il menu medici vuoto e ancora visibile'
 
 
 def pa_elenco_guida():
@@ -242,12 +247,14 @@ def me_modifica():
 
 def me_disattiva():
     oid = id_da(S, Operatore, cognome='Galasso')
+    attivo = html(C.get('/appuntamento?data=%s' % MARTEDI.isoformat()))     # per il gemello: prima di spegnerlo
     C.post('/anagrafiche/medici/%d' % oid, data={
         'cognome': 'Galasso', 'nome': 'Pietro', 'colore': '#6B4E9B'})       # senza "attivo"
     svuota_avvisi(C)
     modulo = html(C.get('/appuntamento?data=%s' % MARTEDI.isoformat()))
-    # l'opzione va cercata con il nome: anche stanze e prestazioni hanno opzioni con lo stesso numero
-    assert not re.search(r'<option value="%d"[^>]*>Galasso' % oid, modulo), 'medico disattivato ancora prenotabile'
+    # l'opzione va cercata con il nome: anche stanze e prestazioni hanno opzioni con lo stesso numero.
+    # Gemello: la stessa opzione c'e' nello stesso modulo quando Galasso e' ancora attivo
+    manca(modulo, re.compile(r'<option value="%d"[^>]*>Galasso' % oid), attivo, 'medico disattivato ancora prenotabile')
     assert re.search(r'<option value="\d+"[^>]*>Lippiello', modulo), 'la prova non vede nemmeno i medici attivi'
     elenco = html(C.get('/anagrafiche'))
     assert 'Galasso' in elenco and 'non attivo' in elenco, 'medico disattivato sparito dall elenco'
@@ -315,6 +322,8 @@ nuovo_medico(C, 'Lippiello')
 nuovo_medico(C, 'Galasso')
 LIP, GAL = id_da(S, Operatore, cognome='Lippiello'), id_da(S, Operatore, cognome='Galasso')
 A1, A2 = stanza_id(S, 'Ambulatorio 1'), stanza_id(S, 'Ambulatorio 2')
+# per il gemello di tu_guida_sparisce: la giornata con i medici e ancora senza turni (solo una lettura)
+GIORNO_SENZA_TURNI = html(C.get('/giorno/%s' % MARTEDI.isoformat()))
 
 
 def tu_apre_fasce():
@@ -329,7 +338,10 @@ def tu_apre_fasce():
 
 def tu_guida_sparisce():
     t = html(C.get('/giorno/%s' % MARTEDI.isoformat()))
-    assert 'Per cominciare' not in t and 'Mancano i turni' not in t, 'avviso di primo avvio ancora visibile'
+    # il gemello di 'Per cominciare' e' in pa_griglia_guida (senza medici); quello di 'Mancano i turni' e' la stessa
+    # giornata di questo mondo prima del primo turno
+    assert 'Per cominciare' not in t, 'avviso di primo avvio ancora visibile'
+    manca(t, 'Mancano i turni', GIORNO_SENZA_TURNI, 'avviso di primo avvio ancora visibile')
 
 
 def tu_stesso_medico_due_stanze():
@@ -441,12 +453,14 @@ def dati_stanza(nome, tipo='AMBULATORIO', ordine='1', attiva=True):
 
 def st_rinomina():
     rid = stanza_id(S, 'Ambulatorio 1')
+    prima = html(C.get('/giorno/%s' % MARTEDI.isoformat()))                 # per il gemello: col nome vecchio
     r = C.post('/anagrafiche/stanze/%d' % rid, data=dati_stanza('Studio Lippiello', ordine=1))
     assert reindirizza_elenco(r), 'HTTP %d' % r.status_code
     svuota_avvisi(C)
     t = html(C.get('/giorno/%s' % MARTEDI.isoformat()))
     assert re.search(r'<th>Studio Lippiello\s*<span class="sotto">', t), 'nome nuovo assente dall intestazione'
-    assert not re.search(r'<th>Ambulatorio 1\s*<span', t), 'il nome vecchio e ancora in griglia'
+    # gemello: la stessa intestazione c'e' nella stessa giornata prima di rinominare
+    manca(t, re.compile(r'<th>Ambulatorio 1\s*<span'), prima, 'il nome vecchio e ancora in griglia')
 
 
 def fai_rifiuto_stanza(dati, frammento):
@@ -599,6 +613,10 @@ def pc_dal_nulla_alla_prenotazione():
     """Quello che fara' la segreteria il primo giorno, tutto dall'interfaccia."""
     assert reindirizza_elenco(nuovo_medico(C, 'Lippiello', specialita='Ginecologia')), 'medico'
     lip = id_da(S, Operatore, cognome='Lippiello')
+    # gemello di pa_modulo_senza_medici: con un medico (e ancora nessun turno) il modulo c'e', con il suo id
+    assert 'id="modulo-appuntamento"' in html(C.get('/appuntamento?data=%s' % MARTEDI.isoformat())), \
+        "gemello: 'id=\"modulo-appuntamento\"' non c'e' nemmeno con un medico: il controllo senza medici non " \
+        "vedrebbe niente"
     a1 = stanza_id(S, 'Ambulatorio 1')
     assert reindirizza_elenco(nuovo_turno(C, lip, a1, giorno=1, dalle='08:00', alle='14:00')), 'turno'
     griglia = html(C.get('/giorno/%s' % MARTEDI.isoformat()))
@@ -618,6 +636,15 @@ def pc_dal_nulla_alla_prenotazione():
     ws = openpyxl.load_workbook(io.BytesIO(r.data)).active
     testi = ' '.join(str(c.value) for riga in ws.iter_rows() for c in riga if c.value)
     assert 'Esposito' in testi and 'Lippiello' in testi, 'appuntamento assente dall Excel'
+    # gemello di 'fuori dai turni' (qui in fondo: aggiunge un appuntamento al mondo): la stessa prenotazione alle
+    # 15:30, fuori dal turno 8-14, l'avviso lo da'
+    r2 = C.post('/appuntamento', data={
+        'struttura': str(id_da(S, Struttura, nome=servizi.NOME_INIZIALE)), 'risorsa': str(a1),
+        'operatore': str(lip), 'prestazione': str(pid), 'data': MARTEDI.isoformat(),
+        'ora': '15:30', 'durata': '30', 'paziente': 'Esempietti', 'telefono': '0815551235'},
+        follow_redirects=True)
+    assert 'Appuntamento salvato.' in html(r2) and 'fuori dai turni' in html(r2), \
+        "gemello: 'fuori dai turni' non c'e' nemmeno fuori dal turno: il controllo dentro il turno non vedrebbe niente"
     return 'medico, turno, prenotazione ed export dall interfaccia'
 
 
@@ -741,10 +768,17 @@ def ro_escaping():
     nuovo_medico(C, '<script>alert(1)</script>', nome='<img src=x onerror=alert(2)>')
     oid = id_da(S, Operatore, cognome='<script>alert(1)</script>')
     nuovo_turno(C, oid, stanza_id(S, 'Ambulatorio 3'), giorno=1)
-    for pagina in ('/anagrafiche', '/giorno/%s' % MARTEDI.isoformat(),
-                   '/appuntamento?data=%s' % MARTEDI.isoformat(), '/anagrafiche/medici/%d' % oid):
+    # protetto(): il testo non c'e' vivo, e il gemello e' la sua forma protetta da Jinja nella stessa pagina (dice che
+    # il nome e' davvero arrivato fin li'). La giornata mostra solo il cognome: li' il nome si controlla soltanto
+    for pagina, con_nome in (('/anagrafiche', True), ('/giorno/%s' % MARTEDI.isoformat(), False),
+                             ('/appuntamento?data=%s' % MARTEDI.isoformat(), True),
+                             ('/anagrafiche/medici/%d' % oid, True)):
         t = html(C.get(pagina))
-        assert '<script>alert(1)' not in t and '<img src=x' not in t, 'testo non neutralizzato in %s' % pagina
+        protetto(t, '<script>alert(1)', 'testo non neutralizzato in %s' % pagina)
+        if con_nome:
+            protetto(t, '<img src=x', 'testo non neutralizzato in %s' % pagina)
+        else:
+            assert '<img src=x' not in t, 'testo non neutralizzato in %s' % pagina
 
 
 def ro_doppio_clic():

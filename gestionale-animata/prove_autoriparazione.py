@@ -18,6 +18,7 @@ controlla che il programma lo ripari da solo, senza perdere dati.
 I processi «altro gestionale» delle prove sono piccoli programmi Python
 lanciati qui: nessuna prova tocca il gestionale vero o la porta 5000."""
 import json
+from prove_dove import dove
 import logging
 import os
 import shutil
@@ -62,7 +63,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 

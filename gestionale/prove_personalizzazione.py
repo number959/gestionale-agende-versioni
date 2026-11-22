@@ -7,6 +7,8 @@ dallo schema esatto di quella versione e verificano che l'aggiornamento
 aggiunga le colonne senza toccare i dati.
 """
 import io
+from prove_dove import dove
+from prove_gemelli import protetto
 import os
 import random
 import re
@@ -54,7 +56,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e) or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e) or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 
@@ -470,9 +472,16 @@ def co_colore_manomesso():
 def co_testo_malevolo():
     r = invia_struttura(C, 1, nome='<script>alert(1)</script>', societa='<img src=x onerror=alert(2)>')
     assert r.status_code == 302, 'HTTP %d' % r.status_code
-    for u in ('/giorno/%s?struttura=1' % MARTEDI.isoformat(), '/anagrafiche', '/anagrafiche/strutture/1'):
+    # protetto(): il testo non c'e' vivo, e il gemello e' la sua forma protetta da Jinja nella stessa pagina (dice che
+    # il testo e' davvero arrivato fin li'). La giornata non mostra la societa: li' si controlla soltanto
+    for u, con_societa in (('/giorno/%s?struttura=1' % MARTEDI.isoformat(), False), ('/anagrafiche', True),
+                           ('/anagrafiche/strutture/1', True)):
         t = html(C.get(u))
-        assert '<script>alert(1)' not in t and '<img src=x' not in t, 'testo non neutralizzato in %s' % u
+        protetto(t, '<script>alert(1)', 'testo non neutralizzato in %s' % u)
+        if con_societa:
+            protetto(t, '<img src=x', 'testo non neutralizzato in %s' % u)
+        else:
+            assert '<img src=x' not in t, 'testo non neutralizzato in %s' % u
     invia_struttura(C, 1, nome='Prima sede', societa='')
 
 

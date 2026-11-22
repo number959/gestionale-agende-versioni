@@ -27,6 +27,8 @@ Dati inventati.
     PROVE_GIRI=400 python prove_110.py    # piu' giorni inventati per i confronti (predefinito 120)
     PROVE_SOLO=c_mano_20 python prove_110.py"""
 import io
+from prove_dove import dove
+from prove_gemelli import manca
 import os
 import random
 import re
@@ -82,7 +84,7 @@ def prova(nome, f):
     try:
         esiti.append(('OK', _area[0], nome, f() or ''))
     except AssertionError as e:
-        esiti.append(('ROTTO', _area[0], nome, str(e)[:900] or 'asserzione fallita'))
+        esiti.append(('ROTTO', _area[0], nome, '%s · %s' % (dove(e), str(e)[:900] or 'asserzione fallita')))
     except Exception:
         esiti.append(('ERRORE', _area[0], nome, traceback.format_exc().strip().splitlines()[-1]))
 
@@ -1262,9 +1264,21 @@ def d_gia_presi():
     assert servizi.conflitti(s, amb, I['Esempietti'], quando(MAR, 9 * 60 + 30), quando(MAR, 9 * 60 + 40)) != []
     assert servizi.conflitti(s, amb, I['Esempietti'], quando(MAR, 10 * 60 + 20), quando(MAR, 10 * 60 + 40)) == []
     s.close()
+    # gemello della modifica della prima (piu' su, «fascia ... già occupata» non c'e'): la stessa pagina,
+    # modificando la seconda alle 9:30 per 10 minuti (orari veri liberi, ma la fascia delle 9:20 e' della prima),
+    # da' l'errore con le stesse due parole. Un rifiuto non salva niente: le prove qui sotto trovano il mondo com'era
+    r2 = C.post('/appuntamento/%d' % seconda, data=dict(modulo, ora='09:30', durata='10'), follow_redirects=True)
+    assert 'fascia' in testo(r2) and 'già occupata' in testo(r2), \
+        ("gemello: 'fascia' e 'già occupata' non ci sono nemmeno modificando in una fascia occupata", testo(r2)[:400])
     # salvando di nuovo il turno l'avviso non c'e' piu': la seconda ora sta nelle fasce
     r = C.post('/anagrafiche/turni/%d' % tid, data=dati, follow_redirects=True)
-    assert 'non stanno nelle fasce' not in testo(r) and 'non sta nelle fasce' not in testo(r), testo(r)[:300]
+    # gemello del plurale: il primo salvataggio di questa prova (due appuntamenti fuori dalle fasce)
+    manca(testo(r), 'non stanno nelle fasce', t, testo(r)[:300])
+    # gemello del singolare (qui in fondo: aggiunge un appuntamento): uno solo alle 10:30, a meta' della fascia
+    # delle 10:20, e salvando di nuovo il turno la frase e' al singolare
+    app_(S, amb, I['Esempietti'], quando(MAR, 10 * 60 + 30), 10)
+    uno_fuori = testo(C.post('/anagrafiche/turni/%d' % tid, data=dati, follow_redirects=True))
+    manca(testo(r), 'non sta nelle fasce', uno_fuori, testo(r)[:300])
 
 
 def d_sposta_pagina():
@@ -1428,11 +1442,13 @@ def e_giorno():
     # la colonscopia delle 8 occupa tre fasce da 15 = 9 righe da 5
     colo = next(c for r_ in t.righe for c in r_ if 'Colonscopia' in c['testo'])
     assert colo['righe'] == 9, colo['righe']
-    # senza fasce proprie (un altro giorno): la griglia di sempre
+    # senza fasce proprie (un altro giorno): la griglia di sempre. Gemello: le stesse classi ci sono nella giornata
+    # con le fasce proprie (quella qui sopra)
+    con_fasce = p
     r = C.get('/giorno/%s?struttura=1' % (MAR + timedelta(days=1)).isoformat())
     p = html(r)
     for classe in ('fasce-miste', 'fasce-turno', 'con-ora', 'sotto-fascia'):
-        assert not re.search(r'class="[^"]*\b%s\b' % classe, p), classe
+        manca(p, re.compile(r'class="[^"]*\b%s\b' % classe), con_fasce, classe)
     disposta(tabella(p), 7)
 
 
@@ -1503,6 +1519,7 @@ def e_turno_modulo():
             'ora_fine': '12:00', 'valido_da': MAR.isoformat(), 'valido_a': '', 'ripetizione': 'settimanale'}
     r = C.post('/anagrafiche/turni/nuovo', data=dict(dati, passo='15'), follow_redirects=True)
     assert 'Turno salvato' in testo(r) and 'fasce da 15 minuti' in testo(r), testo(r)[:300]
+    dopo_salvato_15 = testo(r).split('Turno salvato')[1][:120]       # per il gemello di "Come la struttura"
     s = S()
     t = s.scalars(select(Turno)).one()
     tid = t.id
@@ -1528,7 +1545,9 @@ def e_turno_modulo():
     s.close()
     # "Come la struttura": torna vuoto
     r = C.post('/anagrafiche/turni/%d' % tid, data=dict(dati, passo='0'), follow_redirects=True)
-    assert 'Turno salvato' in testo(r) and 'fasce da' not in testo(r).split('Turno salvato')[1][:120]
+    assert 'Turno salvato' in testo(r)
+    # gemello: lo stesso pezzo di pagina dopo «Turno salvato», quando il turno ha le fasce da 15
+    manca(testo(r).split('Turno salvato')[1][:120], 'fasce da', dopo_salvato_15)
     s = S()
     assert s.get(Turno, tid).passo is None
     s.close()
@@ -1536,7 +1555,7 @@ def e_turno_modulo():
 
 def e_guida():
     a = guida.PER_SLUG['fasce-turno']
-    assert a['condizione'] == 'thead .fasce-turno' and a['endpoint'] == 'giorno'
+    assert a['condizione'] == '[data-guida="giorno-fasce-turno"]' and a['endpoint'] == 'giorno'
     voci = dict(novita.NOVITA)['1.10']
     assert len(voci) >= 3 and all(x.get('guida') == 'fasce-turno' for x in voci), voci
     S, I = mondo_15()
@@ -1563,11 +1582,12 @@ def e_guida():
     assert passi['slug'] == 'fasce-turno' and len(passi['passi']) >= 4, passi
     # e nella pagina c'e' ogni elemento che i passi illuminano
     for x in passi['passi']:
-        if x.get('sel') == 'thead .fasce-turno':
-            assert 'class="fasce-turno"' in p.split('</thead>')[0]
-        elif x.get('sel') == 'td.aperta a.con-ora':
-            assert re.search(r'<td class="aperta"[^>]*><a class="posa con-ora"', p)
-        elif x.get('sel') == 'td.occupata':
+        if x.get('sel') == '[data-guida="giorno-fasce-turno"]':
+            assert re.search(r'<span class="fasce-turno" data-guida="giorno-fasce-turno"', p.split('</thead>')[0])
+        elif x.get('sel') == '[data-guida="giorno-fascia-ora"]':
+            assert re.search(r'<td class="aperta"[^>]*><a class="posa con-ora" data-guida="giorno-fascia-ora"', p)
+        elif x.get('sel') == '[data-guida="giorno-occupata"]':
+            assert x.get('contiene') == 'Colonscopia' and re.search(r'<td class="occupata[^"]*" data-guida="giorno-occupata"', p)
             assert any('occupata' in c['classe'] and x.get('contiene', '') in c['testo'] for r_ in t.righe for c in r_)
         else:
             assert not x.get('sel'), x

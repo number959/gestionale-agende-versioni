@@ -6,7 +6,7 @@
   <td>{{ x.testo }}{% if x.paziente %}<div class="nota-riga"><a href="{{ url_for('pazienti.scheda', pid=x.paziente_id) }}">{{ x.paziente.etichetta }}</a>{% if x.paziente.telefono %} · {{ x.paziente.telefono }}{% endif %}</div>{% endif %}</td>
   <td class="azione">
     {% if not x.fatto_il %}
-    <form method="post" action="{{ url_for('segreteria.cosa_fatta', xid=x.id, azione='fatto') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo stato-arrivato" type="submit">Fatto</button></form>
+    <form method="post" action="{{ url_for('segreteria.cosa_fatta', xid=x.id, azione='fatto') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo stato-arrivato" type="submit" data-guida="cose-da-fare-fatto">Fatto</button></form>
     <form method="post" action="{{ url_for('segreteria.cosa_fatta', xid=x.id, azione='rimanda') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit">Domani</button></form>
     {% else %}
     <span class="nota-riga">fatto il {{ x.fatto_il.strftime('%d/%m %H:%M') }}</span>
@@ -21,7 +21,7 @@
 <div class="pagina larga">
   <h1>Cose da fare</h1>
   <p class="sotto">Richiamare un paziente, sollecitare un referto, ordinare qualcosa. Nel giorno indicato compaiono come notifica in basso a destra.</p>
-  <form method="post" class="filtri">
+  <form method="post" class="filtri" data-guida="cose-da-fare-nuova">
     <label style="flex:1">Cosa<br><input type="text" name="testo" maxlength="300" required style="width:100%" placeholder="Richiamare per il referto"></label>
     <label>Per il<br><input type="date" name="per_il" value="{{ oggi.isoformat() }}"></label>
     <button class="bottone primario" type="submit">Aggiungi</button>

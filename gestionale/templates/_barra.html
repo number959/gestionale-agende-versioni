@@ -1,0 +1,26 @@
+{#- La barra in alto (tappa 2 della base, la cornice della veste nuova; tavole Nefro-*, alta 62 px): il percorso
+    (struttura › voce › linguetta, menu.percorso), la ricerca rapida di prima (stessi id, stesso indirizzo dei pezzi
+    chiesti mentre si scrive, stessa etichetta: gestionale.js la trova per id) e il posto della campanella, che arriva
+    nella tappa 3 (fino ad allora le notifiche restano quelle di prima, in basso a destra). Tutto dentro
+    data-cornice="barra". I segni › fra i pezzi del percorso li disegna veste.css: non sono testo della pagina.
+    Dagli altri PC (1.13, accessi.py) dopo la ricerca c'è chi è entrato, con «La mia password» ed «Esci»
+    (_utente_rete.html); sul PC della segreteria utente_rete non c'è e la barra resta quella di prima. La ricerca c'è
+    solo se almeno una pagina dei suoi risultati si apre (accessi.ricerca_utile: sul PC sempre; l'«if» sta dentro le
+    righe, così sul PC l'HTML resta quello di prima). -#}
+{%- from "_icone.html" import icona -%}
+{%- set _m = menu_della_pagina() -%}
+{%- set _pezzi = percorso_della_pagina(_m, request.endpoint, marchio_di(_m.sid).nome) %}
+<header class="v-barra" data-cornice="barra">
+  <p class="v-percorso">{% for p in _pezzi %}<span>{{ p }}</span>{% endfor %}</p>
+  {% if ricerca_utile() %}<div class="v-cerca" role="search" data-guida="menu-cerca">
+    {{ icona('search') }}
+    <input type="search" id="ricerca-rapida" placeholder="Cerca (tasto /)" autocomplete="off"
+           aria-label="Cerca un paziente, un medico, un giorno o una prestazione"
+           data-indirizzo="{{ url_for('segreteria.cerca_tutto', struttura=_m.sid) }}">
+    <div class="risultati-rapidi" id="risultati-rapidi" hidden></div>
+  </div>{% endif %}
+  {%- if utente_rete %}
+  {% include "_utente_rete.html" %}
+  {%- endif %}
+  <span class="v-posto-campanella" aria-hidden="true"></span>
+</header>

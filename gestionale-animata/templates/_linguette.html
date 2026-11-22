@@ -1,0 +1,12 @@
+{#- Le linguette della voce accesa (tappa 2 della base): le pagine della stessa area, al posto delle tendine del menu di
+    prima, con gli stessi indirizzi. Fatte con il pezzo linguette di _pezzi.html, da menu.py: la riga piccola delle
+    tendine di prima diventa il title; la linguetta che porta in un'altra area (l'Elenco del giorno della Segreteria,
+    che si apre nell'Agenda) ha la freccina e non si accende. base.html le mette in cima al contenuto, nel blocco
+    «linguette»: una pagina può svuotarlo e metterle nella sua testa, sotto l'h1, come nelle tavole (tappe 4-9). -#}
+{%- from "_pezzi.html" import linguette -%}
+{%- set _m = menu_della_pagina() -%}
+{%- if _m.linguette %}
+<div class="v-linguette-cornice" data-cornice="linguette">
+  {{ linguette(_m.linguette_del_pezzo, etichetta=_m.etichetta_linguette) }}
+</div>
+{%- endif %}

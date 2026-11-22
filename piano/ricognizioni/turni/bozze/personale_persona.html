@@ -1,0 +1,41 @@
+{#- BOZZA tappa 7: la scheda della persona (tavola Turni5), «nella pagina»: stessa cornice e stesse linguette dei
+    Turni (accesa «Persone»), non più una pagina stretta a parte. Ordine: nome + ruolo in piccolo, «Torna alle persone
+    · Turni», il modulo in una scheda (max 880 px, due colonne), poi «Elimina» in una scheda a parte.
+    Il modulo è quello di oggi campo per campo: stessi id/name/value/maxlength/required/autofocus/placeholder/
+    inputmode, l'ordine dei campi, «Salva» primario (Ctrl+Invio, gestionale.js:531), «Salva e aggiungi un'altra»
+    name=ancora value=1, «Annulla». Agganci di turni.js: .scelta-ruolo input[name=ruolo] e .campo-medico (con la sua
+    select) per mostrare «Medico dell'agenda» solo ai medici. Prove: 'value="OSS" checked' (ordine degli attributi),
+    .modulo-persona button.primario, .elimina-persona button[type=submit], .ruolo-opzione, .campo-medico, #cognome. -#}
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% block titolo %}{{ p.etichetta if p else 'Nuova persona' }}{% endblock %}
+{% block corpo %}
+{%- macro val(nome, difetto='') -%}{{ campi.get(nome, difetto) if campi else difetto }}{%- endmacro -%}
+{%- set c = campi if campi else {} -%}
+<div class="v-pagina v-turni pagina-persona">          {#- - tolta «pagina» -#}
+  <span class="marchio solo-stampa">{% include "_marchio.html" %}</span>
+  {#- intestazione dei Turni e {% include "_personale_linguette.html" %} con accesa='persone' -#}
+  <h1 class="v-titolo-sezione">{{ p.etichetta if p else 'Nuova persona' }}{% if p %} <small class="sotto-titolo">{{ p.ruolo_etichetta|lower }}</small>{% endif %}</h1>
+  <p class="v-sotto"><a href="{{ url_for('personale.persone') }}">Torna alle persone</a> · <a href="{{ url_for('personale.turni') }}">Turni</a></p>
+
+  <section class="v-scheda">
+  <form method="post" class="modulo-persona">
+    … i campi di oggi, identici (righe 13-55): .campo meta, fieldset.scelta-ruolo con label.ruolo-opzione
+      (input radio PRIMA dello span, come oggi: il CSS usa input:checked + span), .campo-medico, struttura solo con
+      più strutture, note, «In servizio», div.azioni con i tre bottoni …
+  </form>
+  </section>
+  {% if p %}
+  <section class="v-scheda">
+  {#- la domanda: fino alla tappa 3 il confirm di oggi (tojson, prove_18.py p_domanda_elimina: un solo modulo con
+      onsubmit nella pagina); dalla tappa 3 data-conferma e risposta=si -#}
+  <form method="post" class="elimina-persona" onsubmit='return confirm({{ ("Eliminare %s?" % p.etichetta)|tojson }})'>
+    <input type="hidden" name="azione" value="elimina">
+    <button class="bottone con-icona pericolo v-bottone v-pericolo" type="submit">{{ icona('trash-2') }}Elimina</button>
+    <span class="aiuto">Solo se non ha turni: altrimenti si toglie la spunta «In servizio».</span>
+  </form>
+  </section>
+  {% endif %}
+</div>
+<script src="{{ url_for('static', filename='turni.js') }}"></script>
+{% endblock %}

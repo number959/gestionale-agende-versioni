@@ -1,0 +1,57 @@
+{#- BOZZA tappa 7: Tipi di turno e coperture minime (tavola Turni6). Ordine della tavola: intestazione dei Turni e
+    linguette (accesa «Tipi di turno»); «Tipi di turno» + «codici, orari e colori»; «Torna ai turni · Persone»; la nota;
+    due colonne: a sinistra la tabella dei tipi (scheda attaccata), a destra il modulo «Nuovo tipo di turno» /
+    «Modifica X» in una scheda; poi «Coperture minime» con la nota, la tabella in una scheda e il modulo in una scheda.
+    A 1366 le due colonne stanno in 1046 px: ~600 + ~430 (la tavola a 1366 non scorre di lato, misurato).
+    Restano: le ancore #modulo-tipo e #coperture (il server rimanda lì, «?tipo=…#modulo-tipo» le usa), i tre moduli
+    (azione nuovo_tipo/salva_tipo/elimina_tipo/elimina_copertura/nuova_copertura con i loro hidden), gli id dei campi
+    (#codice, #nome-tipo, #categoria con data-categoria-tipo, #colore, #anteprima-tipo, #ora_inizio, #ora_fine,
+    #pausa_min, #cop-ruolo, #cop-tipo, #cop-area, #cop-minimo, g0…g6), .orario-tipo sui tre campi d'orario
+    (turni.js:1206 li nasconde), datalist aree-cop, data-guida tipi-elenco / tipi-coperture, «Togli» come
+    button.collegamento in un modulo per riga, classi elenco elenco-tipi / elenco-coperture, td.azione. -#}
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Tipi di turno{% endblock %}
+{% block corpo %}
+{%- set m = modifica -%}
+<div class="v-pagina v-turni pagina-tipi">            {#- - tolte «pagina larga» -#}
+  <span class="marchio solo-stampa">{% include "_marchio.html" %}</span>
+  {#- intestazione dei Turni e {% include "_personale_linguette.html" %} con accesa='tipi' -#}
+  <h1 class="v-titolo-sezione">Tipi di turno <small class="sotto-titolo">codici, orari e colori</small></h1>
+  <p class="v-sotto"><a href="{{ url_for('personale.turni') }}">Torna ai turni</a> · <a href="{{ url_for('personale.persone') }}">Persone</a></p>
+  <p class="nota">… la nota di oggi, parola per parola …</p>
+
+  <div class="v-due-colonne">                          {#- + griglia 1fr / 430px; sotto i 1100 px una colonna -#}
+    <section class="v-scheda v-attaccata">
+      <div class="v-tabella-contenitore">
+      <table class="elenco elenco-tipi v-tabella" data-guida="tipi-elenco">
+        <thead><tr><th>Codice</th><th>Nome</th><th>Categoria</th><th>Orario</th><th>Ore</th><th></th></tr></thead>
+        … le righe di oggi (righe 16-25) …
+      </table>
+      </div>
+    </section>
+    <section class="v-scheda">
+      <h2 class="sezione v-scheda-titolo" id="modulo-tipo">{{ 'Modifica ' ~ m.codice if m else 'Nuovo tipo di turno' }}</h2>
+      <form method="post" class="modulo-tipo">… identico (righe 29-53) …</form>
+      {% if m %}
+      {#- fino alla tappa 3 il confirm di oggi; m.codice è solo lettere e cifre (il server lo controlla) -#}
+      <form method="post" class="elimina-tipo" onsubmit="return confirm('Eliminare il tipo {{ m.codice }}?')">… identico …</form>
+      {% endif %}
+    </section>
+  </div>
+
+  <h2 class="sezione v-titolo-sezione" id="coperture">Coperture minime</h2>
+  <p class="nota">… la nota di oggi …</p>
+  {% if coperture %}
+  <section class="v-scheda v-attaccata">
+    <div class="v-tabella-contenitore">
+    <table class="elenco elenco-coperture v-tabella" data-guida="tipi-coperture">… identica (righe 67-78), con thead …</table>
+    </div>
+  </section>
+  {% endif %}
+  <section class="v-scheda">
+    <form method="post" class="modulo-copertura">… identico (righe 81-93) …</form>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='turni.js') }}"></script>
+{% endblock %}

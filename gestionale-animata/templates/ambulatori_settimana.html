@@ -24,10 +24,10 @@
       <div class="tendina" role="menu">
         <a href="{{ url_for('ambulatori.settimana_excel', iso=lunedi.isoformat(), struttura=sid) }}"><b>La matrice in Excel</b><small>questa settimana, con assenze e chiusure: per la direzione sanitaria</small></a>
         <a href="{{ url_for('ambulatori.settimana_excel', iso=lunedi.isoformat(), struttura=sid, tipo=1) }}"><b>La settimana tipo in Excel</b><small>solo i turni che si ripetono, senza assenze</small></a>
-        {% if vista.sale %}<a href="{{ url_for('esportazioni.scarica', periodo='settimana', parte='sala', iso=lunedi.isoformat(), struttura=sid) }}"><b>La sala operatoria in Excel</b><small>chirurghi e interventi della settimana, sala per sala</small></a>
+        {% if vista.sale and puo('statistiche') %}<a href="{{ url_for('esportazioni.scarica', periodo='settimana', parte='sala', iso=lunedi.isoformat(), struttura=sid) }}"><b>La sala operatoria in Excel</b><small>chirurghi e interventi della settimana, sala per sala</small></a>
         <a href="{{ url_for('esportazioni.scarica', periodo='settimana', parte='tutto', iso=lunedi.isoformat(), struttura=sid) }}"><b>Ambulatori e sala in Excel</b><small>tutto insieme, in fogli separati</small></a>{% endif %}
         <a href="{{ url_for('ambulatori.mese', aaaamm=aaaamm, struttura=sid) }}"><b>Programmazione del mese</b><small>per specialità e medico, con le date in cui viene</small></a>
-        <a href="{{ url_for('esportazioni.pagina', data=lunedi.isoformat(), struttura=sid) }}"><b>Tutte le esportazioni</b><small>giorno, settimana e mese: ambulatori, sala o tutto insieme</small></a>
+        {% if puo('statistiche') %}<a href="{{ url_for('esportazioni.pagina', data=lunedi.isoformat(), struttura=sid) }}"><b>Tutte le esportazioni</b><small>giorno, settimana e mese: ambulatori, sala o tutto insieme</small></a>{% endif %}
         <a href="#" onclick="window.print(); return false"><b>Stampa</b><small>questa pagina</small></a>
       </div>
     </div>
@@ -62,7 +62,7 @@
         {% else %}
           {% for p in c.presenze %}
           <span class="turno-sett" style="border-left-color: {{ p.operatore.colore_sicuro }}">
-            <a href="{{ url_for('anagrafiche.turno', tid=p.turno.id, torna=request.full_path.rstrip('?')) }}" title="Apri il turno di {{ p.operatore.etichetta }}">{{ p.operatore.cognome }}</a> <small>{{ fascia(p.da, p.a) }}</small>
+            <a href="{{ url_for('anagrafiche.turno', tid=p.turno.id, torna=request.full_path.rstrip('?')) }}" data-guida="matrice-turno" title="Apri il turno di {{ p.operatore.etichetta }}">{{ p.operatore.cognome }}</a> <small>{{ fascia(p.da, p.a) }}</small>
             <form method="post" action="{{ url_for('ambulatori.togli') }}" class="togli-turno">
               <input type="hidden" name="turno" value="{{ p.turno.id }}"><input type="hidden" name="data" value="{{ c.data.isoformat() }}">
               <input type="hidden" name="struttura" value="{{ sid }}"><input type="hidden" name="torna" value="{{ request.full_path.rstrip('?') }}">
@@ -76,7 +76,7 @@
           {% for da, a in c.libere %}<span class="libero">libero {{ fascia(da, a) }}</span>{% endfor %}
           {% if medici and c.data >= oggi %}
           <details class="metti">
-            <summary title="Metti un medico in {{ riga.risorsa.nome }}, {{ giorni_nomi[c.data.weekday()] }} {{ c.meta.nome }}">+</summary>
+            <summary data-guida="matrice-metti" title="Metti un medico in {{ riga.risorsa.nome }}, {{ giorni_nomi[c.data.weekday()] }} {{ c.meta.nome }}">+</summary>
             <form method="post" action="{{ url_for('ambulatori.metti') }}">
               <input type="hidden" name="risorsa" value="{{ riga.risorsa.id }}"><input type="hidden" name="data" value="{{ c.data.isoformat() }}">
               <input type="hidden" name="struttura" value="{{ sid }}"><input type="hidden" name="torna" value="{{ request.full_path.rstrip('?') }}">
@@ -119,7 +119,7 @@
         {% else %}
           {% for p in c.presenze %}
           <span class="turno-sett" style="border-left-color: {{ p.operatore.colore_sicuro }}">
-            <a href="{{ url_for('anagrafiche.turno', tid=p.turno.id, torna=request.full_path.rstrip('?')) }}" title="Apri il turno di {{ p.operatore.etichetta }}">{{ p.operatore.cognome }}</a> <small>{{ fascia(p.da, p.a) }}</small>
+            <a href="{{ url_for('anagrafiche.turno', tid=p.turno.id, torna=request.full_path.rstrip('?')) }}" data-guida="matrice-turno" title="Apri il turno di {{ p.operatore.etichetta }}">{{ p.operatore.cognome }}</a> <small>{{ fascia(p.da, p.a) }}</small>
             {%- set n = (c.per_chirurgo or {}).get(p.operatore.id, 0) %}
             {%- if n and p.operatore.id not in (c.presenze[:loop.index0]|map(attribute='operatore')|map(attribute='id')|list) %}
             <a class="interventi-sala" href="{{ url_for('sala.giornata', iso=c.data.isoformat(), struttura=sid) }}" title="Gli interventi di {{ p.operatore.etichetta }} quel giorno">{{ n }} intervent{{ 'o' if n == 1 else 'i' }}</a>{% endif %}

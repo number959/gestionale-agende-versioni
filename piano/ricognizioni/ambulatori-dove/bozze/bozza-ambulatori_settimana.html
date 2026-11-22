@@ -1,0 +1,53 @@
+{#- BOZZA (tappa 8). ambulatori_settimana.html nella veste nuova (tavola Nefro-Ambulatori1-Pianificazione).
+    Regola: la MATRICE RESTA LA <table> DI OGGI, con le stesse classi e lo stesso HTML dentro le celle: le prove e il
+    foglio di stile di stampa la leggono così (prove_112.py:577,1197-1231; prove_112_browser.py:78-168;
+    stile.css:631-636). L'aspetto nuovo si dà con regole CSS che partono dal contenitore nuovo (.v-matrice …), non con
+    classi nuove sulle celle. Cambiano solo: la testa (bozza-_ambulatori_testa.html), la striscia, la scheda bianca
+    attorno, la grandezza del «+». -#}
+{% extends "base.html" %}
+{% from "_pezzi.html" import striscia, passo %}
+{% from "_ambulatori_testa.html" import testa_ambulatori %}
+{% block titolo %}Ambulatori · {{ titolo }}{% endblock %}          {#- <title> identico a oggi -#}
+{% block linguette %}{% endblock %}
+{% block corpo %}
+{% call testa_ambulatori(titolo) %}  {#- h2 = «Settimana dal 16 novembre al 22 novembre 2026» (prove_112.py:1200) -#}
+  … frecce (data-tasto precedente/successivo, title di oggi), «Oggi» (era «Questa settimana»: parola approvata),
+    la tendina della struttura (modulo GET di oggi), «Stampa e scarica» (righe 22-33 di oggi, invariate) …
+{% endcall %}
+
+{#- la striscia: il conto che oggi sta accanto al titolo (riga 7). Oggi è UNA riga «59 mezze giornate libere, 3 con ore
+    libere»; nella striscia diventano due voci: si perde solo la virgola (da scrivere nell'elenco dei cambiamenti). -#}
+{{ striscia([(vista.libere, 'mezza giornata libera' if vista.libere == 1 else 'mezze giornate libere')]
+            + ([(vista.parziali, 'con ore libere')] if vista.parziali else [])) }}
+            {#- etichetta «I conti della settimana» (aria-label della tavola): nuova, solo se approvata -#}
+
+<div class="telaio v-telaio">   {#- .telaio resta: stile.css:845 lo usa in stampa -#}
+<p class="nota" data-guida="matrice-spiegazione">… testo di oggi, identico …</p>
+{% if vista.righe or vista.sale %}
+<section class="v-scheda v-matrice">   {#- la scheda bianca SENZA overflow (né hidden né auto): il «+» della prima riga
+                                           si apre verso l'alto e sale 85 px sopra la tabella (misurato: form alto
+                                           261 px, top 159 contro tabella a 244); dentro un contenitore che scorre di
+                                           lato verrebbe tagliato (misurato). Niente pezzo tabella() qui. -#}
+<table class="settimana matrice" id="matrice-ambulatori" data-lunedi="{{ lunedi.isoformat() }}">
+  … thead, tbody, <tbody class="parte-sala" …> ESATTAMENTE come oggi (righe 41-139) …
+  {#- da non toccare, perché le prove cercano il testo:
+      <tbody class="parte-sala"        (nessuna classe in più: prove_112.py:577, 884, 1202)
+      <details class="metti">          (nessuna classe né attributo in più: prove_112.py:1218 conta la stringa)
+      i due campi nascosti del «+» uno dopo l'altro: name="risorsa" value=".."><input type="hidden" name="data" …
+                                        (prove_112.py:1228)
+      «Gli interventi di X quel giorno">2 interventi</a>»     (prove_112.py:885: title e testo attaccati)
+      «Esempietti <small>senza turno</small>»                  (prove_112.py:579)
+      td.libera / .occupata / .parziale / .chiusa / .sala-vuota, span.disponibile, span.libero, .turno-sett,
+      th.stanza-sett, th.meta, td[data-cella], td[data-sala], form.togli-turno (prove_112_browser.py:78-168)
+      il bottone «Metti» con «primario»: Ctrl+Invio lo preme (gestionale.js:531; la tavola lo dice)
+      il «×»: dalla tappa 3 con data-conferma e risposta=si (oggi onclick confirm, riga 70) -#}
+</table>
+{#- legenda dei colori della tavola («verde: DISPONIBILE · verde tenue: occupata, con ore libere · grigio-azzurro:
+    occupata · grigio: chiusa · quasi bianco: sala libera»): testo NUOVO, non c'è oggi → solo se approvato -#}
+</section>
+<p class="nota legenda-matrice">… testo di oggi …</p>     {#- p.legenda-matrice: nascosta in stampa (stile.css:631) -#}
+{% else %}
+<p class="vuoto">… di oggi …</p>
+{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% from "_pezzi.html" import intestazione, scheda, tabella, euro %}
+{% from "_pezzi_striscia_numeri.html" import striscia_numeri %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Statistiche{% endblock %}
+{# ore con un decimale, arrotondate a meta' per eccesso: 75 minuti = 1,3 #}
+{% macro ore(m) %}{% set d = ((m|int) + 3) // 6 %}{{ d // 10 }},{{ d % 10 }}{% endmacro %}
+{% macro perc(x, cifre=0) %}{{ ('%.' ~ cifre ~ 'f')|format(x)|replace('.', ',') }}%{% endmacro %}
+{% macro barra(valore, massimo) %}<span class="barra-dato v-barra-dato"><span style="width: {{ [100, (100.0 * valore / massimo) if massimo else 0]|min|round(1) }}%"></span></span>{% endmacro %}
+{% block corpo %}
+{#- BOZZA tappa 4 (veste 1.13), tavola Stat1-Statistiche: riga piccola «Statistiche · <struttura>» e titolo
+    «Statistiche» (DA APPROVARE: oggi il titolo è «Statistiche · <struttura>», vedi il resoconto); il modulo dei filtri
+    in una scheda bianca; i numeri in cima nella striscia; ogni tabella nella sua scheda, con il titolo dentro e i
+    numeri a destra; Giorni a sinistra, le tabelline a destra.
+    Restano per forza: il modulo GET con struttura (tendina o nascosto), dal, al e «Aggiorna» con la classe primario
+    (Ctrl+Invio); i due collegamenti dentro il modulo, «Riepilogo del mese per medico» con la classe bottone
+    (guida.py:505 cerca a.bottone con «Riepilogo del mese»); ul.numeri e .barra-dato (animata: animazioni.js:93-94,
+    135; prove_animazioni.py:78-90); «Chi li manda» (prove_14.py:1348); il testo di seguito «Indirizzati alle altre
+    strutture Centro Sud 2 Centro Nord 1» (prove_19.py:982); niente titoli nelle barre (sarebbero testi nuovi).
+    Le euro con il pezzo comune euro(c, se_zero='—'): stesso testo della macro di oggi per ogni intero (provato da
+    -10^11 a 10^11). Le celle numeriche hanno class="v-numero": prove_funzioni.py:1270 cerca «<td>3,0</td>» e va
+    riscritta nel primo passo (vedi il resoconto). -#}
+{%- set voci = [
+  {'parti': [(dati.appuntamenti, 'appuntamenti')]},
+  {'parti': [(ore(dati.prenotati), 'ore prenotate su'),
+             (ore(dati.capacita), 'di turno' ~ ((' (' ~ perc(100.0 * dati.prenotati / dati.capacita) ~ ')') if dati.capacita else ''))]},
+  {'parti': [(dati.disdetti, 'disdetti')]},
+  {'parti': [(dati.non_presentati, 'non presentati' ~ ((' (' ~ perc(dati.tasso_assenze, 1) ~ ')') if dati.tasso_assenze is not none else ''))],
+   'allarme': dati.tasso_assenze and dati.tasso_assenze > 10},
+  {'parti': [(dati.pazienti_nuovi, 'pazienti nuovi')]},
+] + ([{'parti': [(euro(dati.importo_cent), 'euro indicati')]}] if dati.importo_cent else [])
+  + ([{'parti': [(euro(dati.incassato_cent), 'euro incassati')]}] if dati.incassato_cent else []) %}
+<div class="pagina larga v-pagina v-statistiche">
+  {% call intestazione('Statistiche', sopra='Statistiche · ' ~ st.nome) %}
+  <p class="sotto v-sotto">Dal {{ dal.strftime('%d/%m/%Y') }} al {{ al.strftime('%d/%m/%Y') }}.
+    {% for nome, da, a in scorciatoie %}<a href="{{ url_for('viste.statistiche', struttura=sid, dal=da.isoformat(), al=a.isoformat()) }}">{{ nome }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+  {% endcall %}
+  <form method="get" class="filtri v-barra-comandi">
+    {% if strutture|length > 1 %}
+    <label class="v-etichetta-in-riga">Struttura <span class="v-tendina"><select name="struttura">{% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}</select></span></label>
+    {% else %}<input type="hidden" name="struttura" value="{{ sid }}">{% endif %}
+    <label class="v-etichetta-in-riga">Dal <input type="date" name="dal" value="{{ dal.isoformat() }}"></label>
+    <label class="v-etichetta-in-riga">Al <input type="date" name="al" value="{{ al.isoformat() }}"></label>
+    <button class="primario v-bottone v-principale" type="submit">Aggiorna</button>
+    <a class="bottone v-bottone" href="{{ url_for('viste.statistiche_excel', struttura=sid, dal=dal.isoformat(), al=al.isoformat()) }}">{{ icona('file-spreadsheet') }}Scarica in Excel</a>
+    <a class="bottone v-bottone" href="{{ url_for('cruscotto.riepilogo', aaaamm=dal.strftime('%Y-%m'), struttura=sid if strutture|length > 1 else none) }}">Riepilogo del mese per medico</a>
+  </form>
+
+  {{ striscia_numeri(voci) }}
+
+  {% call scheda('Saturazione delle stanze', sotto='Ore prenotate sulle ore di turno, tolte assenze, chiusure e festivi chiusi. Sopra il 100% ci sono appuntamenti fuori turno.', livello=2, attaccata=true) %}
+  {% call tabella(classe='elenco') %}
+    <thead><tr><th>Stanza</th><th class="v-numero">Ore di turno</th><th class="v-numero">Ore prenotate</th><th class="v-numero">Appuntamenti</th><th class="largo">Saturazione</th></tr></thead>
+    <tbody>
+    {% for x in dati.per_stanza %}
+    <tr><td>{{ x.risorsa.nome }}</td><td class="v-numero">{{ ore(x.capacita) }}</td><td class="v-numero">{{ ore(x.prenotati) }}</td><td class="v-numero">{{ x.appuntamenti }}</td>
+      <td>{% if x.saturazione is not none %}<span class="v-barra-e-numero">{{ barra(x.saturazione, 100) }} {{ perc(x.saturazione) }}</span>{% else %}<span class="senza">nessun turno</span>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  {% endcall %}
+  {% endcall %}
+
+  {% call scheda('Medici', livello=2, attaccata=true) %}
+  {% if dati.per_medico %}
+  {% set massimo = dati.per_medico|map(attribute='appuntamenti')|max %}
+  {% call tabella(classe='elenco') %}
+    <thead><tr><th>Medico</th><th class="largo">Appuntamenti</th><th class="v-numero">Ore</th><th class="v-numero">Ore di turno</th><th class="v-numero">Disdetti</th><th class="v-numero">Non presentati</th><th class="v-numero">Importi</th></tr></thead>
+    <tbody>
+    {% for m in dati.per_medico %}
+    <tr><td>{{ m.operatore.etichetta }}</td><td><span class="v-barra-e-numero">{{ barra(m.appuntamenti, massimo) }} {{ m.appuntamenti }}</span></td>
+      <td class="v-numero">{{ ore(m.minuti) }}</td><td class="v-numero">{{ ore(m.turno_minuti) }}</td><td class="v-numero">{{ m.disdetti }}</td>
+      <td class="v-numero">{{ m.assenti }}{% if m.tasso_assenze is not none and m.assenti %} ({{ perc(m.tasso_assenze) }}){% endif %}</td><td class="v-numero">{{ euro(m.importo_cent, se_zero='—') }}</td></tr>
+    {% endfor %}
+    </tbody>
+  {% endcall %}
+  {% else %}<p class="vuoto v-vuoto">Nessun appuntamento nel periodo.</p>{% endif %}
+  {% endcall %}
+
+  {% call scheda('Prestazioni', livello=2, attaccata=true) %}
+  {% if dati.per_prestazione %}
+  {% set massimo = dati.per_prestazione|map(attribute='appuntamenti')|max %}
+  {% call tabella(classe='elenco') %}
+    <thead><tr><th>Prestazione</th><th class="largo">Appuntamenti</th><th class="v-numero">Ore</th><th class="v-numero">Importi</th></tr></thead>
+    <tbody>
+    {% for p in dati.per_prestazione %}
+    <tr><td>{{ p.nome }}</td><td><span class="v-barra-e-numero">{{ barra(p.appuntamenti, massimo) }} {{ p.appuntamenti }}</span></td><td class="v-numero">{{ ore(p.minuti) }}</td><td class="v-numero">{{ euro(p.importo_cent, se_zero='—') }}</td></tr>
+    {% endfor %}
+    </tbody>
+  {% endcall %}
+  {% else %}<p class="vuoto v-vuoto">Nessun appuntamento nel periodo.</p>{% endif %}
+  {% endcall %}
+
+  <div class="due-colonne v-stat-colonne">
+    {% call scheda('Giorni della settimana', livello=2, attaccata=true) %}
+      {% set massimo = dati.per_giorno_settimana|max %}
+      {% call tabella(classe='elenco') %}
+        {% for n in dati.per_giorno_settimana %}<tr><td>{{ giorni_nomi[loop.index0] }}</td><td class="largo"><span class="v-barra-e-numero">{{ barra(n, massimo) }} {{ n }}</span></td></tr>{% endfor %}
+      {% endcall %}
+    {% endcall %}
+    <div class="v-colonna">
+      {% call scheda('Tipo di visita', livello=2, attaccata=true) %}
+      {% call tabella(classe='elenco') %}
+        {% for nome, n in dati.per_tipo %}<tr><td>{{ nome }}</td><td class="v-numero">{{ n }}</td></tr>{% else %}<tr><td class="senza">nessun dato</td></tr>{% endfor %}
+      {% endcall %}
+      {% endcall %}
+      {% call scheda('Pazienti nuovi: come ci hanno conosciuto', livello=2, attaccata=true) %}
+      {% call tabella(classe='elenco') %}
+        {% for nome, n in dati.per_provenienza %}<tr><td>{{ nome }}</td><td class="v-numero">{{ n }}</td></tr>{% else %}<tr><td class="senza">nessun paziente nuovo</td></tr>{% endfor %}
+      {% endcall %}
+      {% endcall %}
+      {% if dati.inviati %}
+      {% call scheda('Chi li manda', livello=2, attaccata=true) %}
+      {% call tabella(classe='elenco') %}{% for nome, n in dati.inviati %}<tr><td>{{ nome }}</td><td class="v-numero">{{ n }}</td></tr>{% endfor %}{% endcall %}
+      {% endcall %}
+      {% endif %}
+      {% if indirizzati %}
+      {% call scheda('Indirizzati alle altre strutture', livello=2, attaccata=true) %}
+      {% call tabella(classe='elenco') %}{% for nome, n in indirizzati %}<tr><td>{{ nome }}</td><td class="v-numero">{{ n }}</td></tr>{% endfor %}{% endcall %}
+      <p class="nota v-piede-scheda"><a href="{{ url_for('dovesifa.registro', mese=dal.strftime('%Y-%m')) }}">Il registro dei pazienti indirizzati</a></p>
+      {% endcall %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
