@@ -161,13 +161,26 @@ scritta in `prove_prova.py`. Si costruisce con `CREA_PROVA.bat` (o `strumenti/cr
 `strumenti/confronta_rami.py` (non è nel giro di `tutte_le_prove.py`: vuole git) confronta il programma del ramo
 principale con quello della cartella, sugli stessi dati di prova copiati due volte: segue i collegamenti da tutte
 le pagine senza parametri (ogni tipo di pagina al massimo 4 volte) e confronta risposte, moduli e campi (anche
-nascosti), collegamenti, `data-tasto`, `data-guida`, testo, JSON e Excel cella per cella; poi i 9 fogli da
-stampare (fino a 3 pagine di ognuno, prese dal giro) in PDF come con Ctrl+P, pixel per pixel (`strumenti/fogli_pdf.py`,
-vuole `pdftoppm`; senza, foto in modo stampa che vedono meno; `--senza-pdf` per saltarli). Un foglio mai incontrato
-nel giro conta come diverso. Nella veste nuova si lancia dopo ogni passo: le differenze che restano devono essere
-solo quelle volute, una per una. Quelle approvate stanno in `strumenti/cambiamenti_approvati.txt` (uguale nelle due
-cartelle; regole «aggiunto» e «sostituisci» per chiave), che il lanciatore conta a parte; `--senza-approvati` le
-mostra tutte. Un cambiamento nuovo si approva scrivendo la regola nello stesso commit, con il perché.
+nascosti), collegamenti, `data-tasto`, `data-guida`, testo, JSON e Excel cella per cella. Dalla tappa 2 collegamenti,
+segni e righe di testo di una pagina sono insiemi con le quantità, senza ordine (la veste sposta le cose), e i moduli si
+confrontano per indirizzo, metodo e campi, anche loro senza ordine ma con le quantità; `--con-ordine` guarda anche
+l'ordine, come nella tappa 1 (senza ordine due valori scambiati di posto non si vedono: nel dubbio, `--con-ordine`).
+La cornice (menu, barra in alto, linguette, campanella, zona dei messaggi, tasti rapidi) sta fuori dal confronto di ogni
+pagina e si confronta una volta a parte: per ogni tipo le voci (parola, indirizzo, `data-tasto`, `data-guida`), i segni
+e il testo; su ogni pagina quali tipi ci sono e quale voce è accesa; gli indirizzi interi delle voci (portano ancora
+struttura e giorno). Nella veste nuova ogni contenitore della cornice ha `data-cornice="<tipo>"` (`menu`, `barra`,
+`linguette`, `campanella`, `messaggi`, `tasti`) e la voce accesa ha `aria-current`; in una pagina senza `data-cornice`,
+come nel principale, la cornice sono `nav.menu`, `#notifiche`, `#aiuto-tasti` e `.avvisi`, con la classe `attivo`
+(`CORNICE_DI_OGGI`): un pezzo della cornice nuova senza `data-cornice` finisce nel confronto delle pagine. Poi i 17
+fogli e pagine che si stampano: i 9 fogli da stampare e, dalla tappa 2, le 8 pagine che si stampano con Ctrl+P (mese e
+settimana dell'Agenda, cassa del giorno e del mese, settimana, mese e riepilogo degli Ambulatori, mese dei Turni), che
+in stampa restano identiche a oggi: fino a 3 pagine di ognuno, prese dal giro, in PDF come con Ctrl+P, pixel per pixel
+(`strumenti/fogli_pdf.py`, vuole `pdftoppm`; senza, foto in modo stampa che vedono meno; `--senza-pdf` per saltarli).
+Un foglio mai incontrato nel giro conta come diverso. Nella veste nuova si lancia dopo ogni passo: le differenze che
+restano devono essere solo quelle volute, una per una. Quelle approvate stanno in `strumenti/cambiamenti_approvati.txt`
+(uguale nelle due cartelle; regole «aggiunto» e «sostituisci» per chiave, anche `voci`, `cornici` e `accese` della
+cornice; una sostituzione che lascia vuoto un elemento lo toglie), che il lanciatore conta a parte; `--senza-approvati`
+le mostra tutte. Un cambiamento nuovo si approva scrivendo la regola nello stesso commit, con il perché.
 I passi della guida indicano un punto della pagina solo con `[data-guida="…"]` o con un id (mai una classe o un
 tag, che cambiano con la veste): lo controlla `prove_guida.py`, che vuole anche che il nome esista in un modello (scritto
 `data-guida="nome"` o, dalla tappa 1-bis, passato a un pezzo di `_pezzi.html` con `guida='nome'`).

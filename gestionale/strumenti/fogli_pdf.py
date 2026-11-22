@@ -1,14 +1,19 @@
 # -*- coding: utf-8 -*-
-"""I 9 fogli da stampare in PDF, confrontati pixel per pixel: lo usa strumenti/confronta_rami.py (tappa 1 della
-base, 22/11/2026).
+"""I 9 fogli da stampare e le 8 pagine che si stampano, in PDF, confrontati pixel per pixel: lo usa
+strumenti/confronta_rami.py (tappa 1 della base, 22/11/2026; le 8 pagine dalla tappa 2).
 
 I «fogli da stampare» sono i 9 modelli con `{% set foglio_carta = true %}` e il blocco menu vuoto
 (agenda_medico, aiuto_stampa, dove_stampa, lista_operatoria, promemoria, riepilogo_medici, stampa,
-stampa_modulo, tariffario_stampa). Il lanciatore li incontra già seguendo i collegamenti (provato: tutti
-e 9, sulle 607 pagine del giro). Di ogni foglio si prendono le PER_TIPO pagine più piene (byte dell'HTML),
-una per variante d'indirizzo; si fa il PDF con Chromium come Ctrl+P (A4, formato e margini da @page di
-stile.css, sfondi come Chrome di partenza: solo dove il CSS dice print-color-adjust: exact), lo si
+stampa_modulo, tariffario_stampa). Le «pagine che si stampano» sono 8 pagine di tutti i giorni, con il menu,
+che si stampano con Ctrl+P (mese e settimana dell'Agenda, cassa del giorno e del mese, settimana, mese e
+riepilogo degli Ambulatori, il mese dei Turni): la veste nuova le cambia a schermo, ma stampate restano
+identiche a oggi (decisione del 22/11/2026). Il lanciatore li incontra già seguendo i collegamenti (provato: tutti
+e 17, sulle 607 pagine del giro). Di ogni foglio si prendono le PER_TIPO pagine più piene (byte dell'HTML),
+una per variante d'indirizzo, e la più vuota; si fa il PDF con Chromium come Ctrl+P (A4, formato e margini da
+@page di stile.css, sfondi come Chrome di partenza: solo dove il CSS dice print-color-adjust: exact), lo si
 trasforma in immagini con pdftoppm e si confronta con Pillow: stesso numero di pagine, nessun pixel diverso.
+Le pagine con il menu si stampano un momento dopo che si sono aperte (ASPETTA_PAGINE), come chi preme Ctrl+P:
+nell'animata i numeri contano fino al valore per meno di un secondo.
 
 Data e ora di stampa («stampato il 22/11/2026 alle 09:41», «aggiornata al …», «… il 22/11/2026.») si
 scrivono uguali nelle due pagine prima del PDF (solo le cifre), e un foglio diverso si rifà una volta.
@@ -21,17 +26,32 @@ import re
 import shutil
 import subprocess
 
-FOGLI = (                                            # modello, indirizzo (senza la ?…): il secondo serve
-    ('stampa', r'/stampa/\d{4}-\d\d-\d\d'),          # solo se il programma non manda X-Modelli
-    ('agenda_medico', r'/agenda-medico/\d{4}-\d\d-\d\d'),
-    ('lista_operatoria', r'/lista-operatoria/\d{4}-\d\d-\d\d'),
-    ('promemoria', r'/appuntamento/\d+/promemoria'),
-    ('riepilogo_medici', r'/riepilogo-medici/\d{4}-\d\d'),
-    ('stampa_modulo', r'/appuntamento/\d+/modulo/\d+'),
-    ('tariffario_stampa', r'/cassa/tariffari/\d+/stampa'),
-    ('dove_stampa', r'/dove-si-fa/stampa'),
-    ('aiuto_stampa', r'/aiuto/stampa'),
+# nome, modello, indirizzo (senza la ?…), pagina con il menu. L'indirizzo serve solo se il programma non manda
+# X-Modelli, o se il modello fa anche altre pagine (DA_INDIRIZZO): il mese dei Turni ha il modello della settimana dei
+# Turni, il riepilogo degli Ambulatori quello del riepilogo della dashboard (/riepilogo-live/statistiche).
+FOGLI = (
+    ('stampa', 'stampa', r'/stampa/\d{4}-\d\d-\d\d', False),
+    ('agenda_medico', 'agenda_medico', r'/agenda-medico/\d{4}-\d\d-\d\d', False),
+    ('lista_operatoria', 'lista_operatoria', r'/lista-operatoria/\d{4}-\d\d-\d\d', False),
+    ('promemoria', 'promemoria', r'/appuntamento/\d+/promemoria', False),
+    ('riepilogo_medici', 'riepilogo_medici', r'/riepilogo-medici/\d{4}-\d\d', False),
+    ('stampa_modulo', 'stampa_modulo', r'/appuntamento/\d+/modulo/\d+', False),
+    ('tariffario_stampa', 'tariffario_stampa', r'/cassa/tariffari/\d+/stampa', False),
+    ('dove_stampa', 'dove_stampa', r'/dove-si-fa/stampa', False),
+    ('aiuto_stampa', 'aiuto_stampa', r'/aiuto/stampa', False),
+    # le 8 pagine che si stampano (dalla tappa 2)
+    ('mese', 'mese', r'/mese/\d{4}-\d\d', True),
+    ('settimana', 'settimana', r'/settimana/\d{4}-\d\d-\d\d', True),
+    ('cassa', 'cassa', r'/cassa/\d{4}-\d\d-\d\d', True),
+    ('cassa_mese', 'cassa_mese', r'/cassa/mese/\d{4}-\d\d', True),
+    ('ambulatori_settimana', 'ambulatori_settimana', r'/ambulatori/settimana/\d{4}-\d\d-\d\d', True),
+    ('ambulatori_mese', 'ambulatori_mese', r'/ambulatori/mese/\d{4}-\d\d', True),
+    ('ambulatori_riepilogo', 'ambulatori_riepilogo', r'/ambulatori/riepilogo', True),
+    ('turni_mese', 'personale_turni', r'/personale/turni/mese/(\d{4}-\d\d)?', True),
 )
+DA_INDIRIZZO = {'personale_turni', 'ambulatori_riepilogo'}   # modelli di più pagine: conta anche l'indirizzo
+CON_MENU = {n for n, _, _, menu in FOGLI if menu}
+ASPETTA_PAGINE = 1200                                # millisecondi, solo per le pagine con il menu
 PER_TIPO = 3
 DPI = 100                                            # A4 orizzontale = 1170×827 pixel
 LARGHEZZA_A4 = 1123                                  # 297 mm a 96 punti per pollice (solo senza pdftoppm)
@@ -72,12 +92,14 @@ PRONTA = "() => document.fonts.ready.then(() => Array.from(document.images).ever
 
 
 def tipo_di(percorso, modelli=None):
-    """Quale foglio è (o None): dall'intestazione X-Modelli se c'è, altrimenti dall'indirizzo."""
+    """Quale foglio è (o None): dall'intestazione X-Modelli se c'è, altrimenti dall'indirizzo. Il modello che fa più
+    pagine (DA_INDIRIZZO) vale solo con il suo indirizzo."""
+    strada = percorso.split('?')[0]
     if modelli is not None:
         nomi = {m[:-5] for m in modelli.split() if m.endswith('.html')}
-        return next((n for n, _ in FOGLI if n in nomi), None)
-    strada = percorso.split('?')[0]
-    return next((n for n, rx in FOGLI if re.fullmatch(rx, strada)), None)
+        return next((n for n, modello, rx, _ in FOGLI if modello in nomi
+                     and (modello not in DA_INDIRIZZO or re.fullmatch(rx, strada))), None)
+    return next((n for n, _, rx, _ in FOGLI if re.fullmatch(rx, strada)), None)
 
 
 def scegli_fogli(viste, per_tipo=PER_TIPO):
@@ -90,7 +112,7 @@ def scegli_fogli(viste, per_tipo=PER_TIPO):
         if t:
             per_foglio.setdefault(t, []).append((percorso, byte))
     scelti = []
-    for nome, _ in FOGLI:
+    for nome, _, _, _ in FOGLI:
         varianti, questi = set(), []
         pagine = sorted(per_foglio.get(nome, []), key=lambda x: -x[1])               # sorted è stabile
         for percorso, _ in pagine:
@@ -101,24 +123,28 @@ def scegli_fogli(viste, per_tipo=PER_TIPO):
         if pagine and pagine[-1][0] not in questi:        # e la più vuota («Nessun appuntamento»…)
             questi.append(pagine[-1][0])
         scelti += [(nome, p) for p in questi]
-    return scelti, [n for n, _ in FOGLI if n not in per_foglio]
+    return scelti, [n for n, _, _, _ in FOGLI if n not in per_foglio]
 
 
-def stampa_pdf(pagina, base, percorso, file_pdf):
+def stampa_pdf(pagina, base, percorso, file_pdf, aspetta=0):
     """Il PDF come Ctrl+P di Chrome. Torna (stato HTTP, quante date di stampa scritte uguali)."""
     r = pagina.goto(base + percorso, wait_until='load')
     pagina.evaluate(PRONTA)
+    if aspetta:
+        pagina.wait_for_timeout(aspetta)
     n = pagina.evaluate(NORMALIZZA_ORA)
     pagina.pdf(path=file_pdf, format='A4', prefer_css_page_size=True, print_background=False)
     return (r.status if r else 0), n
 
 
-def foto_stampa(pagina, base, percorso, file_png):
+def foto_stampa(pagina, base, percorso, file_png, aspetta=0):
     """Senza pdftoppm: la pagina intera con i CSS di stampa, larga come un A4 orizzontale."""
     pagina.set_viewport_size({'width': LARGHEZZA_A4, 'height': 794})
     pagina.emulate_media(media='print')
     r = pagina.goto(base + percorso, wait_until='load')
     pagina.evaluate(PRONTA)
+    if aspetta:
+        pagina.wait_for_timeout(aspetta)
     n = pagina.evaluate(NORMALIZZA_ORA)
     pagina.screenshot(path=file_png, full_page=True, animations='disabled', caret='hide')
     return (r.status if r else 0), n
@@ -148,7 +174,7 @@ def pixel_diversi(file_a, file_b, file_diff=None):
     return quanti, d.getbbox()
 
 
-def confronta_foglio(pagine, basi, percorso, cartella, tolleranza=0):
+def confronta_foglio(pagine, basi, percorso, cartella, tolleranza=0, aspetta=0):
     """Un foglio sui due programmi (pagine e basi: {'principale': …, 'qui': …}). [] se uguali."""
     os.makedirs(cartella, exist_ok=True)
     con_pdf = shutil.which('pdftoppm') is not None
@@ -156,11 +182,11 @@ def confronta_foglio(pagine, basi, percorso, cartella, tolleranza=0):
     for lato in ('principale', 'qui'):
         if con_pdf:
             f = os.path.join(cartella, lato + '.pdf')
-            stati[lato] = stampa_pdf(pagine[lato], basi[lato], percorso, f)
+            stati[lato] = stampa_pdf(pagine[lato], basi[lato], percorso, f, aspetta)
             immagini[lato] = in_immagini(f)
         else:
             f = os.path.join(cartella, lato + '.png')
-            stati[lato] = foto_stampa(pagine[lato], basi[lato], percorso, f)
+            stati[lato] = foto_stampa(pagine[lato], basi[lato], percorso, f, aspetta)
             immagini[lato] = [f]
     righe = []
     if stati['principale'] != stati['qui']:
@@ -194,10 +220,11 @@ def confronta_fogli(porte, viste, uscita, per_tipo=PER_TIPO, tolleranza=0):
         pagine = {lato: ctx.new_page() for lato in basi}
         for k, (nome, percorso) in enumerate(scelti, 1):
             cartella = os.path.join(uscita, '%02d-%s' % (k, nome))
-            differenze = confronta_foglio(pagine, basi, percorso, cartella, tolleranza)
+            aspetta = ASPETTA_PAGINE if nome in CON_MENU else 0
+            differenze = confronta_foglio(pagine, basi, percorso, cartella, tolleranza, aspetta)
             if differenze:                                   # un caso a metà di qualcosa: una volta ancora
                 shutil.rmtree(cartella, ignore_errors=True)
-                differenze = confronta_foglio(pagine, basi, percorso, cartella, tolleranza)
+                differenze = confronta_foglio(pagine, basi, percorso, cartella, tolleranza, aspetta)
             if differenze:
                 diversi += 1
                 righe.append('FOGLIO DIVERSO %s (%s)\n  %s' % (percorso, nome, '\n  '.join(differenze)))

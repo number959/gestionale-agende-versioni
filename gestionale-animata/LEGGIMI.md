@@ -2539,7 +2539,13 @@ vede cadere su un programma rotto apposta (un «mutante», fatto sempre su una c
 - **il confronto con il ramo principale** (`strumenti/confronta_rami.py`): stesse pagine, moduli, collegamenti, segni
   (`data-tasto`, `data-guida`, `role`, `aria-*`, `data-prova`), testi, JSON ed Excel, più i 9 fogli da stampare in PDF
   pixel per pixel (`strumenti/fogli_pdf.py`). I cambiamenti voluti stanno, uno per uno con il perché, in
-  `strumenti/cambiamenti_approvati.txt`.
+  `strumenti/cambiamenti_approvati.txt`. Dalla tappa 2: collegamenti, segni, testi e campi dei moduli si confrontano
+  senza ordine, come insiemi con le quantità (`--con-ordine` per vedere anche le cose spostate); la cornice (menu,
+  barra in alto, linguette, campanella, messaggi, tasti rapidi: i contenitori con `data-cornice`, e nel programma di
+  oggi `nav.menu`, `#notifiche`, `#aiuto-tasti`, `.avvisi`) si toglie da ogni pagina e si confronta una volta a parte,
+  voce per voce, con la voce accesa di ogni pagina e gli indirizzi interi; le 8 pagine che si stampano con Ctrl+P
+  (mese, settimana, cassa, cassa del mese, settimana, mese e riepilogo degli ambulatori, mese dei turni) si
+  confrontano in PDF come i 9 fogli: 17 in tutto.
 
 ```
 python strumenti/demo.py --porta 5001                      # in un'altra finestra
@@ -2549,6 +2555,13 @@ python strumenti/confronta_rami.py                         # alla fine: «0 dive
 
 Il 22/11/2026, a tappa 1 chiusa: tutte le prove senza browser e nel browser verdi nelle due cartelle, e il confronto
 con il ramo principale con 607 pagine e 20 fogli da stampare, nessuno diverso oltre ai cambiamenti approvati.
+Il 22/11/2026, primo passo della tappa 2 (il lanciatore pronto per la cornice nuova), dalle due cartelle: 607 pagine,
+nessuna diversa; la cornice, confrontata una volta su 454 pagine, senza differenze; 49 fogli e pagine che si stampano
+(i 17 tipi) in PDF, nessuno diverso. I tre mutanti, fatti su copie, sono presi: una voce del menu tolta solo dentro
+`data-cornice` (6 differenze della cornice, pagine uguali), un collegamento tolto (6 pagine diverse anche senza
+ordine), un colore cambiato solo in stampa su /mese (4 fogli diversi). I gemelli passano: la cornice di oggi segnata
+con `data-cornice` senza togliere niente, due collegamenti scambiati di posto (diversi solo con `--con-ordine`), lo
+stesso colore cambiato solo a schermo.
 
 ### Il pacchetto di prova (dalla tappa 1 della base)
 

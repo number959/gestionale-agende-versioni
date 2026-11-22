@@ -2,13 +2,21 @@
 # come differenze, ma li conta a parte e li scrive nel resoconto. Ogni riga, con i campi separati da un TAB:
 #
 #   aggiunto      <chiave>   <espressione>                 <perché>
-#       un elemento che c'è in più qui (non appaiato, nello stesso ordine, con uno uguale del principale) e che
-#       corrisponde all'espressione non conta; uno che c'era e ora manca conta sempre;
+#       un elemento che c'è in più qui (più volte che nel principale; con --con-ordine: non appaiato, nello stesso
+#       ordine, con uno uguale del principale) e che corrisponde all'espressione non conta; uno che c'era e ora manca
+#       conta sempre;
 #   sostituisci   <chiave>   <espressione>  <al posto>     <perché>
-#       nel principale l'espressione diventa «al posto» (re.sub), poi si confronta: per le parole approvate.
+#       nel principale l'espressione diventa «al posto» (re.sub), poi si confronta: per le parole approvate; un
+#       elemento che diventa vuoto è tolto (per una cosa approvata che qui non c'è più).
 #
 # <chiave> è una parte del riassunto di una pagina: segni (data-tasto, data-guida, data-prova, role, aria-label,
-# aria-current, scritti «attributo=valore»), testo, collegamenti, moduli.
+# aria-current, scritti «attributo=valore»), testo, collegamenti, moduli. Dalla tappa 2 la cornice (menu, barra in
+# alto, linguette, campanella, zona dei messaggi, tasti rapidi) si confronta a parte, una volta: «segni» e «testo»
+# valgono anche per la sua parte, e ha tre chiavi sue:
+#   voci      «<tipo> «parola» → forma dell'indirizzo [data-tasto=…] [data-guida=…]», per esempio
+#             «menu «Giorno» → /giorno/N-N-N?struttura data-tasto=g data-guida=menu-giorno»;
+#   cornici   su ogni pagina, i tipi di cornice che ci sono («menu», «linguette»…);
+#   accese    su ogni pagina, le voci accese: «<tipo> «parola»».
 # Tolto o cambiato qualcosa che non è in questo elenco: è una differenza vera, da guardare.
 aggiunto	segni	^data-guida=[a-z0-9-]+$	tappa 1: i passi della guida indicano i punti con data-guida invece che con una classe
 aggiunto	segni	^aria-current=(page|true)$	tappa 1: il menu dice quale pagina è aperta (page sulla voce, 28 voci di _menu.html) e il suo gruppo (true sul pulsante, con la stessa condizione della classe attivo) a chi usa un lettore di schermo e alle prove nel browser; prima lo diceva solo la classe attivo
