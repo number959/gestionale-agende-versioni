@@ -3024,6 +3024,22 @@ Rimandato, da decidere con Giovanni (scritto in `piano/DECISIONI-VESTE.md`, Conf
 Resta com'era, da sapere: chi ha l'Agenda senza i Pazienti ha la ricerca rapida (trova giorni e medici), ma cercando
 il nome di un paziente legge «Nessun risultato.».
 
+Le verifiche, il 22/11/2026, dalle due cartelle: tutte le prove senza browser verdi (37 raccolte, in 789 e 780 s, con la
+riga nuova «elenco delle raccolte» OK; `prove_accessi.py` 61 prove, `prove_mattoni.py` 24, `prove_senza_menu.py` 16); nel
+browser 15 raccolte nella normale (1370 controlli; `prove_accessi_browser.py` 50) e 17 nell'animata (1435), tutte verdi
+(nell'animata le stesse raccolte, nello stesso ordine e con lo stesso giudizio della riga finale, lanciate una per una
+con un TMPDIR corto: sotto la cartella del giro del lanciatore il percorso del socket di Chromium passa i 107
+caratteri); il confronto con il ramo principale dalle due cartelle con 610 pagine e nessuna diversa (206 solo per i
+cambiamenti approvati, le stesse 43 regole: sul PC principale niente è cambiato), la cornice senza differenze (457 parti
+approvate) e 49 fogli e pagine che si stampano in PDF, nessuno diverso (1 approvato, la guida da stampare);
+`allinea_animata.py`: 262 file comuni, tutti uguali. I mutanti, ognuno su una copia in /dev/shm, sono presi tutti:
+«11 pagine» nel commento (`prove_senza_menu.py`); `prove_accessi.py` tolto da `SENZA_BROWSER` (`prove_mattoni.py`, e la
+riga «elenco delle raccolte» KO in testa al giro); l'articolo della guida sempre dato, la griglia dei Turni senza segno,
+«Schema a rotazione…» a chi guarda, il nome sempre della prima area, la ricerca sempre, `PAGINE_RICERCA_RAPIDA` senza
+Dove si fa (`prove_accessi.py`, una prova ciascuno); nel browser, su gestionali di prova fatti dalle copie, `turni.js`
+senza il ritorno per «solo guardare» (il clic e la M mandano il salvataggio: 3 controlli su 50) e `veste.css` senza le
+regole nuove (la barra a 66 px, con il nome lungo già a 1366: 1 su 50).
+
 ### Il pacchetto di prova (dalla tappa 1 della base)
 
 Il gestionale di oggi, da provare sul PC di Giovanni prima che arrivi in clinica, senza toccare il programma della
