@@ -1,0 +1,83 @@
+{#- BOZZA (non è nel repository): le intestazioni della tappa 5 nei due casi delicati.
+    Prefisso delle classi nuove: «v-» solo come segnaposto (lo decide la tappa 1-bis con veste.css).
+    Le macro di _pezzi.html non esistono ancora: qui il markup è scritto a mano per far vedere
+    che cosa deve restare identico (moduli, campi, data-tasto, data-guida, href, ordine dei segni). -#}
+
+{# ============================ griglia.html (Giorno) ============================ #}
+<div class="barra v-intestazione">                {# .barra resta: animata (.anim .barra, .barra .giorno), stampa (.barra .comandi), guida '.barra .comandi .passo' #}
+  <p class="v-sopra">Agenda · {{ nome_struttura }}</p>  {# TESTO NUOVO: da approvare (o lo dà il percorso della tappa 2) #}
+  <h1 class="giorno">{{ titolo }}</h1>              {# h1.giorno resta: prove_15_browser guarda il carattere di h1.giorno #}
+  <span class="conteggio">{{ totale }} appuntament{% if totale == 1 %}o{% else %}i{% endif %} in agenda</span>
+  {# ^ nel Giorno la striscia ha un numero solo (deciso il 17/11): resta lo span, in grande con il CSS. Misura: la striscia a parte costa 84 px #}
+  <div class="comandi v-barra-comandi">            {# .comandi resta: in stampa si nasconde per classe #}
+    <a class="passo" data-tasto="precedente" href="{{ url_for('giorno', iso=ieri, struttura=sid) }}" title="Giorno precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('giorno', iso=domani, struttura=sid) }}" title="Giorno successivo">&rsaquo;</a>
+    <a class="bottone" data-tasto="oggi" href="{{ url_for('giorno', iso=oggi, struttura=sid) }}">Oggi</a>   {# era «Vai a oggi»: parola approvata #}
+    <form method="get" action="{{ url_for('giorno', iso=g.isoformat()) }}" class="v-in-linea">
+      <select name="struttura" onchange="this.form.submit()" aria-label="Struttura">   {# aria-label: nome nuovo per il lettore di schermo, da approvare #}
+        {% for s in strutture %}<option value="{{ s.id }}"{% if s.id == sid %} selected{% endif %}>{{ s.nome }}</option>{% endfor %}
+      </select>
+    </form>
+    {# le linguette Giorno · Settimana · Mese · Elenco vengono dalla tappa 2 (menu.py); qui il posto, con il data-guida che oggi sta sul bottone «Elenco» #}
+    <nav class="v-linguette" aria-label="Viste dell'agenda">
+      <a href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}" aria-current="page">Giorno</a>
+      <a href="{{ url_for('viste.settimana', iso=g.isoformat(), struttura=sid) }}">Settimana</a>
+      <a href="{{ url_for('viste.mese', aaaamm=g.isoformat()[:7], struttura=sid) }}">Mese</a>
+      <a href="{{ url_for('viste.elenco_giorno', iso=g.isoformat(), struttura=sid) }}" data-guida="giorno-elenco">Elenco</a>
+    </nav>
+    <span class="v-spinta"></span>
+    <a class="bottone" href="{{ url_for('viste.disponibilita', struttura=sid) }}">Prima disponibilità</a>  {# COLLEGAMENTO NUOVO nella pagina (oggi solo nel menu Segreteria) #}
+    <div class="gruppo-comandi" data-guida="giorno-stampa">   {# .gruppo-comandi/.apri-gruppo/.tendina a: li usa gestionale.js e 3 raccolte di prove #}
+      <button type="button" class="bottone apri-gruppo" aria-haspopup="true" aria-expanded="false">Stampa e scarica<span class="freccia" aria-hidden="true"></span></button>
+      <div class="tendina" role="menu">
+        {# le cinque voci di oggi, nello stesso ordine; l'ultima con la parola approvata #}
+        <a href="{{ url_for('esportazioni.pagina', data=g.isoformat(), struttura=sid) }}"><b>Tutte le esportazioni</b><small>ambulatori, sala operatoria o tutto insieme: giorno, settimana e mese</small></a>
+      </div>
+    </div>
+    <a class="bottone primario" data-tasto="nuovo" data-guida="giorno-nuovo" href="{{ url_for('appuntamento', data=g.isoformat(), struttura=sid) }}">Nuovo appuntamento</a>
+    {# ATTENZIONE: l'ordine dei segni cambia (oggi: nuovo/giorno-nuovo prima di giorno-elenco e giorno-stampa):
+       confronta_rami.py oggi lo segna come differenza → va nell'elenco dei cambiamenti approvati #}
+  </div>
+</div>
+
+{# ============================ settimana.html (e mese.html uguale) ============================ #}
+<div class="barra v-intestazione">
+  <p class="v-sopra">Agenda · {{ nome_struttura }}</p>
+  <h1 class="giorno">{{ titolo }}</h1>
+  <span class="conteggio">{% if medico %}{{ medico.etichetta }}: {{ vista.totale }} appuntament{{ 'o' if vista.totale == 1 else 'i' }}{% else %}{{ vista.totali.values()|sum }} appuntamenti{% endif %}</span>
+  <div class="comandi v-barra-comandi">
+    <a class="passo" data-tasto="precedente" href="{{ url_for('viste.settimana', iso=prima, struttura=sid, medico=medico.id if medico else none) }}" title="Settimana precedente">&lsaquo;</a>
+    <a class="passo" data-tasto="successivo" href="{{ url_for('viste.settimana', iso=dopo, struttura=sid, medico=medico.id if medico else none) }}" title="Settimana successiva">&rsaquo;</a>
+    <a class="bottone" href="{{ url_for('viste.settimana', iso=oggi.isoformat(), struttura=sid, medico=medico.id if medico else none) }}">Oggi</a>
+    {# ^ era «Questa settimana». Oggi NON ha data-tasto="oggi" (il tasto T qui non va): aggiungerlo è un cambiamento da approvare #}
+    {# UN SOLO MODULO, come oggi: struttura (o il campo nascosto) e medico partono insieme. Le linguette stanno DENTRO il modulo
+       per avere l'ordine della tavola senza dividere il modulo; con due moduli, cambiando medico si perderebbe la struttura.
+       Non usare l'attributo form="…": confronta_rami legge i campi solo dentro il <form>. #}
+    <form method="get" class="v-in-linea">
+      {% if strutture|length > 1 %}
+      <select name="struttura" onchange="this.form.submit()">{% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}</select>
+      {% else %}<input type="hidden" name="struttura" value="{{ sid }}">{% endif %}
+      <nav class="v-linguette" aria-label="Viste dell'agenda">…le quattro linguette (tappa 2)…</nav>
+      <select name="medico" onchange="this.form.submit()">
+        <option value="">Tutte le stanze</option>
+        {% for o in medici %}<option value="{{ o.id }}"{% if medico and o.id == medico.id %} selected{% endif %}>Agenda di {{ o.etichetta }}</option>{% endfor %}
+      </select>
+    </form>
+    <span class="v-spinta"></span>
+    {# NUOVI (decisi il 16/11): il giorno proposto è oggi se è nella settimana, altrimenti il lunedì (proposta aperta, s7) #}
+    <a class="bottone" href="{{ url_for('viste.disponibilita', struttura=sid) }}">Prima disponibilità</a>
+    <div class="gruppo-comandi">
+      <button type="button" class="bottone apri-gruppo" aria-haspopup="true" aria-expanded="false">Stampa e scarica<span class="freccia" aria-hidden="true"></span></button>
+      <div class="tendina" role="menu">
+        {# oggi è un <button onclick="window.print()"> fuori dalla tendina. Dentro .tendina gestionale.js chiude e mette il fuoco solo
+           sulle <a>: o si allarga il JS a «.tendina a, .tendina button», o si lascia il bottone «Stampa» com'è, senza tendina #}
+        <button type="button" onclick="window.print()"><b>Stampa</b></button>
+      </div>
+    </div>
+    <a class="bottone primario" href="{{ url_for('appuntamento', data=giorno_proposto.isoformat(), struttura=sid, medico=medico.id if medico else none) }}">Nuovo appuntamento</a>
+    {# ^ giorno_proposto: variabile NUOVA da calcolare in viste.settimana (oggi se lunedi <= oggi <= lunedi+6, altrimenti lunedi)
+       e in viste.mese (oggi se è nel mese, altrimenti il primo del mese). medico=: solo se si decide che con il filtro
+       il modulo propone quel medico (appuntamento accetta già medico=, lo usa settimana.html nelle fasce libere).
+       data-tasto="nuovo" qui? oggi N non va in Settimana e Mese: da decidere #}
+  </div>
+</div>

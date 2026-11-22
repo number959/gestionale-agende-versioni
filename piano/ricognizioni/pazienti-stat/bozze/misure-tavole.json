@@ -1,0 +1,3196 @@
+{
+ "Paz1-Elenco@1440": {
+  "main": {
+   "paddingTop": "22px",
+   "paddingLeft": "36px",
+   "paddingRight": "36px",
+   "gap": "18px",
+   "box": [
+    248,
+    62,
+    1192,
+    1723
+   ]
+  },
+  "h1": {
+   "fontFamily": "Manrope, sans-serif",
+   "fontSize": "36px",
+   "fontWeight": "500",
+   "lineHeight": "40px",
+   "color": "rgb(18, 36, 74)",
+   "box": [
+    284,
+    84,
+    1120,
+    40
+   ]
+  },
+  "sopra": null,
+  "sotto": {
+   "fontSize": "15px",
+   "color": "rgb(91, 104, 124)",
+   "lineHeight": "21.75px",
+   "box": [
+    284,
+    128,
+    1120,
+    22
+   ]
+  },
+  "h2": [
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "500",
+    "lineHeight": "28px",
+    "box": [
+     284,
+     252,
+     1120,
+     28
+    ],
+    "testo": "Ultimi inseriti"
+   }
+  ],
+  "h3": [],
+  "schede": [
+   {
+    "borderRadius": "16px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "10px",
+    "paddingLeft": "12px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px",
+    "box": [
+     284,
+     168,
+     1120,
+     62
+    ],
+    "tag": "FORM",
+    "etichetta": "Cerca un paziente"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     292,
+     1120,
+     1454
+    ],
+    "tag": "SECTION",
+    "etichetta": "Ultimi inseriti"
+   }
+  ],
+  "th": {
+   "fontSize": "13.5px",
+   "fontWeight": "600",
+   "color": "rgb(56, 69, 90)",
+   "backgroundColor": "rgba(0, 0, 0, 0)",
+   "paddingTop": "11px",
+   "paddingLeft": "18px",
+   "box": [
+    285,
+    293,
+    199,
+    42
+   ]
+  },
+  "riga_intestazione": {
+   "backgroundColor": "rgb(238, 242, 248)",
+   "height": "41.5625px",
+   "box": [
+    285,
+    293,
+    1118,
+    42
+   ]
+  },
+  "riga": {
+   "height": "46px",
+   "borderBottomColor": "rgb(18, 36, 74)",
+   "borderBottomWidth": "0px",
+   "box": [
+    285,
+    334,
+    1118,
+    47
+   ]
+  },
+  "td": {
+   "fontSize": "14.5px",
+   "color": "rgb(18, 36, 74)",
+   "paddingTop": "12px",
+   "paddingLeft": "18px",
+   "box": [
+    285,
+    335,
+    199,
+    46
+   ]
+  },
+  "campi": [
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "borderTopColor": "rgb(28, 65, 132)",
+    "fontSize": "14.5px",
+    "paddingLeft": "42px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     297,
+     179,
+     584,
+     40
+    ],
+    "id": "q"
+   }
+  ],
+  "etichette": [
+   {
+    "fontSize": "14.5px",
+    "fontWeight": "400",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     297,
+     179,
+     584,
+     40
+    ],
+    "testo": "Cerca un paziente"
+   }
+  ],
+  "bottoni": [
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(28, 65, 132)",
+    "color": "rgb(255, 255, 255)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "22px",
+    "borderTopColor": "rgb(255, 255, 255)",
+    "box": [
+     891,
+     179,
+     85,
+     40
+    ],
+    "testo": "Cerca"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     986,
+     179,
+     163,
+     40
+    ],
+    "testo": "Nuovo paziente"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1159,
+     179,
+     232,
+     40
+    ],
+    "testo": "Controllo dei codici fiscali"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1295,
+     340,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1295,
+     387,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1295,
+     434,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1295,
+     481,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1295,
+     528,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1295,
+     575,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1295,
+     622,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   }
+  ],
+  "collegamento": {
+   "color": "rgb(28, 65, 132)",
+   "textDecorationLine": "underline",
+   "textUnderlineOffset": "3px",
+   "fontWeight": "600",
+   "box": [
+    303,
+    340,
+    88,
+    36
+   ]
+  },
+  "pillole": [],
+  "numeri_grandi": [],
+  "barre": [],
+  "alto": 1785,
+  "largo": 1440
+ },
+ "Paz1-Elenco@1366": {
+  "main": {
+   "paddingTop": "22px",
+   "paddingLeft": "36px",
+   "paddingRight": "36px",
+   "gap": "18px",
+   "box": [
+    248,
+    62,
+    1118,
+    1723
+   ]
+  },
+  "h1": {
+   "fontFamily": "Manrope, sans-serif",
+   "fontSize": "36px",
+   "fontWeight": "500",
+   "lineHeight": "40px",
+   "color": "rgb(18, 36, 74)",
+   "box": [
+    284,
+    84,
+    1046,
+    40
+   ]
+  },
+  "sopra": null,
+  "sotto": {
+   "fontSize": "15px",
+   "color": "rgb(91, 104, 124)",
+   "lineHeight": "21.75px",
+   "box": [
+    284,
+    128,
+    1046,
+    22
+   ]
+  },
+  "h2": [
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "500",
+    "lineHeight": "28px",
+    "box": [
+     284,
+     252,
+     1046,
+     28
+    ],
+    "testo": "Ultimi inseriti"
+   }
+  ],
+  "h3": [],
+  "schede": [
+   {
+    "borderRadius": "16px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "10px",
+    "paddingLeft": "12px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px",
+    "box": [
+     284,
+     168,
+     1046,
+     62
+    ],
+    "tag": "FORM",
+    "etichetta": "Cerca un paziente"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     292,
+     1046,
+     1454
+    ],
+    "tag": "SECTION",
+    "etichetta": "Ultimi inseriti"
+   }
+  ],
+  "th": {
+   "fontSize": "13.5px",
+   "fontWeight": "600",
+   "color": "rgb(56, 69, 90)",
+   "backgroundColor": "rgba(0, 0, 0, 0)",
+   "paddingTop": "11px",
+   "paddingLeft": "18px",
+   "box": [
+    285,
+    293,
+    165,
+    42
+   ]
+  },
+  "riga_intestazione": {
+   "backgroundColor": "rgb(238, 242, 248)",
+   "height": "41.5625px",
+   "box": [
+    285,
+    293,
+    1044,
+    42
+   ]
+  },
+  "riga": {
+   "height": "46px",
+   "borderBottomColor": "rgb(18, 36, 74)",
+   "borderBottomWidth": "0px",
+   "box": [
+    285,
+    334,
+    1044,
+    47
+   ]
+  },
+  "td": {
+   "fontSize": "14.5px",
+   "color": "rgb(18, 36, 74)",
+   "paddingTop": "12px",
+   "paddingLeft": "18px",
+   "box": [
+    285,
+    335,
+    165,
+    46
+   ]
+  },
+  "campi": [
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "borderTopColor": "rgb(28, 65, 132)",
+    "fontSize": "14.5px",
+    "paddingLeft": "42px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     297,
+     179,
+     510,
+     40
+    ],
+    "id": "q"
+   }
+  ],
+  "etichette": [
+   {
+    "fontSize": "14.5px",
+    "fontWeight": "400",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     297,
+     179,
+     510,
+     40
+    ],
+    "testo": "Cerca un paziente"
+   }
+  ],
+  "bottoni": [
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(28, 65, 132)",
+    "color": "rgb(255, 255, 255)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "22px",
+    "borderTopColor": "rgb(255, 255, 255)",
+    "box": [
+     817,
+     179,
+     85,
+     40
+    ],
+    "testo": "Cerca"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     912,
+     179,
+     163,
+     40
+    ],
+    "testo": "Nuovo paziente"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1085,
+     179,
+     232,
+     40
+    ],
+    "testo": "Controllo dei codici fiscali"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1221,
+     340,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1221,
+     387,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1221,
+     434,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1221,
+     481,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1221,
+     528,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1221,
+     575,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1221,
+     622,
+     80,
+     36
+    ],
+    "testo": "Prenota"
+   }
+  ],
+  "collegamento": {
+   "color": "rgb(28, 65, 132)",
+   "textDecorationLine": "underline",
+   "textUnderlineOffset": "3px",
+   "fontWeight": "600",
+   "box": [
+    303,
+    340,
+    88,
+    36
+   ]
+  },
+  "pillole": [],
+  "numeri_grandi": [],
+  "barre": [],
+  "alto": 1785,
+  "largo": 1366
+ },
+ "Paz2-Scheda@1440": {
+  "main": {
+   "paddingTop": "22px",
+   "paddingLeft": "36px",
+   "paddingRight": "36px",
+   "gap": "18px",
+   "box": [
+    248,
+    62,
+    1192,
+    1635
+   ]
+  },
+  "h1": {
+   "fontFamily": "Manrope, sans-serif",
+   "fontSize": "36px",
+   "fontWeight": "500",
+   "lineHeight": "40px",
+   "color": "rgb(18, 36, 74)",
+   "box": [
+    284,
+    84,
+    1120,
+    40
+   ]
+  },
+  "sopra": null,
+  "sotto": {
+   "fontSize": "14.5px",
+   "color": "rgb(91, 104, 124)",
+   "lineHeight": "21.025px",
+   "box": [
+    284,
+    130,
+    1120,
+    37
+   ]
+  },
+  "h2": [
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "18px",
+    "fontWeight": "600",
+    "lineHeight": "24px",
+    "box": [
+     989,
+     245,
+     390,
+     24
+    ],
+    "testo": "In breve"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "500",
+    "lineHeight": "28px",
+    "box": [
+     284,
+     1138,
+     1120,
+     28
+    ],
+    "testo": "Appuntamenti"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "500",
+    "lineHeight": "28px",
+    "box": [
+     284,
+     1424,
+     1120,
+     28
+    ],
+    "testo": "Documenti"
+   }
+  ],
+  "h3": [
+   {
+    "fontSize": "16px",
+    "fontWeight": "600",
+    "box": [
+     989,
+     527,
+     390,
+     22
+    ],
+    "testo": "Da fare"
+   }
+  ],
+  "schede": [
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "22px",
+    "paddingLeft": "24px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     224,
+     660,
+     896
+    ],
+    "tag": "FORM",
+    "etichetta": "Scheda del paziente"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "20px",
+    "paddingLeft": "24px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     964,
+     224,
+     440,
+     520
+    ],
+    "tag": "SECTION",
+    "etichetta": "titolo-breve"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     1178,
+     1120,
+     228
+    ],
+    "tag": "DIV",
+    "etichetta": ""
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     1464,
+     1120,
+     194
+    ],
+    "tag": "DIV",
+    "etichetta": ""
+   }
+  ],
+  "th": {
+   "fontSize": "13.5px",
+   "fontWeight": "600",
+   "color": "rgb(56, 69, 90)",
+   "backgroundColor": "rgb(238, 242, 248)",
+   "paddingTop": "11px",
+   "paddingLeft": "18px",
+   "box": [
+    285,
+    1179,
+    154,
+    42
+   ]
+  },
+  "riga_intestazione": {
+   "backgroundColor": "rgba(0, 0, 0, 0)",
+   "height": "auto",
+   "box": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  "riga": {
+   "height": "auto",
+   "borderBottomColor": "rgb(18, 36, 74)",
+   "borderBottomWidth": "0px",
+   "box": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  "td": {
+   "fontSize": "14.5px",
+   "color": "rgb(18, 36, 74)",
+   "paddingTop": "12px",
+   "paddingLeft": "18px",
+   "box": [
+    285,
+    1221,
+    154,
+    46
+   ]
+  },
+  "campi": [
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     309,
+     271,
+     295,
+     40
+    ],
+    "id": "cognome"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     624,
+     271,
+     295,
+     40
+    ],
+    "id": "nome"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     309,
+     351,
+     295,
+     40
+    ],
+    "id": "sesso"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     624,
+     351,
+     295,
+     40
+    ],
+    "id": "data_nascita"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     309,
+     431,
+     295,
+     40
+    ],
+    "id": "luogo_nascita_testo"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     624,
+     431,
+     295,
+     40
+    ],
+    "id": "codice_fiscale"
+   }
+  ],
+  "etichette": [
+   {
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "color": "rgb(56, 69, 90)",
+    "box": [
+     309,
+     247,
+     295,
+     18
+    ],
+    "testo": "Cognome"
+   },
+   {
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "color": "rgb(56, 69, 90)",
+    "box": [
+     624,
+     247,
+     295,
+     18
+    ],
+    "testo": "Nome"
+   },
+   {
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "color": "rgb(56, 69, 90)",
+    "box": [
+     309,
+     327,
+     295,
+     18
+    ],
+    "testo": "Sesso"
+   }
+  ],
+  "bottoni": [
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(28, 65, 132)",
+    "color": "rgb(255, 255, 255)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "18px",
+    "borderTopColor": "rgb(28, 65, 132)",
+    "box": [
+     309,
+     1055,
+     129,
+     40
+    ],
+    "testo": "Salva scheda"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1189,
+     679,
+     91,
+     40
+    ],
+    "testo": "Aggiungi"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "12px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1231,
+     1514,
+     74,
+     36
+    ],
+    "testo": "Scarica"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(138, 28, 22)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "12px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1313,
+     1514,
+     72,
+     36
+    ],
+    "testo": "Elimina"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "18px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1304,
+     1598,
+     81,
+     40
+    ],
+    "testo": "Allega"
+   }
+  ],
+  "collegamento": {
+   "color": "rgb(28, 65, 132)",
+   "textDecorationLine": "underline",
+   "textUnderlineOffset": "auto",
+   "fontWeight": "400",
+   "box": [
+    284,
+    130,
+    110,
+    37
+   ]
+  },
+  "pillole": [
+   {
+    "backgroundColor": "rgb(79, 121, 196)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "12.5px",
+    "fontWeight": "600",
+    "height": "7px",
+    "paddingLeft": "0px",
+    "borderRadius": "50%",
+    "box": [
+     1050,
+     1240,
+     7,
+     7
+    ],
+    "testo": ""
+   },
+   {
+    "backgroundColor": "rgb(46, 125, 50)",
+    "color": "rgb(27, 94, 32)",
+    "fontSize": "12.5px",
+    "fontWeight": "600",
+    "height": "7px",
+    "paddingLeft": "0px",
+    "borderRadius": "50%",
+    "box": [
+     1050,
+     1286,
+     7,
+     7
+    ],
+    "testo": ""
+   },
+   {
+    "backgroundColor": "rgb(46, 125, 50)",
+    "color": "rgb(27, 94, 32)",
+    "fontSize": "12.5px",
+    "fontWeight": "600",
+    "height": "7px",
+    "paddingLeft": "0px",
+    "borderRadius": "50%",
+    "box": [
+     1050,
+     1332,
+     7,
+     7
+    ],
+    "testo": ""
+   },
+   {
+    "backgroundColor": "rgb(152, 163, 179)",
+    "color": "rgb(91, 104, 124)",
+    "fontSize": "12.5px",
+    "fontWeight": "600",
+    "height": "7px",
+    "paddingLeft": "0px",
+    "borderRadius": "50%",
+    "box": [
+     1050,
+     1378,
+     7,
+     7
+    ],
+    "testo": ""
+   }
+  ],
+  "numeri_grandi": [
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "28px",
+    "fontWeight": "600",
+    "color": "rgb(28, 65, 132)",
+    "box": [
+     989,
+     283,
+     17,
+     34
+    ],
+    "testo": "2"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "28px",
+    "fontWeight": "600",
+    "color": "rgb(28, 65, 132)",
+    "box": [
+     1072,
+     283,
+     17,
+     34
+    ],
+    "testo": "1"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "28px",
+    "fontWeight": "600",
+    "color": "rgb(28, 65, 132)",
+    "box": [
+     1213,
+     283,
+     17,
+     34
+    ],
+    "testo": "1"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "28px",
+    "fontWeight": "600",
+    "color": "rgb(28, 65, 132)",
+    "box": [
+     989,
+     321,
+     17,
+     34
+    ],
+    "testo": "0"
+   }
+  ],
+  "barre": [],
+  "alto": 1697,
+  "largo": 1440
+ },
+ "Paz2-Scheda@1366": {
+  "main": {
+   "paddingTop": "22px",
+   "paddingLeft": "36px",
+   "paddingRight": "36px",
+   "gap": "18px",
+   "box": [
+    248,
+    62,
+    1118,
+    1656
+   ]
+  },
+  "h1": {
+   "fontFamily": "Manrope, sans-serif",
+   "fontSize": "36px",
+   "fontWeight": "500",
+   "lineHeight": "40px",
+   "color": "rgb(18, 36, 74)",
+   "box": [
+    284,
+    84,
+    1046,
+    40
+   ]
+  },
+  "sopra": null,
+  "sotto": {
+   "fontSize": "14.5px",
+   "color": "rgb(91, 104, 124)",
+   "lineHeight": "21.025px",
+   "box": [
+    284,
+    130,
+    1046,
+    37
+   ]
+  },
+  "h2": [
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "18px",
+    "fontWeight": "600",
+    "lineHeight": "24px",
+    "box": [
+     945,
+     245,
+     360,
+     24
+    ],
+    "testo": "In breve"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "500",
+    "lineHeight": "28px",
+    "box": [
+     284,
+     1138,
+     1046,
+     28
+    ],
+    "testo": "Appuntamenti"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "500",
+    "lineHeight": "28px",
+    "box": [
+     284,
+     1445,
+     1046,
+     28
+    ],
+    "testo": "Documenti"
+   }
+  ],
+  "h3": [
+   {
+    "fontSize": "16px",
+    "fontWeight": "600",
+    "box": [
+     945,
+     527,
+     360,
+     22
+    ],
+    "testo": "Da fare"
+   }
+  ],
+  "schede": [
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "22px",
+    "paddingLeft": "24px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     224,
+     616,
+     896
+    ],
+    "tag": "FORM",
+    "etichetta": "Scheda del paziente"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "20px",
+    "paddingLeft": "24px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     920,
+     224,
+     410,
+     520
+    ],
+    "tag": "SECTION",
+    "etichetta": "titolo-breve"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     1178,
+     1046,
+     249
+    ],
+    "tag": "DIV",
+    "etichetta": ""
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     1485,
+     1046,
+     194
+    ],
+    "tag": "DIV",
+    "etichetta": ""
+   }
+  ],
+  "th": {
+   "fontSize": "13.5px",
+   "fontWeight": "600",
+   "color": "rgb(56, 69, 90)",
+   "backgroundColor": "rgb(238, 242, 248)",
+   "paddingTop": "11px",
+   "paddingLeft": "18px",
+   "box": [
+    285,
+    1179,
+    154,
+    42
+   ]
+  },
+  "riga_intestazione": {
+   "backgroundColor": "rgba(0, 0, 0, 0)",
+   "height": "auto",
+   "box": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  "riga": {
+   "height": "auto",
+   "borderBottomColor": "rgb(18, 36, 74)",
+   "borderBottomWidth": "0px",
+   "box": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  "td": {
+   "fontSize": "14.5px",
+   "color": "rgb(18, 36, 74)",
+   "paddingTop": "12px",
+   "paddingLeft": "18px",
+   "box": [
+    285,
+    1221,
+    154,
+    46
+   ]
+  },
+  "campi": [
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     309,
+     271,
+     273,
+     40
+    ],
+    "id": "cognome"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     602,
+     271,
+     273,
+     40
+    ],
+    "id": "nome"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     309,
+     351,
+     273,
+     40
+    ],
+    "id": "sesso"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     602,
+     351,
+     273,
+     40
+    ],
+    "id": "data_nascita"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     309,
+     431,
+     273,
+     40
+    ],
+    "id": "luogo_nascita_testo"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     602,
+     431,
+     273,
+     40
+    ],
+    "id": "codice_fiscale"
+   }
+  ],
+  "etichette": [
+   {
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "color": "rgb(56, 69, 90)",
+    "box": [
+     309,
+     247,
+     273,
+     18
+    ],
+    "testo": "Cognome"
+   },
+   {
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "color": "rgb(56, 69, 90)",
+    "box": [
+     602,
+     247,
+     273,
+     18
+    ],
+    "testo": "Nome"
+   },
+   {
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "color": "rgb(56, 69, 90)",
+    "box": [
+     309,
+     327,
+     273,
+     18
+    ],
+    "testo": "Sesso"
+   }
+  ],
+  "bottoni": [
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(28, 65, 132)",
+    "color": "rgb(255, 255, 255)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "18px",
+    "borderTopColor": "rgb(28, 65, 132)",
+    "box": [
+     309,
+     1055,
+     129,
+     40
+    ],
+    "testo": "Salva scheda"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1145,
+     679,
+     91,
+     40
+    ],
+    "testo": "Aggiungi"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "12px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1157,
+     1535,
+     74,
+     36
+    ],
+    "testo": "Scarica"
+   },
+   {
+    "height": "36px",
+    "borderRadius": "10px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(138, 28, 22)",
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "paddingLeft": "12px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1239,
+     1535,
+     72,
+     36
+    ],
+    "testo": "Elimina"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "18px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1230,
+     1619,
+     81,
+     40
+    ],
+    "testo": "Allega"
+   }
+  ],
+  "collegamento": {
+   "color": "rgb(28, 65, 132)",
+   "textDecorationLine": "underline",
+   "textUnderlineOffset": "auto",
+   "fontWeight": "400",
+   "box": [
+    284,
+    130,
+    110,
+    37
+   ]
+  },
+  "pillole": [
+   {
+    "backgroundColor": "rgb(79, 121, 196)",
+    "color": "rgb(28, 65, 132)",
+    "fontSize": "12.5px",
+    "fontWeight": "600",
+    "height": "7px",
+    "paddingLeft": "0px",
+    "borderRadius": "50%",
+    "box": [
+     1049,
+     1240,
+     7,
+     7
+    ],
+    "testo": ""
+   },
+   {
+    "backgroundColor": "rgb(46, 125, 50)",
+    "color": "rgb(27, 94, 32)",
+    "fontSize": "12.5px",
+    "fontWeight": "600",
+    "height": "7px",
+    "paddingLeft": "0px",
+    "borderRadius": "50%",
+    "box": [
+     1049,
+     1286,
+     7,
+     7
+    ],
+    "testo": ""
+   },
+   {
+    "backgroundColor": "rgb(46, 125, 50)",
+    "color": "rgb(27, 94, 32)",
+    "fontSize": "12.5px",
+    "fontWeight": "600",
+    "height": "7px",
+    "paddingLeft": "0px",
+    "borderRadius": "50%",
+    "box": [
+     1049,
+     1332,
+     7,
+     7
+    ],
+    "testo": ""
+   },
+   {
+    "backgroundColor": "rgb(152, 163, 179)",
+    "color": "rgb(91, 104, 124)",
+    "fontSize": "12.5px",
+    "fontWeight": "600",
+    "height": "7px",
+    "paddingLeft": "0px",
+    "borderRadius": "50%",
+    "box": [
+     1049,
+     1399,
+     7,
+     7
+    ],
+    "testo": ""
+   }
+  ],
+  "numeri_grandi": [
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "28px",
+    "fontWeight": "600",
+    "color": "rgb(28, 65, 132)",
+    "box": [
+     945,
+     283,
+     17,
+     34
+    ],
+    "testo": "2"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "28px",
+    "fontWeight": "600",
+    "color": "rgb(28, 65, 132)",
+    "box": [
+     1027,
+     283,
+     17,
+     34
+    ],
+    "testo": "1"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "28px",
+    "fontWeight": "600",
+    "color": "rgb(28, 65, 132)",
+    "box": [
+     1168,
+     283,
+     17,
+     34
+    ],
+    "testo": "1"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "28px",
+    "fontWeight": "600",
+    "color": "rgb(28, 65, 132)",
+    "box": [
+     945,
+     321,
+     17,
+     34
+    ],
+    "testo": "0"
+   }
+  ],
+  "barre": [],
+  "alto": 1718,
+  "largo": 1366
+ },
+ "Stat1-Statistiche@1440": {
+  "main": {
+   "paddingTop": "22px",
+   "paddingLeft": "36px",
+   "paddingRight": "36px",
+   "gap": "18px",
+   "box": [
+    248,
+    62,
+    1192,
+    3376
+   ]
+  },
+  "h1": {
+   "fontFamily": "Manrope, sans-serif",
+   "fontSize": "36px",
+   "fontWeight": "500",
+   "lineHeight": "40px",
+   "color": "rgb(18, 36, 74)",
+   "box": [
+    284,
+    108,
+    1120,
+    40
+   ]
+  },
+  "sopra": {
+   "fontSize": "13.5px",
+   "color": "rgb(91, 104, 124)",
+   "fontWeight": "400",
+   "box": [
+    284,
+    84,
+    1120,
+    20
+   ],
+   "testo": "Statistiche · Sede centrale"
+  },
+  "sotto": {
+   "fontSize": "15px",
+   "color": "rgb(91, 104, 124)",
+   "lineHeight": "21.75px",
+   "box": [
+    284,
+    152,
+    1120,
+    22
+   ]
+  },
+  "h2": [
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     305,
+     470,
+     1078,
+     26
+    ],
+    "testo": "Saturazione delle stanze"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     285,
+     939,
+     1118,
+     56
+    ],
+    "testo": "Medici"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     285,
+     1358,
+     1118,
+     56
+    ],
+    "testo": "Prestazioni"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     285,
+     2422,
+     659,
+     56
+    ],
+    "testo": "Giorni della settimana"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     964,
+     2422,
+     439,
+     56
+    ],
+    "testo": "Tipo di visita"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     964,
+     2670,
+     439,
+     56
+    ],
+    "testo": "Pazienti nuovi: come ci hanno conosciuto"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     964,
+     2918,
+     439,
+     56
+    ],
+    "testo": "Chi li manda"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     964,
+     3123,
+     439,
+     56
+    ],
+    "testo": "Indirizzati alle altre strutture"
+   }
+  ],
+  "h3": [],
+  "schede": [
+   {
+    "borderRadius": "16px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "10px",
+    "paddingLeft": "18px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px",
+    "box": [
+     284,
+     191,
+     1120,
+     112
+    ],
+    "tag": "FORM",
+    "etichetta": "Struttura e periodo delle statistiche"
+   },
+   {
+    "borderRadius": "16px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "14px",
+    "paddingLeft": "4px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px",
+    "box": [
+     284,
+     321,
+     1120,
+     114
+    ],
+    "tag": "DIV",
+    "etichetta": "I numeri del periodo"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     453,
+     1120,
+     467
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-stanze"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     938,
+     1120,
+     401
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-medici"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     1357,
+     1120,
+     1046
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-prestazioni"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     2421,
+     661,
+     359
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-giorni"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     963,
+     2421,
+     441,
+     230
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-tipo"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     963,
+     2669,
+     441,
+     230
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-nuovi"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     963,
+     2917,
+     441,
+     187
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-inviati"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     963,
+     3122,
+     441,
+     277
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-indirizzati"
+   }
+  ],
+  "th": {
+   "fontSize": "13.5px",
+   "fontWeight": "600",
+   "color": "rgb(56, 69, 90)",
+   "backgroundColor": "rgba(0, 0, 0, 0)",
+   "paddingTop": "11px",
+   "paddingLeft": "20px",
+   "box": [
+    285,
+    534,
+    328,
+    42
+   ]
+  },
+  "riga_intestazione": {
+   "backgroundColor": "rgb(238, 242, 248)",
+   "height": "41.5625px",
+   "box": [
+    285,
+    534,
+    1118,
+    42
+   ]
+  },
+  "riga": {
+   "height": "42px",
+   "borderBottomColor": "rgb(18, 36, 74)",
+   "borderBottomWidth": "0px",
+   "box": [
+    285,
+    575,
+    1118,
+    43
+   ]
+  },
+  "td": {
+   "fontSize": "14.5px",
+   "color": "rgb(18, 36, 74)",
+   "paddingTop": "10px",
+   "paddingLeft": "12px",
+   "box": [
+    613,
+    576,
+    130,
+    42
+   ]
+  },
+  "campi": [
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     369,
+     202,
+     178,
+     40
+    ],
+    "id": "struttura"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     600,
+     202,
+     148,
+     40
+    ],
+    "id": "dal"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     793,
+     202,
+     148,
+     40
+    ],
+    "id": "al"
+   }
+  ],
+  "etichette": [
+   {
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "color": "rgb(56, 69, 90)",
+    "box": [
+     303,
+     213,
+     56,
+     20
+    ],
+    "testo": "Struttura"
+   },
+   {
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "color": "rgb(56, 69, 90)",
+    "box": [
+     569,
+     213,
+     21,
+     20
+    ],
+    "testo": "Dal"
+   },
+   {
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "color": "rgb(56, 69, 90)",
+    "box": [
+     770,
+     213,
+     13,
+     20
+    ],
+    "testo": "Al"
+   }
+  ],
+  "bottoni": [
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(28, 65, 132)",
+    "color": "rgb(255, 255, 255)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "18px",
+    "borderTopColor": "rgb(28, 65, 132)",
+    "box": [
+     963,
+     202,
+     101,
+     40
+    ],
+    "testo": "Aggiorna"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1086,
+     202,
+     164,
+     40
+    ],
+    "testo": "Scarica in Excel"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     303,
+     252,
+     239,
+     40
+    ],
+    "testo": "Riepilogo del mese per medico"
+   }
+  ],
+  "collegamento": {
+   "color": "rgb(28, 65, 132)",
+   "textDecorationLine": "underline",
+   "textUnderlineOffset": "3px",
+   "fontWeight": "400",
+   "box": [
+    489,
+    144,
+    92,
+    38
+   ]
+  },
+  "pillole": [],
+  "numeri_grandi": [
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     309,
+     336,
+     55,
+     36
+    ],
+    "testo": "294"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     497,
+     336,
+     81,
+     36
+    ],
+    "testo": "200,0"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     696,
+     336,
+     81,
+     36
+    ],
+    "testo": "530,0"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     916,
+     336,
+     36,
+     36
+    ],
+    "testo": "19"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     1046,
+     336,
+     18,
+     36
+    ],
+    "testo": "7"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     1247,
+     336,
+     36,
+     36
+    ],
+    "testo": "41"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     309,
+     384,
+     143,
+     36
+    ],
+    "testo": "28.515,00"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     577,
+     384,
+     143,
+     36
+    ],
+    "testo": "20.460,00"
+   }
+  ],
+  "barre": [
+   {
+    "width": "276px",
+    "height": "22px",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "borderRadius": "0px",
+    "box": [
+     1055,
+     586,
+     276,
+     22
+    ],
+    "title": "Saturazione 45%",
+    "piena": {
+     "backgroundColor": "rgb(227, 233, 244)",
+     "height": "8px",
+     "width": "276px",
+     "box": [
+      1055,
+      593,
+      276,
+      8
+     ]
+    }
+   },
+   {
+    "width": "276px",
+    "height": "22px",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "borderRadius": "0px",
+    "box": [
+     1055,
+     629,
+     276,
+     22
+    ],
+    "title": "Saturazione 34%",
+    "piena": {
+     "backgroundColor": "rgb(227, 233, 244)",
+     "height": "8px",
+     "width": "276px",
+     "box": [
+      1055,
+      636,
+      276,
+      8
+     ]
+    }
+   },
+   {
+    "width": "276px",
+    "height": "22px",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "borderRadius": "0px",
+    "box": [
+     1055,
+     672,
+     276,
+     22
+    ],
+    "title": "Saturazione 44%",
+    "piena": {
+     "backgroundColor": "rgb(227, 233, 244)",
+     "height": "8px",
+     "width": "276px",
+     "box": [
+      1055,
+      679,
+      276,
+      8
+     ]
+    }
+   }
+  ],
+  "alto": 3438,
+  "largo": 1440
+ },
+ "Stat1-Statistiche@1366": {
+  "main": {
+   "paddingTop": "22px",
+   "paddingLeft": "36px",
+   "paddingRight": "36px",
+   "gap": "18px",
+   "box": [
+    248,
+    62,
+    1118,
+    3402
+   ]
+  },
+  "h1": {
+   "fontFamily": "Manrope, sans-serif",
+   "fontSize": "36px",
+   "fontWeight": "500",
+   "lineHeight": "40px",
+   "color": "rgb(18, 36, 74)",
+   "box": [
+    284,
+    108,
+    1046,
+    40
+   ]
+  },
+  "sopra": {
+   "fontSize": "13.5px",
+   "color": "rgb(91, 104, 124)",
+   "fontWeight": "400",
+   "box": [
+    284,
+    84,
+    1046,
+    20
+   ],
+   "testo": "Statistiche · Sede centrale"
+  },
+  "sotto": {
+   "fontSize": "15px",
+   "color": "rgb(91, 104, 124)",
+   "lineHeight": "21.75px",
+   "box": [
+    284,
+    152,
+    1046,
+    22
+   ]
+  },
+  "h2": [
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     305,
+     470,
+     1004,
+     26
+    ],
+    "testo": "Saturazione delle stanze"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     285,
+     939,
+     1044,
+     56
+    ],
+    "testo": "Medici"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     285,
+     1358,
+     1044,
+     56
+    ],
+    "testo": "Prestazioni"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     285,
+     2422,
+     615,
+     56
+    ],
+    "testo": "Giorni della settimana"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     920,
+     2422,
+     409,
+     56
+    ],
+    "testo": "Tipo di visita"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     920,
+     2670,
+     409,
+     82
+    ],
+    "testo": "Pazienti nuovi: come ci hanno conosciuto"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     920,
+     2944,
+     409,
+     56
+    ],
+    "testo": "Chi li manda"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "500",
+    "lineHeight": "26px",
+    "box": [
+     920,
+     3149,
+     409,
+     56
+    ],
+    "testo": "Indirizzati alle altre strutture"
+   }
+  ],
+  "h3": [],
+  "schede": [
+   {
+    "borderRadius": "16px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "10px",
+    "paddingLeft": "18px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px",
+    "box": [
+     284,
+     191,
+     1046,
+     112
+    ],
+    "tag": "FORM",
+    "etichetta": "Struttura e periodo delle statistiche"
+   },
+   {
+    "borderRadius": "16px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "14px",
+    "paddingLeft": "4px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px",
+    "box": [
+     284,
+     321,
+     1046,
+     114
+    ],
+    "tag": "DIV",
+    "etichetta": "I numeri del periodo"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     453,
+     1046,
+     467
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-stanze"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     938,
+     1046,
+     401
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-medici"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     1357,
+     1046,
+     1046
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-prestazioni"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     284,
+     2421,
+     617,
+     359
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-giorni"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     919,
+     2421,
+     411,
+     230
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-tipo"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     919,
+     2669,
+     411,
+     256
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-nuovi"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     919,
+     2943,
+     411,
+     187
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-inviati"
+   },
+   {
+    "borderRadius": "20px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "paddingTop": "0px",
+    "paddingLeft": "0px",
+    "boxShadow": "rgba(18, 36, 74, 0.04) 0px 1px 2px 0px, rgba(18, 36, 74, 0.04) 0px 10px 28px 0px",
+    "box": [
+     919,
+     3148,
+     411,
+     277
+    ],
+    "tag": "SECTION",
+    "etichetta": "t-indirizzati"
+   }
+  ],
+  "th": {
+   "fontSize": "13.5px",
+   "fontWeight": "600",
+   "color": "rgb(56, 69, 90)",
+   "backgroundColor": "rgba(0, 0, 0, 0)",
+   "paddingTop": "11px",
+   "paddingLeft": "20px",
+   "box": [
+    285,
+    534,
+    254,
+    42
+   ]
+  },
+  "riga_intestazione": {
+   "backgroundColor": "rgb(238, 242, 248)",
+   "height": "41.5625px",
+   "box": [
+    285,
+    534,
+    1044,
+    42
+   ]
+  },
+  "riga": {
+   "height": "42px",
+   "borderBottomColor": "rgb(18, 36, 74)",
+   "borderBottomWidth": "0px",
+   "box": [
+    285,
+    575,
+    1044,
+    43
+   ]
+  },
+  "td": {
+   "fontSize": "14.5px",
+   "color": "rgb(18, 36, 74)",
+   "paddingTop": "10px",
+   "paddingLeft": "12px",
+   "box": [
+    539,
+    576,
+    130,
+    42
+   ]
+  },
+  "campi": [
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     369,
+     202,
+     178,
+     40
+    ],
+    "id": "struttura"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     600,
+     202,
+     148,
+     40
+    ],
+    "id": "dal"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "10px",
+    "borderTopColor": "rgb(216, 223, 235)",
+    "fontSize": "14.5px",
+    "paddingLeft": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "box": [
+     793,
+     202,
+     148,
+     40
+    ],
+    "id": "al"
+   }
+  ],
+  "etichette": [
+   {
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "color": "rgb(56, 69, 90)",
+    "box": [
+     303,
+     213,
+     56,
+     20
+    ],
+    "testo": "Struttura"
+   },
+   {
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "color": "rgb(56, 69, 90)",
+    "box": [
+     569,
+     213,
+     21,
+     20
+    ],
+    "testo": "Dal"
+   },
+   {
+    "fontSize": "13.5px",
+    "fontWeight": "600",
+    "color": "rgb(56, 69, 90)",
+    "box": [
+     770,
+     213,
+     13,
+     20
+    ],
+    "testo": "Al"
+   }
+  ],
+  "bottoni": [
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(28, 65, 132)",
+    "color": "rgb(255, 255, 255)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "18px",
+    "borderTopColor": "rgb(28, 65, 132)",
+    "box": [
+     963,
+     202,
+     101,
+     40
+    ],
+    "testo": "Aggiorna"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     1086,
+     202,
+     164,
+     40
+    ],
+    "testo": "Scarica in Excel"
+   },
+   {
+    "height": "40px",
+    "borderRadius": "12px",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgb(18, 36, 74)",
+    "fontSize": "14.5px",
+    "fontWeight": "600",
+    "paddingLeft": "14px",
+    "borderTopColor": "rgb(227, 233, 244)",
+    "box": [
+     303,
+     252,
+     239,
+     40
+    ],
+    "testo": "Riepilogo del mese per medico"
+   }
+  ],
+  "collegamento": {
+   "color": "rgb(28, 65, 132)",
+   "textDecorationLine": "underline",
+   "textUnderlineOffset": "3px",
+   "fontWeight": "400",
+   "box": [
+    489,
+    144,
+    92,
+    38
+   ]
+  },
+  "pillole": [],
+  "numeri_grandi": [
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     309,
+     336,
+     55,
+     36
+    ],
+    "testo": "294"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     497,
+     336,
+     81,
+     36
+    ],
+    "testo": "200,0"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     696,
+     336,
+     81,
+     36
+    ],
+    "testo": "530,0"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     916,
+     336,
+     36,
+     36
+    ],
+    "testo": "19"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     1046,
+     336,
+     18,
+     36
+    ],
+    "testo": "7"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     309,
+     384,
+     36,
+     36
+    ],
+    "testo": "41"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     480,
+     384,
+     143,
+     36
+    ],
+    "testo": "28.515,00"
+   },
+   {
+    "fontFamily": "Manrope, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "500",
+    "color": "rgb(18, 36, 74)",
+    "box": [
+     748,
+     384,
+     143,
+     36
+    ],
+    "testo": "20.460,00"
+   }
+  ],
+  "barre": [
+   {
+    "width": "276px",
+    "height": "22px",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "borderRadius": "0px",
+    "box": [
+     981,
+     586,
+     276,
+     22
+    ],
+    "title": "Saturazione 45%",
+    "piena": {
+     "backgroundColor": "rgb(227, 233, 244)",
+     "height": "8px",
+     "width": "276px",
+     "box": [
+      981,
+      593,
+      276,
+      8
+     ]
+    }
+   },
+   {
+    "width": "276px",
+    "height": "22px",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "borderRadius": "0px",
+    "box": [
+     981,
+     629,
+     276,
+     22
+    ],
+    "title": "Saturazione 34%",
+    "piena": {
+     "backgroundColor": "rgb(227, 233, 244)",
+     "height": "8px",
+     "width": "276px",
+     "box": [
+      981,
+      636,
+      276,
+      8
+     ]
+    }
+   },
+   {
+    "width": "276px",
+    "height": "22px",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "borderRadius": "0px",
+    "box": [
+     981,
+     672,
+     276,
+     22
+    ],
+    "title": "Saturazione 44%",
+    "piena": {
+     "backgroundColor": "rgb(227, 233, 244)",
+     "height": "8px",
+     "width": "276px",
+     "box": [
+      981,
+      679,
+      276,
+      8
+     ]
+    }
+   }
+  ],
+  "alto": 3464,
+  "largo": 1366
+ }
+}

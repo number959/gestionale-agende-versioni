@@ -1,0 +1,36 @@
+/* BOZZA tappa 9: le poche regole proprie di Configura e Aiuto, da mettere in fondo a static/veste.css (fuori dallo
+   strato «vecchio»). Prefisso «c-»: non si pesta con le classi di oggi né con i pezzi «v-». Solo gettoni, nessun
+   colore scritto a mano. */
+.c-configura { max-width: none; }
+.c-testa-linguetta { display: flex; flex-direction: column; gap: var(--v-spazio-2); }
+.c-testa-linguetta > a { align-self: flex-start; padding: var(--v-spazio-3) 0; margin: calc(-1 * var(--v-spazio-3)) 0; }
+.c-titolo-linguetta .sotto-titolo {
+  margin-left: var(--v-spazio-4);
+  font-family: var(--v-corpo); font-size: var(--v-car-l); font-weight: var(--v-peso-normale);
+  color: var(--v-testo-tenue);
+}
+/* una sezione delle Anagrafiche: titolo a sinistra, «Aggiungi …» a destra, sotto la tabella nella scheda bianca */
+.c-sezione { display: flex; flex-direction: column; gap: var(--v-spazio-5); min-width: 0; }
+.c-sezione-testa { display: flex; align-items: center; justify-content: space-between; gap: var(--v-spazio-6); }
+.c-sezione-testa h3 {
+  margin: 0; font-family: var(--v-titoli); font-weight: var(--v-peso-forte);
+  font-size: var(--v-car-t3); line-height: var(--v-int-t3); color: var(--v-testo);
+}
+/* «Aggiungi …»: tiene «bottone aggiungi» (guida e prove), con l'aspetto del bottone nuovo; il float di oggi
+   (stile.css: .sezione .aggiungi) non serve più dentro la riga flessibile */
+.c-sezione-testa .bottone.aggiungi { float: none; margin: 0; gap: var(--v-spazio-3); }
+/* «Per cominciare»: il filo ocra a sinistra come oggi; un passo fatto grigio e barrato */
+.c-per-cominciare { border-left: 4px solid var(--v-avviso-riga); }
+.c-per-cominciare ol { margin: 0; padding-left: var(--v-spazio-7); display: flex; flex-direction: column; gap: var(--v-spazio-2); }
+.c-per-cominciare li.fatto { color: var(--v-testo-tenue); text-decoration: line-through; }
+/* due colonne (Importa, scheda del medico): prima il modulo, poi il riquadro, anche per la tastiera */
+.c-due-colonne { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--v-spazio-7); align-items: start; }
+.c-due-colonne.c-tre-quinti { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+@media (max-width: 1100px) { .c-due-colonne, .c-due-colonne.c-tre-quinti { grid-template-columns: minmax(0, 1fr); } }
+.c-riga-limitata { max-width: 760px; }
+/* il riquadro con il filo a sinistra di oggi («Cosa riconosce», riquadri del medico, stato degli aggiornamenti) */
+.c-filo-arancio { border-left: 4px solid var(--v-avviso-riga); }
+.c-filo-blu { border-left: 4px solid var(--v-primario); }
+.c-azioni { display: flex; flex-wrap: wrap; gap: var(--v-spazio-4); align-items: center; }
+/* Pagina non trovata: al centro della pagina, con il ritorno */
+.c-non-trovata { max-width: 640px; }

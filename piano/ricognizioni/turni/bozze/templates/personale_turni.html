@@ -1,0 +1,71 @@
+{#- BOZZA tappa 7: Mese e Settimana (tavole Turni1 e Turni2). Ordine della tavola: intestazione, linguette, barra
+    (dentro _personale_barra.html); legenda e riga dei tasti; la griglia in una scheda bianca.
+    La GRIGLIA RESTA UNA <table>: la tavola la disegna con <div role="grid"> e un <button> per cella, ma turni.js
+    (tr.riga-persona, td.cella, th.nome-col a, thead th.giorno-col, td.tot, td.cop, tbody[data-ruolo]) e
+    prove_111_turni.py (la regex <td … data-k=…>…</td> e «class="turno» all'inizio dell'attributo) vogliono la tabella.
+    La tabella è l'unico figlio di .scorri-turni: turni.js:540 usa tab.parentNode come «la parte visibile».
+    Righe con «- tolta» / «+ nuova» dicono cosa cambia rispetto a oggi; tutto il resto è identico. -#}
+{% extends "base.html" %}
+{% from "_icone.html" import icona %}
+{% from "_personale_cella.html" import contenuto, totali %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block classe_body %} class="pagina-turni vista-{{ vista }}"{% endblock %}
+{% block corpo %}
+<div class="v-pagina v-turni">                                   {#- + nuova: il contenitore della veste -#}
+{% include "_personale_barra.html" %}
+
+{% if nessuno %}
+{#- - tolta la classe «pagina» (div.pagina sparisce alla tappa 9); + la scheda -#}
+<section class="v-scheda primi-turni">
+  <div class="vuoto-turni">
+    <div class="icone-ruoli" aria-hidden="true">{% for r in ruoli[:4] %}<span>{{ icona(r[3]) }}</span>{% endfor %}</div>
+    <h2>Per cominciare, il personale</h2>
+    <p>I turni si mettono per persona: medici, infermieri, OSS, tecnici, accettazione. I medici dell'agenda si
+      aggiungono con un clic; gli altri uno per volta.</p>
+    <div class="azioni">
+      <form method="post" action="{{ url_for('personale.medici_dall_agenda') }}" style="display:inline">
+        <button class="bottone primario con-icona v-bottone v-principale" type="submit">{{ icona('stethoscope') }}Aggiungi i medici dell'agenda</button>
+      </form>
+      <a class="bottone con-icona v-bottone" href="{{ url_for('personale.persona') }}">{{ icona('user-plus') }}Aggiungi una persona</a>
+    </div>
+  </div>
+</section>
+{% else %}
+
+<div class="legenda-turni v-legenda" data-guida="turni-legenda">
+  <ul>
+    {% for t in tipi %}
+    <li><span class="turno{% if not t.con_orario %} senza-orario{% endif %}{% if t.categoria == 'REPERIBILITA' %} reperibile{% endif %}" style="--c: {{ t.colore_sicuro }}; --t: {{ t.colore_testo }}"><b>{{ t.codice }}</b></span>{{ t.nome }}{% if t.orario %} <small>{{ t.orario }}</small>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  <p class="aiuto-tasti-turni">{{ icona('keyboard') }}<span>Clic su una cella per scegliere il turno · da tastiera scrivere il codice (M, P, N…), <kbd>Canc</kbd> toglie, <kbd>Maiusc</kbd>+frecce o trascinando si scelgono più celle, <kbd>Ctrl</kbd>+<kbd>Z</kbd> annulla</span></p>
+</div>
+
+{#- - tolta la classe «telaio» (overflow-x: auto, stile.css:137): con lei la riga dei giorni non può restare ferma in
+    cima alla finestra. + v-scheda v-attaccata: la scheda bianca della tavola -#}
+<div class="telaio-turni v-scheda v-attaccata v-griglia-turni">
+<div class="scorri-turni">
+<table class="turni turni-{{ vista }}" role="grid" aria-label="{{ titolo }}" id="griglia-turni" data-guida="turni-griglia"
+       data-indirizzo="{{ url_for('personale.cambia') }}" data-dal="{{ dal.isoformat() }}" data-al="{{ al.isoformat() }}"
+       data-vista="{{ vista }}" data-ruolo="{{ ruolo }}" data-area="{{ area }}"{% if strutture|length > 1 %} data-struttura="{{ sid }}"{% endif %}>
+  <colgroup><col class="col-nome">{% for gi in giorni %}<col class="col-giorno{% if gi.festivo %} festivo{% elif gi.sabato %} sabato{% endif %}">{% endfor %}<col class="col-tot"><col class="col-tot"><col class="col-tot"><col class="col-tot"></colgroup>
+  {#- da qui a </table> IDENTICO a oggi (righe 41-86 di personale_turni.html): thead, gruppi, righe, celle con
+      contenuto() e totali(), copertura. L'aspetto nuovo lo dà solo il CSS (bozze/static/turni-veste.css). -#}
+  …
+</table>
+</div>
+{% if not gruppi %}
+<p class="avvio">Nessuno con questi filtri. <a href="{{ url_for('personale.' ~ vista, **({'aaaamm': dal.strftime('%Y-%m')} if vista == 'mese' else {'iso': dal.isoformat()})) }}">Mostra tutto il personale</a>.</p>
+{% endif %}
+</div>
+<div class="stampa-legenda" aria-hidden="true">
+  {% for t in tipi %}<span><b>{{ t.codice }}</b> {{ t.nome }}{% if t.orario %} {{ t.orario }}{% endif %}</span>{% endfor %}
+</div>
+
+{% include "_personale_scelta.html" %}
+{% include "_personale_schema.html" %}
+<script type="application/json" id="tipi-turno">{{ tipi_json|tojson }}</script>
+{% endif %}
+</div>
+<script src="{{ url_for('static', filename='turni.js') }}"></script>
+{% endblock %}

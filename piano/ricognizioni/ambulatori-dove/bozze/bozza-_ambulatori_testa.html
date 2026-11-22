@@ -1,0 +1,47 @@
+{#- BOZZA (tappa 8, non è nel repository). La testa comune delle 5 pagine di Ambulatori
+    (ambulatori_settimana, ambulatori_mese, riepilogo_live, ambulatori_riepilogo, esportazioni), come nelle tavole
+    Nefro-Ambulatori1-5: riga piccola, h1 «Ambulatori», [sottotitolo: SOLO SE APPROVATO], le linguette, poi il titolo
+    della linguetta (h2) e la barra dei comandi, che ogni pagina riempie con {% call %}.
+    Pezzi comuni da _pezzi.html (bozza della 1-bis, classi «v-»): intestazione, linguette, barra_comandi.
+    Le linguette sono quelle di menu.py (tappa 2, gruppo 'ambulatori': CINQUE, con «Riepilogo live» fino a M6):
+    la cornice le disegna in {% block linguette %} prima di <main>; qui vanno DOPO l'intestazione, quindi la pagina
+    svuota quel blocco e le chiama qui (vedi la nota nella risposta).
+    Tre casi:
+      - pagina normale: testa d'area completa;
+      - cruscotto (le statistiche dentro il riepilogo live, /riepilogo-live/statistiche): niente testa d'area, h1 di
+        oggi «Riepilogo del periodo» (prove_112.py:2646 lo cerca come nome della pagina);
+      - schermo (?schermo=1, gli altri PC): niente linguette né collegamenti fuori da /riepilogo-live
+        (prove_112.py:2652, 2670-2680; prove_senza_menu.py:116-120). -#}
+{%- from "_pezzi.html" import intestazione, linguette, barra_comandi -%}
+
+{%- macro testa_ambulatori(titolo_linguetta, schermo=false, cruscotto=false, h1_di_oggi=none, dopo_titolo=none) -%}
+{%- if schermo or cruscotto %}
+  {#- come oggi: l'h1 di oggi (con il suo <small>), nessuna linguetta -#}
+  <h1 class="giorno v-titolo">{{ h1_di_oggi }}</h1>
+{%- else %}
+  {{ intestazione('Ambulatori', sopra='Ambulatori · ' ~ st.nome,
+                  sotto=none) }}  {#- sotto="Chi sta in quale stanza, com'è andata, e i file da scaricare." è NUOVO:
+                                      solo se Giovanni lo approva (SPEC-AGENDE.md:99-100, non è fra le frasi di s1.md) -#}
+  {{ linguette(linguette_di(sezione).voci|voci_pronte(sid, data_menu), etichetta=none) }}
+                                   {#- etichetta «Pagine di Ambulatori» (aria-label nuovo): solo se approvata -#}
+  <div class="v-testa-linguetta">
+    <h2 class="v-titolo-linguetta">{{ titolo_linguetta }}</h2>
+    {%- if dopo_titolo %}{{ dopo_titolo }}{% endif %}   {#- nel Riepilogo del periodo: Ambulatori | Sala operatoria -#}
+  </div>
+{%- endif %}
+{{ barra_comandi() if caller is not defined else barra_comandi(caller=caller) }}
+{%- endmacro -%}
+
+{#- Uso, in ambulatori_settimana.html (titolo di oggi: 'Settimana dal 16 novembre al 22 novembre 2026'):
+    {% block linguette %}{% endblock %}
+    {% call testa_ambulatori(titolo) %}
+      {{ passo(url_for('ambulatori.settimana', iso=prima, struttura=sid), 'indietro', 'Settimana precedente', 'precedente') }}
+      {{ passo(url_for('ambulatori.settimana', iso=dopo, struttura=sid), 'avanti', 'Settimana successiva', 'successivo') }}
+      <a class="v-bottone" href="{{ url_for('ambulatori.settimana', iso=oggi.isoformat(), struttura=sid) }}">Oggi</a>
+          {#- parola approvata (s1.md); SENZA data-tasto, come oggi: aggiungerlo sarebbe una differenza nei «segni» -#}
+      {% if strutture|length > 1 %}<form method="get" class="v-in-linea"> … la tendina di oggi, identica … </form>{% endif %}
+      <span class="v-a-destra"></span>
+      … «Stampa e scarica» di oggi (righe 22-33), stesse 7 voci, stesso data-guida="matrice-scarica" …
+    {% endcall %}
+    Riepilogo live: h1_di_oggi = 'Riepilogo live <small class="sotto-titolo">' ~ r.giorno ~ '</small>' nel modo schermo;
+    titolo_linguetta = r.giorno nella pagina normale. -#}

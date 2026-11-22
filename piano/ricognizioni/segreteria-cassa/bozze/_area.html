@@ -1,0 +1,33 @@
+{#- BOZZA tappa 6 (non è nel repository). L'intestazione delle due aree e le linguette della Cassa.
+    - Le linguette della Segreteria le fa la cornice (tappa 2, menu.py: LINGUETTE['segreteria']).
+    - Le linguette della Cassa vanno in menu.py come LINGUETTE['cassa'] (vedi linguette_cassa.py); qui sono scritte
+      a mano solo finché menu.py non c'è. Stessi indirizzi e argomenti dei bottoni di oggi (cassa.html:19-21):
+      Mese = cassa_mese(aaaamm=<mese della pagina>), Listino = listino(struttura), Tariffari = tariffari.elenco(struttura).
+    - TESTI NUOVI, solo se approvati: la riga sopra («Segreteria · <struttura>», «Cassa · <struttura>»), il titolo
+      dell'area e il sottotitolo; le parole «Giorno» e «Tariffari dei medici» delle linguette (oggi il bottone dice
+      «Tariffari»). Senza via, testa_area() si chiama con approvata=false e restano solo le linguette. -#}
+{%- from "_pezzi.html" import intestazione, linguette -%}
+
+{%- macro testa_segreteria(approvata=true) -%}
+{%- if approvata -%}
+{{ intestazione('Segreteria', sopra='Segreteria · ' ~ st.nome if st is defined and st else none,
+                sotto="Telefonate, prenotazioni in sospeso, fine giornata, cose da fare e lista d'attesa.") }}
+{%- endif -%}
+{#- qui, in tappa 2, {{ linguette(...) }} della cornice -#}
+{%- endmacro -%}
+
+{%- macro testa_cassa(approvata=true) -%}
+{%- set _sid = sid if sid is defined and sid else none -%}
+{%- set _data = data_menu if data_menu is defined and data_menu else oggi_iso -%}
+{%- set _ep = request.endpoint or '' -%}
+{%- if approvata -%}
+{{ intestazione('Cassa', sopra='Cassa · ' ~ st.nome if st is defined and st else none,
+                sotto='Quanto si è incassato, come e quando; il listino e i tariffari dei medici. Il programma non fa fatture.') }}
+{%- endif -%}
+{{ linguette([
+  {'testo': 'Giorno', 'indirizzo': url_for('cassa.cassa_giorno', iso=_data, struttura=_sid), 'accesa': _ep == 'cassa.cassa_giorno'},
+  {'testo': 'Mese', 'indirizzo': url_for('cassa.cassa_mese', aaaamm=_data[:7], struttura=_sid), 'accesa': _ep == 'cassa.cassa_mese'},
+  {'testo': 'Listino', 'indirizzo': url_for('cassa.listino', struttura=_sid), 'accesa': _ep == 'cassa.listino'},
+  {'testo': 'Tariffari dei medici', 'indirizzo': url_for('tariffari.elenco', struttura=_sid), 'accesa': _ep.startswith('tariffari.')},
+]) }}
+{%- endmacro -%}

@@ -1,0 +1,650 @@
+[
+ {
+  "pagina": "/oggi",
+  "tema": "chiaro",
+  "intera": false,
+  "rumore": 53,
+  "prima_dopo": 53,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/oggi",
+  "tema": "chiaro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/oggi",
+  "tema": "scuro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/oggi",
+  "tema": "scuro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/conferme",
+  "tema": "chiaro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/conferme",
+  "tema": "chiaro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/conferme",
+  "tema": "scuro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/conferme",
+  "tema": "scuro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/giorno/2026-11-17?struttura=1",
+  "tema": "chiaro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/giorno/2026-11-17?struttura=1",
+  "tema": "chiaro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/giorno/2026-11-17?struttura=1",
+  "tema": "scuro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/giorno/2026-11-17?struttura=1",
+  "tema": "scuro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/pazienti",
+  "tema": "chiaro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/pazienti",
+  "tema": "chiaro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/pazienti",
+  "tema": "scuro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/pazienti",
+  "tema": "scuro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/statistiche",
+  "tema": "chiaro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/statistiche",
+  "tema": "chiaro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/statistiche",
+  "tema": "scuro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/statistiche",
+  "tema": "scuro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/personale/turni/mese/",
+  "tema": "chiaro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/personale/turni/mese/",
+  "tema": "chiaro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/personale/turni/mese/",
+  "tema": "scuro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/personale/turni/mese/",
+  "tema": "scuro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/dove-si-fa/",
+  "tema": "chiaro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/dove-si-fa/",
+  "tema": "chiaro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/dove-si-fa/",
+  "tema": "scuro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/dove-si-fa/",
+  "tema": "scuro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/cassa/2026-11-17?struttura=1",
+  "tema": "chiaro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/cassa/2026-11-17?struttura=1",
+  "tema": "chiaro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/cassa/2026-11-17?struttura=1",
+  "tema": "scuro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/cassa/2026-11-17?struttura=1",
+  "tema": "scuro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/impostazioni",
+  "tema": "chiaro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/impostazioni",
+  "tema": "chiaro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(255, 255, 255)",
+  "link_dopo": "rgb(255, 255, 255)",
+  "v_testo_dopo": "#12244A"
+ },
+ {
+  "pagina": "/impostazioni",
+  "tema": "scuro",
+  "intera": false,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ },
+ {
+  "pagina": "/impostazioni",
+  "tema": "scuro",
+  "intera": true,
+  "rumore": 0,
+  "prima_dopo": 0,
+  "errori_js": [],
+  "fogli_dopo": [
+   "in linea",
+   "in linea",
+   "gettoni.css",
+   "veste.css",
+   "in linea"
+  ],
+  "link_prima": "rgb(242, 245, 248)",
+  "link_dopo": "rgb(242, 245, 248)",
+  "v_testo_dopo": "#E1E7ED"
+ }
+]

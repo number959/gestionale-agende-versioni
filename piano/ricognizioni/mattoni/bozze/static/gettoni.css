@@ -1,0 +1,167 @@
+/* I gettoni della veste nuova (1.13): variabili CSS con un nome di ruolo. Sono l'unico posto con i colori scritti a
+   mano: veste.css e i pezzi usano solo var(--v-...). Fuori dallo strato «vecchio» in cui base.html mette i fogli di oggi.
+
+   Da dove vengono: la tavola dei colori del gruppo (Nefro-Colori: «Cornice» e «Stati», 18 voci con nome e uso) e le
+   tavole Nefro delle pagine. Gli stati sono quelli di oggi (stile.css, riga accanto). Il colore della struttura non
+   è scritto qui: resta quello scelto in «Nome, logo e colori» (base.html scrive --primario e le sue varianti); i gettoni
+   del primario lo riprendono. I valori scuri vengono da converti() di strumenti/genera_tema_scuro.py, poi ritoccati
+   perché fondi, superfici, testo e righe siano la stessa famiglia del tema scuro di oggi (FISSI del generatore).
+   Contrasti testo/fondo misurati: almeno 4,5:1 in chiaro e in scuro (la prova li ricalcola da questo file).
+   Regola: un colore nuovo entra qui con un ruolo, il suo valore scuro e la sua coppia nella prova. */
+
+:root {
+  /* ---- fondi */
+  --v-fondo: #F3F6FA;              /* pagina (Colori «Fondo») */
+  --v-superficie: #FFFFFF;         /* schede, campi, bottoni normali */
+  --v-superficie-tenue: #F8FAFD;   /* menu laterale */
+  --v-incasso: #EEF2F8;            /* contenitore delle linguette, intestazione delle tabelle, riga del totale */
+  --v-chiuso: #ECEFF3;             /* caselle chiuse e fuori turno, pillola Disdetto (Colori «Fuori turno e disdetto») */
+
+  /* ---- testo */
+  --v-testo: #12244A;              /* principale (Colori «Inchiostro») */
+  --v-testo-medio: #38455A;        /* celle, voci e linguette non scelte */
+  --v-testo-tenue: #5B687C;        /* secondario: sopratitolo, sottotitolo, etichette (Colori «Grigio-blu») */
+  --v-testo-su-pieno: #FFFFFF;     /* sopra il primario e i fondi pieni */
+
+  /* ---- righe */
+  --v-riga: #E3E9F4;               /* bordi di schede e tabelle (Colori «Righe») */
+  --v-riga-campo: #B3BDCB;         /* bordo di campi e tendine: 1,9:1, non meno di oggi (stile.css:255, #B8C0C4) */
+  --v-segno-grigio: #98A3B3;       /* punto e tratteggio di Prenotato e Disdetto */
+
+  /* ---- il colore della struttura (base.html), con i nomi dei ruoli. Le varianti --primario-tinta, -bordo, -profondo
+     e -testo sono la proposta per marchio.tema() (bozza in marchio_tema_nuovo.py: stessa tinta, luce e saturazione delle
+     tavole); finché non ci sono, valgono le varianti di oggi */
+  --v-primario: var(--primario);                                       /* bottone principale (tavola #1C4184) */
+  --v-primario-premuto: var(--primario-profondo, var(--primario-scuro)); /* premuto e sotto il mouse (tavola #14294F) */
+  --v-primario-tinta: var(--primario-tinta, var(--primario-tenue));    /* fondo di voce e linguetta accese (tavola #E7EEF8) */
+  --v-primario-chiaro: var(--primario-bordo, var(--primario-chiaro));  /* bordo delle cose scelte (tavola #BCCCEC) */
+  --v-primario-testo: var(--primario-testo, var(--primario));          /* il primario come testo: almeno 4,5:1 sulla tinta */
+  --v-collegamento: var(--v-primario-testo);                           /* collegamenti (tavola: il blu principale) */
+  --v-fuoco: var(--primario-fuoco);                                    /* contorno del pezzo con il fuoco della tastiera */
+
+  /* ---- stati, come oggi */
+  --v-occupato: #DFEBDA;           /* stile.css:204 */
+  --v-arrivato: #CFE6C8;           /* stile.css:433 */
+  --v-verde: #2E7D32;              /* ✓ di confermato, targhetta «arrivato 10:21» (stile.css:431-432) */
+  --v-verde-testo: #1B5E20;        /* testo della pillola Arrivato (stile.css:438) */
+  --v-disponibile: #E3F4E1;        /* stanza senza medico (stile.css:570) */
+  --v-confermato: #E7EEF8;         /* pillola Confermato */
+  --v-confermato-testo: #1C4184;
+  --v-azzurro: #4F79C4;            /* punti e segni piccoli (Colori «Azzurro») */
+  --v-da-fare: #AFC4E2;            /* visite non cominciate (stile.css:654) */
+  --v-rosso: #B3261E;              /* non presentato, errore (stile.css:133) */
+  --v-rosso-fondo: #FCE9E7;
+  --v-rosso-riga: #F3C9C4;
+  --v-rosso-forte: #8A1C16;        /* testo del riquadro di errore (stile.css:133) */
+  --v-sabbia: #F3EEDF;             /* riquadro «Da confermare» (Colori «Da guardare») */
+  --v-avviso-fondo: #FFF4D6;
+  --v-avviso-riga: #EBD49A;
+  --v-avviso-testo: #7A5412;
+  --v-ok-fondo: #E3F1E4;
+  --v-ok-testo: #1E5E22;
+  --v-sala-fondo: #EFE9F7;         /* la Sala, in viola */
+  --v-sala-testo: #4B3474;
+  --v-sala: #6B4E9B;
+  /* fondi pieni con il testo bianco sopra (targhetta «arrivato 10:21», contatore, segno della Sala): in scuro restano
+     scuri, mentre i colori di testo qui sopra in scuro diventano chiari */
+  --v-verde-pieno: #2E7D32;
+  --v-rosso-pieno: #B3261E;
+  --v-sala-pieno: #6B4E9B;
+
+  /* ---- ombre */
+  --v-ombra-1: 0 1px 2px rgba(18, 36, 74, .04);                                  /* schede e barre */
+  --v-ombra-2: 0 1px 2px rgba(18, 36, 74, .04), 0 10px 28px rgba(18, 36, 74, .04); /* sezioni grandi */
+  --v-ombra-3: 0 12px 32px rgba(18, 36, 74, .16);                                /* tendine, campanella, messaggi */
+
+  /* ---- spazi: 9 passi invece dei 24 valori delle tavole (tabella di conversione nel catalogo) */
+  --v-spazio-1: 2px;
+  --v-spazio-2: 4px;
+  --v-spazio-3: 6px;
+  --v-spazio-4: 8px;
+  --v-spazio-5: 12px;
+  --v-spazio-6: 16px;
+  --v-spazio-7: 20px;
+  --v-spazio-8: 24px;
+  --v-spazio-9: 36px;
+
+  /* ---- raggi: 4 passi e il tondo, invece dei 18 delle tavole */
+  --v-raggio-1: 4px;     /* 1-5 px: segni, barrette, quadratini della legenda */
+  --v-raggio-2: 8px;     /* 6-9 px: linguette, contatori, codici */
+  --v-raggio-3: 12px;    /* 10-14 px: bottoni, campi, tendine, voci del menu, blocchi */
+  --v-raggio-4: 16px;    /* 16-20 px: schede, barra dei comandi, striscia, sezioni */
+  --v-raggio-pieno: 999px; /* pillole e cerchi (999px, 100px, 50%) */
+
+  /* ---- caratteri: 9 grandezze invece di 26, ognuna con la sua interlinea */
+  --v-titoli: var(--titoli);       /* Manrope (stile.css:36-37) */
+  --v-corpo: var(--testo);         /* Inter */
+  --v-car-xs: 12px;   --v-int-xs: 16px;    /* 9-12: contatori, legende */
+  --v-car-s: 12.5px;  --v-int-s: 18px;     /* 12,5-13: pillole, righe piccole sotto un nome */
+  --v-car-m: 13.5px;  --v-int-m: 20px;     /* 13,5: sopratitolo, etichette, intestazioni di tabella */
+  --v-car-n: 14px;    --v-int-n: 22px;     /* 14-14,5: testo, bottoni, campi, linguette */
+  --v-car-l: 15px;    --v-int-l: 22px;     /* 15-16: sottotitolo della pagina */
+  --v-car-t3: 18px;   --v-int-t3: 24px;    /* 17-18: titolo di una scheda (h3) */
+  --v-car-t2: 22px;   --v-int-t2: 28px;    /* 20-24: titolo della linguetta (h2) */
+  --v-car-num: 30px;  --v-int-num: 36px;   /* 26-30: numeri della striscia */
+  --v-car-t1: 36px;   --v-int-t1: 40px;    /* 34-46: titolo della pagina (h1) */
+  --v-peso-normale: 400;
+  --v-peso-medio: 500;
+  --v-peso-forte: 600;
+  --v-peso-titolo: 700;
+  --v-lettere: -0.012em;            /* la spaziatura delle tavole (Inter un filo più stretta) */
+
+  /* ---- altezze dei comandi */
+  --v-alto-piccolo: 36px;   /* linguette, bottoni nelle righe */
+  --v-alto: 40px;           /* bottoni, campi, tendine */
+  --v-alto-grande: 44px;    /* ricerca e campanella (tappa 2) */
+}
+
+/* il tema scuro: come tema-scuro.css vale solo sullo schermo, i fogli stampati restano chiari */
+@media screen {
+  html.scuro {
+    --v-fondo: #141A21;
+    --v-superficie: #1C242D;
+    --v-superficie-tenue: #181F27;
+    --v-incasso: #222B35;
+    --v-chiuso: #222B35;
+    --v-testo: #E1E7ED;
+    --v-testo-medio: #C3CDD7;
+    --v-testo-tenue: #9AA8B4;
+    --v-testo-su-pieno: #FFFFFF;
+    --v-riga: #2E3843;
+    --v-riga-campo: #45525F;
+    --v-segno-grigio: #6B7785;
+    /* il primario in scuro: le varianti scure di tema-scuro (correzioni a mano, righe 3-6), come le pagine di oggi */
+    --v-primario-premuto: color-mix(in srgb, var(--primario) 80%, #FFFFFF);   /* come .bottone.primario:hover in scuro */
+    --v-primario-tinta: var(--primario-tenue);
+    --v-primario-chiaro: var(--primario-fuoco);
+    --v-primario-testo: var(--primario-scuro);   /* in scuro --primario-scuro è il primario schiarito */
+    --v-occupato: #2A3E22;
+    --v-arrivato: #294620;
+    --v-verde: #A9DFAC;
+    --v-verde-testo: #B5EAB9;
+    --v-disponibile: #2A3A28;
+    --v-confermato: #252B35;
+    --v-confermato-testo: #A5BDE8;
+    --v-azzurro: #8CA8D9;
+    --v-da-fare: #1E324F;
+    --v-rosso: #E49793;
+    --v-rosso-fondo: #322523;
+    --v-rosso-riga: #563733;
+    --v-rosso-forte: #E8A8A5;
+    --v-sabbia: #3B3729;
+    --v-avviso-fondo: #3A3528;
+    --v-avviso-riga: #61563A;
+    --v-avviso-testo: #EAD3AC;
+    --v-ok-fondo: #293A2A;
+    --v-ok-testo: #B6E8B9;
+    --v-sala-fondo: #2B2434;
+    --v-sala-testo: #BFAFDB;
+    --v-sala: #AC99CC;
+    --v-verde-pieno: #29702D;
+    --v-rosso-pieno: #A1221B;
+    --v-sala-pieno: #60468B;
+    --v-ombra-1: 0 1px 2px rgba(0, 0, 0, .35);
+    --v-ombra-2: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 28px rgba(0, 0, 0, .25);
+    --v-ombra-3: 0 12px 32px rgba(0, 0, 0, .55);
+  }
+}

@@ -1,0 +1,17 @@
+{
+ "/pazienti": "UGUALE",
+ "/pazienti?q=ferr": "UGUALE",
+ "/pazienti?q=zzzz": "UGUALE",
+ "/pazienti/nuovo": "UGUALE",
+ "/pazienti/1": "UGUALE",
+ "/pazienti/3": "UGUALE",
+ "/pazienti/17": "UGUALE",
+ "/pazienti/29/unisci": "UGUALE",
+ "/pazienti/29/unisci?altro=30": "UGUALE",
+ "/pazienti/29/unisci?q=testa": "UGUALE",
+ "/pazienti/codici-fiscali": "UGUALE",
+ "/statistiche": [
+  "testo: solo nel principale []; solo qui [] (stessi elementi, ordine diverso)",
+  "primo testo diverso alla riga 83: oggi ['Statistiche · Clinica Posillipo', 'Dal 01/11/2026 al 30/11/2026.', 'Questo mese', '·'] / bozza ['Statistiche · Clinica Posillipo', 'Statistiche', 'Dal 01/11/2026 al 30/11/2026.', 'Questo mese']"
+ ]
+}

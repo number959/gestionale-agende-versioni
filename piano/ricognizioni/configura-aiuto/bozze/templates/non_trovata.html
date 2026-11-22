@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{#- BOZZA tappa 9: «Pagina non trovata» in italiano, al posto della pagina inglese di Flask (oggi 41 abort(404) e
+    ogni indirizzo che non esiste). I due testi sono NUOVI: entrano solo con il sì di Giovanni (proposta qui sotto).
+    La risposta resta 404. Nella cornice nuova, con il menu: dalla pagina si va dove si vuole.
+    `senza_cornice` (lo passa app.py per /riepilogo-live*, /logo/ e /static/): niente menu, campanella e ricerca,
+    così il Modo schermo sugli altri PC non chiede niente fuori da /riepilogo-live, /static/ e /logo/
+    (la guardia della tappa 1) e il portiere non vede collegamenti che non lascia passare. -#}
+{% from "_pezzi.html" import intestazione %}
+{% block titolo %}Pagina non trovata{% endblock %}
+{% block menu %}{% if not senza_cornice %}{{ super() }}{% endif %}{% endblock %}
+{% block corpo %}
+<div class="v-pagina"><div class="c-non-trovata">
+  {% call intestazione('Pagina non trovata', sotto='Questo indirizzo non porta a nessuna pagina del programma: forse è scritto male, oppure quello che mostrava è stato eliminato.') %}{% endcall %}
+  {% if not senza_cornice %}<p><a href="{{ url_for('cruscotto.oggi') }}">Torna alla pagina Oggi</a></p>{% endif %}
+</div></div>
+{% endblock %}

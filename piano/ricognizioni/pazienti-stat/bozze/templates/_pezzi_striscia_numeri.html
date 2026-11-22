@@ -1,0 +1,18 @@
+{#- PROPOSTA per _pezzi.html (veste-pazienti-stat): una seconda forma della striscia, per le pagine che oggi hanno
+    ul.numeri (Statistiche: ul.numeri.grandi; scheda del paziente, «In breve»: ul.numeri; anteprima del database di
+    Dove si fa: ul.numeri grandi).
+    Perché non basta striscia() della bozza dei mattoni:
+    - una voce di Statistiche ha due numeri: «<b>200,0</b> ore prenotate su <b>530,0</b> di turno (38%)»;
+    - la versione animata cerca «ul.numeri li» e «ul.numeri b» (animazioni.js:93 e 135: entrate e numeri che contano)
+      e prove_animazioni.py:78-86 legge «ul.numeri b»: con div e span l'animazione sparisce senza errori.
+    Il testo letto resta quello di oggi, pezzo per pezzo: «294», «appuntamenti», «200,0», «ore prenotate su», …
+    voci: elenco di dizionari {parti: [(numero, parole), ...], allarme: vero/falso}. Il numero arriva già scritto. -#}
+{%- macro striscia_numeri(voci, classe='numeri grandi', guida=none) -%}
+<ul class="v-striscia {{ classe }}"{% if guida %} data-guida="{{ guida }}"{% endif %}>
+  {%- for v in voci %}
+  <li class="v-striscia-voce{{ ' allarme v-allarme' if v.get('allarme') }}">
+    {%- for numero, parole in v.parti %}<b class="v-striscia-numero">{{ numero }}</b> <span class="v-striscia-cosa">{{ parole }}</span>{% if not loop.last %} {% endif %}{% endfor -%}
+  </li>
+  {%- endfor %}
+</ul>
+{%- endmacro -%}

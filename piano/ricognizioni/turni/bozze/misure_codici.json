@@ -1,0 +1,204 @@
+{
+ "codici": {
+  "M": {
+   "Manrope 700 12px +.02em (oggi)": 10.5,
+   "Manrope 700 11px 0 (tavola)": 9.4,
+   "Manrope 700 10px 0": 8.6,
+   "Manrope 700 9.5px 0 (doppio)": 8.1,
+   "Manrope 700 9px -.02em": 7.5,
+   "Manrope 700 8px -.03em": 6.6
+  },
+  "P": {
+   "Manrope 700 12px +.02em (oggi)": 7.9,
+   "Manrope 700 11px 0 (tavola)": 7,
+   "Manrope 700 10px 0": 6.4,
+   "Manrope 700 9.5px 0 (doppio)": 6.1,
+   "Manrope 700 9px -.02em": 5.6,
+   "Manrope 700 8px -.03em": 4.9
+  },
+  "N": {
+   "Manrope 700 12px +.02em (oggi)": 8.9,
+   "Manrope 700 11px 0 (tavola)": 7.9,
+   "Manrope 700 10px 0": 7.2,
+   "Manrope 700 9.5px 0 (doppio)": 6.8,
+   "Manrope 700 9px -.02em": 6.3,
+   "Manrope 700 8px -.03em": 5.5
+  },
+  "G": {
+   "Manrope 700 12px +.02em (oggi)": 9,
+   "Manrope 700 11px 0 (tavola)": 8.1,
+   "Manrope 700 10px 0": 7.3,
+   "Manrope 700 9.5px 0 (doppio)": 7,
+   "Manrope 700 9px -.02em": 6.4,
+   "Manrope 700 8px -.03em": 5.6
+  },
+  "R": {
+   "Manrope 700 12px +.02em (oggi)": 8.2,
+   "Manrope 700 11px 0 (tavola)": 7.3,
+   "Manrope 700 10px 0": 6.6,
+   "Manrope 700 9.5px 0 (doppio)": 6.3,
+   "Manrope 700 9px -.02em": 5.8,
+   "Manrope 700 8px -.03em": 5
+  },
+  "F": {
+   "Manrope 700 12px +.02em (oggi)": 6.5,
+   "Manrope 700 11px 0 (tavola)": 5.8,
+   "Manrope 700 10px 0": 5.3,
+   "Manrope 700 9.5px 0 (doppio)": 5,
+   "Manrope 700 9px -.02em": 4.5,
+   "Manrope 700 8px -.03em": 4
+  },
+  "RE": {
+   "Manrope 700 12px +.02em (oggi)": 15.4,
+   "Manrope 700 11px 0 (tavola)": 13.7,
+   "Manrope 700 10px 0": 12.5,
+   "Manrope 700 9.5px 0 (doppio)": 11.8,
+   "Manrope 700 9px -.02em": 10.9,
+   "Manrope 700 8px -.03em": 9.5
+  },
+  "SN": {
+   "Manrope 700 12px +.02em (oggi)": 17,
+   "Manrope 700 11px 0 (tavola)": 15.1,
+   "Manrope 700 10px 0": 13.8,
+   "Manrope 700 9.5px 0 (doppio)": 13.1,
+   "Manrope 700 9px -.02em": 12,
+   "Manrope 700 8px -.03em": 10.5
+  },
+  "MA": {
+   "Manrope 700 12px +.02em (oggi)": 18.8,
+   "Manrope 700 11px 0 (tavola)": 16.8,
+   "Manrope 700 10px 0": 15.3,
+   "Manrope 700 9.5px 0 (doppio)": 14.5,
+   "Manrope 700 9px -.02em": 13.4,
+   "Manrope 700 8px -.03em": 11.7
+  },
+  "PE": {
+   "Manrope 700 12px +.02em (oggi)": 15.2,
+   "Manrope 700 11px 0 (tavola)": 13.5,
+   "Manrope 700 10px 0": 12.3,
+   "Manrope 700 9.5px 0 (doppio)": 11.6,
+   "Manrope 700 9px -.02em": 10.7,
+   "Manrope 700 8px -.03em": 9.3
+  },
+  "MM": {
+   "Manrope 700 12px +.02em (oggi)": 21,
+   "Manrope 700 11px 0 (tavola)": 18.8,
+   "Manrope 700 10px 0": 17.1,
+   "Manrope 700 9.5px 0 (doppio)": 16.3,
+   "Manrope 700 9px -.02em": 15,
+   "Manrope 700 8px -.03em": 13.2
+  },
+  "MP": {
+   "Manrope 700 12px +.02em (oggi)": 18.4,
+   "Manrope 700 11px 0 (tavola)": 16.4,
+   "Manrope 700 10px 0": 14.9,
+   "Manrope 700 9.5px 0 (doppio)": 14.2,
+   "Manrope 700 9px -.02em": 13.1,
+   "Manrope 700 8px -.03em": 11.5
+  },
+  "WW": {
+   "Manrope 700 12px +.02em (oggi)": 23.9,
+   "Manrope 700 11px 0 (tavola)": 21.5,
+   "Manrope 700 10px 0": 19.5,
+   "Manrope 700 9.5px 0 (doppio)": 18.5,
+   "Manrope 700 9px -.02em": 17.2,
+   "Manrope 700 8px -.03em": 15.1
+  },
+  "REP": {
+   "Manrope 700 12px +.02em (oggi)": 23.3,
+   "Manrope 700 11px 0 (tavola)": 20.7,
+   "Manrope 700 10px 0": 18.8,
+   "Manrope 700 9.5px 0 (doppio)": 17.9,
+   "Manrope 700 9px -.02em": 16.4,
+   "Manrope 700 8px -.03em": 14.4
+  },
+  "MAL": {
+   "Manrope 700 12px +.02em (oggi)": 25.4,
+   "Manrope 700 11px 0 (tavola)": 22.7,
+   "Manrope 700 10px 0": 20.6,
+   "Manrope 700 9.5px 0 (doppio)": 19.6,
+   "Manrope 700 9px -.02em": 18,
+   "Manrope 700 8px -.03em": 15.8
+  },
+  "WWW": {
+   "Manrope 700 12px +.02em (oggi)": 35.8,
+   "Manrope 700 11px 0 (tavola)": 32.2,
+   "Manrope 700 10px 0": 29.3,
+   "Manrope 700 9.5px 0 (doppio)": 27.8,
+   "Manrope 700 9px -.02em": 25.8,
+   "Manrope 700 8px -.03em": 22.7
+  },
+  "L104": {
+   "Manrope 700 12px +.02em (oggi)": 27.8,
+   "Manrope 700 11px 0 (tavola)": 24.6,
+   "Manrope 700 10px 0": 22.4,
+   "Manrope 700 9.5px 0 (doppio)": 21.3,
+   "Manrope 700 9px -.02em": 19.4,
+   "Manrope 700 8px -.03em": 17
+  },
+  "MMMM": {
+   "Manrope 700 12px +.02em (oggi)": 42,
+   "Manrope 700 11px 0 (tavola)": 37.6,
+   "Manrope 700 10px 0": 34.2,
+   "Manrope 700 9.5px 0 (doppio)": 32.5,
+   "Manrope 700 9px -.02em": 30.1,
+   "Manrope 700 8px -.03em": 26.4
+  },
+  "WWWW": {
+   "Manrope 700 12px +.02em (oggi)": 47.8,
+   "Manrope 700 11px 0 (tavola)": 42.9,
+   "Manrope 700 10px 0": 39,
+   "Manrope 700 9.5px 0 (doppio)": 37.1,
+   "Manrope 700 9px -.02em": 34.4,
+   "Manrope 700 8px -.03em": 30.3
+  }
+ },
+ "orari": {
+  "8": {
+   "Inter 600 9px -.01em (oggi)": 5.7,
+   "Inter 600 9px 0 (tavola)": 5.8,
+   "Inter 600 8.5px -.02em": 5.3,
+   "Manrope 700 9.5px 0 (doppio)": 5.8
+  },
+  "12": {
+   "Inter 600 9px -.01em (oggi)": 9.2,
+   "Inter 600 9px 0 (tavola)": 9.4,
+   "Inter 600 8.5px -.02em": 8.6,
+   "Manrope 700 9.5px 0 (doppio)": 9.8
+  },
+  "7:30": {
+   "Inter 600 9px -.01em (oggi)": 19.1,
+   "Inter 600 9px 0 (tavola)": 19.4,
+   "Inter 600 8.5px -.02em": 17.7,
+   "Manrope 700 9.5px 0 (doppio)": 20.1
+  },
+  "13:30": {
+   "Inter 600 9px -.01em (oggi)": 23.6,
+   "Inter 600 9px 0 (tavola)": 24.1,
+   "Inter 600 8.5px -.02em": 21.9,
+   "Manrope 700 9.5px 0 (doppio)": 24.7
+  },
+  "19:45": {
+   "Inter 600 9px -.01em (oggi)": 23.5,
+   "Inter 600 9px 0 (tavola)": 23.9,
+   "Inter 600 8.5px -.02em": 21.8,
+   "Manrope 700 9.5px 0 (doppio)": 24.7
+  },
+  "21:15": {
+   "Inter 600 9px -.01em (oggi)": 21.2,
+   "Inter 600 9px 0 (tavola)": 21.6,
+   "Inter 600 8.5px -.02em": 19.6,
+   "Manrope 700 9.5px 0 (doppio)": 22.8
+  },
+  "23:45": {
+   "Inter 600 9px -.01em (oggi)": 25.3,
+   "Inter 600 9px 0 (tavola)": 25.7,
+   "Inter 600 8.5px -.02em": 23.4,
+   "Manrope 700 9.5px 0 (doppio)": 25.8
+  }
+ },
+ "caratteri": [
+  "Inter 100 900",
+  "Manrope 200 800"
+ ]
+}

@@ -1,0 +1,180 @@
+{#- Il catalogo dei pezzi della veste nuova: ogni pezzo di templates/_pezzi.html negli stati che ha davvero, con i
+    gettoni e le scale. Lo serve solo strumenti/catalogo_pezzi.py (gestionale di prova): non sta in templates/ e non
+    entra nell'eseguibile. Dati e nomi inventati (anteprime/SPEC.md), logo inventato. -#}
+{% extends "base.html" %}
+{% from "_pezzi.html" import intestazione, scheda, tabella, pillola, conta, striscia, barra_comandi, passo, linguette, stampa_e_scarica, euro %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Catalogo dei pezzi{% endblock %}
+{% block menu %}{% endblock %}
+{% block corpo %}
+<div class="v-pagina" id="catalogo">
+
+  {% call intestazione('I pezzi della veste nuova', sopra='Catalogo · gestionale di prova',
+                       sotto='Ogni pezzo come lo mostrerà il programma, negli stati che ha davvero. Dati e nomi inventati.') %}
+  <p class="v-sotto">Tema:
+    <a href="#" onclick="try { localStorage.setItem('gestionale-tema', 'chiaro'); } catch (e) {} location.reload(); return false;">chiaro</a> ·
+    <a href="#" onclick="try { localStorage.setItem('gestionale-tema', 'scuro'); } catch (e) {} location.reload(); return false;">scuro</a></p>
+  {% endcall %}
+
+  {# ------------------------------------------------------------ 1. gettoni #}
+  {% call scheda('Gettoni: i colori con il loro ruolo', sotto='Il valore chiaro viene dalla tavola dei colori del gruppo; quello scuro da converti() del tema scuro, ritoccato dove serve. Il primario è il colore della struttura.', livello=2, id='gettoni') %}
+  <div class="cat-gettoni">
+    {% for g in gettoni %}
+    <div class="cat-gettone">
+      <span class="cat-campione" style="background: var(--v-{{ g.nome }})" aria-hidden="true"></span>
+      <span><b>--v-{{ g.nome }}</b><small>{{ g.chiaro }} · scuro {{ g.scuro }}</small></span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endcall %}
+
+  {% call scheda('Contrasto delle coppie testo e fondo', sotto='Almeno 4,5 a 1 in chiaro e in scuro. Il campione mostra la coppia nel tema in uso.', livello=2, id='contrasti', attaccata=true) %}
+  {% call tabella() %}
+    <thead><tr><th>Testo</th><th>Fondo</th><th>Campione</th><th class="v-numero">Chiaro</th><th class="v-numero">Scuro</th></tr></thead>
+    <tbody>
+    {% for c in coppie %}
+      <tr><td>--v-{{ c.testo }}</td><td>--v-{{ c.fondo }}</td>
+        <td><span class="cat-coppia" style="color: var(--v-{{ c.testo }}); background: var(--v-{{ c.fondo }})">Rossi Anna 10:40</span></td>
+        <td class="v-numero">{{ '%.2f'|format(c.chiaro)|replace('.', ',') }}</td><td class="v-numero">{{ '%.2f'|format(c.scuro)|replace('.', ',') }}</td></tr>
+    {% endfor %}
+    </tbody>
+  {% endcall %}
+  {% endcall %}
+
+  {# ------------------------------------------------------------ 2. scale #}
+  {% call scheda('Scale: spazi, raggi e caratteri', sotto='Poche misure decise prima, perché le 73 pagine si somiglino. A destra i valori delle tavole che diventano quel passo.', livello=2, id='scale') %}
+  <div class="cat-scale">
+    <div>
+      <h3 class="v-scheda-titolo">Spazi</h3>
+      {% for nome, valore, dalle_tavole in scala_spazi %}
+      <div class="cat-riga-scala"><span class="cat-barra" style="width: var(--v-{{ nome }})"></span><code>--v-{{ nome }}</code> {{ valore }}<small>{{ dalle_tavole }}</small></div>
+      {% endfor %}
+    </div>
+    <div>
+      <h3 class="v-scheda-titolo">Raggi</h3>
+      {% for nome, valore, dalle_tavole in scala_raggi %}
+      <div class="cat-riga-scala"><span class="cat-angolo" style="border-radius: var(--v-{{ nome }})"></span><code>--v-{{ nome }}</code> {{ valore }}<small>{{ dalle_tavole }}</small></div>
+      {% endfor %}
+    </div>
+    <div>
+      <h3 class="v-scheda-titolo">Caratteri</h3>
+      {% for nome, valore, dalle_tavole, titoli in scala_caratteri %}
+      <div class="cat-riga-scala"><span style="font-size: var(--v-car-{{ nome }}); line-height: var(--v-int-{{ nome }}){% if titoli %}; font-family: var(--v-titoli){% endif %}">Agende {{ valore }}</span><small>{{ dalle_tavole }}</small></div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endcall %}
+
+  {# ------------------------------------------------------------ 3. i pezzi #}
+  <h2 class="v-titolo-sezione">Linguette</h2>
+  {{ linguette([
+      {'testo': 'Giorno', 'indirizzo': '#', 'accesa': true},
+      {'testo': 'Mese', 'indirizzo': '#'},
+      {'testo': 'Listino', 'indirizzo': '#'},
+      {'testo': 'Da confermare', 'indirizzo': '#', 'conta': 3, 'conta_titolo': '3 da confermare'},
+      {'testo': 'Tariffari dei medici', 'indirizzo': '#'}]) }}
+
+  <h2 class="v-titolo-sezione">Barra dei comandi</h2>
+  {% call barra_comandi() %}
+    {{ passo('#', 'indietro', 'Giorno precedente') }}
+    {{ passo('#', 'avanti', 'Giorno successivo') }}
+    <a class="v-bottone v-stacco" href="#">Oggi</a>
+    <label class="v-tendina"><span class="cat-nascosto">Struttura</span><select><option>Sede centrale</option><option>Sede nord</option><option>Poliambulatorio est</option></select>{{ icona('chevron-down') }}</label>
+    <a class="v-bottone v-a-destra" href="#">{{ icona('search') }}Prima disponibilità</a>
+    {{ stampa_e_scarica([
+        {'testo': 'Stampa del giorno', 'sotto': "il foglio per l'accettazione", 'indirizzo': '#'},
+        {'testo': 'Scarica in Excel', 'sotto': 'il planning del giorno', 'indirizzo': '#'},
+        {'testo': 'Tutte le esportazioni', 'sotto': 'ambulatori, sala operatoria o tutto insieme', 'indirizzo': '#'}]) }}
+    <button type="button" class="v-bottone v-principale primario">{{ icona('plus') }}Nuovo appuntamento</button>
+  {% endcall %}
+  <div class="cat-fila">
+    <button type="button" class="v-bottone">Normale</button>
+    <button type="button" class="v-bottone v-principale primario">Principale</button>
+    <button type="button" class="v-bottone v-pericolo">Elimina</button>
+    <button type="button" class="v-bottone v-piccolo">Piccolo</button>
+    <button type="button" class="v-bottone v-piccolo v-pericolo">Non presentato</button>
+    <button type="button" class="v-bottone" disabled>Spento</button>
+  </div>
+
+  <h2 class="v-titolo-sezione">Striscia dei numeri</h2>
+  {{ striscia([(23, 'appuntamenti'), (17, 'arrivati'), (1, 'disdetto'), {'numero': 1, 'cosa': 'non presentato', 'allarme': true}]) }}
+  {{ striscia([(euro(91500, simbolo=true), 'incassati'), (7, 'pagamenti')]) }}
+
+  <h2 class="v-titolo-sezione">Pillole dello stato</h2>
+  <div class="cat-fila">
+    {% for codice, parola in stati %}{{ pillola(codice, parola) }}{% endfor %}
+    {{ pillola('ARRIVATO', 'Arrivato', dopo='10:21') }}
+    {{ pillola('SALA', 'Sala A') }}
+    <span>Da confermare {{ conta(3, '3 da confermare') }}</span>
+  </div>
+
+  <h2 class="v-titolo-sezione">Scheda e tabella</h2>
+  {% call scheda('Incassi del giorno', sotto='Una tabella dentro una scheda; numeri a destra, il totale in grassetto.', id='incassi', attaccata=true) %}
+  {% call tabella() %}
+    <thead><tr><th>Metodo</th><th class="v-numero">Importo</th></tr></thead>
+    <tbody>
+      <tr><td>Contanti</td><td class="v-numero">{{ euro(28000, simbolo=true) }}</td></tr>
+      <tr><td>POS / carta</td><td class="v-numero">{{ euro(63500, simbolo=true) }}</td></tr>
+      <tr class="v-spento"><td>Bonifico</td><td class="v-numero">{{ euro(0, simbolo=true) }}</td></tr>
+      <tr class="v-spento"><td>Assegno</td><td class="v-numero">{{ euro(0, simbolo=true) }}</td></tr>
+      <tr class="v-totale"><td>Totale (7 pagamenti)</td><td class="v-numero">{{ euro(91500, simbolo=true) }}</td></tr>
+    </tbody>
+  {% endcall %}
+  {% endcall %}
+  {% call tabella() %}
+    <thead><tr><th>Ora</th><th>Paziente</th><th>Prestazione</th><th>Medico · stanza</th><th>Stato</th></tr></thead>
+    <tbody>
+      <tr><td>08:00</td><td><a href="#">Bove Chiara</a><small>porta le analisi</small></td><td>Visita cardiologica</td><td>Gallo Marco<small>Ambulatorio 1</small></td><td>{{ pillola('ARRIVATO', 'Arrivato', dopo='08:02') }}</td></tr>
+      <tr><td>08:30</td><td><a href="#">Romano Anna</a></td><td>Gastroscopia</td><td>Ricci Luca<small>Sala endoscopia</small></td><td>{{ pillola('CONFERMATO', 'Confermato') }}</td></tr>
+      <tr><td>09:00</td><td><a href="#">Galli Rosa</a></td><td>Visita dermatologica</td><td>Monti Anna<small>Ambulatorio 2</small></td><td>{{ pillola('PRENOTATO', 'Prenotato') }}</td></tr>
+      <tr><td>09:30</td><td><a href="#">Costa Luigi</a></td><td>Colonscopia</td><td>Ricci Luca<small>Sala endoscopia</small></td><td>{{ pillola('NON_PRESENTATO', 'Non presentato') }}</td></tr>
+      <tr><td>10:00</td><td><a href="#">Amato Gennaro</a></td><td>Ecocardiogramma</td><td>Gallo Marco<small>Ambulatorio 1</small></td><td>{{ pillola('DISDETTO', 'Disdetto') }}</td></tr>
+    </tbody>
+  {% endcall %}
+
+  <h2 class="v-titolo-sezione">Riquadri e campi</h2>
+  <div class="cat-due">
+    <div class="cat-colonna">
+      <div class="v-riquadro v-riquadro-avviso">Venerdì 20 novembre: 5 appuntamenti da confermare.</div>
+      <div class="v-riquadro v-riquadro-errore">L'orario si sovrappone a un altro appuntamento.</div>
+      <div class="v-riquadro v-riquadro-ok">Checklist completa.</div>
+      {% call scheda(sabbia=true) %}<b>Da confermare per questo giorno (1)</b> Bianchi Rita, visita cardiologica, preferisce dopo le 12{% endcall %}
+    </div>
+    {% call scheda('Campi', id='campi') %}
+      <div class="v-campo"><label for="cat-cognome">Cognome</label><input id="cat-cognome" value="Esempietti"></div>
+      <div class="v-campo"><label for="cat-tel">Telefono</label><input id="cat-tel" placeholder="333 000 0000"><p class="v-aiuto">Anche fisso; si cerca nei telefoni.</p></div>
+      <div class="v-campo"><label for="cat-med">Medico</label><select id="cat-med"><option>Gallo Marco</option><option>Monti Anna</option></select></div>
+      <div class="v-campo"><label for="cat-note">Note</label><textarea id="cat-note" rows="2">porta le analisi</textarea></div>
+      <div class="v-campo"><label for="cat-spento">Campo spento</label><input id="cat-spento" value="non si cambia" disabled></div>
+    {% endcall %}
+  </div>
+
+  <h2 class="v-titolo-sezione">Importo in euro</h2>
+  {% call tabella() %}
+    <thead><tr><th>Centesimi</th><th>euro(c)</th><th>euro(c, se_zero='—')</th><th>euro(c, simbolo=true)</th></tr></thead>
+    <tbody>
+    {% for c in [12345, 125050, 0, -150, None] %}
+      <tr><td>{{ c }}</td><td>«{{ euro(c) }}»</td><td>«{{ euro(c, se_zero='—') }}»</td><td>«{{ euro(c, simbolo=true) }}»</td></tr>
+    {% endfor %}
+    </tbody>
+  {% endcall %}
+</div>
+{# solo per il catalogo: la disposizione delle sue prove (non è un pezzo, non va in veste.css) #}
+<style>
+  .cat-gettoni { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--v-spazio-4) var(--v-spazio-6); }
+  .cat-gettone { display: flex; gap: var(--v-spazio-4); align-items: center; }
+  .cat-gettone b { display: block; font-size: var(--v-car-m); font-weight: var(--v-peso-forte); }
+  .cat-gettone small, .cat-riga-scala small { display: block; font-size: var(--v-car-xs); color: var(--v-testo-tenue); }
+  .cat-campione { flex: none; width: 44px; height: 30px; border-radius: var(--v-raggio-2); box-shadow: inset 0 0 0 1px var(--v-riga-campo); }
+  .cat-coppia { display: inline-block; padding: 0 var(--v-spazio-4); border-radius: var(--v-raggio-1); font-weight: var(--v-peso-forte); }
+  .cat-scale { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--v-spazio-8); }
+  .cat-riga-scala { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--v-spazio-4); padding: var(--v-spazio-2) 0; border-top: 1px solid var(--v-riga); }
+  .cat-riga-scala small { flex-basis: 100%; }
+  .cat-barra { display: inline-block; height: 12px; background: var(--v-primario); }
+  .cat-angolo { display: inline-block; width: 34px; height: 24px; background: var(--v-primario-tinta); border: 1px solid var(--v-primario-chiaro); }
+  .cat-fila { display: flex; flex-wrap: wrap; gap: var(--v-spazio-4); align-items: center; }
+  .cat-due { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--v-spazio-7); align-items: start; }
+  .cat-colonna { display: flex; flex-direction: column; gap: var(--v-spazio-5); }
+  .cat-nascosto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+{% endblock %}

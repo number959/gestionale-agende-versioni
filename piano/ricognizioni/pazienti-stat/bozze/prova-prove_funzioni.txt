@@ -1,0 +1,20 @@
+
+aggiornamento dello schema                       5 prove  tutte a posto
+stati degli appuntamenti                         7 prove  tutte a posto
+pazienti: controlli                              4 prove  tutte a posto
+pazienti: ricerca, scheda, doppioni              7 prove  tutte a posto
+prenotazione con paziente e campi nuovi          8 prove  tutte a posto
+festivita, assenze, chiusure, turni di un giorno   8 prove  tutte a posto
+settimana, mese e prima disponibilita con oracolo   6 prove  tutte a posto
+statistiche con oracolo                          2 prove  1 DA SISTEMARE
+elenco, conferme, messaggi, stampa               6 prove  tutte a posto
+orari e dati della struttura                     4 prove  tutte a posto
+backup e ripristino                              7 prove  tutte a posto
+robustezza                                       4 prove  tutte a posto
+
+Dettaglio:
+  ROTTO  [statistiche con oracolo] saturazione, prenotati e disdetti contro l oracolo
+         prove_funzioni.py:1271 · semenza 0 Ambulatorio 1: 0 minuti non mostrati come <td>0,0</td>
+
+68 prove totali, 67 superate, 1 da sistemare
+uscita 0

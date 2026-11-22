@@ -1,0 +1,86 @@
+{#- BOZZA tappa 7 (non è nel repository). La testa delle pagine dei turni: intestazione, le cinque linguette, la barra
+    dei comandi in una scheda (tavole Turni1-3). Si include in personale_turni.html e personale_giorno.html; le pagine
+    Persone, scheda della persona e Tipi includono solo _personale_linguette (in fondo a questo file, da staccare).
+    Resta identico, carattere per carattere: indirizzi e parametri di ogni collegamento (gli stessi url_for di oggi),
+    data-tasto precedente/successivo/oggi e i loro title, il modulo GET dei filtri (nomi, scelte, onchange, noscript
+    «Mostra»), data-guida turni-viste / turni-filtri / turni-persone / turni-tipi / turni-strumenti, le classi
+    gruppo-comandi / apri-gruppo / tendina e role="menu" di «Strumenti» (gestionale.js:714, guida.js:130), le voci con
+    data-apri-schema e data-copia-settimana (turni.js:1131, 1187), il modulo nascosto #modulo-copia.
+    Testi: senza via di Giovanni restano quelli di oggi (h1 = titolo della vista, accanto «Turni del personale»).
+    Con il via, le tre frasi della tavola in TAVOLA_* qui sotto (vedi il resoconto). -#}
+{%- from "_icone.html" import icona -%}
+{%- from "_pezzi.html" import intestazione, linguette, barra_comandi, passo -%}
+{%- set filtri = {'struttura': sid if strutture|length > 1 else none, 'ruolo': ruolo or none, 'area': area or none} -%}
+{%- set nome_vista = 'Giorno' if vista == 'giorno' else 'Settimana' if vista == 'settimana' else 'Mese' -%}
+
+{#- il logo della struttura SCELTA (oggi nella barra): a schermo lo mostra il menu, ma il foglio stampato
+    (Strumenti → Stampa) lo deve avere ancora, con il titolo e «Turni del personale» -#}
+<span class="marchio solo-stampa">{% include "_marchio.html" %}</span>
+
+{#- senza via: le parole di oggi. Con il via: intestazione('Turni', sopra='Turni · ' ~ nome_struttura,
+    sotto='Turni del personale: chi lavora, quando e dove.') e sotto le linguette un <h2 class="v-titolo-sezione"> con
+    il titolo della vista (oggi è l'h1) -#}
+{{ intestazione(titolo, sotto='Turni del personale', classe_titolo='giorno') }}
+
+{{ linguette([
+     {'testo': 'Giorno', 'indirizzo': url_for('personale.giorno', iso=dal.isoformat(), **filtri), 'accesa': vista == 'giorno'},
+     {'testo': 'Settimana', 'indirizzo': url_for('personale.settimana', iso=dal.isoformat(), **filtri), 'accesa': vista == 'settimana'},
+     {'testo': 'Mese', 'indirizzo': url_for('personale.mese', aaaamm=dal.strftime('%Y-%m'), **filtri), 'accesa': vista == 'mese'},
+     {'testo': 'Persone', 'indirizzo': url_for('personale.persone'), 'guida': 'turni-persone'},
+     {'testo': 'Tipi di turno', 'indirizzo': url_for('personale.tipi_turno'), 'guida': 'turni-tipi'}],
+   etichetta='Vista dei turni', guida='turni-viste') }}
+
+{%- call barra_comandi() %}
+  {{ passo(indietro, 'indietro', nome_vista ~ ' precedente', 'precedente') }}
+  {{ passo(avanti, 'avanti', nome_vista ~ ' successivo', 'successivo') }}
+  <a class="v-bottone" data-tasto="oggi" href="{{ adesso_url }}" title="{{ 'Oggi' if vista == 'giorno' else 'Questa settimana' if vista == 'settimana' else 'Questo mese' }} (tasto T)">Oggi</a>
+  <span class="v-separa" aria-hidden="true"></span>
+  {#- il modulo dei filtri è quello di oggi, riga per riga: cambia solo l'aspetto delle tendine (v-tendina) -#}
+  <form method="get" class="filtri-turni v-filtri" data-guida="turni-filtri">
+    {% if strutture|length > 1 %}
+    <select name="struttura" onchange="this.form.submit()" aria-label="Struttura" class="v-tendina">
+      {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+    </select>
+    {% endif %}
+    <select name="ruolo" onchange="this.form.submit()" aria-label="Ruolo" class="v-tendina">
+      <option value="">Tutto il personale</option>
+      {% for r in ruoli %}<option value="{{ r[0] }}"{% if r[0] == ruolo %} selected{% endif %}>{{ r[1] }}</option>{% endfor %}
+    </select>
+    <select name="area" onchange="this.form.submit()" aria-label="Area" class="v-tendina">
+      <option value="">Tutte le aree</option>
+      {% for a in aree %}<option value="{{ a }}"{% if a == area %} selected{% endif %}>{{ a }}</option>{% endfor %}
+    </select>
+    <noscript><button class="bottone" type="submit">Mostra</button></noscript>
+  </form>
+  {#- «Strumenti»: non è «Stampa e scarica» (ha lo schema e la copia): stesse classi e stesse voci di oggi, scritte qui -#}
+  <div class="gruppo-comandi v-a-destra v-stampa" data-guida="turni-strumenti">
+    <button type="button" class="v-bottone apri-gruppo" aria-haspopup="true" aria-expanded="false">Strumenti<span class="v-freccia" aria-hidden="true"></span></button>
+    <div class="tendina" role="menu">
+      {% if vista != 'giorno' %}<a href="#" data-apri-schema role="menuitem">{{ icona('repeat') }}<b>Schema a rotazione…</b><small>ripetere una sequenza di turni (M M P P N…)</small></a>{% endif %}
+      {% if vista == 'settimana' %}<a href="#" data-copia-settimana role="menuitem">{{ icona('copy') }}<b>Copia la settimana prima</b><small>gli stessi turni, nelle celle ancora vuote</small></a>{% endif %}
+      <a href="#" onclick="window.print(); return false" role="menuitem">{{ icona('printer') }}<b>Stampa</b><small>il foglio dei turni, in orizzontale</small></a>
+      <a href="{{ url_for('personale.mese_excel', aaaamm=dal.strftime('%Y-%m'), **filtri) }}" role="menuitem">{{ icona('file-spreadsheet') }}<b>Scarica in Excel</b><small>il mese, con un foglio per le ore</small></a>
+    </div>
+  </div>
+{%- endcall %}
+{% if vista == 'settimana' %}
+<form method="post" action="{{ url_for('personale.copia') }}" id="modulo-copia" hidden>
+  <input type="hidden" name="lunedi" value="{{ dal.isoformat() }}"><input type="hidden" name="ruolo" value="{{ ruolo }}">
+  {% if strutture|length > 1 %}<input type="hidden" name="struttura" value="{{ sid }}">{% endif %}
+</form>
+{% endif %}
+
+{#- ------------------------------------------------------------------------------------------------------------
+    _personale_linguette.html (file a parte): le stesse cinque linguette nelle pagine Persone, scheda e Tipi.
+    Lì non c'è un periodo né un filtro: Giorno, Settimana e Mese portano a oggi, a questa settimana e al mese in
+    corso della prima struttura, come «Torna ai turni» di oggi. Sono collegamenti NUOVI in quelle tre pagine: vanno
+    nell'elenco dei cambiamenti approvati del lanciatore.
+    {{ linguette([
+         {'testo': 'Giorno', 'indirizzo': url_for('personale.giorno')},
+         {'testo': 'Settimana', 'indirizzo': url_for('personale.settimana')},
+         {'testo': 'Mese', 'indirizzo': url_for('personale.turni')},
+         {'testo': 'Persone', 'indirizzo': url_for('personale.persone'), 'accesa': accesa == 'persone'},
+         {'testo': 'Tipi di turno', 'indirizzo': url_for('personale.tipi_turno'), 'accesa': accesa == 'tipi'}],
+       etichetta='Vista dei turni') }}
+    (qui senza data-guida: turni-viste, turni-persone e turni-tipi restano uno per pagina, quelli della barra)
+------------------------------------------------------------------------------------------------------------ -#}

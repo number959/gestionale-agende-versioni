@@ -1,0 +1,14 @@
+/* ALTERNATIVA A (come dice il piano): un file. Va bene per la versione normale; nell animata l ordine di oggi è
+   stile, animazioni, tema-scuro, quindi servirebbe un vecchio.css proprio dell animata. La bozza scelta (B) scrive
+   gli @import in base.html, nell ordine di ogni variante. */
+/* Il foglio di stile di oggi, dentro uno strato (@layer «vecchio»).
+   Uno strato vale meno di tutto quello che sta fuori: le regole di veste.css, scritte dopo e fuori dallo strato,
+   vincono sempre su quelle di stile.css e tema-scuro.css, qualunque sia il loro peso. Senza lo strato, in scuro un campo
+   nuovo prenderebbe il fondo vecchio, perché «html.scuro input» pesa più di una classe (tema-scuro.css:596).
+   Dentro lo strato i due fogli restano nell'ordine di oggi, quindi le pagine di oggi non cambiano di un pixel.
+   I fogli da stampare (foglio_carta) non caricano questo file ma i due fogli direttamente: restano identici.
+   stile.css, tema-scuro.css e il loro generatore non si toccano. Nella versione animata animazioni.css entra nello
+   stesso strato da base.html, subito dopo questo file (vedi base.html). */
+@layer vecchio;
+@import url("stile.css") layer(vecchio);
+@import url("tema-scuro.css") layer(vecchio);

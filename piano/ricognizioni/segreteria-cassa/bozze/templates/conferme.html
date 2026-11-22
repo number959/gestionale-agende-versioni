@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{#- BOZZA tappa 6 (tavola Seg1-Conferme). Moduli, campi, collegamenti, data-tasto, data-guida e il loro ordine come oggi
+    (provato con il Lettore di confronta_rami). Restano le classi che usano JavaScript, guida e prove: elenco e
+    lista-giorno (animazioni.js:61, 119), ora-lista, promemoria-conferme, stato-invio-*, data-attesa, in-linea, azione;
+    le macro di _stato.html (pulsanti-stato, contatti-rapidi: guida.py:235-237) non cambiano, perché le usano anche
+    Elenco e Oggi: il loro aspetto nuovo si dà da veste-segreteria-cassa.css, dentro .v-seg. -#}
+{% from "_stato.html" import pulsanti, contatti as link_contatti %}
+{% from "_pezzi.html" import barra_comandi, passo, striscia, tabella %}
+{% from "_area.html" import testa_segreteria with context %}
+{% block titolo %}Conferme del {{ titolo }}{% endblock %}
+{% block corpo %}
+<div class="v-pagina v-seg">
+{{ testa_segreteria() }}
+<h2 class="v-titolo-sezione">Conferme · {{ titolo }}</h2>
+{% call barra_comandi() %}
+  {{ passo(url_for('viste.conferme', data=ieri, struttura=sid), 'indietro', 'Giorno precedente', 'precedente') }}
+  {{ passo(url_for('viste.conferme', data=domani, struttura=sid), 'avanti', 'Giorno successivo', 'successivo') }}
+  <a class="v-bottone" href="{{ url_for('viste.conferme', struttura=sid) }}">Prossimo giorno di lavoro</a>
+  {% if strutture|length > 1 %}
+  {#- la tendina di oggi non ha nome: aria-label «Struttura» (la tavola la scrive anche a vista: testo nuovo) #}
+  <form method="get" class="v-in-riga"><input type="hidden" name="data" value="{{ g.isoformat() }}"><span class="v-tendina"><select name="struttura" onchange="this.form.submit()" aria-label="Struttura">
+    {% for x in strutture %}<option value="{{ x.id }}"{% if x.id == sid %} selected{% endif %}>{{ x.nome }}</option>{% endfor %}
+  </select></span></form>
+  {% endif %}
+{% endcall %}
+{#- oggi: «5 da confermare su 14» accanto al titolo. Stesse parole in una voce della striscia; la tavola la divide in
+    «5 da confermare» e «14 appuntamenti» (parola nuova: solo con il via) -#}
+{{ striscia([(da_confermare, 'da confermare su ' ~ apps|length)]) }}
+<p class="v-sotto nota">WhatsApp ed Email aprono il messaggio già scritto: resta solo da inviarlo. Il testo si cambia in <a href="{{ url_for('viste.impostazioni') }}#messaggi">Impostazioni</a>.
+  {%- if promemoria_attivi %} I promemoria automatici partono ogni giorno alle {{ ora_promemoria }}: la colonna Promemoria dice cosa è partito.{% else %} I promemoria automatici si accendono in <a href="{{ url_for('invii.pagina') }}#promemoria">Configura → Email e WhatsApp</a>.{% endif %}</p>
+{% if apps %}
+{% call tabella(classe='elenco lista-giorno') %}
+  <thead><tr><th>Ora</th><th>Paziente</th><th>Telefono</th><th>Prestazione · medico</th><th>Stato</th><th>Promemoria</th><th>Contatta</th><th></th></tr></thead>
+  <tbody>
+  {% for a in apps %}
+  <tr class="stato-{{ a.stato|lower }}">
+    <td class="ora-lista"><a href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}">{{ a.inizio.strftime('%H:%M') }}</a></td>
+    <td>{% if a.paziente %}<a href="{{ url_for('pazienti.scheda', pid=a.paziente.id) }}">{{ a.paziente.etichetta }}</a>
+      {%- if not a.paziente.promemoria %}<div class="nota-riga">non vuole promemoria</div>{% endif %}{% else %}<span class="senza">senza paziente</span>{% endif %}</td>
+    <td>{% if a.paziente %}{{ a.paziente.telefono or '' }}{% if a.paziente.telefono2 %}<br>{{ a.paziente.telefono2 }}{% endif %}{% endif %}</td>
+    <td>{{ a.prestazione.nome if a.prestazione else '' }}<div class="nota-riga">{{ a.operatore.etichetta }} · {{ a.risorsa.nome }}</div></td>
+    <td><b>{{ a.etichetta_stato }}</b></td>
+    <td class="promemoria-conferme">{% set x = promemoria.get(a.id) %}
+      {%- if x %}<span class="stato-invio stato-invio-{{ x.stato|lower }}" title="{{ x.errore or '' }}">{{ canali_invio.get(x.canale, x.canale) }}: {{ stati_invio.get(x.stato, x.stato) }}{% if x.stato == 'INVIATO' and x.inviato_il %} {{ x.inviato_il.strftime('%d/%m %H:%M') }}{% endif %}</span>{% endif %}
+      {%- if a.paziente and canale.get(a.id) and (not x or x.stato in ('ERRORE', 'ANNULLATO')) %}
+      <form method="post" action="{{ url_for('invii.appuntamento', aid=a.id) }}" class="in-linea" data-attesa="…">
+        <input type="hidden" name="azione" value="promemoria"><input type="hidden" name="torna" value="{{ torna }}">
+        <button class="bottone piccolo" type="submit" title="Manda adesso il promemoria con {{ canali_invio.get(canale[a.id]) }}">Manda</button>
+      </form>
+      {%- elif a.paziente and not x %}<span class="senza">da chiamare</span>{% endif %}</td>
+    <td>{% if a.paziente %}{{ link_contatti(contatti[a.id]) }}{% endif %}</td>
+    <td class="azione">{{ pulsanti(a, torna, [('CONFERMATO', 'Confermato'), ('DISDETTO', 'Disdetto')]) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+{% endcall %}
+{% else %}
+<p class="vuoto">Nessun appuntamento da confermare in questo giorno.</p>
+{% endif %}
+</div>
+{% endblock %}

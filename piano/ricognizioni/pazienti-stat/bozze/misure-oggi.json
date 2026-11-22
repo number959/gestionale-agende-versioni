@@ -1,0 +1,101 @@
+{
+ "pazienti": {
+  "alto": 1331,
+  "largo": 1366,
+  "h1": "Pazienti",
+  "h1_top": 61,
+  "primo_th_top": 0,
+  "menu_alto": 35,
+  "errori": []
+ },
+ "pazienti-cerca": {
+  "alto": 657,
+  "largo": 1366,
+  "h1": "Pazienti",
+  "h1_top": 61,
+  "primo_th_top": 0,
+  "menu_alto": 35,
+  "errori": []
+ },
+ "pazienti-nessuno": {
+  "alto": 657,
+  "largo": 1366,
+  "h1": "Pazienti",
+  "h1_top": 61,
+  "primo_th_top": 0,
+  "menu_alto": 35,
+  "errori": []
+ },
+ "paziente-nuovo": {
+  "alto": 974,
+  "largo": 1366,
+  "h1": "Nuovo paziente",
+  "h1_top": 61,
+  "primo_th_top": 0,
+  "menu_alto": 35,
+  "errori": []
+ },
+ "paziente-1-documenti": {
+  "alto": 1427,
+  "largo": 1366,
+  "h1": "Sepe Anna",
+  "h1_top": 61,
+  "primo_th_top": 0,
+  "menu_alto": 35,
+  "errori": []
+ },
+ "paziente-3-cuomo": {
+  "alto": 1299,
+  "largo": 1366,
+  "h1": "Cuomo Maria",
+  "h1_top": 61,
+  "primo_th_top": 0,
+  "menu_alto": 35,
+  "errori": []
+ },
+ "paziente-17-elimina": {
+  "alto": 1204,
+  "largo": 1366,
+  "h1": "Iovine",
+  "h1_top": 61,
+  "primo_th_top": 0,
+  "menu_alto": 35,
+  "errori": []
+ },
+ "unisci": {
+  "alto": 657,
+  "largo": 1366,
+  "h1": "Unisci a Testabianca Lia",
+  "h1_top": 61,
+  "primo_th_top": 0,
+  "menu_alto": 35,
+  "errori": []
+ },
+ "unisci-altro": {
+  "alto": 657,
+  "largo": 1366,
+  "h1": "Unisci a Testabianca Lia",
+  "h1_top": 61,
+  "primo_th_top": 0,
+  "menu_alto": 35,
+  "errori": []
+ },
+ "codici-fiscali": {
+  "alto": 1984,
+  "largo": 1366,
+  "h1": "Controllo dei codici fiscali",
+  "h1_top": 61,
+  "primo_th_top": 0,
+  "menu_alto": 35,
+  "errori": []
+ },
+ "statistiche": {
+  "alto": 2209,
+  "largo": 1366,
+  "h1": "Statistiche · Clinica Posillipo",
+  "h1_top": 61,
+  "primo_th_top": 0,
+  "menu_alto": 35,
+  "errori": []
+ }
+}

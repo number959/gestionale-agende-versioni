@@ -1,0 +1,105 @@
+/* BOZZA tappa 7: le regole della veste per i turni, da mettere in static/veste.css (fuori dal layer «vecchio»).
+   Misure provate con sim_mese.py e sim_settimana.py su markup di oggi (veste-turni/foto/sim-*.png).
+   Colori solo da gettoni.css; quelli che mancano sono segnati GETTONE NUOVO (vanno in gettoni.css, con lo scuro).
+   Non si aggiungono classi a .pista, ai <td> e ai tasselli: prove_18.py cerca 'class="pista"' esatto e
+   prove_111_turni.py 'class="turno' all'inizio dell'attributo; si arriva a loro da .v-turni (descendant). */
+
+/* ------------------------------------------------------------------ il mese in 1046 px (1366 - 248 - 36 - 36)
+   31 giorni da 24 + Ore 56 + Notti/Fest./Ass. 30 = 890; il nome prende il resto (col senza larghezza): 154 px con
+   31 giorni, 178 con 30, 226 con 28 (misurato, sim_mese.py 24 56 30). Con la barra di scorrimento classica di Windows
+   (17 px, la pagina scorre in alto) restano 1029 px: nome 137, nessun nome tagliato sui dati di prova
+   (sim_mese_barra.py). La tavola chiede 26 + 64 + 38: 1098 px, 52 in più del posto che c'è.
+   Scartati: 24/58/32 (con la barra di Windows il nome scende a 129 e taglia «Campionelli Marco»), 25/56/30 (nome
+   123), 23/58/32 (tagliati WW e «23:45»). */
+@media screen {   /* solo a schermo: il foglio stampato tiene le colonne di oggi (stile.css:1593-1608) */
+  .v-turni table.turni-mese col.col-nome { width: auto; }
+  .v-turni table.turni-mese col.col-giorno { width: 24px; }
+  .v-turni table.turni-mese col.col-tot { width: 30px; }
+  .v-turni table.turni-mese col.col-tot:nth-last-child(4) { width: 56px; }
+  /* la colonna del nome non scende sotto 130 px: con lo zoom o a 1024 la griglia scorre di lato (table-layout fixed
+     darebbe 0 alla colonna senza larghezza) */
+  .v-turni table.turni-mese { min-width: max(100%, 1020px); }
+  .v-turni table.turni-mese td.cella { height: 40px; }
+  /* il tassello: 1 px di aria per parte (oggi 2), niente min-width (stile.css .turno ha 26 px: uscirebbe dalla cella) */
+  .v-turni table.turni-mese td.cella .turno { width: calc(100% - 2px); min-width: 0; padding: 0;
+    font-size: 11px; letter-spacing: 0; border-radius: var(--v-raggio-1); }
+  .v-turni table.turni-mese td.cella .turno.doppio { font-size: 9.5px; height: 15px; }
+  /* l'orario scritto a mano: due righe, 8 px; misurato: «13:30» 20,6, «23:45» 22,0 su 23 di posto */
+  .v-turni table.turni-mese td.cella .turno.a-mano { width: calc(100% - 1px); }
+  .v-turni table.turni-mese td.cella .turno b.orario-stretto,
+  .v-turni table.turni-mese td.cella .turno.a-mano.doppio b { font: 600 8px/1.1 var(--v-corpo); letter-spacing: -.02em; }
+  /* FACOLTATIVO (solo se la classe entra nei due disegni, contenuto() e chipCella()): codici di 3 e 4 caratteri */
+  .v-turni table.turni-mese td.cella .turno.lungo-3 { font-size: 9px; letter-spacing: -.03em; }
+  .v-turni table.turni-mese td.cella .turno.lungo-4 { font-size: 8px; letter-spacing: -.03em; }
+  /* totali: «152» sopra, «/ 154:17» sotto (come la tavola), in 56 px */
+  .v-turni table.turni-mese td.tot { padding: 2px 1px; }
+  .v-turni table.turni-mese td.tot b, .v-turni table.turni-mese td.tot small { display: block; margin: 0; }
+  .v-turni table.turni-mese td.tot small { font-size: 10.5px; }
+
+  /* ------------------------------------------------------------------ la settimana in 1046 px
+     nome 150, Ore 92 (con la pillola dello scarto), gli altri tre 40: i sette giorni restano 97 px (misurato:
+     codice, orario e area interi, nessuna area con i puntini sui dati di prova) */
+  .v-turni table.turni-settimana col.col-nome { width: 150px; }
+  .v-turni table.turni-settimana col.col-giorno { width: auto; }
+  .v-turni table.turni-settimana col.col-tot { width: 40px; }
+  .v-turni table.turni-settimana col.col-tot:nth-last-child(4) { width: 92px; }
+}
+
+/* ------------------------------------------------------------------ dove scorre la griglia
+   Larga (>= 1360 px CSS, cioè 1366 con lo zoom al 100%): la griglia non scorre da sola, scorre la pagina e la riga
+   dei giorni resta ferma in cima alla finestra (con l'intestazione nuova la griglia comincia a y=485: a 657 px di
+   altezza, se scorresse da sola, se ne vedrebbero 172 px). Più stretta (zoom, 1024, telefono): come oggi, la griglia
+   scorre da sola di lato e in alto, con nomi e giorni fermi. ATTENZIONE: nessun antenato fino alla pagina deve avere
+   overflow diverso da visible (vale anche per la cornice: main e .vn-colonna). */
+.v-turni .scorri-turni { border: 0; border-radius: var(--v-raggio-4); background: var(--v-superficie); }
+@media (min-width: 1360px) {
+  .v-turni .scorri-turni { overflow: visible; max-height: none; }
+  .v-turni table.turni thead th { top: 0; }
+  /* frecce e Tab: la cella scelta non finisce sotto la riga dei giorni (oggi scroll-padding di .scorri-turni) */
+  .v-turni table.turni td.cella { scroll-margin-top: 64px; scroll-margin-bottom: 8px; }
+}
+@media (max-width: 1359.98px) {
+  .v-turni .scorri-turni { overflow: auto; max-height: calc(100vh - 24px); }
+}
+
+/* ------------------------------------------------------------------ aspetto (tavola Turni1/2) */
+.v-turni table.turni thead th { background: var(--v-superficie-tenue); color: var(--v-testo-medio);
+  border-bottom: 1px solid var(--v-riga); }
+.v-turni table.turni thead th.festivo { background: var(--v-festivo); color: var(--v-festivo-testo); } /* GETTONE NUOVO #F1E2D1 / #6B4524 */
+.v-turni table.turni col.festivo { background: var(--v-festivo-tenue); }                              /* GETTONE NUOVO */
+.v-turni table.turni col.sabato { background: var(--v-superficie-tenue); }
+.v-turni table.turni thead th.oggi .gn { background: var(--v-superficie); color: var(--v-primario-testo);
+  box-shadow: inset 0 0 0 1.5px var(--v-primario); }
+.v-turni table.turni tr.testa-ruolo th { background: var(--v-superficie-tenue); border-top: 1px solid var(--v-riga); }
+.v-turni table.turni td { border-bottom-color: var(--v-riga); border-right-color: var(--v-riga); }
+.v-turni table.turni td.tot { background: var(--v-superficie-tenue); color: var(--v-testo); }
+.v-turni .segno-riposo { border-top-color: var(--v-riposo-breve); }                                   /* GETTONE NUOVO #C2671B */
+.v-turni table.turni tr.copertura td.manca { background: var(--v-rosso-fondo); color: var(--v-rosso-forte); }
+
+/* legenda e riga dei tasti, sotto la barra (tavola: tasselli 22 px, nome, orario piccolo) */
+.v-turni .legenda-turni { padding: 0; background: none; border: 0; }
+.v-turni .legenda-turni li { font-size: var(--v-car-n); color: var(--v-testo); }
+.v-turni .legenda-turni li small { font-size: var(--v-car-s); color: var(--v-testo-tenue); }
+
+/* ------------------------------------------------------------------ il giorno: resta elastico
+   La tavola Turni3 disegna 24 ore da 36 px (864 px fissi): a 1366 la pagina scorre di lato di 37 px. Qui resta
+   la griglia di oggi (--nome + 1fr): con 1046 px le ore sono larghe 34-35 px. */
+.v-turni .linea-tempo { border: 1px solid var(--v-riga); border-radius: var(--v-raggio-4); background: var(--v-superficie); }
+.v-turni .riga-giorno.riga-presenze { background: var(--v-superficie-tenue); }
+
+/* ------------------------------------------------------------------ persone, scheda, tipi */
+/* il pallino del ruolo: la radio nascosta senza larghezza (oggi è larga 1366 px, position absolute, e la scheda
+   della persona scorre di lato di 805 px: scrollWidth 2171 a 1366, misurato) */
+.v-turni .ruolo-opzione { position: relative; }
+.v-turni .ruolo-opzione input { width: 1px; height: 1px; margin: 0; }
+.v-turni .modulo-persona { max-width: 880px; }
+
+/* ------------------------------------------------------------------ stampa: come oggi
+   Il foglio stampato (Strumenti → Stampa) resta: logo della struttura scelta, titolo, «Turni del personale»,
+   griglia piccola, legenda su una riga. Via linguette, barra e (se approvate) riga piccola e sottotitolo nuovi. */
+@media print {
+  .v-turni .v-linguette, .v-turni .v-barra-comandi, .v-turni .v-sopra { display: none !important; }
+  .v-turni .scorri-turni { overflow: visible; max-height: none; }
+}
+
+/* animata (animazioni.css): «.anim .schede-vista a» non trova più niente → «.anim .v-linguetta» */

@@ -1,0 +1,148 @@
+{
+ "pazienti 1366 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "pazienti 1440 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "pazienti 683 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-1-documenti 1366 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-1-documenti 1440 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-3-cuomo 1366 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-3-cuomo 1440 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-3-cuomo 683 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-17-elimina 1366 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-17-elimina 1440 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-nuovo 1366 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-nuovo 1440 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "unisci-altro 1366 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "unisci-altro 1440 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "codici-fiscali 1366 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "codici-fiscali 1440 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "statistiche 1366 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "statistiche 1440 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "statistiche 683 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "pazienti-nessuno 1366 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "pazienti-nessuno 1440 chiaro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "pazienti 1366 scuro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-1-documenti 1366 scuro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-3-cuomo 1366 scuro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-17-elimina 1366 scuro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "paziente-nuovo 1366 scuro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "unisci-altro 1366 scuro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "codici-fiscali 1366 scuro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "statistiche 1366 scuro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "pazienti-nessuno 1366 scuro": {
+  "errori": [],
+  "scorre_di_lato": false
+ },
+ "suggerimenti del luogo non coperti": true,
+ "esito cf": "✗ Il carattere di controllo (l'ultimo) non torna: con questi caratteri sarebbe «W». Di solito vuol dire che una lettera o una cifra è stata scritta male.",
+ "classe esito cf": "esito-cf errore",
+ "cf_calcolato dentro il modulo": true,
+ "ul.numeri b in statistiche": [
+  "27",
+  "27,2",
+  "615,5",
+  "2",
+  "1",
+  "24",
+  "1.711,54",
+  "330,77"
+ ],
+ "barra-dato span": 30,
+ "a.bottone Riepilogo del mese": true,
+ "ul.numeri b in In breve": [
+  "3",
+  "0",
+  "0",
+  "0"
+ ],
+ "celle <td>X,Y</td> (prove_funzioni.py:1270)": 0,
+ "celle <td class=\"v-numero\">X,Y</td>": 37,
+ "testo dopo «Indirizzati alle altre strutture»": "Indirizzati alle altre strutture Centro Nord 1 Centro Sud 1 Diagnostica Lago 1 Il registro",
+ "frammenti di prove_17.py:826-828": true
+}

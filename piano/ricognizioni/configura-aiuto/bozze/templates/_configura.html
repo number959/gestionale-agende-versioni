@@ -1,0 +1,50 @@
+{#- BOZZA tappa 9 (non è nel repository). La testa uguale in tutte le pagine di Configura (tavole Conf1-7):
+    riga piccola, titolo «Configura», sottotitolo, poi le linguette. I tre testi della testa NON ci sono oggi:
+    entrano solo se Giovanni li approva (vanno anche in strumenti/cambiamenti_approvati.txt).
+
+    Le linguette: in tappa 2 le scrive menu.py (le voci e la sezione che le accende); qui, finché menu.py non c'è,
+    stanno in un elenco Jinja con gli stessi indirizzi e le stesse parole del menu di oggi (_menu.html:66-71); nel
+    title la riga piccola che oggi sta sotto ogni voce. La SETTIMA («Aree e accessi», la pagina dei moduli e degli
+    accessi dagli altri PC, M2) c'è già nell'elenco ma si mostra solo quando esiste la sua pagina: oggi
+    `pagina_aree_accessi` non è definita, quindi non si vede e non cambia niente (né testo né collegamenti).
+    Misurato (misure/linguette.json): sei linguette 838 px, sette 968 px; a 1366 lo spazio è 1046 px, quindi stanno
+    su una riga; da 1280 in giù (960 px) la settima va a capo (flex-wrap), senza tagli.
+
+    Uso:   {% from "_configura.html" import testa_configura %}
+           {{ testa_configura(sezione) }}
+    `sezione` è quella che le pagine passano già oggi ('anagrafiche', 'gruppo', 'invii', 'importa', 'impostazioni',
+    'aggiornamenti'): la linguetta accesa è la stessa voce che oggi il menu evidenzia. -#}
+{%- from "_pezzi.html" import intestazione, linguette -%}
+
+{%- macro testa_configura(sezione) -%}
+{%- set voci = [
+  {'testo': 'Anagrafiche', 'indirizzo': url_for('anagrafiche.elenco'), 'accesa': sezione == 'anagrafiche',
+   'titolo': 'stanze, medici, turni, prestazioni, strutture'},
+  {'testo': 'Strutture del gruppo', 'indirizzo': url_for('dovesifa.strutture'), 'accesa': sezione == 'gruppo',
+   'titolo': 'database delle prestazioni e recapiti, per Dove si fa'},
+  {'testo': 'Email e WhatsApp', 'indirizzo': url_for('invii.pagina'), 'accesa': sezione == 'invii',
+   'titolo': 'email automatiche, promemoria, registro'},
+  {'testo': 'Importa da Excel', 'indirizzo': url_for('importa.carica'), 'accesa': sezione == 'importa',
+   'titolo': 'rubrica e agende dei file vecchi'},
+  {'testo': 'Impostazioni', 'indirizzo': url_for('viste.impostazioni'), 'accesa': sezione == 'impostazioni',
+   'titolo': 'backup, messaggi, stampa, tema'},
+  {'testo': 'Aggiornamenti', 'indirizzo': url_for('aggiornamenti.pagina'), 'accesa': sezione == 'aggiornamenti',
+   'titolo': 'versione installata, Aggiorna adesso'},
+] -%}
+{#- il posto della settima: nome e riga piccola da decidere con Giovanni in M2 («Moduli» c'è già per i moduli
+    da stampare, impostazioni.html:10). Nasce spenta: nessun indirizzo nuovo nella base (prove_indirizzi.py). -#}
+{%- if pagina_aree_accessi is defined and pagina_aree_accessi -%}
+{%- set voci = voci + [{'testo': 'Aree e accessi', 'indirizzo': pagina_aree_accessi, 'accesa': sezione == 'aree',
+   'titolo': 'quali aree si vedono dagli altri PC, e per chi'}] -%}
+{%- endif -%}
+{%- call intestazione('Configura', sopra='Configura · tutte le sedi',
+      sotto='Le anagrafiche, le strutture del gruppo, i messaggi ai pazienti e le impostazioni del programma.') -%}
+{%- endcall %}
+{{ linguette(voci, etichetta='Pagine di Configura') }}
+{%- endmacro -%}
+
+{#- il titolo della linguetta: h2 grande (22 px nella tavola) con accanto, piccolo e grigio, la parola di oggi
+    (oggi è il <small class="sotto-titolo"> dentro l'h1). Le parole restano quelle di oggi. -#}
+{%- macro titolo_linguetta(titolo, piccolo=none) -%}
+<h2 class="v-titolo-sezione c-titolo-linguetta">{{ titolo }}{% if piccolo %} <small class="sotto-titolo">{{ piccolo }}</small>{% endif %}</h2>
+{%- endmacro -%}

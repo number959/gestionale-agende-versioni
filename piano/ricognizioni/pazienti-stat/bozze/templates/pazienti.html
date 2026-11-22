@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_pezzi.html" import intestazione, tabella %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Pazienti{% endblock %}
+{% block corpo %}
+{#- BOZZA tappa 4 (veste 1.13), tavola Paz1-Elenco: titolo e sottotitolo; la barra di ricerca in una scheda bianca;
+    «Ultimi inseriti»; la tabella in una scheda, con l'intestazione chiara e «Prenota» come bottone piccolo.
+    Restano per forza: form.ricerca (guida «Trovare un paziente»: guida.py:159), table.elenco con i nomi come link
+    (guida.py:161, strumenti/genera_immagini_guida.py:112, genera_video_guida.py:89, animata: animazioni.js:119),
+    data-guida="controllo-codici" (prove_17_browser.py:176), td.azione (nascosta in stampa: stile.css:864), la classe
+    primario su «Cerca» (Ctrl+Invio: gestionale.js:531), autofocus, p.vuoto (animata: animazioni.js:244).
+    Testi, collegamenti e modulo identici a oggi, nello stesso ordine. -#}
+<div class="pagina larga v-pagina v-pazienti">
+  {{ intestazione('Pazienti', sotto=totale ~ ' in anagrafica. La ricerca non bada a maiuscole, accenti e apostrofi; un numero si cerca nei telefoni.') }}
+  <form method="get" class="ricerca v-barra-comandi">
+    <span class="v-cerca">{{ icona('search') }}<input type="search" name="q" value="{{ q }}" placeholder="cognome, nome, telefono, email o codice fiscale" autofocus></span>
+    <button class="primario v-bottone v-principale" type="submit">Cerca</button>
+    <a class="v-bottone" href="{{ url_for('pazienti.scheda') }}">{{ icona('user-plus') }}Nuovo paziente</a>
+    <a class="v-bottone" href="{{ url_for('pazienti.codici_fiscali') }}" data-guida="controllo-codici">{{ icona('clipboard-list') }}Controllo dei codici fiscali</a>
+  </form>
+  {% if q and not risultati %}
+  <p class="vuoto v-vuoto">Nessun paziente trovato per «{{ q }}». <a href="{{ url_for('pazienti.scheda') }}">Aggiungilo</a>.</p>
+  {% elif risultati %}
+  <div class="v-blocco">
+  {% if not q %}<h2 class="v-titolo-sezione">Ultimi inseriti</h2>{% endif %}
+  {% call tabella(classe='elenco') %}
+    <thead><tr><th>Paziente</th><th>Nato il</th><th>Telefono</th><th>Email</th><th>Prossimo appuntamento</th><th></th></tr></thead>
+    <tbody>
+    {% for p in risultati %}
+    {% set pr = prossimi.get(p.id) %}
+    <tr>
+      <td><a href="{{ url_for('pazienti.scheda', pid=p.id) }}">{{ p.etichetta }}</a></td>
+      <td>{{ p.data_nascita.strftime('%d/%m/%Y') if p.data_nascita else '' }}</td>
+      <td>{{ p.telefono or '' }}</td>
+      <td>{{ p.email or '' }}</td>
+      <td>{% if pr %}<a href="{{ url_for('appuntamento', aid=pr.id) }}">{{ pr.inizio.strftime('%d/%m/%Y %H:%M') }}</a> · {{ pr.operatore.cognome }}{% endif %}</td>
+      <td class="azione"><a class="v-bottone v-piccolo" href="{{ url_for('appuntamento', paziente_id=p.id) }}">Prenota</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  {% endcall %}
+  </div>
+  {% else %}
+  <p class="vuoto v-vuoto">Nessun paziente ancora: le schede si creano da sole prenotando, oppure da «Nuovo paziente».</p>
+  {% endif %}
+</div>
+{% endblock %}

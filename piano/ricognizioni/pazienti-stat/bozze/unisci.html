@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_pezzi.html" import intestazione, tabella %}
+{% from "_icone.html" import icona %}
+{% block titolo %}Unisci schede{% endblock %}
+{% block corpo %}
+{#- BOZZA tappa 4 (veste 1.13). Pagina SENZA tavola: solo pezzi comuni nella cornice nuova, testi identici a oggi
+    (per queste pagine il lanciatore confronta anche le righe di testo). Come la scheda del paziente: titolo,
+    collegamento sotto, testo; il riquadro dell'altra scheda con il filo giallo (come «Potrebbe essere già in
+    anagrafica» in Paz2); la ricerca in una barra come Pazienti, con «Cerca» NON principale (come oggi); la tabella in
+    una scheda. Restano per forza: i due moduli nell'ordine di oggi (POST con altro e conferma=1 obbligatoria, poi GET
+    con q), il nome «conferma» della spunta (la tappa 3 usa un altro nome, risposta=si), form.ricerca, «Scegli» come
+    collegamento, i nomi NON collegamenti. -#}
+<div class="pagina larga v-pagina v-unisci">
+  {% call intestazione('Unisci a ' ~ p.etichetta) %}
+  <p class="sotto v-sotto"><a href="{{ url_for('pazienti.scheda', pid=p.id) }}">Torna alla scheda</a></p>
+  {% endcall %}
+  <p class="v-testo">Quando la stessa persona ha due schede: gli appuntamenti dell'altra scheda passano a
+     <b>{{ p.etichetta }}</b>, i dati mancanti vengono completati e l'altra scheda viene eliminata.</p>
+
+  {% if altro %}
+  <section class="v-scheda v-filo-giallo">
+    <h2 class="v-scheda-titolo">{{ altro.etichetta }}{% if altro.data_nascita %}, nato il {{ altro.data_nascita.strftime('%d/%m/%Y') }}{% endif %}</h2>
+    <p>Telefono {{ altro.telefono or '—' }} · email {{ altro.email or '—' }} · {{ appuntamenti_altro|length }} appuntament{{ 'o' if appuntamenti_altro|length == 1 else 'i' }}.</p>
+    <form method="post" class="v-riga-comandi">
+      <input type="hidden" name="altro" value="{{ altro.id }}">
+      <label class="v-spunta"><input type="checkbox" name="conferma" value="1" required> Sono la stessa persona</label>
+      <button class="primario v-bottone v-principale" type="submit">Unisci le schede</button>
+    </form>
+  </section>
+  {% endif %}
+
+  <form method="get" class="ricerca v-barra-comandi">
+    <span class="v-cerca">{{ icona('search') }}<input type="search" name="q" value="{{ q }}" placeholder="cerca l'altra scheda"></span>
+    <button class="v-bottone" type="submit">Cerca</button>
+  </form>
+  {% if candidati %}
+  {% call tabella(classe='elenco') %}
+    <thead><tr><th>{{ 'Risultati' if q else 'Possibili doppioni' }}</th><th>Nato il</th><th>Telefono</th><th>Email</th><th></th></tr></thead>
+    <tbody>
+    {% for x in candidati %}
+    <tr>
+      <td>{{ x.etichetta }}</td><td>{{ x.data_nascita.strftime('%d/%m/%Y') if x.data_nascita else '' }}</td>
+      <td>{{ x.telefono or '' }}</td><td>{{ x.email or '' }}</td>
+      <td class="azione"><a class="v-bottone v-piccolo" href="{{ url_for('pazienti.unisci_pagina', pid=p.id, altro=x.id) }}">Scegli</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  {% endcall %}
+  {% else %}
+  <p class="vuoto v-vuoto">{{ 'Nessun risultato.' if q else 'Nessun possibile doppione trovato: cercare l\'altra scheda per nome o telefono.' }}</p>
+  {% endif %}
+</div>
+{% endblock %}
