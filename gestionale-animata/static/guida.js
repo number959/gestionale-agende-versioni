@@ -207,6 +207,7 @@
     }
     var video = finestraVideo.querySelector('video');
     finestraVideo.querySelector('b').textContent = titolo || 'Videoguida';
+    finestraVideo.setAttribute('aria-label', titolo ? 'Videoguida: ' + titolo : 'Videoguida');   // il titolo nel nome della finestra
     if (video.getAttribute('src') !== indirizzo) { video.setAttribute('src', indirizzo); }
     else { try { video.currentTime = 0; } catch (e) { /* non ancora caricato */ } }
     if (!finestraVideo.open) { finestraVideo.showModal(); }

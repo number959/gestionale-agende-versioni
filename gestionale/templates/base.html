@@ -27,7 +27,7 @@
 <main id="principale">
 {% with messaggi = get_flashed_messages(with_categories=true) %}
   {% if messaggi %}
-  <div class="avvisi">
+  <div class="avvisi" role="status" aria-label="Messaggi">
     {% for categoria, testo in messaggi %}
       <div class="avviso {% if categoria == 'errore' %}errore{% elif categoria == 'avviso' %}avviso-giallo{% endif %}">{{ testo }}</div>
     {% endfor %}

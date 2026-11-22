@@ -2,10 +2,17 @@
 # come differenze, ma li conta a parte e li scrive nel resoconto. Ogni riga, con i campi separati da un TAB:
 #
 #   aggiunto      <chiave>   <espressione>                 <perché>
-#       un elemento che c'è solo qui (non nel principale) e che corrisponde all'espressione non conta;
+#       un elemento che c'è in più qui (non appaiato, nello stesso ordine, con uno uguale del principale) e che
+#       corrisponde all'espressione non conta; uno che c'era e ora manca conta sempre;
 #   sostituisci   <chiave>   <espressione>  <al posto>     <perché>
 #       nel principale l'espressione diventa «al posto» (re.sub), poi si confronta: per le parole approvate.
 #
-# <chiave> è una parte del riassunto di una pagina: segni (data-tasto, data-guida), testo, collegamenti, moduli.
+# <chiave> è una parte del riassunto di una pagina: segni (data-tasto, data-guida, data-prova, role, aria-label,
+# aria-current, scritti «attributo=valore»), testo, collegamenti, moduli.
 # Tolto o cambiato qualcosa che non è in questo elenco: è una differenza vera, da guardare.
 aggiunto	segni	^data-guida=[a-z0-9-]+$	tappa 1: i passi della guida indicano i punti con data-guida invece che con una classe
+aggiunto	segni	^aria-current=(page|true)$	tappa 1: il menu dice quale pagina è aperta (page sulla voce, 28 voci di _menu.html) e il suo gruppo (true sul pulsante, con la stessa condizione della classe attivo) a chi usa un lettore di schermo e alle prove nel browser; prima lo diceva solo la classe attivo
+aggiunto	segni	^aria-label=(Ambulatori|Segreteria|Aiuto|Configura)$	tappa 1: le quattro tendine del menu (role=menu in _menu.html) hanno il nome del loro gruppo
+aggiunto	segni	^(role=region|aria-label=Notifiche)$	tappa 1: la zona delle notifiche (#notifiche in _menu.html) è una regione di nome Notifiche
+aggiunto	segni	^(role=dialog|aria-label=Tasti rapidi)$	tappa 1: il riquadro dei tasti rapidi (#aiuto-tasti in _menu.html) è una finestra di nome Tasti rapidi
+aggiunto	segni	^(role=status|aria-label=Messaggi)$	tappa 1: la zona dei messaggi del programma (.avvisi in base.html) è uno stato di nome Messaggi

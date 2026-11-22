@@ -26,6 +26,10 @@ from html import unescape
 
 from playwright.sync_api import sync_playwright
 
+# la zona dei messaggi (role="status" aria-label="Messaggi" in base.html) e il controllo del messaggio stanno negli
+# aiuti comuni delle prove nel browser: se la veste cambia la zona, si cambia lì
+from aiuti_browser import nella_zona, zona_messaggi  # noqa: E402
+
 B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
 esiti = []
 
@@ -33,21 +37,6 @@ esiti = []
 def controlla(nome, ok, dettaglio=''):
     esiti.append((ok, nome, dettaglio))
     print('%s %s %s' % ('OK' if ok else 'NO', nome, '' if ok else dettaglio))
-
-
-ZONA = '.avvisi'          # la zona dei messaggi di base.html: se cambia l'aspetto, si cambia solo qui
-
-
-def nella_zona(pg, testo, errore):
-    """(va bene, dettaglio): il messaggio con quel testo c'è una volta sola, dentro la zona dei messaggi,
-    visibile, e rosso solo se è un errore."""
-    trovati = pg.get_by_text(testo)
-    if trovati.count() != 1:
-        return False, '%r trovato %d volte; zona: %d' % (testo, trovati.count(), pg.locator(ZONA).count())
-    m = trovati.first
-    dentro = m.evaluate('(e, z) => !!e.closest(z)', ZONA)
-    rosso = 'errore' in (m.get_attribute('class') or '').split()
-    return dentro and m.is_visible() and rosso == errore, {'dentro': dentro, 'visibile': m.is_visible(), 'errore': rosso}
 
 
 def testo_promemoria():
@@ -149,7 +138,10 @@ with sync_playwright() as p:
     controlla('testo rimesso com\'era', testo_promemoria() == prima)
     controlla('rimesso: di nuovo il messaggio nella zona', *nella_zona(pg, 'Testo dei messaggi salvato', False))
     pg.reload()
-    controlla('ricaricata la pagina il messaggio non torna', pg.locator(ZONA).count() == 0, pg.locator(ZONA).count())
+    # per ruolo si vedono solo i pezzi visibili: anche il testo, che si trova pure nascosto, non deve esserci
+    controlla('ricaricata la pagina il messaggio non torna',
+              zona_messaggi(pg).count() == 0 and pg.get_by_text('Testo dei messaggi salvato').count() == 0,
+              (zona_messaggi(pg).count(), pg.get_by_text('Testo dei messaggi salvato').count()))
     # un errore: la pagina ridisegnata (200) con il messaggio rosso; la scheda con il telefono sbagliato non si crea
     pg.goto(B + '/pazienti/nuovo')
     pg.fill('#cognome', 'Fittizi')

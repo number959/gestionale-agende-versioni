@@ -11,7 +11,8 @@ toccare il repository) e uno da questa cartella, ognuno sulla sua copia. Dalle p
 seguono i collegamenti interni (niente /static/): ogni tipo di pagina (l'indirizzo con le cifre scritte N e
 i nomi dei parametri) al massimo --per-forma volte, in tutto al massimo --massimo pagine. Per ogni pagina si confrontano:
 risposta e rimando; i moduli come li manda il browser (indirizzo, metodo, campi anche nascosti, scelte delle
-tendine, bottoni con il loro valore); collegamenti, data-tasto e data-guida; le righe di testo (non con
+tendine, bottoni con il loro valore); collegamenti; i segni (data-tasto, data-guida, data-prova, role, aria-label,
+aria-current: vedi SEGNI); le righe di testo (non con
 --senza-testo); i JSON per intero; gli Excel cella per cella; gli altri file byte per byte. Una pagina diversa
 si chiede di nuovo una volta (l'ora può scattare fra le due richieste). Nessuna richiesta che cambia i dati:
 solo GET. Poi i 9 fogli da stampare (stampa del giorno, agenda dei medici, lista operatoria, promemoria…): di
@@ -20,6 +21,7 @@ pixel per pixel (strumenti/fogli_pdf.py; senza pdftoppm, foto in modo stampa; --
 con «N pagine confrontate, K diverse» e un resoconto in confronto_rami.txt (nella cartella temporanea, il
 percorso lo scrive alla fine)."""
 import argparse
+import difflib
 import hashlib
 import html
 import io
@@ -73,6 +75,13 @@ def aspetta(porta, secondi=120):
     return False
 
 
+# I segni di una pagina: gli attributi che non sono aspetto ma servono a qualcuno. data-tasto ai tasti rapidi,
+# data-guida ai passi della guida; role, aria-label e aria-current a chi usa un lettore di schermo e alle prove nel
+# browser, che cercano i pezzi per ruolo e nome (aiuti_browser.py); data-prova alle prove, per i pezzi che un nome
+# non ce l'hanno. Una veste nuova che ne perde uno lo fa vedere qui come differenza da spiegare.
+SEGNI = ('data-tasto', 'data-guida', 'data-prova', 'role', 'aria-label', 'aria-current')
+
+
 class Lettore(HTMLParser):
     """Quello che conta di una pagina, senza l'aspetto."""
 
@@ -83,7 +92,7 @@ class Lettore(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
-        for k in ('data-tasto', 'data-guida'):
+        for k in SEGNI:
             if k in a:
                 self.segni.append('%s=%s' % (k, a[k]))
         if tag in ('script', 'style'):
@@ -259,6 +268,19 @@ def _sostituisci(x, rx, al_posto):
     return x
 
 
+def togli_aggiunti(principale, qui, rx):
+    """«qui» senza gli elementi che ci sono in più rispetto al principale e corrispondono all'espressione. In più
+    vuol dire non appaiati, nello stesso ordine, con un elemento uguale del principale (difflib): così un
+    aria-current=page aggiunto al menu conta come aggiunto anche nelle pagine che ne avevano già uno (la barra
+    dei turni), e uno che c'era e ora manca resta una differenza."""
+    if principale == qui:
+        return qui
+    tieni = []
+    for op, _, _, j1, j2 in difflib.SequenceMatcher(None, principale, qui, autojunk=False).get_opcodes():
+        tieni += [x for x in qui[j1:j2] if op == 'equal' or not (isinstance(x, str) and rx.search(x))]
+    return tieni
+
+
 def applica_approvati(ra, rb, regole):
     """Le due pagine con i cambiamenti approvati tolti (copie): (principale, qui)."""
     if not regole:
@@ -268,8 +290,7 @@ def applica_approvati(ra, rb, regole):
         if tipo == 'sostituisci' and chiave in ra:
             ra[chiave] = _sostituisci(ra[chiave], rx, al_posto)
         elif tipo == 'aggiunto' and isinstance(rb.get(chiave), list):
-            nel_principale = ra.get(chiave) or []
-            rb[chiave] = [x for x in rb[chiave] if x in nel_principale or not (isinstance(x, str) and rx.search(x))]
+            rb[chiave] = togli_aggiunti(ra.get(chiave) or [], rb[chiave], rx)
     return ra, rb
 
 

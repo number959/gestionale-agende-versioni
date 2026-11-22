@@ -20,13 +20,19 @@ avviato con i dati di prova (strumenti/demo.py):
 - dalla tappa 1 della base la dashboard rimasta aperta, con l'orologio della pagina mandato avanti: il rinnovo di
   ogni minuto ricarica la pagina solo se cambia data-giorno (giorno e versione), e ogni richiesta resta dentro
   /riepilogo-live, /static/ e /logo/.
+La cornice (menu, tendine del menu e della pagina, messaggi, notifiche, la domanda della «×») si cerca per ruolo e
+nome con gli aiuti di aiuti_browser.py, come un lettore di schermo (tappa 1 della base); la domanda del browser passa
+da rispondi(), e una domanda che nessuno aspettava fa cadere la prova.
 Mette e toglie un turno sui dati di prova: alla fine sono come prima."""
 import os
 import re
 import sys
 from datetime import date, timedelta
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
+
+from aiuti_browser import (apri_comandi, apri_gruppo, gruppo_attivo, menu, messaggi, nome_voce, prepara_domande,
+                           rispondi, tendina_aperta)
 
 B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
 esiti = []
@@ -35,25 +41,34 @@ LUN = OGGI - timedelta(days=OGGI.weekday()) + timedelta(days=7)        # il lune
 GIORNI = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica']
 
 
-TENDINE_MENU_APERTE = """() => [...document.querySelectorAll('nav.menu .gruppo')]
-    .filter(g => { const t = g.querySelector('.tendina'); return t && getComputedStyle(t).display !== 'none'; })
-    .map(g => ({gruppo: (g.querySelector('.apri-gruppo') || g).textContent.trim(), classi: g.className,
-                mouse_sopra: g.matches(':hover'), focus_dentro: g.matches(':focus-within')}))"""
+def tendine_aperte():
+    """Per la diagnosi: le tendine del menu aperte adesso, con il loro nome, e se il mouse o il fuoco sono nel loro
+    gruppo (quello che le tiene aperte)."""
+    return tendina_aperta(pg).evaluate_all(
+        "ts => ts.map(t => ({gruppo: t.getAttribute('aria-label'), mouse_sopra: t.parentElement.matches(':hover'),"
+        " focus_dentro: t.parentElement.matches(':focus-within')}))")
 
 
 def apri_stampa_e_scarica():
-    """Apre «Stampa e scarica» come una persona: il mouse prima in un punto neutro della pagina, poi nessuna tendina del
-    menu deve essere aperta. 21/11/2026, nell'animata: la tendina «Stampa e scarica» entra con un'animazione, Playwright
-    fa scorrere la pagina per cliccarne una voce e lascia il mouse in cima alla finestra; al clic dopo la pagina torna in
-    cima, il gruppo «Ambulatori» del menu finisce sotto il mouse e apre la sua tendina sopra il pulsante (una volta in
-    tutti i giri di quel giorno; la causa l'ha trovata la revisione della 1.12.7). Con il mouse in (2, 500) non succede."""
+    """Apre «Stampa e scarica» come una persona e torna la sua tendina: il mouse prima in un punto neutro della pagina,
+    poi nessuna tendina del menu deve essere aperta. 21/11/2026, nell'animata: la tendina «Stampa e scarica» entra con
+    un'animazione, Playwright fa scorrere la pagina per cliccarne una voce e lascia il mouse in cima alla finestra; al
+    clic dopo la pagina torna in cima, il gruppo «Ambulatori» del menu finisce sotto il mouse e apre la sua tendina sopra
+    il pulsante (una volta in tutti i giri di quel giorno; la causa l'ha trovata la revisione della 1.12.7). Con il mouse
+    in (2, 500) non succede."""
     pg.mouse.move(2, 500)
     try:
-        pg.wait_for_function('() => (%s)().length === 0' % TENDINE_MENU_APERTE, timeout=5000)
-    except Exception:
-        ok('nessuna tendina del menu resta aperta da sola', False, pg.evaluate(TENDINE_MENU_APERTE))
+        expect(tendina_aperta(pg)).to_have_count(0, timeout=5000)
+    except AssertionError:
+        ok('nessuna tendina del menu resta aperta da sola', False, tendine_aperte())
         raise
-    pg.locator('.gruppo-comandi .apri-gruppo').click()
+    return apri_comandi(pg, 'Stampa e scarica')
+
+
+def notifiche(anche_nascoste=False):
+    """La zona delle notifiche (role="region", nome «Notifiche», in _menu.html). Per ruolo una zona nascosta non si
+    vede: anche_nascoste=True la trova lo stesso, per dire che c'è ma è nascosta."""
+    return pg.get_by_role('region', name='Notifiche', exact=True, include_hidden=anche_nascoste)
 
 
 def ok(n, c, d=''):
@@ -67,10 +82,10 @@ with sync_playwright() as p:
     ctx.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); "
                         "localStorage.setItem('gestionale-tema', 'chiaro'); } catch (e) {}")
     pg = ctx.new_page()
-    err, conferme = [], []
+    domande = prepara_domande(pg)            # subito: ogni domanda del browser passa da qui
+    err = []
     pg.on('pageerror', lambda e: err.append(str(e)))
     pg.on('console', lambda m: err.append(m.text) if m.type == 'error' else None)
-    pg.on('dialog', lambda d: (conferme.append(d.message), d.accept()))
 
     settimana = B + '/ambulatori/settimana/%s?struttura=1' % LUN.isoformat()
     pg.goto(settimana)
@@ -90,12 +105,14 @@ with sync_playwright() as p:
     ok('Lippiello in Ambulatorio 1 tutte le mattine (dati di prova)', len(mattine) == 6 and all('Lippiello' in x and '08:00–14:00' in x for x in mattine), mattine[:2])
     pomeriggi = riga.locator('td').evaluate_all("tds => tds.filter((td, i) => i % 2 === 1).map(td => td.className)")
     ok('i pomeriggi di Ambulatorio 1 liberi', len(pomeriggi) == 6 and all('libera' in x for x in pomeriggi), pomeriggi)
-    attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
-    ok('il menu: il gruppo Ambulatori è segnato attivo', attivo.count() and 'Ambulatori' in attivo.inner_text(), attivo.inner_text() if attivo.count() else 'nessun gruppo attivo')
-    voci = pg.locator('nav.menu .gruppo.attivo .tendina a').all_inner_texts()
+    ok('il menu: il gruppo Ambulatori è segnato attivo', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg) or 'nessun gruppo attivo')
+    pg.mouse.move(2, 500)
+    voci = apri_gruppo(pg, 'Ambulatori').get_by_role('link').all_inner_texts()
     ok('nel gruppo: Pianificazione della settimana, Programmazione del mese, Riepilogo live, Riepilogo del periodo, Esportazioni',
        len(voci) == 5 and 'Pianificazione' in voci[0] and 'Programmazione' in voci[1] and 'Riepilogo live' in voci[2] and
        'Riepilogo del periodo' in voci[3] and 'Esportazioni in Excel' in voci[4], voci)
+    pg.keyboard.press('Escape')              # la tendina si chiude; il mouse via dal menu
+    pg.mouse.move(2, 500)
 
     # Metti: una cella libera, il «+», Galasso, Metti
     cella = pg.locator('#matrice-ambulatori td.libera:has(details.metti)').first
@@ -111,7 +128,7 @@ with sync_playwright() as p:
     modulo.locator('select[name=operatore]').select_option(label='Galasso')
     with pg.expect_navigation():
         modulo.locator('button[type=submit]').click()
-    avviso = pg.locator('.avvisi').inner_text() if pg.locator('.avvisi').count() else ''
+    avviso = messaggi(pg)
     ok('«Turno salvato» con medico, stanza e ore', 'Turno salvato: Galasso' in avviso and 'ogni %s' % GIORNI[date.fromisoformat(chiave.split('_')[1]).weekday()] in avviso, avviso[:200])
     cella = pg.locator('td[data-cella="%s"]' % chiave)
     nomi = cella.locator('.turno-sett a').all_inner_texts()
@@ -121,33 +138,34 @@ with sync_playwright() as p:
 
     # Togli: la «x» chiede conferma, poi la cella torna disponibile
     with pg.expect_navigation():
-        cella.locator('form.togli-turno button').click()
-    ok('la «x» chiede conferma', conferme and 'Togliere Galasso' in conferme[-1] and 'da questa settimana in poi' in conferme[-1], conferme[-1:] or 'nessuna conferma')
-    avviso = pg.locator('.avvisi').inner_text() if pg.locator('.avvisi').count() else ''
+        with rispondi(pg) as d:
+            cella.get_by_role('button', name=re.compile('^Togli ')).click()
+    ok('la «x» chiede conferma', d.testo and 'Togliere Galasso' in d.testo and 'da questa settimana in poi' in d.testo, d.testo or 'nessuna conferma')
+    avviso = messaggi(pg)
     ok('«Turno tolto»', 'Turno tolto: Galasso' in avviso, avviso[:200])
     cella = pg.locator('td[data-cella="%s"]' % chiave)
     ok('la cella è di nuovo DISPONIBILE (i dati di prova come prima)', cella.locator('.disponibile').count() == 1 and 'libera' in (cella.get_attribute('class') or '')
        and cella.locator('.turno-sett').count() == 0, cella.get_attribute('class'))
 
     # Stampa e scarica
-    voci = pg.locator('.gruppo-comandi .tendina a').all_inner_texts()
+    voci = apri_stampa_e_scarica().get_by_role('link').all_inner_texts()
     ok('«Stampa e scarica»: matrice, settimana tipo, sala, ambulatori e sala, programmazione, tutte le esportazioni, stampa',
        len(voci) == 7 and 'La matrice in Excel' in voci[0] and 'settimana tipo' in voci[1] and 'sala operatoria in Excel' in voci[2]
        and 'Ambulatori e sala' in voci[3] and 'Programmazione del mese' in voci[4] and 'Tutte le esportazioni' in voci[5]
        and 'Stampa' in voci[6], voci)
-    apri_stampa_e_scarica()
+    tendina = apri_stampa_e_scarica()
     with pg.expect_download() as scaricato:
-        pg.locator('.gruppo-comandi .tendina a', has_text='Ambulatori e sala in Excel').click()
+        tendina.get_by_role('link', name=nome_voce('Ambulatori e sala in Excel')).click()
     ok('ambulatori e sala della settimana in un file solo',
        scaricato.value.suggested_filename == 'ambulatori-e-sala-settimana-%s.xlsx' % LUN.isoformat(), scaricato.value.suggested_filename)
-    apri_stampa_e_scarica()
+    tendina = apri_stampa_e_scarica()
     with pg.expect_download() as scaricato:
-        pg.locator('.gruppo-comandi .tendina a', has_text='La matrice in Excel').click()
+        tendina.get_by_role('link', name=nome_voce('La matrice in Excel')).click()
     ok('la matrice in Excel si scarica con il nome della settimana',
        scaricato.value.suggested_filename == 'matrice-ambulatori-%s.xlsx' % LUN.isoformat(), scaricato.value.suggested_filename)
-    apri_stampa_e_scarica()
+    tendina = apri_stampa_e_scarica()
     with pg.expect_download() as scaricato:
-        pg.locator('.gruppo-comandi .tendina a', has_text='settimana tipo').click()
+        tendina.get_by_role('link', name=nome_voce('La settimana tipo in Excel')).click()
     ok('la settimana tipo in Excel', scaricato.value.suggested_filename == 'matrice-ambulatori-%s-settimana-tipo.xlsx' % LUN.isoformat(), scaricato.value.suggested_filename)
 
     # 1.12.3: la sala operatoria in fondo alla matrice, solo da guardare (la settimana di oggi ha interventi)
@@ -176,8 +194,7 @@ with sync_playwright() as p:
     ok('la programmazione ha le sue righe, con Lippiello tutti i giorni in Ambulatorio 1',
        righe.count() > 6 and corpo.count('Lippiello') >= 6 and 'Ambulatorio 1' in corpo, (righe.count(), corpo.count('Lippiello')))
     ok('le date del mese sono numeri separati da virgole', any(',' in x for x in pg.locator('#programmazione-ambulatori tr td:nth-child(4)').all_inner_texts()))
-    attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
-    ok('anche qui il gruppo Ambulatori è attivo', attivo.count() and 'Ambulatori' in attivo.inner_text())
+    ok('anche qui il gruppo Ambulatori è attivo', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
     with pg.expect_download() as scaricato:
         pg.locator('a.bottone.primario', has_text='Scarica in Excel').click()
     ok('la programmazione in Excel si scarica con il nome del mese',
@@ -191,17 +208,16 @@ with sync_playwright() as p:
     ok('il calendario ha la colonna degli interventi e le righe della sala',
        'Interventi' in pg.locator('details.calendario-mese table tr').first.inner_text()
        and pg.locator('details.calendario-mese tr.riga-sala').count() >= 1)
-    pg.locator('[data-guida="programmazione-altre"] .apri-gruppo').click()
-    altre = pg.locator('[data-guida="programmazione-altre"] .tendina a').all_inner_texts()
+    tendina = apri_comandi(pg, 'Altre esportazioni')
+    altre = tendina.get_by_role('link').all_inner_texts()
     ok('«Altre esportazioni» del mese: la sala, tutto insieme, la pagina delle esportazioni',
        len(altre) == 3 and 'sala operatoria del mese' in altre[0] and 'Ambulatori e sala' in altre[1] and 'Tutte le esportazioni' in altre[2], altre)
     with pg.expect_download() as scaricato:
-        pg.locator('[data-guida="programmazione-altre"] .tendina a', has_text='La sala operatoria del mese').click()
+        tendina.get_by_role('link', name=nome_voce('La sala operatoria del mese')).click()
     # sul telefono la tendina aperta resta dentro lo schermo (prima usciva a sinistra)
     pg.set_viewport_size({'width': 390, 'height': 844})
     pg.reload()
-    pg.locator('[data-guida="programmazione-altre"] .apri-gruppo').click()
-    box = pg.locator('[data-guida="programmazione-altre"] .tendina').bounding_box()
+    box = apri_comandi(pg, 'Altre esportazioni').bounding_box()
     ok('sul telefono la tendina «Altre esportazioni» resta dentro lo schermo',
        box and box['x'] >= 0 and box['x'] + box['width'] <= 390, box)
     pg.set_viewport_size({'width': 1366, 'height': 820})
@@ -224,8 +240,7 @@ with sync_playwright() as p:
     pg.wait_for_selector('#esportazioni')
     ok('esportazioni: cambiando la data cambiano i pulsanti',
        ((OGGI + timedelta(days=40)).isoformat() + '.xlsx') in (pulsanti.first.get_attribute('href') or ''), pulsanti.first.get_attribute('href'))
-    attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
-    ok('esportazioni: il gruppo Ambulatori è attivo', attivo.count() and 'Ambulatori' in attivo.inner_text())
+    ok('esportazioni: il gruppo Ambulatori è attivo', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
     pg.set_viewport_size({'width': 390, 'height': 800})
     largo = pg.evaluate('document.documentElement.scrollWidth')
     ok('esportazioni: sul telefono niente scorrimento laterale', largo <= 392, largo)
@@ -240,23 +255,23 @@ with sync_playwright() as p:
     richieste_notifiche = []
     pg.on('request', lambda q: richieste_notifiche.append(q.url) if '/notifiche' in q.url else None)
     # gemello del «le notifiche non si chiedono» del riepilogo live (piu' sotto): in una pagina normale le stesse tre
-    # cose ci sono (la richiesta a /notifiche, #notifiche .notifica, la memoria delle viste). I dati di prova hanno
-    # sempre cose da fare di oggi e di ieri, quindi qualche notifica c'e'.
+    # cose ci sono (la richiesta a /notifiche, le notifiche nella loro zona, la memoria delle viste). I dati di prova
+    # hanno sempre cose da fare di oggi e di ieri, quindi qualche notifica c'e'.
     pg.goto(B + '/ambulatori/riepilogo?struttura=1')
     try:
-        pg.wait_for_selector('#notifiche .notifica', timeout=8000)
+        notifiche().get_by_role('status').first.wait_for(timeout=8000)
     except Exception:
         pass
     viste = pg.evaluate("sessionStorage.getItem('notifiche-viste')")
     ok('notifiche (gemello): in una pagina normale si chiedono, compaiono e risultano viste',
-       any('/notifiche' in u for u in richieste_notifiche) and pg.locator('#notifiche .notifica').count() >= 1 and
-       viste not in (None, '{}'), (richieste_notifiche, pg.locator('#notifiche .notifica').count(), viste))
+       any('/notifiche' in u for u in richieste_notifiche) and notifiche().get_by_role('status').count() >= 1 and
+       viste not in (None, '{}'), (richieste_notifiche, notifiche().get_by_role('status').count(), viste))
     del richieste_notifiche[:]                       # la stessa lista: la guarda ancora il pg.on di sopra
     pg.evaluate("sessionStorage.removeItem('notifiche-viste')")
     pg.goto(B + '/riepilogo-live?struttura=1')
     pg.wait_for_selector('#riepilogo-live .frase-live')
     ok('riepilogo live (gemello del modo schermo, piu\' sotto): nella pagina normale il menu c\'è',
-       pg.locator('nav.menu').count() == 1, pg.locator('nav.menu').count())
+       menu(pg).count() == 1, menu(pg).count())
     ok('riepilogo live: la frase in cima, in parole', len(pg.inner_text('.frase-live').strip()) > 20, pg.inner_text('.frase-live'))
     conti = pg.locator('.conti-oggi-live li b').all_inner_texts()
     ok('riepilogo live: fatti, in corso, da segnare e da fare sommano agli appuntamenti di oggi',
@@ -271,11 +286,13 @@ with sync_playwright() as p:
     linee = pg.locator('.pista-live .adesso-live').count()
     ok('riepilogo live: la linea di adesso in ogni stanza, o in nessuna fuori orario',
        linee == (len(dati['stanze']) if dati['asse']['adesso'] is not None else 0), linee)
-    ok('riepilogo live: le notifiche non coprono la pagina', pg.evaluate("getComputedStyle(document.getElementById('notifiche')).display") == 'none')
+    ok('riepilogo live: le notifiche non coprono la pagina (la zona c\'è, ma nascosta)',
+       notifiche(anche_nascoste=True).count() == 1 and notifiche().count() == 0, (notifiche(anche_nascoste=True).count(), notifiche().count()))
     pg.wait_for_timeout(1500)
     ok('riepilogo live: le notifiche non si chiedono nemmeno (non risultano viste nelle altre pagine)',
        not richieste_notifiche and pg.evaluate("sessionStorage.getItem('notifiche-viste')") in (None, '{}') and
-       pg.locator('#notifiche .notifica').count() == 0, (richieste_notifiche, pg.evaluate("sessionStorage.getItem('notifiche-viste')")))
+       notifiche(anche_nascoste=True).get_by_role('status', include_hidden=True).count() == 0,
+       (richieste_notifiche, pg.evaluate("sessionStorage.getItem('notifiche-viste')")))
     misura = pg.evaluate("(() => { const r = document.querySelector('.legenda-live .gr-turno').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })()")
     ok('riepilogo live: i quadratini della legenda sono tutti piccoli (nessuna classe di altre pagine)', misura[0] <= 16, misura)
     pg.set_viewport_size({'width': 390, 'height': 844})
@@ -285,7 +302,7 @@ with sync_playwright() as p:
     pg.set_viewport_size({'width': 1366, 'height': 820})
     pg.goto(B + '/riepilogo-live?struttura=1&schermo=1')
     pg.wait_for_selector('#riepilogo-live .linea-live')
-    ok('riepilogo live: il modo schermo senza menu, con la linea del tempo', pg.locator('nav.menu').count() == 0 and
+    ok('riepilogo live: il modo schermo senza menu, con la linea del tempo', menu(pg).count() == 0 and
        pg.locator('.linea-live .riga-live').count() == len(dati['stanze']) + 1)
 
     # 1.12.2: il riepilogo del periodo
@@ -309,8 +326,7 @@ with sync_playwright() as p:
     ok('riepilogo del periodo: l\'Excel si scarica con il suo nome',
        scarico.value.suggested_filename == 'riepilogo-ambulatori-%s.xlsx' % (OGGI - timedelta(days=1)).isoformat(),
        scarico.value.suggested_filename)
-    attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
-    ok('riepilogo del periodo: il gruppo Ambulatori è attivo', attivo.count() and 'Ambulatori' in attivo.inner_text())
+    ok('riepilogo del periodo: il gruppo Ambulatori è attivo', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
     pg.set_viewport_size({'width': 390, 'height': 844})
     pg.wait_for_timeout(300)
     ok('riepilogo del periodo: sul telefono la pagina non scorre di lato (scorrono le tabelle)',
@@ -335,8 +351,8 @@ with sync_playwright() as p:
     pg.click('[data-guida="live-statistiche"]')
     pg.wait_for_selector('.pagina-periodo .frase-live')
     ok('dashboard normale (gemello): «Riepilogo del periodo» apre il riepilogo con il menu',
-       '/riepilogo-live/statistiche' in pg.url and 'schermo=1' not in pg.url and pg.locator('nav.menu').count() == 1,
-       (pg.url, pg.locator('nav.menu').count()))
+       '/riepilogo-live/statistiche' in pg.url and 'schermo=1' not in pg.url and menu(pg).count() == 1,
+       (pg.url, menu(pg).count()))
     pg.goto(B + '/riepilogo-live?struttura=1&schermo=1')
     pg.wait_for_selector('#riepilogo-live .frase-live')
     fuori = [h for h in pg.eval_on_selector_all('a[href], form[action]', 'els => els.map(e => e.getAttribute("href") || e.getAttribute("action"))')
@@ -347,7 +363,7 @@ with sync_playwright() as p:
     pg.click('[data-guida="live-statistiche"]')
     pg.wait_for_selector('.pagina-periodo .frase-live')
     ok('dashboard: «Riepilogo del periodo» apre il riepilogo senza menu, nel modo schermo',
-       '/riepilogo-live/statistiche' in pg.url and 'schermo=1' in pg.url and pg.locator('nav.menu').count() == 0, pg.url)
+       '/riepilogo-live/statistiche' in pg.url and 'schermo=1' in pg.url and menu(pg).count() == 0, pg.url)
     pg.locator('.parti-periodo a', has_text='Sala operatoria').click()
     pg.wait_for_selector('.pagina-periodo .frase-live')
     pg.locator('.periodi-pronti a', has_text='Questo mese').click()
@@ -370,6 +386,7 @@ with sync_playwright() as p:
     # la mezzanotte e dopo un aggiornamento la pagina passa da sola al giorno nuovo e alla versione nuova. E ogni
     # richiesta della pagina resta dentro quello che il portiere della rete lascia passare.
     sch = ctx.new_page()
+    domande_sch = prepara_domande(sch)
     sch.on('pageerror', lambda e: err.append(str(e)))
     richieste = []
     sch.on('request', lambda r: richieste.append((r.resource_type, r.url)))
@@ -440,6 +457,7 @@ with sync_playwright() as p:
        (rinnovi, cambia, len(richieste)))
     sch.close()
     ok('nessun errore JavaScript', not err, err[:3])
+    ok('nessuna domanda del browser inattesa', not domande.inattese and not domande_sch.inattese, domande.inattese + domande_sch.inattese)
     br.close()
 
 print('%d prove nel browser, %d superate' % (len(esiti), sum(esiti)))

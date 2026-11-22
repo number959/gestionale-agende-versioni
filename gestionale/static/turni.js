@@ -117,7 +117,8 @@
       document.body.appendChild(scatola);
     }
     var a = nuovo('div', 'avviso-turni livello-' + livello);
-    if (livello === 'errore') { a.setAttribute('role', 'alert'); }
+    // come in dove.js: gli errori si annunciano subito, gli altri avvisi quando il lettore di schermo ha finito
+    a.setAttribute('role', livello === 'errore' ? 'alert' : 'status');
     var testo = nuovo('div', 'parole-avviso');
     righe.slice(0, 6).forEach(function (r) { testo.appendChild(nuovo('p', null, r)); });
     a.appendChild(testo);
