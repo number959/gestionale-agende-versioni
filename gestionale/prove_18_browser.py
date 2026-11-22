@@ -230,6 +230,21 @@ with sync_playwright() as p:
     else:
         ok("la notte del cambio dell'ora di ottobre: 11 ore vere di riposo, nessun avviso",
            'ore di riposo' not in avviso('avviso') and cella(A1, 25).locator('.segno-riposo').count() == 0, avviso('avviso'))
+        # gemello nello stesso giro (il ramo di sopra non gira in questo mese): una notte normale dello stesso mese,
+        # pomeriggio il 29 e mattina il 30 (10 ore), con la terza persona dell'elenco, che nessun'altra prova tocca
+        A3 = nomi[2].split()[0]
+        chiudi_avvisi()
+        cella(A3, 29).click()
+        pop.locator('.scelta-tipo[data-codice="P"]').click()
+        quieta()
+        pg.keyboard.press('ArrowRight')
+        pg.keyboard.press('m')
+        pg.keyboard.press('Enter')
+        quieta()
+        pg.wait_for_timeout(150)
+        ok('(gemello) una notte normale con poco riposo: avviso e segno nella cella',
+           'ore di riposo' in avviso('avviso') and cella(A3, 30).locator('.segno-riposo').count() == 1,
+           (avviso('avviso'), codici(cella(A3, 29)), codici(cella(A3, 30))))
 
     # ------------------------------------------------ solo tastiera nella scelta
     cella(A1, 27).focus()
@@ -330,6 +345,14 @@ with sync_playwright() as p:
     pg.keyboard.press('Escape')
     pg.keyboard.press('g')
     quieta()
+    # gemello del «'Mattina' non c'è» qui sotto: nella stessa vista del giorno, la riga di A1 il 7 (la M messa con la
+    # tastiera all'inizio) ha «Mattina» nella stessa etichetta
+    pid1 = riga(A1).get_attribute('data-persona')
+    g7 = (MESE + timedelta(days=6)).isoformat()
+    pg.goto(B + '/personale/turni/giorno/' + g7)
+    pista7 = pg.locator('.pista[data-k="%s_%s"]' % (pid1, g7))
+    etichetta = (pista7.get_attribute('aria-label') or '') if pista7.count() else ''
+    ok('giorno (gemello): dove c\'è la M l\'etichetta della riga dice «Mattina»', 'Mattina' in etichetta, etichetta)
     g20 = (MESE + timedelta(days=19)).isoformat()
     pg.goto(B + '/personale/turni/giorno/' + g20)
     pista = pg.locator('.pista[data-k="%s_%s"]' % (pid5, g20))

@@ -9,6 +9,7 @@ oracolo) e non con quello che il programma stesso ha prodotto."""
 import io
 from prove_dove import dove
 import prove_messaggi as PM
+from prove_gemelli import manca
 import json
 import os
 import random
@@ -896,6 +897,9 @@ def ch_chiusura():
     t = html(C.get('/chiusura/%s?struttura=1' % ieri))
     for aid in (a1, a2):
         assert 'value="%d"' % aid in t, 'manca %d fra quelli da chiudere' % aid
+        # gemello del «non c'è» qui sotto: la casella di chi va chiuso è scritta proprio così
+        assert 'name="scelti" value="%d"' % aid in t, \
+            'gemello: \'name="scelti" value="%d"\' non c\'è nemmeno dove deve esserci' % aid
     for aid in (a3, a4, altra):
         assert 'name="scelti" value="%d"' % aid not in t, '%d non va chiuso qui' % aid
     s = S()
@@ -973,6 +977,7 @@ def at_flusso():
     messaggio = avvisi(C)
     assert '2 in lista d\'attesa' in messaggio, 'avviso alla disdetta: %s' % messaggio
     t = html(C.get('/attesa/per/%d' % aid))
+    # Secondo vuole il pomeriggio: qui non c'è (il gemello è in fondo: per un posto delle 15 c'è)
     assert t.index('Primo') < t.index('Terzo') and 'Secondo' not in t, 'ordine o filtro sbagliati'
     assert 'wa.me/393331110001' in t and 'si%20%C3%A8%20liberato' in t, 'WhatsApp per il posto libero'
     s = S()
@@ -990,6 +995,11 @@ def at_flusso():
     t = html(C.get('/attesa'))
     assert 'Terzo' in t and 'Primo' not in t
     assert 'Primo' in html(C.get('/attesa?chiuse=1'))
+    # gemello di «'Secondo' not in t»: nella stessa pagina, per un posto del pomeriggio, Secondo c'è.
+    # In fondo, perché aggiunge un appuntamento.
+    pomeriggio = nuovo_app(S, I['Ambulatorio 1'], I['Lippiello'], MAR, 15, 0, paziente=p0, prest=I['Controllo'])
+    assert 'Secondo' in html(C.get('/attesa/per/%d' % pomeriggio)), \
+        "gemello: 'Secondo' non c'è nemmeno dove deve esserci (un posto delle 15)"
 
 
 prova('adatta_a contro l\'oracolo, 300 combinazioni', at_adatta_oracolo)
@@ -1289,6 +1299,7 @@ def do_moduli():
     assert testo == atteso, '\n%s\n%s' % (testo, atteso)
     assert applicabili == ['Per tutti', 'Preparazione colonscopia'], applicabili
     t = html(C.get('/appuntamento/%d' % aid))
+    # il modulo dell'EGDS non c'è su una colonscopia (il gemello è in fondo: su un'EGDS c'è)
     assert 'Preparazione colonscopia' in t and 'Solo EGDS' not in t
     t = html(C.get('/appuntamento/%d/modulo/%d' % (aid, mid)))
     assert 'Firma del paziente' in t and 'Rossi Marta' in t
@@ -1298,6 +1309,11 @@ def do_moduli():
     assert '<script>alert(1)' not in t and '&lt;script&gt;' in t
     r = C.post('/moduli/nuovo', data={'azione': 'esempio'})
     assert r.status_code == 302 and conta(S, ModuloStampa) == 4
+    # gemello di «'Solo EGDS' not in t»: sulla pagina di un appuntamento EGDS lo stesso modulo c'è.
+    # In fondo, perché aggiunge un appuntamento.
+    egds = nuovo_app(S, I['Sala endoscopia'], I['Galasso'], MAR, 11, 0, paziente=p, prest=I['EGDS'])
+    assert 'Solo EGDS' in html(C.get('/appuntamento/%d' % egds)), \
+        "gemello: 'Solo EGDS' non c'è nemmeno dove deve esserci (un appuntamento EGDS)"
 
 
 prova('documenti: PDF, PNG, JPG sì; eseguibili, vuoti, enormi no; intestazioni; unione', do_documenti)
@@ -1763,11 +1779,17 @@ def st_colonne_e_orientamento():
               importo_cent=8000, extra=json.dumps({'Sedazione': 'Sì'}))
     def intestazioni(r):
         return re.findall(r'<th[^>]*>([^<]*)</th>', html(r).split('<thead>')[1].split('</thead>')[0])
+
+    def gira(r):        # il solo pulsante che gira il foglio (gli altri pulsanti tengono l'orientamento scelto)
+        m = re.search(r'<a [^>]*>Foglio (?:verticale|orizzontale)</a>', html(r))
+        assert m, 'manca il pulsante che gira il foglio'
+        return m.group(0)
     # di serie: tutte le colonne, orizzontale, una tabella per stanza
     r = C.get('/stampa/%s?struttura=1' % MAR.isoformat())
     assert intestazioni(r) == ['Ora', 'Paziente', 'Telefono', 'Prestazione', 'Medico', 'Tipo · convenzione',
                                'Importo', 'Sedazione', 'Note'], intestazioni(r)
     assert 'size: A4 portrait' not in html(r) and 'foglio-orizzontale' in html(r) and '<h2>Ambulatorio 1</h2>' in html(r)
+    tutte = html(r)          # con tutte le colonne: importo e sedazione ci sono (gemello dei «non c'è» più sotto)
     # scelte in Impostazioni: telefono e note, verticale, in ordine di ora
     r = C.post('/impostazioni', data={'azione': 'stampa', 'colonne': ['note', 'telefono', 'inventata'],
                                       'orientamento': 'verticale', 'ordine': 'ora'})
@@ -1779,11 +1801,18 @@ def st_colonne_e_orientamento():
     r = C.get('/stampa/%s?struttura=1' % MAR.isoformat())
     assert intestazioni(r) == ['Ora', 'Stanza', 'Paziente', 'Telefono', 'Note'], intestazioni(r)
     assert '@page { size: A4 portrait' in html(r) and 'foglio-verticale' in html(r)
-    assert '3470007001' in html(r) and 'porta gli esami' in html(r) and '80,00' not in html(r) and 'Sì' not in html(r)
+    assert '3470007001' in html(r) and 'porta gli esami' in html(r)
+    manca(html(r), '80,00', dove_ce=tutte, perche='importo stampato senza la sua colonna')
+    manca(html(r), 'Sì', dove_ce=tutte, perche='sedazione stampata senza la sua colonna')
+    giro_dal_verticale = gira(r)      # dal foglio verticale il pulsante porta all'orizzontale
     # dalla pagina di stampa si cambia al volo, senza toccare le impostazioni
     r = C.get('/stampa/%s?struttura=1&orientamento=orizzontale&per=stanza' % MAR.isoformat())
     assert 'size: A4 portrait' not in html(r) and '<h2>Ambulatorio 1</h2>' in html(r)
-    assert 'orientamento=orizzontale' not in html(r) or 'Foglio verticale' in html(r)
+    # prima era «'orientamento=orizzontale' not in html(r) or 'Foglio verticale' in html(r)»: passava con una sola
+    # delle due, e la prima non vale mai su tutta la pagina (gli altri pulsanti tengono orientamento=orizzontale).
+    # Ora tutte e due, la prima sul solo pulsante che gira il foglio, con il gemello sul foglio verticale.
+    assert 'Foglio verticale' in html(r), 'dal foglio orizzontale manca «Foglio verticale»'
+    manca(gira(r), 'orientamento=orizzontale', dove_ce=giro_dal_verticale, perche='il pulsante non gira il foglio')
     r = C.get('/stampa/%s?struttura=1&orientamento=storto&per=boh' % MAR.isoformat())
     assert r.status_code == 200 and 'size: A4 portrait' in html(r)
     # nessuna colonna scelta: restano ora e paziente

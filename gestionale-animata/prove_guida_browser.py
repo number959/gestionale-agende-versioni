@@ -23,6 +23,8 @@ with sync_playwright() as p:
     ok('menu su una riga a 1366 pixel', alt[0] < 45 and alt[1] <= alt[2], alt)
     pg.click('.giro-invito button.primario'); pg.wait_for_timeout(600)
     ok('il giro parte', pg.locator('.giro-fumetto').count() == 1)
+    # gemello di «Esc chiude» (piu' sotto): durante il giro body.giro-in-corso c'è
+    ok('durante il giro la pagina lo sa (body.giro-in-corso)', pg.evaluate("document.body.classList.contains('giro-in-corso')"))
     n = len([x for x in guida.PER_SLUG['come-e-fatto']['passi']])
     ok('conta i passi', pg.locator('.giro-conto').text_content() == '1 di %d' % n, pg.locator('.giro-conto').text_content())
     pg.keyboard.press('ArrowRight'); pg.wait_for_timeout(300)

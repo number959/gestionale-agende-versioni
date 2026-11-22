@@ -11,6 +11,7 @@ aggiornamento del database dalla versione 8, e un giro di modifiche a caso
 con gli invarianti controllati dopo ogni passo. Tutti i nomi sono inventati."""
 import json
 from prove_dove import dove
+from prove_gemelli import protetto
 import os
 import random
 import re
@@ -733,15 +734,27 @@ def q_protezioni():
     s.commit()
     s.close()
     mettere(S, P['Esempio'], g, 'M', note='<b>grassetto</b>')
-    for url in ('/personale/turni/settimana/%s' % g.isoformat(), '/personale/turni/mese/%s' % g.strftime('%Y-%m'),
-                '/personale/turni/giorno/%s' % g.isoformat(), '/personale/persone', '/personale/persone/%d' % P['Esempio'],
-                '/oggi'):
+    # dove una pagina mostra quel dato, c'è nella forma protetta (il gemello) e mai vivo; dove non lo mostra
+    # (la nota nelle persone, tutto in Oggi: il turno è della settimana prossima) non c'è per niente
+    vivi = ('<script>alert(1)', '<img src=x>', '<b>grassetto</b>')
+    for url, mostra in (('/personale/turni/settimana/%s' % g.isoformat(), vivi),
+                        ('/personale/turni/mese/%s' % g.strftime('%Y-%m'), vivi),
+                        ('/personale/turni/giorno/%s' % g.isoformat(), vivi),
+                        ('/personale/persone', vivi[:2]), ('/personale/persone/%d' % P['Esempio'], vivi[:2]),
+                        ('/oggi', ())):
         corpo = html(C.get(url))
-        assert '<script>alert(1)' not in corpo and '<img src=x>' not in corpo and '<b>grassetto</b>' not in corpo, url
+        for pezzo in vivi:
+            if pezzo in mostra:
+                protetto(corpo, pezzo, url)
+            else:
+                assert pezzo not in corpo, (url, pezzo)
     r = C.post(CAMBIA, json={'azione': 'metti', 'celle': [k(P['Esempio'], g)], 'tipo': T['P'], 'note': '<i>x</i>'})
     corpo = r.get_data(as_text=True)
     assert '<' not in corpo and r.headers['Content-Type'].startswith('application/json'), corpo[:200]
     assert r.headers.get('Cache-Control') == 'no-store'
+    # gemello di Oggi (in fondo, perché aggiunge un turno): con un turno di oggi il cognome c'è, protetto
+    mettere(S, P['Esempio'], OGGI, 'M', note='<b>grassetto</b>')
+    protetto(html(C.get('/oggi')), '<script>alert(1)', '/oggi con un turno di oggi')
 
 
 def q_caso():
@@ -1053,12 +1066,16 @@ def p_oggi():
     mettere(S, P['Fintoni'], OGGI, 'R')
     t = testo(C.get('/oggi'))
     assert 'In servizio oggi' in t and 'Fittizi Ada 21:00–07:00 da ieri · Degenza' in t and 'Esempio Bruno 07:00–14:00' in t, t
-    assert 'Fintoni' not in t, 'chi riposa non e\' in servizio'
+    assert 'Fintoni' not in t, 'chi riposa non e\' in servizio'      # il gemello è in fondo: quando lavora c'è
     s = S()
     voci = PE.in_servizio(s, datetime.combine(OGGI, time(6)))
     s.close()
     stati = {v['turno'].persona.cognome: (v['adesso'], v['finito']) for gr in voci for v in gr['voci']}
     assert stati == {'Fittizi': (True, False), 'Esempio': (False, False)}, stati
+    # gemello di «'Fintoni' not in t»: se oggi lavora invece di riposare, nella stessa pagina c'è.
+    # In fondo, perché cambia il suo turno di oggi.
+    mettere(S, P['Fintoni'], OGGI, 'M')
+    assert 'Fintoni' in testo(C.get('/oggi')), "gemello: 'Fintoni' non c'è nemmeno dove deve esserci (oggi lavora)"
 
 
 def p_contrasti_icone():
@@ -1463,6 +1480,10 @@ def w_errori():
         C.post('/invii', data={'azione': 'registra_whatsapp', 'pin': '654321'})
         msg = avvisi(C)
         assert atteso in msg and 'Numero registrato' not in msg and '654321' not in msg, (risposta, msg)
+        # gemello di «'654321' not in msg»: il PIN non deve stare in nessun avviso, quindi il gemello non può essere un
+        # avviso; è lo stesso PIN che in questo giro è partito davvero, così com'è, verso la finta Meta
+        assert len(META.richieste) == 1 and '654321' in json.dumps(META.richieste[0]['corpo']), \
+            ("gemello: '654321' non c'è nemmeno dove deve esserci (la richiesta a Meta)", risposta)
     s = S()
     assert invii.impostazioni(s)['wa_registrato'] == ''
     s.close()

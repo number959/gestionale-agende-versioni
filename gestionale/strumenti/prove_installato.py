@@ -98,6 +98,12 @@ pagina_st = b.decode('utf-8', 'replace')
 controlla('Riepilogo del periodo nella dashboard (1.12.6): la pagina senza menu e senza Excel',
           s == 200 and 'class="frase-live' in pagina_st and '<nav class="menu"' not in pagina_st and 'riepilogo.xlsx' not in pagina_st
           and '<h1 class="giorno">Riepilogo del periodo' in pagina_st, s)
+# gemello: lo stesso indirizzo senza ?schermo=1 ha il menu e il collegamento all'Excel (solo lettura)
+s, b, _ = get('/riepilogo-live/statistiche?struttura=1&periodo=settimana')
+pagina_st = b.decode('utf-8', 'replace')
+controlla('Riepilogo del periodo nella dashboard (gemello): senza il modo schermo il menu e l\'Excel ci sono',
+          s == 200 and '<nav class="menu"' in pagina_st and 'riepilogo.xlsx' in pagina_st,
+          (s, '<nav class="menu"' in pagina_st, 'riepilogo.xlsx' in pagina_st))
 s, b, _ = get('/cassa/tariffari')
 controlla('Tariffari dei medici (1.12.6): la pagina con il controllo dei medici e «Carica tariffario»',
           s == 200 and 'Controllo dei medici' in testo(b) and 'Carica tariffario' in testo(b), s)
@@ -105,6 +111,8 @@ s, b, _ = get('/aggiornamenti')
 controlla('Aggiornamenti (1.12.6): il controllo automatico risulta acceso', s == 200 and
           'Controllo automatico degli aggiornamenti: acceso' in testo(b), s)
 s, b, _ = get('/oggi')
+# il gemello qui non si può (il popup vuole un aggiornamento pronto, e qui non si scrive niente): c'è in prove_16.py,
+# a_popup(), con lo stesso pezzo cercato nell'HTML della stessa /oggi ('data-popup="aggiornamento"' in t)
 controlla('Aggiornamenti (1.12.6): senza una versione nuova pronta nessun popup', s == 200 and
           'data-popup="aggiornamento"' not in b.decode('utf-8', 'replace'), s)
 s, b, _ = get('/ambulatori/riepilogo.json?struttura=1&periodo=settimana')
@@ -244,6 +252,12 @@ controlla('autoriparazione: la pagina Controllo del programma', s == 200 and 'Co
           'Cosa ha fatto da solo' in t and 'Database' in t, (s, t[:200]))
 controlla('autoriparazione: i tre lavori in sottofondo sorvegliati e attivi',
           t.count('Lavoro in sottofondo') == 3 and ' fermo' not in t, t[t.find('Lavoro in sottofondo'):][:400])
+# accanto al « fermo» che non c'è, in positivo: le tre righe dicono «attivo» (templates/autoriparazione.html). Non è il
+# gemello (un lavoro fermo qui non si può creare: si scriverebbe nel programma); la pagina con un lavoro fermo va
+# provata in prove_autoriparazione.py
+controlla('autoriparazione: le tre righe dei lavori in sottofondo dicono «attivo»',
+          len(re.findall(r'Lavoro in sottofondo: [^<]*</td><td>attivo</td>', b.decode('utf-8', 'replace'))) == 3,
+          re.findall(r'Lavoro in sottofondo: [^<]*</td><td>[^<]*', b.decode('utf-8', 'replace')))
 s, b, _ = get('/impostazioni')
 controlla('autoriparazione: il collegamento in Impostazioni', s == 200 and b'/autoriparazione' in b, s)
 cartella_dati = os.environ.get('CARTELLA_DATI')

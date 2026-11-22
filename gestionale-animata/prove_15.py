@@ -10,6 +10,7 @@ Niente rete vera: le email vanno a un finto server di posta su 127.0.0.1
 server di Meta. I dati sono inventati."""
 import base64
 from prove_dove import dove
+from prove_gemelli import manca
 import email
 import json
 import os
@@ -1338,11 +1339,13 @@ def c_prenotazione_senza():
     I = ids(S)
     regola_galasso(S)
     prenota(C, I, email_paziente='')
-    assert 'non ha un indirizzo email' in avvisi(C)
+    senza_indirizzo = avvisi(C)       # «Email … non mandata: il paziente non ha un indirizzo email»
+    assert 'non ha un indirizzo email' in senza_indirizzo, senza_indirizzo
     assert invii_tutti(S) == []
-    # nessuna regola per la visita: nessun messaggio, nessun avviso
+    # nessuna regola per la visita: nessun messaggio, nessun avviso (il gemello: l'avviso di sopra comincia con Email)
     prenota(C, I, prestazione='Visita gastroenterologica', quando=ORA9 + timedelta(hours=3))
-    assert 'Email' not in avvisi(C) and invii_tutti(S) == []
+    manca(avvisi(C), 'Email', dove_ce=senza_indirizzo, perche='avviso per una prestazione senza regola')
+    assert invii_tutti(S) == []
 
 
 def c_stesso_giorno():
@@ -1689,6 +1692,7 @@ def d_controlli_prima_di_spedire():
     assert esito[1:] == ('ANNULLATO', 'appuntamento disdetto'), esito
     # passato: quella automatica non parte piu'; a comando si'
     prenota(C, I, quando=ORA9 + timedelta(days=7))
+    futuro = ultimo(S)            # un appuntamento che deve ancora venire: il gemello dei «non c'è» più sotto
     esito = invii.elabora(fabbrica, adesso=ORA9 + timedelta(days=8))[0]
     assert esito[1:] == ('ANNULLATO', 'appuntamento già passato'), esito
     s = S()
@@ -1697,10 +1701,13 @@ def d_controlli_prima_di_spedire():
     vecchio = nuovo_app(S, I['Sala endoscopia'], I['Galasso'], datetime.combine(OGGI - timedelta(days=2), time(9, 0)),
                         paziente_id=pid, prestazione_id=I['EGDS'])
     rid = ultimo(S, RegolaEmail)
-    pagina = testo(C.get('/appuntamento/%d' % vecchio))
-    assert "Manda l'email" in pagina and 'Manda il promemoria adesso' not in pagina, 'promemoria per un appuntamento passato'
+    pagina = pagina_vecchio = testo(C.get('/appuntamento/%d' % vecchio))
+    pagina_futuro = testo(C.get('/appuntamento/%d' % futuro))      # qui il promemoria si può mandare
+    assert "Manda l'email" in pagina, "a comando l'email si manda anche per un appuntamento passato"
+    manca(pagina, 'Manda il promemoria adesso', dove_ce=pagina_futuro, perche='promemoria per un appuntamento passato')
     pagina = testo(C.get('/appuntamento/%d' % aid))
-    assert "Manda l'email" not in pagina and 'Manda il promemoria' not in pagina, 'pulsanti per un appuntamento disdetto'
+    manca(pagina, "Manda l'email", dove_ce=pagina_vecchio, perche='pulsanti per un appuntamento disdetto')
+    manca(pagina, 'Manda il promemoria', dove_ce=pagina_futuro, perche='pulsanti per un appuntamento disdetto')
     r = C.post('/invii/appuntamento/%d' % vecchio, data={'azione': 'regola', 'regola': str(rid)})
     assert r.status_code == 302 and 'Mandato a mara.fintini@example.com' in avvisi(C)
     assert len(POSTA.messaggi) == 1 and invii.elabora(fabbrica) == []

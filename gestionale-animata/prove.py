@@ -141,11 +141,17 @@ def colore_iniettabile():
     o.colore = 'red; background: url(x)'
     s.commit()
     c = A.app.test_client()
-    html = c.get('/giorno/2026-09-15?struttura=1').get_data(as_text=True)
+    pagina = '/giorno/2026-09-15?struttura=1'
+    html = c.get(pagina).get_data(as_text=True)
     o.colore = '#B3261E'
     s.commit(); s.close()
+    html_valido = c.get(pagina).get_data(as_text=True)
     assert 'background: url(x)' not in html, \
         "il campo colore finisce dentro l'attributo style senza controllo"
+    # gemello: lo stesso campo con un colore valido arriva davvero nell'attributo style (Marino ha un appuntamento
+    # quel giorno). Se la pagina non mostrasse piu' il suo appuntamento, il controllo qui sopra passerebbe da solo.
+    assert 'border-left-color: #B3261E' in html_valido, \
+        "gemello: il colore valido del medico non c'e' nella pagina: il controllo «non c'e'» non vedrebbe niente"
 
 
 # ------------------------------------------ 8. richieste in parallelo

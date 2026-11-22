@@ -7,6 +7,7 @@ tutto. La prova nel browser (fumetti, riflettore, tasti) e' in
 prove_guida_browser.py."""
 import json
 from prove_dove import dove
+from prove_gemelli import manca, protetto
 import os
 import re
 import shutil
@@ -96,16 +97,22 @@ def gu_indice_ricerca_stampa():
     S, C = mondo()
     t = html(C.get('/aiuto'))
     assert all(a['titolo'].replace("'", '&#39;') in t for a in guida.ARTICOLI), 'indice incompleto'
-    for q, atteso, escluso in (('backup', 'Backup e ripristino', 'Prenotare un appuntamento'),
-                               ('WHATSAPP', 'Le conferme del giorno dopo', 'Backup e ripristino'),
-                               ('checklist', 'Checklist pre-operatoria', 'Importare dai file Excel')):
+    # dove_ce: una ricerca in cui il titolo escluso compare (il gemello del suo «non c'e'»)
+    for q, atteso, escluso, dove_ce in (('backup', 'Backup e ripristino', 'Prenotare un appuntamento', 'prenotare'),
+                                        ('WHATSAPP', 'Le conferme del giorno dopo', 'Backup e ripristino', 'backup'),
+                                        ('checklist', 'Checklist pre-operatoria', 'Importare dai file Excel',
+                                         'importare')):
         t = html(C.get('/aiuto?q=' + q))
-        assert atteso in t and escluso not in t, q
+        assert atteso in t, q
+        manca(t, escluso, html(C.get('/aiuto?q=' + dove_ce)), q)
     t = html(C.get('/aiuto?q=zzzzqqq'))
     assert 'Nessuna guida parla' in t
     for sporco in ('<script>alert(1)</script>', '%00', 'x' * 500, "'\""):
         r = C.get('/aiuto', query_string={'q': sporco})
         assert r.status_code == 200 and '<script>alert' not in html(r)
+        if sporco == '<script>alert(1)</script>':
+            # gemello: la parola cercata torna nella pagina, nella forma protetta da Jinja
+            protetto(html(r), '<script>alert', 'la ricerca nella guida')
     assert C.get('/aiuto/nonesiste').status_code == 404
     assert C.get('/aiuto/nonesiste/passi.json').status_code == 404
     assert C.get('/aiuto/../app.py').status_code == 404

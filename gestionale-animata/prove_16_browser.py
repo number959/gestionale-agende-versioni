@@ -171,6 +171,10 @@ with sync_playwright() as p:
        (pg.url, len(chiamate)))
     pg.unroute_all()
     chiamate = prova_attesa([base, dict(base, partito=False, errore='accesso negato')])
+    # gemello della «rotella» tolta qui sotto: la stessa pagina, appena aperta (la prima domanda parte dopo 2,5 secondi,
+    # l'errore arriva con la seconda), la rotella c'è
+    ok('attesa: mentre aspetta la rotella gira', pg.locator('#messaggio-attesa .rotella').count() == 1,
+       pg.locator('#messaggio-attesa .rotella').count())
     pg.wait_for_timeout(6000)
     messaggio = pg.text_content('#messaggio-attesa') or ''
     ok('attesa: se il Setup non parte lo dice e smette di aspettare', 'Il Setup non è partito: accesso negato' in messaggio

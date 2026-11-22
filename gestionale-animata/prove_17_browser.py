@@ -79,10 +79,14 @@ with sync_playwright() as p:
     pg.wait_for_timeout(700)
     ok('mentre si scrivono i primi caratteri nessun errore', 'non' not in esito().lower() or esito().startswith('Dal codice'),
        esito())
+    # «non» non basta: l'errore di un codice ancora corto («Il codice fiscale ha 8 caratteri: ne servono 16.») non lo
+    # contiene. Si cerca la frase dell'errore, che il gemello qui sotto trova uscendo dal campo (stessa pagina, stesso esito)
+    ok('mentre si scrivono i primi caratteri niente «ne servono 16»', 'ne servono 16' not in esito(), esito())
     pg.keyboard.type('A01F839X', delay=15)
     ok('al sedicesimo carattere: il motivo', aspetta_esito('sarebbe «W»'), esito())
     pg.fill('#codice_fiscale', 'FNTPRV80A01')
     pg.press('#codice_fiscale', 'Tab')
+    # gemello di «niente "ne servono 16"» qui sopra
     ok('uscendo dal campo con un codice corto: il motivo', aspetta_esito('ne servono 16'), esito())
 
     # ------------------------------------------------ calcolo dai dati

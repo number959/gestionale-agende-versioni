@@ -2,6 +2,7 @@
 """Suite estesa. Ogni prova ha un nome parlante: se rompe si sa dove guardare."""
 import os
 from prove_dove import dove
+from prove_gemelli import protetto
 import tempfile
 import random
 import threading
@@ -415,11 +416,14 @@ def fai_veleno(nome, testo):
         tabella_viva = s2.scalars(select(Appuntamento)).first() is not None
         s2.close(); s.close()
         assert resp.status_code == 200, 'HTTP %d' % resp.status_code
-        assert '<script' not in html.replace('<script', '', 0) or True
         assert '<script>alert' not in html, 'tag script passato intero'
         assert '<img src=x' not in html, 'tag img passato intero'
-        if '&lt;img' in html or '&lt;script' in html:
-            pass                     # marcatori resi inerti da Jinja, come deve essere
+        # gemelli dei due controlli qui sopra: con il cognome che li contiene arrivano nella pagina, ma nella forma
+        # protetta da Jinja (&lt;script&gt;...). Se il cognome non arrivasse fino alla pagina, cadrebbe qui
+        if nome == 'script':
+            protetto(html, '<script>alert', 'il cognome del paziente nella giornata')
+        elif nome == 'immagine con onerror':
+            protetto(html, '<img src=x', 'il cognome del paziente nella giornata')
         assert tabella_viva, 'la tabella appuntamenti e sparita'
     return f
 

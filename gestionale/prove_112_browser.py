@@ -239,8 +239,24 @@ with sync_playwright() as p:
     pg.evaluate("sessionStorage.removeItem('notifiche-viste')")
     richieste_notifiche = []
     pg.on('request', lambda q: richieste_notifiche.append(q.url) if '/notifiche' in q.url else None)
+    # gemello del «le notifiche non si chiedono» del riepilogo live (piu' sotto): in una pagina normale le stesse tre
+    # cose ci sono (la richiesta a /notifiche, #notifiche .notifica, la memoria delle viste). I dati di prova hanno
+    # sempre cose da fare di oggi e di ieri, quindi qualche notifica c'e'.
+    pg.goto(B + '/ambulatori/riepilogo?struttura=1')
+    try:
+        pg.wait_for_selector('#notifiche .notifica', timeout=8000)
+    except Exception:
+        pass
+    viste = pg.evaluate("sessionStorage.getItem('notifiche-viste')")
+    ok('notifiche (gemello): in una pagina normale si chiedono, compaiono e risultano viste',
+       any('/notifiche' in u for u in richieste_notifiche) and pg.locator('#notifiche .notifica').count() >= 1 and
+       viste not in (None, '{}'), (richieste_notifiche, pg.locator('#notifiche .notifica').count(), viste))
+    del richieste_notifiche[:]                       # la stessa lista: la guarda ancora il pg.on di sopra
+    pg.evaluate("sessionStorage.removeItem('notifiche-viste')")
     pg.goto(B + '/riepilogo-live?struttura=1')
     pg.wait_for_selector('#riepilogo-live .frase-live')
+    ok('riepilogo live (gemello del modo schermo, piu\' sotto): nella pagina normale il menu c\'è',
+       pg.locator('nav.menu').count() == 1, pg.locator('nav.menu').count())
     ok('riepilogo live: la frase in cima, in parole', len(pg.inner_text('.frase-live').strip()) > 20, pg.inner_text('.frase-live'))
     conti = pg.locator('.conti-oggi-live li b').all_inner_texts()
     ok('riepilogo live: fatti, in corso, da segnare e da fare sommano agli appuntamenti di oggi',
@@ -295,6 +311,8 @@ with sync_playwright() as p:
        scarico.value.suggested_filename)
     attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
     ok('riepilogo del periodo: il gruppo Ambulatori è attivo', attivo.count() and 'Ambulatori' in attivo.inner_text())
+    ok('riepilogo del periodo (gemello del modo schermo della dashboard, piu\' sotto): il menu c\'è',
+       pg.locator('nav.menu').count() == 1, pg.locator('nav.menu').count())
     pg.set_viewport_size({'width': 390, 'height': 844})
     pg.wait_for_timeout(300)
     ok('riepilogo del periodo: sul telefono la pagina non scorre di lato (scorrono le tabelle)',

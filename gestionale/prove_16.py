@@ -10,6 +10,7 @@ avvierebbe. La prova vera, con il Setup che chiude, aggiorna e riapre il
 programma, si fa con l'eseguibile su Windows (vedi LEGGIMI)."""
 import hashlib
 from prove_dove import dove
+from prove_gemelli import manca
 import json
 import os
 import random
@@ -409,8 +410,16 @@ def c_nuova_versione():
     t = testo(C.get('/aggiornamenti'))
     assert 'È pronta la versione %s' % nuova in t and 'Correzioni. Piccole correzioni di prova.' in t, t
     assert 'data-guida="aggiorna-adesso"' in html(C.get('/aggiornamenti'))
-    # le novita' delle versioni gia' installate non si ripetono
-    assert 'Videoguide' not in t, 'novità già installate mostrate di nuovo'
+    # le novita' delle versioni gia' installate non si ripetono. Il gemello: la stessa pagina, con lo stesso
+    # file delle versioni, se il programma installato fosse la 1.5 mostra le Videoguide della 1.6
+    def installata_la_15():
+        prima = AG.VERSIONE
+        AG.VERSIONE = '1.5'
+        try:
+            return testo(C.get('/aggiornamenti'))
+        finally:
+            AG.VERSIONE = prima
+    manca(t, 'Videoguide', dove_ce=installata_la_15, perche='novità già installate mostrate di nuovo')
     return 'scaricato e controllato: %s' % os.path.basename(st['pronto'])
 
 

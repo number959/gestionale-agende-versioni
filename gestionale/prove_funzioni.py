@@ -10,6 +10,7 @@ programma stesso.
 import io
 from prove_dove import dove
 import prove_messaggi as PM
+from prove_gemelli import manca
 import json
 import os
 import random
@@ -866,7 +867,11 @@ def fe_assenza():
     s.close()
     assert avviso == 'Lippiello risulta assente il %s (Congresso).' % g.strftime('%d/%m'), avviso
     t = html(C.get('/appuntamento?data=%s&ora=09:00&risorsa=%d' % (g, I['Ambulatorio 1'])))
-    assert not re.search(r'<option value="%d" selected>Lippiello' % I['Lippiello'], t), 'propone il medico assente'
+    # il gemello: due giorni dopo, senza assenza, lo stesso modulo propone Lippiello
+    manca(t, re.compile(r'<option value="%d" selected>Lippiello' % I['Lippiello']),
+          dove_ce=lambda: html(C.get('/appuntamento?data=%s&ora=09:00&risorsa=%d'
+                                     % (g + timedelta(days=2), I['Ambulatorio 1']))),
+          perche='propone il medico assente')
 
 
 def fe_chiusura():

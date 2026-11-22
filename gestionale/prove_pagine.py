@@ -9,6 +9,8 @@ pagina al massimo due volte (il tipo: l'indirizzo con le cifre scritte N e i nom
   clinica internet può mancare, e una pagina non deve dire a nessuno fuori chi la sta guardando).
 Lo stesso per i fogli di stile in static/. I gemelli: lo stesso controllo trova i tre difetti in una pagina fatta
 apposta, e nelle pagine vere vede davvero moduli, id e risorse del programma (altrimenti passerebbe da solo).
+Dal 22/11/2026 anche il menu: ogni pagina intera lo ha una volta sola, tranne i fogli da stampare e la dashboard nel
+modo schermo (?schermo=1), che devono esserne senza; prove_senza_menu.py prova quelle una per una, con la gemella.
 
     python prove_pagine.py
 """
@@ -60,11 +62,17 @@ class Guarda(HTMLParser):
         self.risorse = 0              # script, fogli di stile e immagini del programma
         self.collegamenti = []
         self._stile = False
+        self.menu = 0                 # quanti nav.menu: lo stesso selettore del browser, della guida e di prove_senza_menu
+        self.funzione = None          # data-pagina del <body>: la funzione che ha fatto la pagina
 
     def handle_starttag(self, tag, attrs):
         a = {k: (v or '') for k, v in attrs}
         if a.get('id'):
             self.id[a['id']] += 1
+        if tag == 'nav' and 'menu' in a.get('class', '').split():
+            self.menu += 1
+        if tag == 'body':
+            self.funzione = a.get('data-pagina')
         if tag == 'form':
             self.moduli += 1
             if self.aperti:
@@ -183,6 +191,37 @@ def p_fogli_di_stile():
     return '%d fogli' % len(fogli)
 
 
+# le pagine senza menu: i fogli da stampare sempre, la dashboard solo con ?schermo=1 (prove_senza_menu.py le prova
+# una per una, con la gemella; lì anche le tre che il giro non vede, perché seed.py non ha moduli da stampare,
+# tariffari e strutture del gruppo)
+SENZA_MENU = {'viste.stampa', 'segreteria.agenda_medico', 'sala.lista_operatoria', 'cruscotto.riepilogo',
+              'viste.promemoria', 'documenti.stampa_modulo', 'guida.stampa', 'dovesifa.stampa', 'tariffari.stampa'}
+SENZA_MENU_SCHERMO = {'live.pagina', 'live.statistiche'}
+
+
+def p_menu():
+    """Ogni pagina intera ha il menu una volta sola, tranne quelle che devono farne a meno."""
+    sconosciute = sorted((SENZA_MENU | SENZA_MENU_SCHERMO) - set(A.app.view_functions))
+    assert not sconosciute, 'nell\'elenco delle pagine senza menu ci sono funzioni che non esistono più: %s' % sconosciute
+    male, senza, guardate = [], set(), 0
+    for p, g in PAGINE.items():
+        if g.funzione is None:                      # un pezzo di pagina, senza <body> (i risultati di Dove si fa)
+            continue
+        guardate += 1
+        schermo = ('schermo', '1') in parse_qsl(urlsplit(p).query)
+        atteso = 0 if g.funzione in SENZA_MENU or (schermo and g.funzione in SENZA_MENU_SCHERMO) else 1
+        if g.menu != atteso:
+            male.append('%s (%s): %d menu, attesi %d' % (p, g.funzione, g.menu, atteso))
+        if not g.menu:
+            senza.add(g.funzione)
+    # il gemello dei «senza menu»: lo stesso selettore trova il menu nelle altre pagine, e le pagine si riconoscono
+    con = sum(1 for g in PAGINE.values() if g.funzione is not None and g.menu)
+    assert guardate >= len(PAGINE) * 0.9, 'solo %d pagine su %d hanno data-pagina nel <body>' % (guardate, len(PAGINE))
+    assert con >= 200, 'il menu si vede solo in %d pagine: il selettore non lo trova più?' % con
+    assert not male, male[:5]
+    return '%d pagine con il menu, %d senza (%s)' % (con, guardate - con, ', '.join(sorted(senza)))
+
+
 def g_trova_i_difetti():
     """Il gemello del controllo: in una pagina fatta apposta trova tutti e tre i difetti, in ogni forma."""
     g = guarda('<form action="/fuori"><input id="a"><form action="/dentro"></form></form><p id="a"></p>'
@@ -213,6 +252,7 @@ prova('nessun modulo dentro un altro modulo', p_annidati)
 prova('nessun id ripetuto nella stessa pagina', p_id)
 prova('niente caricato da internet nelle pagine', p_esterni)
 prova('niente caricato da internet nei fogli di stile', p_fogli_di_stile)
+prova('il menu c\'è, una volta sola, tranne nei fogli da stampare e nel modo schermo', p_menu)
 prova('gemello: il controllo trova moduli annidati, id ripetuti e risorse da internet', g_trova_i_difetti)
 prova('gemello: nelle pagine vere il controllo vede moduli, id e risorse', g_vede_le_pagine)
 
