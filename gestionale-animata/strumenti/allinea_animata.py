@@ -31,7 +31,7 @@ SOLO_ANIMATA = ('static/animazioni.css', 'static/animazioni.js', 'static/animazi
 RIGENERATI = ('static/guida/', 'static/video/')
 CARTELLE_ESCLUSE = {'__pycache__', 'build', 'dist', 'Output', '.venv', '.git', 'prove_animazioni_foto'}
 ESTENSIONI_ESCLUSE = ('.db', '.db-wal', '.db-shm', '.pyc', '.log', '.conflitto')
-FILE_ESCLUSI = {'campagna-progresso.txt'}
+FILE_ESCLUSI = {'campagna-progresso.txt', 'firma_prova.json'}       # firma_prova.json: la scrive crea_prova.py
 
 
 def file_di(radice):

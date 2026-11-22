@@ -1,0 +1,36 @@
+# Il foglio che va con il pacchetto di prova. strumenti/crea_prova.py lo copia in dist/ accanto all'eseguibile,
+# senza queste righe con # e con {file}, {tappa}, {commit} e {giorno} al posto giusto.
+GESTIONALE AGENDE - VERSIONE DI PROVA (tappa {tappa}, commit {commit}, {giorno})
+
+Che cos'è
+  Il gestionale di oggi, con dati inventati, per provarlo prima che arrivi in clinica. Non si installa e
+  non tocca il programma della clinica: ha una cartella sua, un indirizzo suo (http://127.0.0.1:5050,
+  quello vero è :5000), non manda email o WhatsApp, non fa copie di sicurezza e non cerca aggiornamenti.
+
+Primo avvio: l'avviso di Windows
+  Il file non ha una firma digitale, quindi al primo doppio clic Windows può mostrare una finestra blu
+  «Windows ha protetto il PC». Se il nome del file è {file} ed è arrivato dal posto concordato:
+    1. clic su «Ulteriori informazioni»;
+    2. clic su «Esegui comunque».
+  In alternativa, prima di aprirlo: tasto destro sul file, Proprietà, in basso spuntare «Annulla
+  blocco», OK. Il browser può dire che il file «non viene scaricato comunemente»: «Mantieni».
+  Se l'antivirus lo mette in quarantena, lo si ripristina solo per questo file. Se Windows lo blocca
+  senza il pulsante «Esegui comunque» (Controllo intelligente delle app di Windows 11), non disattivare
+  niente: avvisare.
+
+Come si riconosce
+  Una cornice arancione intorno alla pagina, in alto «Versione di prova · tappa · commit · giorno», e il
+  titolo della scheda del browser che comincia con «PROVA». Le prenotazioni vere vanno solo nel programma
+  dall'icona «Agende».
+
+Aprire e chiudere
+  Doppio clic sul file per aprirla: la prima volta del giorno ci vuole qualche secondo, perché prepara i
+  dati. Un secondo doppio clic riapre solo la pagina. Per chiuderla: «Chiudi la prova» in alto. Non usare
+  FERMA.bat: chiude il programma della clinica. Non rinominare il file in «Gestionale.exe».
+
+I dati
+  Stanno in %LOCALAPPDATA%\GestionaleAgendeProva e si rifanno da capo al primo avvio di ogni giorno
+  (o con un pacchetto nuovo): quello che si scrive nella prova il giorno dopo non c'è più. Lasciata aperta
+  oltre la mezzanotte, mostra i dati di ieri fino al prossimo avvio. Per togliere tutto: chiudere la
+  prova e cancellare quella cartella e il file. La cartella %LOCALAPPDATA%\GestionaleAgende è quella della
+  clinica: non si tocca.

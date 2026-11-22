@@ -136,6 +136,16 @@ solo nell'animata, e il gemello cambia `aggiornamenti.VARIANTE` e le vede compar
 `riepilogo_live_atteso.json` (uguale nelle due cartelle) chiave per chiave, a ogni livello e anche nel tipo
 (1 non è 1.0), su un mondo di prova con soli nomi inventati e l'orologio fermo in sette momenti; un numero
 nuovo voluto si scrive con `python prove_live_json.py --scrivi`, nello stesso commit.
+Il pacchetto di prova per Giovanni (dalla tappa 1 della base): `prova.py` è il programma di oggi sui dati inventati di
+`strumenti/dati_prova.py` (gli stessi di `demo.py`, più `nomi_inventati`), con una cornice «Versione di prova», nella cartella
+`%LOCALAPPDATA%\GestionaleAgendeProva` e sulla porta 5050, senza invii, copie, aggiornamenti né riavvii (`chiudi_le_porte`).
+`prove_dati_prova.py` confronta quei dati, con l'orologio fermo, con `dati_prova_atteso.txt` (uguale nelle due cartelle,
+`--scrivi` per un cambio voluto); `prove_prova.py` controlla ogni sostituzione di `chiudi_le_porte` e, con una guardia sui
+sorgenti, che ogni chiamata verso internet o verso un altro programma sia coperta: una nuova va sostituita in `prova.py` e
+scritta in `prove_prova.py`. Si costruisce con `CREA_PROVA.bat` (o `strumenti/crea_prova.py --tappa N`) dentro
+`gestionale-animata`, la variante della clinica: mai un Setup per la prova, mai il nome `Gestionale.exe`. In Wine:
+`bash strumenti/wine/costruisci.sh --prova ../gestionale-animata`, poi `python3 strumenti/wine/prova_isolamento.py
+../gestionale-animata/dist/windows/GestionaleProva-….exe`, accanto al programma installato.
 `strumenti/confronta_rami.py` (non è nel giro di `tutte_le_prove.py`: vuole git) confronta il programma del ramo
 principale con quello della cartella, sugli stessi dati di prova copiati due volte: segue i collegamenti da tutte
 le pagine senza parametri (ogni tipo di pagina al massimo 4 volte) e confronta risposte, moduli e campi (anche
