@@ -307,8 +307,9 @@ def avvio_non_riuscito(registro, errore):
 
 def principale(argomenti=None):
     p = argparse.ArgumentParser(description='Gestionale Agende, versione di prova con dati inventati.')
-    p.add_argument('--dati', default=None, help='cartella dei dati della prova (di solito %%LOCALAPPDATA%%\\%s)'
-                   % NOME_CARTELLA)
+    # argparse legge l'aiuto con %: il % di Windows si scrive %% (Python 3.14 lo controlla gia' qui, non solo con --help)
+    p.add_argument('--dati', default=None,
+                   help='cartella dei dati della prova (di solito %%LOCALAPPDATA%%\\' + NOME_CARTELLA + ')')
     p.add_argument('--porta', type=int, default=PORTA)
     p.add_argument('--da-capo', action='store_true', help='rifa\' i dati inventati anche se sono di oggi')
     p.add_argument('--senza-browser', action='store_true')

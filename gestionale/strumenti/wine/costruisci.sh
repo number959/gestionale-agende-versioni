@@ -5,11 +5,19 @@
 # versioni) torna in <cartella>/Output.
 #
 #   bash strumenti/wine/costruisci.sh [cartella del programma]
+#   bash strumenti/wine/costruisci.sh --prova [cartella]   # il pacchetto di prova (CREA_PROVA.bat), in <cartella>/dist/windows
 #
+# Con --prova la firma (commit e giorno) si scrive qui, dove c'e' git (strumenti/crea_prova.py --solo-firma):
+# nel Windows finto git non c'e'. La tappa e' TAPPA (di solito 1). Mai un Setup per la prova.
 # Prima, una volta sola: bash strumenti/wine/prepara.sh
 set -e
 QUI="$(cd "$(dirname "$0")" && pwd)"
+PROVA=0
+if [ "${1:-}" = "--prova" ]; then PROVA=1; shift; fi
 CARTELLA="$(cd "${1:-$QUI/../..}" && pwd)"
+if [ "$PROVA" = 1 ]; then
+    (cd "$CARTELLA" && python3 strumenti/crea_prova.py --tappa "${TAPPA:-1}" --solo-firma)
+fi
 NOME="$(basename "$CARTELLA")"
 . "$QUI/ambiente.sh"
 DEST="$WINEPREFIX/drive_c/costruzione/$NOME"
@@ -41,6 +49,20 @@ for radice, sotto, nomi in os.walk(dest):
             os.remove(os.path.join(radice, n))         # un file tolto dai sorgenti non resta nella copia
 PY
 cd "$DEST"
+if [ "$PROVA" = 1 ]; then
+    rm -f dist/GestionaleProva-* dist/LEGGIMI-PROVA.txt
+    echo "== CREA_PROVA.bat (qualche minuto)"
+    printf '\r\n\r\n\r\n' | env "${ENV_CERTIFICATI[@]}" timeout 1800 script -qec "$WINE cmd /c CREA_PROVA.bat ${TAPPA:-1}" /dev/null > crea_prova.log 2>&1 || true
+    if ! ls dist/GestionaleProva-*.exe >/dev/null 2>&1 || [ ! -f dist/LEGGIMI-PROVA.txt ]; then
+        echo "CREA_PROVA.bat non riuscito, ultime righe di $DEST/crea_prova.log:"; senza_codici < crea_prova.log | tail -25; exit 1
+    fi
+    mkdir -p "$CARTELLA/dist/windows"
+    rm -f "$CARTELLA"/dist/windows/GestionaleProva-*
+    cp dist/GestionaleProva-*.exe dist/LEGGIMI-PROVA.txt "$CARTELLA/dist/windows/"
+    echo "== pronto in $CARTELLA/dist/windows:"
+    ls -la "$CARTELLA/dist/windows"
+    exit 0
+fi
 rm -rf dist Output
 echo "== CREA_EXE.bat (qualche minuto)"
 printf '\r\n\r\n\r\n' | env "${ENV_CERTIFICATI[@]}" timeout 1800 script -qec "$WINE cmd /c CREA_EXE.bat" /dev/null > crea_exe.log 2>&1 || true

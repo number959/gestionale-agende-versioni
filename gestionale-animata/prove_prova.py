@@ -115,6 +115,21 @@ def p_porte():
         prova.cartella_sicura = vera
 
 
+def p_aiuto():
+    """L'aiuto delle opzioni si legge: Python 3.14 (quello di CREA_PROVA.bat) controlla gli aiuti di argparse gia'
+    all'avvio, e un % sbagliato fermava il doppio clic con una finestra d'errore (trovato in Wine, 22/11/2026)."""
+    import contextlib
+    import io
+    uscita = io.StringIO()
+    with contextlib.redirect_stdout(uscita):
+        try:
+            prova.principale(['--help'])
+        except SystemExit as e:
+            assert e.code in (0, None), 'uscita %s' % e.code
+    testo = uscita.getvalue()
+    assert '%LOCALAPPDATA%' in testo and prova.NOME_CARTELLA in testo and '--porta' in testo, testo[-400:]
+
+
 def p_cartella_sicura():
     vera = os.path.join(VUOTA, 'GestionaleAgende')
     assert prova.cartella_vera() == vera, prova.cartella_vera()
@@ -389,6 +404,7 @@ def p_cookie_e_cartella_dei_backup():
 
 
 prova_('le porte 5000-5009 si rifiutano, prima di creare la cartella', p_porte)
+prova_('l\'aiuto delle opzioni si legge (Python 3.14 lo controlla all\'avvio)', p_aiuto)
 prova_('la cartella dei dati non e\' mai quella della clinica', p_cartella_sicura)
 prova_('ogni sostituzione di chiudi_le_porte e\' fatta e dice di no', p_sostituzioni)
 prova_('guardia: ogni chiamata verso fuori nei sorgenti e\' sostituita o ammessa', g_guardia)
