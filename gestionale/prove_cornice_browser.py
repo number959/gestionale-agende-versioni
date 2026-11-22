@@ -27,6 +27,9 @@ Non salva niente. Le pagine sono tutte quelle senza parametri di indirizzi.txt c
 4. Sotto 1200 px (1199, 1024 e 683) il menu è a sole icone: largo al più 80 px, il nome delle voci non si vede ma c'è
    per i lettori di schermo (si trovano per ruolo e nome) e nel title; al posto del logo le iniziali. A 1200 px il
    contrario (il gemello naturale).
+   4-bis. Il logo della struttura nel menu largo (1366 e 1200 px) ha le proporzioni del suo file e sta in 216x36 px:
+   quello dei dati di prova e, sostituiti solo nel browser (page.route, non si salva niente), uno quadrato, uno alto
+   e uno larghissimo.
 5. Ogni pagina registra le domande del browser (prepara_domande): nessuna è attesa.
 Ogni controllo ha il suo gemello, in fondo: lo stesso controllo, sulla pagina guastata apposta (un menu tolto, due
 voci accese, il menu in stampa, il menu che non scorre o non resta fermo, un pezzo largo nel menu, un errore
@@ -696,6 +699,50 @@ def problemi_stretto(pg, stretto):
     return p, len(r['voci'])
 
 
+# ---------------------------------------------------------------- 4-bis. il logo del menu
+# il logo della struttura nel menu largo tiene le sue proporzioni (verifica finale della tappa 2: nella colonna del
+# marchio, un flex in colonna, il logo si allargava fino a 216 px mentre l'altezza restava al più 36: il logo dei dati
+# di prova, 6 a 1, usciva largo il 13% in più, e uno quadrato diventava un'ellisse piatta)
+LOGO = r"""() => { const i = document.querySelector('[data-cornice="menu"] img');
+  if (!i || !i.getClientRects().length) { return null; }
+  const s = getComputedStyle(i), b = i.getBoundingClientRect(), n = (x) => parseFloat(x) || 0;
+  return {w: b.width - n(s.paddingLeft) - n(s.paddingRight) - n(s.borderLeftWidth) - n(s.borderRightWidth),
+          h: b.height - n(s.paddingTop) - n(s.paddingBottom) - n(s.borderTopWidth) - n(s.borderBottomWidth),
+          fuori: [b.width, b.height], nw: i.naturalWidth, nh: i.naturalHeight, adatta: s.objectFit};
+}"""
+LOGO_MASSIMO = (216, 36)                             # veste.css, .v-marchio-logo (con il suo bordo chiaro)
+
+
+def problemi_logo(pg):
+    """Il logo del menu si vede, sta in 216x36 px e ha le proporzioni del file (al più il 3% di scarto, per i pixel
+    arrotondati), oppure è disegnato dentro la sua scatola senza deformarlo (object-fit contain)."""
+    r = pg.evaluate(LOGO)
+    if not r or not r['nw'] or not r['nh'] or r['h'] <= 0:
+        return ['il logo del menu non si vede: %s' % r]
+    p = []
+    if r['fuori'][0] > LOGO_MASSIMO[0] + 0.5 or r['fuori'][1] > LOGO_MASSIMO[1] + 0.5:
+        p.append('il logo del menu è più grande di %dx%d: %s' % (LOGO_MASSIMO + (r['fuori'],)))
+    vero, reso = r['nw'] / r['nh'], r['w'] / r['h']
+    if abs(reso / vero - 1) > 0.03 and r['adatta'] not in ('contain', 'scale-down'):
+        p.append('il logo del menu è deformato: nel file %.2f a 1, nel menu %.2f a 1 (%dx%d px)' % (vero, reso, r['w'], r['h']))
+    return p
+
+
+def logo_finto(larga, alta):
+    """Un PNG pieno di quelle misure, per provare il menu con loghi di altre forme senza salvare niente."""
+    from io import BytesIO
+    from PIL import Image
+    f = BytesIO()
+    Image.new('RGBA', (larga, alta), (180, 83, 9, 255)).save(f, 'PNG')
+    return f.getvalue()
+
+
+def servi_logo(corpo):
+    """Per page.route: risponde con quel PNG al posto del logo (il gestore prende solo la richiesta: con un secondo
+    argomento Playwright gli passerebbe la richiesta anche lì)."""
+    return lambda route: route.fulfill(status=200, content_type='image/png', body=corpo)
+
+
 # ---------------------------------------------------------------- il giro
 PERCORSI = {}                                       # funzione -> indirizzo senza parametri
 with sync_playwright() as p:
@@ -782,6 +829,24 @@ with sync_playwright() as p:
                                             if stretto else 'menu largo con i nomi', n), not pr, pr)
             pr = problemi_barra(pg)
             ok('%d px, %s: la barra in alto su una riga' % (larghezza, u), not pr, pr)
+
+    # ---------------------------------------------- 4-bis. il logo del menu tiene le sue proporzioni
+    # quello dei dati di prova (6 a 1) e, al posto suo senza salvare niente (page.route), uno quadrato, uno alto e uno
+    # larghissimo; a 1366 e a 1200 px, l'ultima larghezza con il menu largo
+    for larghezza in (LARGO, 1200):
+        pg.set_viewport_size({'width': larghezza, 'height': ALTO})
+        for nome, corpo in (('dei dati di prova', None), ('quadrato', logo_finto(160, 160)), ('alto', logo_finto(60, 180)),
+                            ('larghissimo', logo_finto(900, 60))):
+            if corpo:
+                pg.route('**/logo/**', servi_logo(corpo))
+            pg.goto(B + '/oggi?struttura=1')
+            pg.wait_for_function("() => { const i = document.querySelector('[data-cornice=\"menu\"] img'); "
+                                 "return !i || (i.complete && i.naturalWidth > 0); }")
+            pr = problemi_logo(pg)
+            ok('%d px: il logo %s nel menu ha le sue proporzioni e sta in %dx%d px' % ((larghezza, nome) + LOGO_MASSIMO),
+               not pr, pr)
+            if corpo:
+                pg.unroute('**/logo/**')
     pg.set_viewport_size({'width': LARGO, 'height': ALTO})
     e = errori_di(errori, 'giri')
     ok('nessun errore JavaScript nei giri (clic, tasti, menu stretto)', not e, e[:3])
@@ -868,6 +933,13 @@ with sync_playwright() as p:
                              'height: auto !important; clip: auto !important; clip-path: none !important; }')
     gemello('a 1199 px i nomi visibili nel menu si vedono', problemi_stretto(pg, True)[0], 'il nome si vede')
     pg.set_viewport_size({'width': LARGO, 'height': ALTO})
+    # il difetto di prima: il logo tirato fino alla larghezza della colonna (align-self stretch, il valore di un flex)
+    pg.route('**/logo/**', servi_logo(logo_finto(160, 160)))
+    pg.goto(B + '/oggi?struttura=1')
+    pg.wait_for_function("() => { const i = document.querySelector('[data-cornice=\"menu\"] img'); return i && i.complete; }")
+    pg.add_style_tag(content='[data-cornice="menu"] img { align-self: stretch !important; }')
+    gemello('il logo quadrato tirato fino a 216 px si vede deformato', problemi_logo(pg), 'deformato')
+    pg.unroute('**/logo/**')
     errori_di(errori, 'gemelli')
     # una domanda del browser che nessuno aspetta: in una scheda a parte, fuori dal conto finale
     prova = br.new_page()

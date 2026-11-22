@@ -324,9 +324,11 @@ table.v-tabella td small, table.v-tabella .v-testo-piccolo { display: block; }
     font: var(--v-car-n)/var(--v-int-n) var(--v-corpo); letter-spacing: var(--v-lettere);
   }
   .v-marchio { flex: none; display: flex; flex-direction: column; gap: var(--v-spazio-4); padding: var(--v-spazio-2) 2px var(--v-spazio-6); min-width: 0; }
-  /* il logo su un fondo chiaro anche nel tema scuro (--v-fondo-logo): i loghi sono fatti per il fondo bianco */
+  /* il logo su un fondo chiaro anche nel tema scuro (--v-fondo-logo): i loghi sono fatti per il fondo bianco.
+     align-self: flex-start, perché in una colonna flex il logo si allungherebbe fino alla larghezza della colonna
+     mentre l'altezza resta al più 36 px: un logo quadrato diventava un'ellisse piatta (prove_cornice_browser.py, 4-bis) */
   .v-marchio-logo {
-    display: block; width: auto; height: auto; max-width: 216px; max-height: 36px;
+    display: block; align-self: flex-start; width: auto; height: auto; max-width: 216px; max-height: 36px;
     padding: 3px 6px; margin-left: -6px; border-radius: var(--v-raggio-1); background: var(--v-fondo-logo);
   }
   .v-marchio-nome {

@@ -2563,7 +2563,9 @@ bottoni e dati; cambia solo quello che hanno intorno.
   Statistiche e Cassa stavano sotto il bordo). Sotto 1200 px solo le icone (72 px; il nome resta per i lettori di schermo e compare sotto il mouse) e al posto del
   logo le iniziali della struttura (il nome resta per i lettori di schermo); sotto 600 px (il telefono) il menu torna
   in alto, su una riga di icone. Resta un solo `<nav class="menu" aria-label="Pagine">`, che serve alla guida; il
-  menu intero, con il logo (`alt=""`: il nome è scritto sotto), è un `<aside aria-label="Menu">`.
+  menu intero, con il logo (`alt=""`: il nome è scritto sotto), è un `<aside aria-label="Menu">`. Il logo
+  tiene le sue proporzioni dentro 216×36 px (`align-self: flex-start`: nella colonna del marchio si sarebbe allargato
+  fino a 216 px).
 - **La barra in alto** (`_barra.html`, alta 62 px): il percorso (struttura › voce › linguetta; la struttura solo per
   le aree che ne hanno una; i segni › li disegna il foglio di stile), la ricerca rapida di prima (stesso campo, stessi
   pezzi chiesti mentre si scrive, stesso tasto /) e il posto della campanella, che arriva nella tappa 3: fino ad allora
@@ -2742,6 +2744,16 @@ delle tendine che portano alla struttura 1 (M1) e l'Agenda accesa anche nelle pa
 pagina (M2) da `prove_menu.py` (1 su 11); nel browser, su un gestionale di prova fatto da una copia, la voce accesa non
 portata in vista, il riquadro dei Turni alto come prima, la barra che va a capo e le notifiche prima della pagina
 (`prove_cornice_browser.py`, 23 controlli).
+
+La verifica finale della tappa 2 (22/11/2026), fatta da capo senza guardare i resoconti, ha trovato un difetto che
+nessuna prova vedeva: **il logo della struttura nel menu era tirato in largo**. Il marchio è una colonna flex, e il
+logo (largo «auto», al più 216×36 px) si allungava fino alla larghezza della colonna mentre l'altezza restava al più
+36 px: il logo dei dati di prova (6 a 1) usciva largo il 13% in più, uno quadrato (come quello inventato del pacchetto
+di prova) diventava un'ellisse piatta. Corretto con `align-self: flex-start` su `.v-marchio-logo` (`veste.css`).
+`prove_cornice_browser.py` (4-bis) misura il logo a 1366 e a 1200 px: quello dei dati di prova e, sostituiti solo nel
+browser con `page.route` (non si salva niente), uno quadrato, uno alto e uno larghissimo devono avere le proporzioni
+del file e stare in 216×36 px; il gemello rimette il difetto (`align-self: stretch`) e lo vede. Il mutante, su una
+copia senza la correzione, rompe 6 controlli su 634 (tutti i loghi tranne il larghissimo, che il difetto non tocca).
 
 ### Il pacchetto di prova (dalla tappa 1 della base)
 

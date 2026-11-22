@@ -99,7 +99,8 @@ i tasti G, E, C e D, la cornice che sparisce in stampa), `prove_cornice_browser.
 senza parametri di `indirizzi.txt` a 1366×657 con la cornice nuova, senza errori JavaScript, una voce e una linguetta
 accese, la cornice che sparisce in stampa, il menu che scorre per conto suo e non spinge la pagina di lato; ogni pagina
 raggiunta con soli clic dalla home, dal menu e dalle linguette, e lì accesa la voce cliccata; G, E, C e D da più pagine e
-dalla seconda struttura; il menu a sole icone sotto 1200 px, con i nomi per i lettori di schermo; non salva niente),
+dalla seconda struttura; il menu a sole icone sotto 1200 px, con i nomi per i lettori di schermo; il logo della
+struttura nel menu con le proporzioni del suo file, anche quadrato o alto, sostituito solo nel browser; non salva niente),
 `prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, `prove_19_browser.py`,
 `prove_191_browser.py` (salva le impostazioni email della prova e poi rimette quelle di
 partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova),
