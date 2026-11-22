@@ -26,6 +26,8 @@ from datetime import date, timedelta
 
 from flask import Blueprint, render_template, abort, url_for, request, Response, redirect
 
+import accessi
+
 bp = Blueprint('guida', __name__, url_prefix='/aiuto')
 
 
@@ -1019,8 +1021,11 @@ def passi_json(slug):
     a = PER_SLUG.get(slug)
     if a is None:
         abort(404)
-    testo = json.dumps({'slug': a['slug'], 'titolo': a['titolo'], 'passi': a['passi'],
-                        'articolo': url_for('guida.articolo', slug=slug)}, ensure_ascii=False)
+    # l'ultimo passo porta alla guida con le immagini (guida.js), che è dell'area «Guida e aiuto»: dagli altri PC solo a
+    # chi ce l'ha, altrimenti il collegamento non c'è (revisione dell'unione: portava al 403). I passi sono di tutti.
+    articolo = url_for('guida.articolo', slug=slug) if accessi.si_apre('guida.articolo') else ''
+    testo = json.dumps({'slug': a['slug'], 'titolo': a['titolo'], 'passi': a['passi'], 'articolo': articolo},
+                       ensure_ascii=False)
     testo = testo.replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
     r = Response(testo, mimetype='application/json')
     r.headers['Cache-Control'] = 'no-store'

@@ -2967,6 +2967,63 @@ diversa (206 solo per i cambiamenti approvati, 43 regole di cui 26 solo per la c
 (457 parti approvate) e 49 fogli e pagine che si stampano in PDF, nessuno diverso (la guida da stampare con le 2 pagine
 della guida nuova, approvata dalla sua regola «foglio»); `allinea_animata.py`: 262 file comuni, tutti uguali.
 
+### La revisione dell'unione: correzioni e cose rimandate (22/11/2026)
+
+Due revisori hanno guardato l'unione (niente perso dai due lati; l'accesso dagli altri PC con la cornice nuova) e hanno
+trovato 8 problemi. Ognuno è stato riprodotto prima di toccarlo (sul gestionale di prova, con utenti inventati e
+le pagine aperte dall'indirizzo di questo PC fuori da 127.*, come da un altro PC). Corretti, ognuno con la sua prova e
+il suo gemello o mutante:
+
+- **il commento di `base.html` e `CLAUDE.md`** dicevano «le 11 pagine senza menu»: sono 13 (i 9 fogli da stampare, le 2
+  della dashboard nel Modo schermo, l'accesso e la propria password dagli altri PC). `prove_senza_menu.py` vuole lo
+  stesso numero dei modelli in tutti e due (il gemello: con 11 cade);
+- **il lanciatore lancia ogni raccolta della cartella**: nessuno controllava `SENZA_BROWSER` e `NEL_BROWSER`, e togliere
+  `prove_accessi.py` dall'elenco (proprio la riga del conflitto) lasciava «36 prove lanciate: tutte andate».
+  `tutte_le_prove.fuori_elenco()` vuole in un elenco ogni `prove*.py` che non è un aiuto (`AIUTI`: `prove_cornice.py`,
+  `prove_dove.py`, `prove_gemelli.py`, `prove_messaggi.py`) e ogni file che scrive la riga finale di una raccolta; lo
+  dice all'inizio di ogni giro completo (riga «elenco delle raccolte», KO se non torna) e lo prova `prove_mattoni.py`
+  (il gemello toglie una riga per volta dai due elenchi, un aiuto dal suo, scrive un nome in due elenchi, e in una
+  cartella finta una raccolta con un altro nome e un aiuto con la riga finale);
+- **il giro della guida sullo schermo** (Aiuto → «Guida di questa pagina», l'invito «Fai il giro» in Oggi) finiva con
+  «La guida con le immagini», verso `/aiuto/<guida>`, che è dell'area «Guida e aiuto»: chi non l'aveva finiva su un 403.
+  `guida.passi_json` ora dà l'articolo vuoto se `guida.articolo` non si apre, e `guida.js` mostra il collegamento solo
+  se c'è (`z_rv_guida_con_le_immagini_solo_con_la_guida`, per tutte le 46 guide; gemelli: con la Guida e sul PC
+  l'articolo c'è, e aperto a mano senza la Guida è un 403);
+- **i Turni da guardare**: la riga diceva «I campi e i bottoni per salvare sono spenti», ma la griglia restava attiva (il
+  clic apriva la scelta, una lettera mandava il salvataggio, rifiutato con un 403) e c'erano «Aggiungi» e gli Strumenti
+  che cambiano. Ora la griglia della settimana e del mese e la vista del giorno hanno `data-solo-guardare` con il motivo
+  (`accessi.solo_guardare('turni')`, vuoto sul PC e per chi può salvare): `turni.js` non apre la scelta e non ascolta i
+  tasti («Turno a…» spento), `gestionale.js` mette il motivo nel title e nella riga in cima; «Aggiungi», «Schema a
+  rotazione…», «Copia la settimana prima» e la riga «Clic su una cella…» non ci sono (Stampa e Scarica in Excel sì).
+  Prove: `z_rv_turni_solo_guardare` (gemelli: con «modificare» e sul PC tutto c'è, e sul PC l'HTML è identico) e, nel
+  browser, `prove_accessi_browser.py`: clic su una cella e tasto M, nessuna scelta e nessun POST; il gemello dal PC
+  salva il turno e Ctrl+Z lo toglie;
+- **il nome della parte per le pagine di più aree**: il cambio di stato vale per Agenda o Segreteria, e la riga «solo
+  guardare», il title dei bottoni e il rifiuto dicevano sempre «Agenda», anche a chi ha solo la Segreteria. Ora
+  `accessi.nome_della_parte` dice la parte da cui viene il livello, in `livello_modulo` e in `controlla_accesso`
+  (`z_rv_nome_della_parte_doppia`; gemello: con la sola Agenda si dice ancora «Agenda»);
+- **la ricerca rapida dalla rete**: a chi non ha Agenda, Pazienti né Dove si fa rispondeva sempre «Nessun risultato.»,
+  anche per un paziente che c'è (i risultati si tolgono dopo, nel filtro). Ora nella barra c'è solo se almeno una delle
+  pagine dei suoi risultati si apre (`accessi.ricerca_utile`, `PAGINE_RICERCA_RAPIDA`); l'«if» sta dentro le righe di
+  `_barra.html`, e sul PC l'HTML è quello di prima. `z_rv_ricerca_solo_se_serve` prende le pagine dagli `url_for` di
+  `cerca_tutto` e di `dovesifa.per_ricerca_rapida` e dai risultati veri sul PC; tre utenti senza quelle aree non hanno
+  la ricerca, tre con una sola sì;
+- **la barra in alto dalla rete** andava su due righe (66 px invece di 62) anche a 1280 e a 1200 px sulle pagine con il
+  percorso lungo (Ambulatori › Pianificazione della settimana, Segreteria › Chiusura della giornata…), e con un nome
+  lungo anche Segreteria › Conferme. Ora, solo con la riga dell'utente: la ricerca larga 240 px (almeno 160), il nome al
+  più 9em, e il percorso su una riga, dove si accorcia con i puntini solo il nome della struttura. Sul PC niente cambia.
+  `prove_accessi_browser.py` misura la barra (62 px) a 1366, 1280, 1200, 1199 e 1024 px su sei pagine, con un utente
+  dal nome di 38 lettere; il gemello rimette lo stile di prima e a 1280 la vede andare a capo.
+
+Rimandato, da decidere con Giovanni (scritto in `piano/DECISIONI-VESTE.md`, Configura):
+
+- **le linguette di Configura a 1200 e a 1024 px** sul PC principale: sono 7, e «Aree e accessi» va da sola sulla seconda
+  riga (le 7 pagine di Configura scendono di 38 px); lo stesso succede alle 7 della Segreteria. Accorciare la parola non
+  basta (a 1024 px anche «Accessi» va a capo: servirebbe meno spazio fra tutte le linguette, in tutte le aree).
+
+Resta com'era, da sapere: chi ha l'Agenda senza i Pazienti ha la ricerca rapida (trova giorni e medici), ma cercando
+il nome di un paziente legge «Nessun risultato.».
+
 ### Il pacchetto di prova (dalla tappa 1 della base)
 
 Il gestionale di oggi, da provare sul PC di Giovanni prima che arrivi in clinica, senza toccare il programma della

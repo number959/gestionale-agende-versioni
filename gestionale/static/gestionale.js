@@ -797,15 +797,18 @@
 /* ------------------------------------------- solo guardare (dagli altri PC, accessi.py)
    Il programma segna con data-solo-guardare i moduli che chi è entrato da un altro PC non può salvare: qui i loro
    campi e bottoni si spengono, con la spiegazione sopra (title), e una riga in cima alla pagina lo dice, prima di
-   scrivere qualcosa che non si salverebbe (revisione del 22/11). Sul PC della segreteria non ce ne sono mai. */
+   scrivere qualcosa che non si salverebbe (revisione del 22/11). Sul PC della segreteria non ce ne sono mai. Lo stesso
+   segno su una parte che salva senza modulo (la griglia dei turni, accessi.solo_guardare): il suo script non apre
+   niente, e qui prende il motivo nel title e nella riga in cima. */
 (function () {
   'use strict';
-  var moduli = document.querySelectorAll('form[data-solo-guardare]');
+  var moduli = document.querySelectorAll('[data-solo-guardare]');
   if (!moduli.length) { return; }
   var spiegazioni = [];
   moduli.forEach(function (modulo) {
     var perche = modulo.getAttribute('data-solo-guardare');
     if (spiegazioni.indexOf(perche) < 0) { spiegazioni.push(perche); }
+    if (modulo.tagName !== 'FORM') { modulo.title = perche; return; }
     Array.prototype.forEach.call(modulo.elements, function (campo) {
       if (campo.type === 'hidden' || campo.tagName === 'FIELDSET' ||
           (campo.tagName === 'BUTTON' && campo.type === 'button')) { return; }

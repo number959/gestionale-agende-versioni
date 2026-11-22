@@ -38,8 +38,8 @@
     <div class="gruppo-comandi" data-guida="turni-strumenti">
       <button type="button" class="bottone apri-gruppo" aria-haspopup="true" aria-expanded="false">Strumenti<span class="freccia" aria-hidden="true"></span></button>
       <div class="tendina" role="menu">
-        {% if vista != 'giorno' %}<a href="#" data-apri-schema role="menuitem">{{ icona('repeat') }}<b>Schema a rotazione…</b><small>ripetere una sequenza di turni (M M P P N…)</small></a>{% endif %}
-        {% if vista == 'settimana' %}<a href="#" data-copia-settimana role="menuitem">{{ icona('copy') }}<b>Copia la settimana prima</b><small>gli stessi turni, nelle celle ancora vuote</small></a>{% endif %}
+        {% if vista != 'giorno' and puo_cambiare('turni') %}<a href="#" data-apri-schema role="menuitem">{{ icona('repeat') }}<b>Schema a rotazione…</b><small>ripetere una sequenza di turni (M M P P N…)</small></a>{% endif %}
+        {% if vista == 'settimana' and puo_cambiare('turni') %}<a href="#" data-copia-settimana role="menuitem">{{ icona('copy') }}<b>Copia la settimana prima</b><small>gli stessi turni, nelle celle ancora vuote</small></a>{% endif %}
         <a href="#" onclick="window.print(); return false" role="menuitem">{{ icona('printer') }}<b>Stampa</b><small>il foglio dei turni, in orizzontale</small></a>
         <a href="{{ url_for('personale.mese_excel', aaaamm=dal.strftime('%Y-%m'), **filtri) }}" role="menuitem">{{ icona('file-spreadsheet') }}<b>Scarica in Excel</b><small>il mese, con un foglio per le ore</small></a>
       </div>

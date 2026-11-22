@@ -469,6 +469,9 @@
     });
     elenco(tab.querySelectorAll('td.cop')).forEach(function (td) { perCopertura[td.getAttribute('data-c')] = td; });
     if (!M.length || !M[0].length) { return; }
+    // solo guardare (dagli altri PC, accessi.solo_guardare): la griglia si legge, ma il clic e i tasti non aprono la
+    // scelta e non mandano niente; il motivo lo mettono nel title e nella riga in cima alla pagina gestionale.js
+    if (tab.hasAttribute('data-solo-guardare')) { return; }
     tab.setAttribute('aria-multiselectable', 'true');
 
     var fuoco = null;
@@ -877,6 +880,12 @@
   (function () {
     var vg = $('vista-giorno');
     if (!vg || !Scelta) { return; }
+    if (vg.hasAttribute('data-solo-guardare')) {
+      // solo guardare: come nella griglia, niente scelta e niente tasti; «Turno a…» spento, con il motivo
+      var spenta = $('aggiungi-persona');
+      if (spenta) { spenta.disabled = true; spenta.title = vg.getAttribute('data-solo-guardare'); }
+      return;
+    }
     var indirizzo = vg.getAttribute('data-indirizzo');
     var struttura = vg.getAttribute('data-struttura') || '';
     var giorno = vg.getAttribute('data-giorno');

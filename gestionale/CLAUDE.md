@@ -107,11 +107,13 @@ partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova),
 `prove_112_browser.py` (la pianificazione degli ambulatori: mette e toglie un turno, scarica i due Excel),
 `prove_tariffari_browser.py` (il prezzo del tariffario nella prenotazione, carica ed elimina un tariffario),
 `prove_accessi_browser.py` (dalla 1.13: il giro della segreteria in *Aree e accessi*, dal menu Configura → Aree e accessi
-e dal bottone di Impostazioni, accesso dalla rete acceso su una porta libera, mai la 5080, un utente con Agenda da
-modificare e Cassa, Sala e Ambulatori da guardare, poi da un'altra scheda sull'indirizzo della rete: accesso e password
-nuova senza cornice, la riga con il nome ed «Esci» nella barra in alto su una riga a 1366 e 1024 px, il menu e le
-linguette con le sole sue pagine seguite tutte, il Modo schermo senza cornice, nota salvata, «Solo guardare», Pazienti
-negata senza cornice, Esci; alla fine tutto come prima), nell'animata
+e dal bottone di Impostazioni, accesso dalla rete acceso su una porta libera, mai la 5080, un utente con un nome lungo,
+Agenda da modificare e Cassa, Sala, Turni e Ambulatori da guardare, poi da un'altra scheda sull'indirizzo della rete:
+accesso e password nuova senza cornice, la riga con il nome ed «Esci» nella barra in alto e la barra alta 62 px come sul
+PC a 1366, 1280, 1200, 1199 e 1024 px sulle pagine con il percorso più lungo (gemello: lo stile di prima, a 1280 la barra
+va a capo), il menu e le linguette con le sole sue pagine seguite tutte, il Modo schermo senza cornice, i Turni da
+guardare (clic su una cella e tasto M: niente scelta e niente salvataggio; gemello dal PC che salva, poi Ctrl+Z), nota
+salvata, «Solo guardare», Pazienti negata senza cornice, Esci; alla fine tutto come prima), nell'animata
 `prove_animazioni.py` e `prove_icone_animate.py`, e per ultima `prove_16_browser.py`, che
 cambia l'indirizzo degli aggiornamenti. Le prove nel browser salvano dati: sempre su un
 gestionale di prova, mai su quello vero. Dalla tappa 1 della base prendono l'indirizzo solo da
@@ -161,7 +163,10 @@ mandati insieme, collegamenti per PC, cookie da un altro PC, sessioni per utente
 la tappa 2 `z_menu_per_area` (per ogni area un utente che ha solo quella segue ogni voce e linguetta della cornice dalla
 sua prima pagina: tutte 200, almeno una della sua area, niente tolto che per lui si apre; sul PC il menu identico a quello
 senza la condizione; gemello: senza la condizione le voci delle altre aree portano al 403), `z_menu_voce_al_posto` e
-`z_cornice_dalla_rete` (la riga dell'utente nella barra, accesso, password, rifiuto e Modo schermo senza cornice).
+`z_cornice_dalla_rete` (la riga dell'utente nella barra, accesso, password, rifiuto e Modo schermo senza cornice); dalla
+revisione dell'unione le `z_rv_…`: la guida sullo schermo senza «La guida con le immagini» a chi non ha la Guida, i Turni
+da guardare con la griglia segnata e senza «Aggiungi» e Strumenti che cambiano, il nome della parte da cui viene il
+livello per le pagine di più aree, la ricerca rapida solo se una pagina dei suoi risultati si apre (con il PC identico).
 `prove_canarino.py` è la guardia del Modo schermo: un paziente inventato apposta (il «canarino»), con appuntamenti
 di oggi in ogni stato, un intervento, la lista d'attesa e il nome scritto in note, cose da fare e appunti, non deve
 comparire in nessuna pagina sotto `/riepilogo-live*`, con e senza schermo, per ogni struttura e periodo; i suoi gemelli
@@ -174,7 +179,8 @@ solo nell'animata, e il gemello cambia `aggiornamenti.VARIANTE` e le vede compar
 fogli delle pagine arrivano con gli `@import` dello strato, e il controllo li legge anche lì).
 `prove_mattoni.py` (dalla tappa 1-bis) prova i mattoni della veste nuova senza browser: contrasti dei gettoni, valori
 scuri, nessun colore scritto a mano nei file nuovi, lo strato in `base.html`, il prefisso `v-`, i pezzi con le variabili
-rigide, le icone, `euro()`, `marchio.tema` e l'autoriparazione; ogni prova ha il gemello con il suo mutante.
+rigide, le icone, `euro()`, `marchio.tema` e l'autoriparazione, e (dalla revisione dell'unione) che il lanciatore lanci
+ogni raccolta della cartella (`tutte_le_prove.fuori_elenco`); ogni prova ha il gemello con il suo mutante.
 `prove_menu.py` (dalla tappa 2) prova il menu fatto da `menu.py` e la cornice che lo disegna: ogni voce, linguetta,
 voce della tendina Aiuto e collegamento nascosto si costruisce con `url_for`, e ogni voce ha un'icona di `_icone.html`;
 ogni pagina senza parametri accende una voce sola e, se la sua voce ha le linguette, una linguetta sola, le stesse in
@@ -245,7 +251,10 @@ siano scritti nella pagina. Dove si vedono (dentro la zona `.avvisi`, una volta 
 tornano ricaricando) lo controlla `prove_sicurezza_browser.py`. Le altre raccolte hanno ancora un loro `avvisi()`
 che legge solo la sessione.
 Quando una prova cade, il messaggio dice anche file e riga (`prove_dove.py`). Alcune delle più vecchie escono con codice 0 anche se qualcosa non va: conta la
-riga finale («0 da sistemare»), ed è quella che legge `tutte_le_prove.py`.
+riga finale («0 da sistemare»), ed è quella che legge `tutte_le_prove.py`. Una raccolta nuova va in `SENZA_BROWSER` o
+in `NEL_BROWSER` di `tutte_le_prove.py`, un aiuto che le raccolte importano (non scrive la riga finale) in `AIUTI`:
+`fuori_elenco()` lo controlla all'inizio di ogni giro completo (riga «elenco delle raccolte») e in `prove_mattoni.py`
+(revisione dell'unione: una riga persa risolvendo un conflitto lì non la vedeva nessuno).
 `PROVE_SOLO=nome1,nome2 python prove_15.py` rifà solo alcune prove di una raccolta. Le due
 cartelle si possono provare insieme: ogni giro di `tutte_le_prove.py` ha la sua cartella
 temporanea.
@@ -440,7 +449,15 @@ temporanea.
   `profile=private,domain`; la pagina dice l'ultima richiesta arrivata da un altro PC (`ultimo_da_fuori`). «Solo
   guardare»: `segna_moduli` (in `dopo_la_risposta`, solo dalla rete) mette `data-solo-guardare` su ogni `<form
   method="post">` che l'utente non può salvare, e `gestionale.js` lo spegne; una pagina nuova non deve fare niente, ma un
-  modulo che salva con `fetch` deve mostrare il motivo del 403 (il JSON `errore`). Pezzi di un'altra parte: cose da fare
+  modulo che salva con `fetch` deve mostrare il motivo del 403 (il JSON `errore`), e una parte che salva senza modulo
+  (la griglia dei turni) prende sul suo contenitore `data-solo-guardare="{{ solo_guardare('area') }}"` (vuoto sul PC e
+  per chi può salvare): il suo script non apre niente, `gestionale.js` mette il motivo nel title e nella riga in cima;
+  i comandi che cambiano qualcosa senza modulo («Aggiungi», gli Strumenti dei Turni) stanno dietro `puo_cambiare`. Per
+  una pagina di più aree (il cambio di stato: Agenda o Segreteria; `ANCHE_PER`) la riga, il title e il rifiuto dicono la
+  parte da cui viene il livello (`nome_della_parte`). La ricerca rapida della barra c'è solo se una delle pagine dei suoi
+  risultati si apre (`ricerca_utile`, `PAGINE_RICERCA_RAPIDA`: un risultato nuovo di `cerca_tutto` verso un'altra pagina
+  va scritto lì, `prove_accessi.py` le confronta con gli `url_for` della ricerca), e il giro della guida sullo schermo
+  finisce con «La guida con le immagini» solo se `guida.articolo` si apre (`passi_json`, l'articolo vuoto). Pezzi di un'altra parte: cose da fare
   e lista d'attesa nella scheda del paziente con la Segreteria, appunti del giorno con la Segreteria
   (`segreteria.appunti_del_giorno`), ricerca dei pazienti intera solo con Pazienti o Agenda (agli altri nome, nascita e
   telefono), prezzo di listino con `puo_cambiare('cassa')`, tariffario del medico con la Cassa. Statistiche e report
@@ -558,8 +575,10 @@ temporanea.
   attributo del collegamento (`prove_19.py`, `strumenti/prove_installato.py`). Regola `data-cornice`: ogni pezzo della
   cornice sta in un contenitore con `data-cornice="<tipo>"` (`menu`, `barra`, `linguette`, `campanella`, `messaggi`,
   `tasti`), altrimenti `confronta_rami.py` lo conta nel confronto di ogni pagina; `base.html` legge il blocco `menu` una
-  volta (`self.menu()`) e mette la cornice solo se non è vuoto: le 11 pagine senza menu svuotano solo quel blocco, e una
-  pagina può svuotare `barra`, `linguette` o `messaggi`. In stampa la cornice sparisce (`veste.css`, `@media print`, e
+  volta (`self.menu()`) e mette la cornice solo se non è vuoto: le 13 pagine senza menu (i 9 fogli da stampare, le 2
+  della dashboard nel Modo schermo, l'accesso e la propria password dagli altri PC) svuotano solo quel blocco, e una
+  pagina può svuotare `barra`, `linguette` o `messaggi` (`prove_senza_menu.py` vuole lo stesso numero qui e in
+  `base.html`). In stampa la cornice sparisce (`veste.css`, `@media print`, e
   la griglia solo a schermo): le 8 pagine che si stampano e i 9 fogli restano identici in PDF. Le regole del menu di
   prima (`.menu` di `stile.css` e `tema-scuro.css`, dallo strato) arrivano ancora sul nav: `veste.css` riscrive ogni
   proprietà che cambiano, e la tendina Aiuto si apre ancora con le loro regole (mai `display` sulla tendina in

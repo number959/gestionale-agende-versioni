@@ -212,6 +212,45 @@ def p_undici():
     return '%d modelli (%d dalla rete)' % (len(tolti), len(DALLA_RETE))
 
 
+# il numero delle pagine senza menu scritto nel commento di base.html e in CLAUDE.md («le 13 pagine senza menu»)
+CONTO_SCRITTO = re.compile(r'\b[Ll]e (\d+) pagine senza menu')
+
+
+def controlla_conto(testi, n):
+    """In ognuno dei testi (nome -> testo) il numero delle pagine senza menu c'è ed è n."""
+    for nome, testo in testi.items():
+        numeri = [int(x) for x in CONTO_SCRITTO.findall(testo)]
+        assert numeri, '%s non dice più quante sono le pagine senza menu' % nome
+        assert set(numeri) == {n}, '%s dice %s pagine senza menu, i modelli che tolgono il menu sono %d' % (
+            nome, ' e '.join(str(x) for x in numeri), n)
+
+
+def testi_del_conto():
+    testi = {}
+    for rel in ('templates/base.html', 'CLAUDE.md'):
+        with open(os.path.join(CARTELLA, rel), encoding='utf-8') as f:
+            testi[rel] = f.read()
+    return testi
+
+
+def p_conto_scritto():
+    """Il commento di base.html e CLAUDE.md dicono quante sono le pagine senza menu: lo stesso numero dei modelli che le
+    tolgono (revisione dell'unione: dicevano ancora 11, senza l'accesso e la password dagli altri PC). Gemello: con 11
+    in uno dei due la prova cade."""
+    n = len(COPPIE) + len(DALLA_RETE)
+    testi = testi_del_conto()
+    controlla_conto(testi, n)
+    for rel in testi:
+        vecchio = dict(testi)
+        vecchio[rel] = CONTO_SCRITTO.sub(lambda m: m.group(0).replace(m.group(1), '11'), testi[rel], count=1)
+        try:
+            controlla_conto(vecchio, n)
+        except AssertionError:
+            continue
+        raise AssertionError('gemello: con «11 pagine senza menu» in %s la prova passa lo stesso' % rel)
+    return '%d in base.html e in CLAUDE.md' % n
+
+
 def g_selettore():
     """Il gemello del selettore e del blocco del menu: vedono il menu scritto in altri modi, e non vedono quello che
     menu non è."""
@@ -232,6 +271,7 @@ for nome, _, senza, funzione, gemelle in COPPIE:
 for nome, _, senza, funzione, cambia, gemella in DALLA_RETE:
     prova('%s: senza menu, con il menu nella gemella' % nome, dalla_rete(senza, funzione, cambia, gemella))
 prova('gemello: il selettore e il blocco del menu lo vedono in ogni forma, e solo il menu', g_selettore)
+prova('base.html e CLAUDE.md dicono quante sono le pagine senza menu, come i modelli (gemello: con 11 cade)', p_conto_scritto)
 
 shutil.rmtree(PROVVISORIA, ignore_errors=True)
 for esito, nome, dettaglio in esiti:

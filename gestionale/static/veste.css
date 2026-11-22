@@ -504,7 +504,10 @@ table.v-tabella td small, table.v-tabella .v-testo-piccolo { display: block; }
    Nella barra in alto, dopo la ricerca, solo dagli altri PC (templates/_utente_rete.html dentro _barra.html): l'icona,
    il nome, «La mia password» ed «Esci» su una riga; «Entrato da un altro PC come» resta per i lettori di schermo e nel
    title (scritto per intero, a 1366 px il percorso andava a capo). Un nome lungo si accorcia con i puntini. Fuori dalla
-   barra (nessuna pagina oggi) resta la riga intera. */
+   barra (nessuna pagina oggi) resta la riga intera. Con questa riga la barra resta alta 62 px anche fra 1024 e 1366 px
+   (revisione dell'unione: a 1280 e a 1200 il percorso andava su due righe e la barra passava a 66): la ricerca più stretta
+   (240 px, almeno 160), il nome al più 9em, e il percorso su una riga, dove si accorcia con i puntini solo il nome della
+   struttura. Senza ricerca (accessi.ricerca_utile) la riga va a destra, dove sarebbe stata la ricerca. */
 .v-utente-rete {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-3) var(--v-spazio-4);
   margin: 0; font-size: var(--v-car-m); line-height: var(--v-int-m);
@@ -513,9 +516,16 @@ table.v-tabella td small, table.v-tabella .v-testo-piccolo { display: block; }
 .v-barra .v-utente-rete { flex: none; flex-wrap: nowrap; gap: var(--v-spazio-3); white-space: nowrap; color: var(--v-testo-medio); }
 .v-barra .v-utente-rete > svg { flex: none; width: 18px; height: 18px; }
 .v-barra .v-utente-rete b {
-  display: inline-block; max-width: 12em; overflow: hidden; text-overflow: ellipsis;
+  display: inline-block; max-width: 9em; overflow: hidden; text-overflow: ellipsis;
   color: var(--v-testo); font-weight: var(--v-peso-forte);
 }
 .v-barra .v-utente-come {
   position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+.v-barra:not(:has(.v-cerca)) .v-utente-rete { margin-left: auto; }
+@media screen and (min-width: 600px) {
+  .v-barra:has(.v-utente-rete) .v-cerca { flex: 0 1 240px; min-width: 160px; }
+  .v-barra:has(.v-utente-rete) .v-percorso { flex-wrap: nowrap; }
+  .v-barra:has(.v-utente-rete) .v-percorso span { flex: none; white-space: nowrap; }
+  .v-barra:has(.v-utente-rete) .v-percorso span:first-child { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 }

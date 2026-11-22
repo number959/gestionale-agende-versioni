@@ -14,6 +14,9 @@
   ai tre modi di oggi.
 - marchio.tema: le cinque varianti di sempre non cambiano (copia ferma qui sotto) e i fondi chiari sono quelli dei gettoni.
 - L'autoriparazione controlla anche gettoni.css e veste.css (app.risorse_presenti), e prove_installato.py li chiede.
+- Il lanciatore (strumenti/tutte_le_prove.py) lancia ogni raccolta della cartella: ogni prove*.py che non è un aiuto, e
+  ogni file che scrive la riga finale di una raccolta, sta in SENZA_BROWSER o in NEL_BROWSER (revisione dell'unione con
+  l'accesso dagli altri PC: una riga persa in un conflitto lasciava tutto verde).
 Ogni prova ha il suo gemello: la stessa prova su un file cambiato apposta (il mutante) deve cadere.
 
     python prove_mattoni.py
@@ -37,6 +40,7 @@ import app as A  # noqa: E402
 import marchio  # noqa: E402
 from modelli import importo_in_testo  # noqa: E402
 from strumenti import leggi_gettoni as L  # noqa: E402
+from strumenti import tutte_le_prove as TP  # noqa: E402
 
 A.app.config['TESTING'] = True
 A.Sessione = seed.popola('sqlite:///' + os.path.join(PROVVISORIA, 'prove.db'))
@@ -587,6 +591,46 @@ def gemello_risorse():
         A.RISORSE_DA_CONTROLLARE = vecchie
 
 
+# ================================================================ il lanciatore lancia tutte le raccolte
+def l_lanciatore():
+    problemi = TP.fuori_elenco()
+    assert not problemi, '; '.join(problemi)
+    presenti = [n for n in TP.SENZA_BROWSER + TP.NEL_BROWSER if os.path.exists(os.path.join(CARTELLA, n))]
+    assert {'prove_accessi.py', 'prove_menu.py', 'prove_mattoni.py'} <= set(TP.SENZA_BROWSER), TP.SENZA_BROWSER
+    assert {'prove_accessi_browser.py', 'prove_cornice_browser.py'} <= set(TP.NEL_BROWSER), TP.NEL_BROWSER
+    return '%d raccolte negli elenchi, %d aiuti fuori' % (len(presenti), len(TP.AIUTI))
+
+
+def gemello_lanciatore():
+    """Le righe dei due lati del conflitto dell'unione tolte una per volta, un aiuto tolto dal suo elenco, un nome in due
+    elenchi; in una cartella finta, una raccolta nuova con un altro nome e un aiuto che scrive la riga finale."""
+    senza, nel = TP.SENZA_BROWSER, TP.NEL_BROWSER
+    for tolto in ('prove_accessi.py', 'prove_menu.py', 'campagna.py'):
+        p = TP.fuori_elenco(senza_browser=[x for x in senza if x != tolto])
+        assert any(x.startswith(tolto + ' non è') for x in p), (tolto, p)
+    for tolto in ('prove_accessi_browser.py', 'prove_cornice_browser.py'):
+        p = TP.fuori_elenco(nel_browser=[x for x in nel if x != tolto])
+        assert any(x.startswith(tolto + ' non è') for x in p), (tolto, p)
+    p = TP.fuori_elenco(aiuti=[x for x in TP.AIUTI if x != 'prove_gemelli.py'])
+    assert any(x.startswith('prove_gemelli.py non è') for x in p), p
+    p = TP.fuori_elenco(nel_browser=nel + ['prove_menu.py'])
+    assert any('più di un elenco' in x for x in p), p
+    finta = tempfile.mkdtemp(prefix='lanciatore-', dir=PROVVISORIA)
+    for nome, testo in (('prove_a.py', "print('%d prove totali, %d superate, %d da sistemare')"),
+                        ('verifica_b.py', "print('Nessun guasto')"), ('prove_aiuto.py', 'def aiuto(): pass'),
+                        ('prove_c.py', "print('%d / %d' % (1, 1))"), ('prove_d.py', "print(sum(e), '/', len(e))"),
+                        ('altro.py', 'x = 1')):
+        with open(os.path.join(finta, nome), 'w', encoding='utf-8') as f:
+            f.write(testo)
+    p = TP.fuori_elenco(finta, ['prove_a.py'], ['prove_c.py', 'prove_d.py'], ['prove_aiuto.py'])
+    assert p == ['verifica_b.py non è in SENZA_BROWSER né in NEL_BROWSER (né fra gli AIUTI): non si lancerebbe mai'], p
+    p = TP.fuori_elenco(finta, ['prove_a.py', 'verifica_b.py', 'altro.py'], ['prove_d.py'], ['prove_c.py', 'prove_x.py'])
+    assert sorted(p) == ['altro.py si lancia, ma non scrive la riga finale di una raccolta',
+                         'prove_aiuto.py non è in SENZA_BROWSER né in NEL_BROWSER (né fra gli AIUTI): non si lancerebbe mai',
+                         'prove_c.py è fra gli aiuti, ma scrive la riga finale di una raccolta',
+                         'prove_x.py è fra gli aiuti, ma nella cartella non c\'è'], p
+
+
 prova('gettoni: contrasto almeno 4,5:1 di ogni coppia testo/fondo, in chiaro e in scuro, per ogni colore della struttura', g_contrasti)
 prova('gemello: un testo chiaro, il premuto schiarito in scuro e un colore senza coppia fanno cadere i contrasti', gemello_contrasti)
 prova('gettoni: il contorno del fuoco della tastiera almeno 3:1 sui fondi del menu e delle linguette, per ogni colore', g_contorni)
@@ -609,6 +653,9 @@ prova('marchio.tema: le cinque varianti di sempre ferme, quattro nuove, fondi ch
 prova('gemello: una variante di sempre cambiata, un fondo dei gettoni diverso', gemello_tema)
 prova('autoriparazione: risorse_presenti() controlla gettoni.css e veste.css; prove_installato.py li chiede', r_risorse)
 prova('gemello: senza veste.css nell\'elenco l\'autoriparazione non se ne accorgerebbe', gemello_risorse)
+prova('lanciatore: ogni raccolta della cartella è in SENZA_BROWSER o in NEL_BROWSER, gli aiuti a parte', l_lanciatore)
+prova('gemello: una riga tolta da un elenco (prove_accessi, prove_menu…), un aiuto tolto, un nome in due elenchi, una raccolta '
+      'con un altro nome, un aiuto con la riga finale', gemello_lanciatore)
 
 shutil.rmtree(PROVVISORIA, ignore_errors=True)
 for esito, nome, dettaglio in esiti:

@@ -3218,6 +3218,165 @@ def z_cornice_dalla_rete():
         accessi.PERCORSO_PAGINA
 
 
+# ====================================================== revisione dell'unione con la tappa 2 (problemi A, B, C, D)
+def z_rv_guida_con_le_immagini_solo_con_la_guida():
+    """Problema A: il giro della guida sullo schermo (dalla cornice: Aiuto → Guida di questa pagina, l'invito in Oggi)
+    finiva sempre con «La guida con le immagini», verso /aiuto/<guida>, che è di «Guida e aiuto»: chi non l'ha finiva su un
+    403. Ora passi.json dà l'articolo vuoto, e guida.js mostra il collegamento solo se c'è. Per ogni guida: senza la Guida
+    i passi ci sono e l'articolo no (e l'articolo, aperto a mano, è proprio un 403: il gemello del perché); con la Guida
+    l'articolo c'è e si apre; sul PC c'è sempre."""
+    import guida
+    ospiti(('Giro Senza Guida', {'agenda': 'modifica'}), ('Giro Con Guida', {'agenda': 'modifica', 'guida': 'guarda'}))
+    senza, con, pc = dentro_come('Giro Senza Guida', '192.168.9.1'), dentro_come('Giro Con Guida', '192.168.9.2'), locale()
+    n = 0
+    for a in guida.ARTICOLI:
+        url, art = '/aiuto/%s/passi.json' % a['slug'], '/aiuto/%s' % a['slug']
+        d = chiedi(senza, 'GET', url)
+        assert d.status_code == 200 and d.json['passi'] and d.json['articolo'] == '', (a['slug'], d.status_code, d.json)
+        assert chiedi(con, 'GET', url).json['articolo'] == art, ('gemello: con la Guida l\'articolo c\'è', a['slug'])
+        assert pc.get(url).json['articolo'] == art, ('sul PC l\'articolo c\'è sempre', a['slug'])
+        n += 1
+    assert rifiutata(chiedi(senza, 'GET', '/aiuto/come-e-fatto')), 'gemello: senza la Guida l\'articolo è un 403'
+    assert chiedi(con, 'GET', '/aiuto/come-e-fatto').status_code == 200, 'gemello: con la Guida l\'articolo si apre'
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'guida.js'), encoding='utf-8') as f:
+        js = f.read()
+    assert 'if (ultimo && giro.articolo) {' in js and "articolo: dati.articolo || ''" in js, \
+        'guida.js deve mostrare «La guida con le immagini» solo se passi.json dà l\'articolo'
+    return '%d guide: senza la Guida i passi senza l\'articolo, con la Guida e sul PC con l\'articolo' % n
+
+
+def persone_dei_turni():
+    """Due persone del personale (la griglia dei turni non è vuota), una volta sola."""
+    from modelli import Persona
+    s = A.Sessione()
+    try:
+        if not s.scalars(select(Persona.id)).first():
+            s.add_all([Persona(cognome='Fittizi', nome='Ada', ruolo='INFERMIERE'),
+                       Persona(cognome='Esempio', nome='Bruno', ruolo='OSS')])
+            s.commit()
+    finally:
+        s.close()
+
+
+def z_rv_turni_solo_guardare():
+    """Problema B: con Turni in «solo guardare» la riga diceva «I campi e i bottoni per salvare sono spenti», ma la griglia
+    restava attiva (clic, scelta, tasti, salvataggio rifiutato) e c'erano «Aggiungi» e gli Strumenti che cambiano. Ora la
+    griglia della settimana e del mese e la vista del giorno hanno data-solo-guardare con il motivo (turni.js non apre
+    niente: nel browser in prove_accessi_browser.py), e «Aggiungi», «Schema a rotazione…» e «Copia la settimana prima» non
+    ci sono, e nemmeno la riga «Clic su una cella per scegliere il turno…»; Stampa e Scarica in Excel restano. Gemelli: con Turni in «modificare» e sul PC tutto come prima, e sul PC
+    l'HTML è identico a quello senza le condizioni nuove."""
+    persone_dei_turni()
+    ospiti(('Turni Guarda', {'turni': 'guarda'}), ('Turni Modifica', {'turni': 'modifica'}))
+    guarda, modifica = dentro_come('Turni Guarda', '192.168.9.3'), dentro_come('Turni Modifica', '192.168.9.4')
+    lunedi = (date.today() - timedelta(days=date.today().weekday())).isoformat()
+    pagine = ('/personale/turni/settimana/%s' % lunedi, '/personale/turni/mese/%s' % MESE, '/personale/turni/giorno/%s' % OGGI)
+    motivo = 'Solo guardare: per «Turni» questo utente non salva niente.'
+    for url in pagine:
+        tg, tm, tp = testo(chiedi(guarda, 'GET', url)), testo(chiedi(modifica, 'GET', url)), locale().get(url).get_data(as_text=True)
+        contenitore = r'<(?:table|div)\b[^>]*id="(?:griglia-turni|vista-giorno)"[^>]*>'
+        cg, cm, cp = (re.search(contenitore, x) for x in (tg, tm, tp))
+        assert cg and cm and cp, (url, 'la griglia o la vista del giorno non c\'è')
+        assert 'data-solo-guardare="%s"' % motivo.replace('«', '&laquo;').replace('»', '&raquo;') in cg.group(0) or \
+            ('data-solo-guardare="%s"' % motivo) in cg.group(0), (url, 'solo guardare: la griglia non è segnata', cg.group(0)[:300])
+        assert 'data-solo-guardare' not in cm.group(0) and 'data-solo-guardare' not in cp.group(0), (url, 'gemello: segnata')
+        for parola in ('data-apri-schema', 'data-copia-settimana', 'class="aggiungi-ruolo"', 'Clic su una cella per scegliere'):
+            assert parola not in tg, (url, parola, 'a chi può solo guardare')
+        assert 'Scarica in Excel' in tg and 'window.print()' in tg, (url, 'Stampa e Excel restano')
+        if '/settimana/' in url:
+            for parola in ('data-apri-schema', 'data-copia-settimana', 'class="aggiungi-ruolo"', 'Clic su una cella per scegliere'):
+                assert parola in tm and parola in tp, (url, parola, 'gemello: con «modificare» e sul PC c\'è')
+    # sul PC l'HTML è proprio quello di prima: le condizioni nuove, rese sempre vere, non cambiano niente
+    prima = {'solo_guardare': accessi.solo_guardare, 'puo_cambiare': accessi.puo_cambiare}
+    url = pagine[0]
+    con = locale().get(url).get_data(as_text=True)
+    accessi.solo_guardare, accessi.puo_cambiare = (lambda area: ''), (lambda area: True)
+    try:
+        senza = locale().get(url).get_data(as_text=True)
+    finally:
+        accessi.solo_guardare, accessi.puo_cambiare = prima['solo_guardare'], prima['puo_cambiare']
+    assert con == senza, 'sul PC i Turni cambiano'
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'turni.js'), encoding='utf-8') as f:
+        js = f.read()
+    assert js.count("hasAttribute('data-solo-guardare')") == 2, 'turni.js: la griglia e il giorno con «solo guardare»'
+    return 'settimana, mese e giorno segnati, «Aggiungi» e gli Strumenti che cambiano tolti; con «modificare» e sul PC no'
+
+
+def z_rv_nome_della_parte_doppia():
+    """Problema C: il cambio di stato vale per Agenda o Segreteria, e la riga «solo guardare», il title dei bottoni e il
+    rifiuto nominavano sempre la prima, Agenda: a chi ha solo la Segreteria da guardare si diceva «per Agenda». Ora la
+    parte da cui viene il livello. Gemello: con la sola Agenda da guardare si dice ancora Agenda."""
+    valori = dati_per_le_pagine()
+    ospiti(('Doppia Segreteria', {'segreteria': 'guarda', 'pazienti': 'guarda'}), ('Doppia Agenda', {'agenda': 'guarda'}))
+    azione = '/appuntamento/%d/stato' % valori['aid']
+    s = A.Sessione()
+    giorno = s.get(Appuntamento, valori['aid']).inizio.date().isoformat()
+    s.close()
+    for nome, ip, pagina, parte, altra in (
+            ('Doppia Segreteria', '192.168.9.5', '/conferme?data=%s&struttura=%d' % (giorno, valori['sid']), 'Segreteria', 'Agenda'),
+            ('Doppia Agenda', '192.168.9.6', '/appuntamento/%d' % valori['aid'], 'Agenda', 'Segreteria')):
+        u = accessi.trova(utenti_salvati(), nome)
+        with A.app.test_request_context('/', base_url=RETE, environ_base={'REMOTE_ADDR': '192.168.1.77'}):
+            assert accessi.livello_modulo(u, azione) == ('guarda', parte), (nome, accessi.livello_modulo(u, azione))
+        d = decisione('POST', azione, cookie_di(nome))
+        assert d and d[0] == 403 and 'Per «%s» questo utente può solo guardare' % parte in d[2] and \
+            '«%s»' % altra not in d[2], (nome, d[2][:300] if d else d)
+        t = testo(chiedi(dentro_come(nome, ip), 'GET', pagina))
+        segni = [accessi._attributo(tag, 'data-solo-guardare') for tag, a in moduli_post(t) if a and a.endswith('/stato')]
+        assert segni and set(segni) == {accessi.SOLO_GUARDARE % parte}, (nome, pagina, set(segni))
+    # la funzione da sola: la parte con il livello, o la prima se nessuna
+    u = {'aree': {'segreteria': 'modifica', 'agenda': 'guarda'}}
+    assert accessi.nome_della_parte(u, ('agenda', 'segreteria'), 'modifica') == 'Segreteria'
+    assert accessi.nome_della_parte(u, ('agenda', 'segreteria'), 'guarda') == 'Agenda'
+    assert accessi.nome_della_parte({'aree': {}}, ('agenda', 'segreteria'), 'no') == 'Agenda'
+    assert accessi.nome_della_parte(u, 'cassa', 'no') == 'Cassa'
+    return 'la Segreteria da guardare dice «Segreteria» (riga, title, rifiuto); la sola Agenda dice ancora «Agenda»'
+
+
+def z_rv_ricerca_solo_se_serve():
+    """Problema D: dalla rete la ricerca rapida della barra c'era sempre, ma a chi non ha Agenda, Pazienti né Dove si fa
+    rispondeva sempre «Nessun risultato.», anche per un paziente che c'è. Ora c'è solo se almeno una delle pagine dei suoi
+    risultati si apre (accessi.ricerca_utile). Oracolo delle pagine: gli url_for di segreteria.cerca_tutto e di
+    dovesifa.per_ricerca_rapida, e le pagine dei risultati veri sul PC. Gemelli: con una sola di quelle aree la ricerca
+    c'è; sul PC sempre, e l'HTML è quello di prima."""
+    import inspect
+    import dovesifa
+    import segreteria
+    sorgenti = inspect.getsource(segreteria.cerca_tutto) + inspect.getsource(dovesifa.per_ricerca_rapida)
+    assert set(re.findall(r"url_for\('([\w.]+)'", sorgenti)) == set(accessi.PAGINE_RICERCA_RAPIDA), \
+        (sorted(set(re.findall(r"url_for\('([\w.]+)'", sorgenti))), accessi.PAGINE_RICERCA_RAPIDA)
+    dati_per_le_pagine()
+    viste = set()
+    for q in ('Esempietti', 'domani', 'Lippiello'):
+        for gruppo in locale().get('/cerca-tutto.json?q=%s' % q).json.values():
+            for voce in gruppo if isinstance(gruppo, list) else [gruppo] if gruppo else []:
+                with A.app.test_request_context():
+                    viste.add(A.app.url_map.bind('x').match(urllib.parse.urlsplit(voce['url']).path)[0])
+    assert viste and viste <= set(accessi.PAGINE_RICERCA_RAPIDA) and len(viste) >= 3, viste
+    senza = [('Cerca Cassa', {'cassa': 'guarda', 'sala': 'guarda', 'turni': 'modifica'}, '/cassa/listino'),
+             ('Cerca Statistiche', {'statistiche': 'guarda'}, '/statistiche'),
+             ('Cerca Guida', {'guida': 'guarda'}, '/aiuto')]
+    con = [('Cerca Agenda', {'agenda': 'guarda'}, '/oggi'), ('Cerca Pazienti', {'pazienti': 'guarda'}, '/pazienti'),
+           ('Cerca Dove', {'dove': 'guarda'}, '/dove-si-fa/')]
+    ospiti(*[(n, a) for n, a, _ in senza + con])
+    for i, (nome, _, url) in enumerate(senza + con):
+        t = testo(chiedi(dentro_come(nome, '192.168.9.%d' % (20 + i)), 'GET', url))
+        barra = re.search(r'<header class="v-barra" data-cornice="barra">(.*?)</header>', t, re.S)
+        assert barra, (nome, url, 'senza la barra in alto')
+        c = 'id="ricerca-rapida"' in barra.group(1) and 'role="search"' in barra.group(1)
+        assert c == ((nome, _, url) in con), (nome, url, 'la ricerca c\'è' if c else 'la ricerca non c\'è')
+        assert entrato_come(barra.group(1), nome), (nome, 'la riga dell\'utente resta nella barra')
+    pc = locale().get('/oggi').get_data(as_text=True)
+    assert 'id="ricerca-rapida"' in pc, 'gemello: sul PC la ricerca c\'è'
+    prima = accessi.ricerca_utile
+    accessi.ricerca_utile = lambda: True
+    try:
+        assert locale().get('/oggi').get_data(as_text=True) == pc, 'sul PC la barra cambia'
+    finally:
+        accessi.ricerca_utile = prima
+    return 'pagine dei risultati %s; senza nessuna di quelle aree niente ricerca (3 utenti), con una sì (3); sul PC come ' \
+           'prima' % ', '.join(sorted(viste))
+
+
 if __name__ == '__main__':
     for nome, f in sorted((k, v) for k, v in dict(globals()).items() if re.match(r'[a-z]_', k) and callable(v)):
         if os.environ.get('PROVE_SOLO') and nome not in os.environ['PROVE_SOLO'].split(','):

@@ -437,6 +437,15 @@ def area_di(endpoint):
     return CENSIMENTO.get(endpoint, SISTEMA)
 
 
+def nome_della_parte(utente, area, lv):
+    """Il nome della parte da dire a chi è entrato («solo guardare», rifiuti): per una pagina di più aree (il cambio di
+    stato vale per Agenda o Segreteria, ANCHE_PER) quella da cui viene il suo livello, non sempre la prima (revisione
+    dell'unione: a chi ha solo la Segreteria da guardare si diceva «per Agenda»). Senza nessuna, la prima."""
+    if not isinstance(area, tuple):
+        return NOMI_AREE.get(area, '')
+    return next((NOMI_AREE[a] for a in area if a in NOMI_AREE and livello(utente, a) == lv), NOMI_AREE.get(area[0], ''))
+
+
 def senza_area(endpoint_presenti):
     """Le funzioni di Flask senza una riga nel censimento (dalla rete sarebbero rifiutate senza motivo)."""
     return sorted(set(endpoint_presenti) - set(CENSIMENTO))
@@ -525,6 +534,18 @@ def livello_ricerca_pazienti(utente):
         return lv
     altre = [livello(utente, a) for a in SERVIZIO_PAZIENTI if a != 'pazienti']
     return 'modifica' if 'modifica' in altre else 'no'
+
+
+# Le pagine a cui portano i risultati della ricerca rapida della barra (segreteria.cerca_tutto: giorno, pazienti, medici,
+# prestazioni di Dove si fa): prove_accessi.py le confronta con i collegamenti che la ricerca dà sul PC principale.
+PAGINE_RICERCA_RAPIDA = ('giorno', 'pazienti.scheda', 'viste.settimana', 'dovesifa.pagina')
+
+
+def ricerca_utile():
+    """Per la barra in alto: c'è la ricerca rapida? Sul PC principale sempre; dalla rete solo se almeno una delle pagine
+    dei suoi risultati si apre (revisione dell'unione: a chi non ha Agenda, Pazienti né Dove si fa la ricerca rispondeva
+    sempre «Nessun risultato.», anche per un paziente che c'è, perché i risultati si tolgono dopo, in _filtra_ricerca)."""
+    return any(si_apre(e) for e in PAGINE_RICERCA_RAPIDA)
 
 
 def puo_cercare_pazienti():
@@ -1259,8 +1280,9 @@ def controlla_accesso():
     in_piu = ANCHE_PER.get(endpoint)
     if in_piu is not None and lv != 'modifica' and request.method not in ('GET', 'HEAD', 'OPTIONS') \
             and in_piu[1](request.form):
-        lv = livello(utente, (area, in_piu[0]) if isinstance(area, str) else area + (in_piu[0],))
-    nome_area = NOMI_AREE.get(area if isinstance(area, str) else area[0], '')
+        area = (area, in_piu[0]) if isinstance(area, str) else area + (in_piu[0],)
+        lv = livello(utente, area)
+    nome_area = nome_della_parte(utente, area, lv)
     if lv == 'no':
         annota('negato %s %s' % (request.method, request.path), utente['nome'], logging.WARNING)
         return rifiuta('«%s» non è fra le parti disponibili per questo utente.' % nome_area, utente=utente)
@@ -1318,6 +1340,14 @@ def _filtra_ricerca(dati, utente):
 # data-solo-guardare="perché"; gestionale.js ne spegne campi e bottoni, con la spiegazione, e lo dice in cima alla pagina.
 # La guardia (controlla_accesso) resta: questo è solo per non far scrivere invano. Sul PC principale non si tocca niente.
 MODULO_HTML = re.compile(r'<form\b[^>]*>', re.I)
+SOLO_GUARDARE = 'Solo guardare: per «%s» questo utente non salva niente.'
+
+
+def solo_guardare(area):
+    """Per i modelli: il motivo di «solo guardare» per una parte che si salva senza un modulo (la griglia dei turni, che
+    salva con fetch: data-solo-guardare sul suo contenitore, e turni.js non apre niente), o '' se l'utente può
+    salvare. Sul PC principale sempre ''."""
+    return '' if puo_cambiare(area) else SOLO_GUARDARE % NOMI_AREE[area]
 
 
 def _attributo(tag, nome):
@@ -1343,13 +1373,14 @@ def livello_modulo(utente, azione):
         return 'no', 'Sistema'
     if area == SCHERMO:
         area = 'ambulatori'
-    nome = NOMI_AREE.get(area if isinstance(area, str) else area[0], '')
     if endpoint == RICERCA_PAZIENTI:
-        return livello_ricerca_pazienti(utente), nome
+        lv = livello_ricerca_pazienti(utente)
+        return lv, nome_della_parte(utente, area, lv)
     in_piu = ANCHE_PER.get(endpoint)
     if in_piu is not None:
         area = (area, in_piu[0]) if isinstance(area, str) else area + (in_piu[0],)
-    return livello(utente, area), nome
+    lv = livello(utente, area)
+    return lv, nome_della_parte(utente, area, lv)
 
 
 def segna_moduli(testo, utente):
@@ -1366,7 +1397,7 @@ def segna_moduli(testo, utente):
         if nome == 'Sistema':
             perche = 'Questa parte si salva solo dal PC della segreteria.'
         elif lv == 'guarda':
-            perche = 'Solo guardare: per «%s» questo utente non salva niente.' % nome
+            perche = SOLO_GUARDARE % nome
         else:
             perche = '«%s» non è fra le parti disponibili per questo utente: qui non si salva niente.' % nome
         return tag[:-1].rstrip().rstrip('/') + ' data-solo-guardare="%s">' % escape(perche)
@@ -1993,7 +2024,7 @@ def installa(app, ses, lucchetto, fabbrica):
     @app.context_processor
     def per_i_modelli():
         valori = {'puo': puo, 'puo_cambiare': puo_cambiare, 'puo_cercare_pazienti': puo_cercare_pazienti,
-                  'utente_rete': utente_attuale()}
+                  'solo_guardare': solo_guardare, 'ricerca_utile': ricerca_utile, 'utente_rete': utente_attuale()}
         if dalla_rete():
             valori['popup_aggiornamento'] = lambda: None     # l'aggiornamento si fa solo dal PC principale
         return valori

@@ -87,3 +87,18 @@ strumenti/cambiamenti_approvati.txt con il perché.
 - Configura (9): testa approvata anche nelle pagine secondarie; «Tasti rapidi» resta un collegamento; la settima linguetta
   è «Aree e accessi», arrivata con l'unione dell'accesso dagli altri PC (22/11: registrata da accessi.py su una sezione
   sua, solo sul PC principale; dalla rete il menu mostra solo le pagine dell'utente).
+  DA DECIDERE CON GIOVANNI (revisione dell'unione, 22/11): sul PC principale le 7 linguette di Configura stanno su una
+  riga a 1366 e 1280 px, ma a 1200 (menu intero) e a 1024 px (menu a icone) «Aree e accessi» va da sola sulla seconda
+  riga e le 7 pagine di Configura scendono di 38 px (le linguette alte 96 px invece di 58). Succede lo stesso alle 7
+  linguette della Segreteria («Elenco del giorno» sulla seconda riga). Accorciare la parola non basta: a 1024 px le
+  linguette hanno 916 px, e anche con «Accessi» (84 px invece di 129) restano su due righe; servirebbe anche meno spazio
+  fra le linguette, che cambierebbe tutte le aree. Le strade: lasciarle così fino alla tappa 9 (le linguette sotto l'h1,
+  con la testa nuova di Configura), oppure linguette più strette sotto i 1280 px per tutte le aree.
+
+## Barra in alto dagli altri PC (revisione dell'unione, 22/11)
+- Con la riga dell'utente (icona, nome, «La mia password», «Esci») la barra resta alta 62 px come sul PC fra 1024 e 1366
+  px: la ricerca larga 240 px (al più; almeno 160), il nome al più 9em (poi i puntini, intero nel title), il percorso su
+  una riga, dove si accorcia con i puntini solo il nome della struttura (a 1200 e a 1024 px, con un nome lungo:
+  «Clinic… › Segreteria › Chiusura della giornata»). Sul PC principale niente cambia. Da far vedere a Giovanni.
+- La ricerca rapida dalla rete c'è solo se almeno una pagina dei suoi risultati si apre (Agenda, Pazienti o Dove si fa);
+  senza, la riga dell'utente va a destra.

@@ -17,7 +17,7 @@
       <form method="post" action="{{ url_for('personale.medici_dall_agenda') }}" style="display:inline">
         <button class="bottone primario con-icona" type="submit">{{ icona('stethoscope') }}Aggiungi i medici dell'agenda</button>
       </form>
-      <a class="bottone con-icona" href="{{ url_for('personale.persona') }}">{{ icona('user-plus') }}Aggiungi una persona</a>
+      {% if puo_cambiare('turni') %}<a class="bottone con-icona" href="{{ url_for('personale.persona') }}">{{ icona('user-plus') }}Aggiungi una persona</a>{% endif %}
     </div>
   </div>
 </div>
@@ -29,14 +29,14 @@
     <li><span class="turno{% if not t.con_orario %} senza-orario{% endif %}{% if t.categoria == 'REPERIBILITA' %} reperibile{% endif %}" style="--c: {{ t.colore_sicuro }}; --t: {{ t.colore_testo }}"><b>{{ t.codice }}</b></span>{{ t.nome }}{% if t.orario %} <small>{{ t.orario }}</small>{% endif %}</li>
     {% endfor %}
   </ul>
-  <p class="aiuto-tasti-turni">{{ icona('keyboard') }}<span>Clic su una cella per scegliere il turno · da tastiera scrivere il codice (M, P, N…), <kbd>Canc</kbd> toglie, <kbd>Maiusc</kbd>+frecce o trascinando si scelgono più celle, <kbd>Ctrl</kbd>+<kbd>Z</kbd> annulla</span></p>
+  {% if puo_cambiare('turni') %}<p class="aiuto-tasti-turni">{{ icona('keyboard') }}<span>Clic su una cella per scegliere il turno · da tastiera scrivere il codice (M, P, N…), <kbd>Canc</kbd> toglie, <kbd>Maiusc</kbd>+frecce o trascinando si scelgono più celle, <kbd>Ctrl</kbd>+<kbd>Z</kbd> annulla</span></p>{% endif %}
 </div>
 
 <div class="telaio telaio-turni">
 <div class="scorri-turni">
 <table class="turni turni-{{ vista }}" role="grid" aria-label="{{ titolo }}" id="griglia-turni" data-guida="turni-griglia"
        data-indirizzo="{{ url_for('personale.cambia') }}" data-dal="{{ dal.isoformat() }}" data-al="{{ al.isoformat() }}"
-       data-vista="{{ vista }}" data-ruolo="{{ ruolo }}" data-area="{{ area }}"{% if strutture|length > 1 %} data-struttura="{{ sid }}"{% endif %}>
+       data-vista="{{ vista }}" data-ruolo="{{ ruolo }}" data-area="{{ area }}"{% if strutture|length > 1 %} data-struttura="{{ sid }}"{% endif %}{% if solo_guardare('turni') %} data-solo-guardare="{{ solo_guardare('turni') }}"{% endif %}>
   <colgroup><col class="col-nome">{% for gi in giorni %}<col class="col-giorno{% if gi.festivo %} festivo{% elif gi.sabato %} sabato{% endif %}">{% endfor %}<col class="col-tot"><col class="col-tot"><col class="col-tot"><col class="col-tot"></colgroup>
   <thead>
     <tr>
@@ -59,7 +59,7 @@
       <th scope="rowgroup" colspan="{{ giorni|length + 5 }}">
         <span class="icona-ruolo">{{ icona(gr.icona) }}</span><span class="nome-ruolo">{{ gr.nome }}</span>
         <span class="quanti">{{ gr.righe|length }}</span>
-        <a class="aggiungi-ruolo" href="{{ url_for('personale.persona', ruolo=gr.ruolo) }}">{{ icona('plus') }}Aggiungi</a>
+        {% if puo_cambiare('turni') %}<a class="aggiungi-ruolo" href="{{ url_for('personale.persona', ruolo=gr.ruolo) }}">{{ icona('plus') }}Aggiungi</a>{% endif %}
       </th>
     </tr>
     {% for r in gr.righe %}{% set p = r.persona %}

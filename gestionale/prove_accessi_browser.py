@@ -6,14 +6,17 @@ prova (strumenti/demo.py), tutto il giro come lo fa la segreteria:
   anche dal bottone in Impostazioni); l'accesso dagli altri PC acceso su una porta libera
   (mai la 5080 della clinica), con l'indirizzo da scrivere sugli altri PC, «nessuna richiesta da un altro PC» e il
   firewall spiegato (i comandi in «Per l'assistenza»); un utente rifiutato (la password con il suo nome) torna con nome e
-  parti scritti; poi l'utente nuovo con Agenda «guardare e modificare», Cassa, Sala e Ambulatori «solo guardare»,
-  riquadro aperto;
+  parti scritti; poi l'utente nuovo (con un nome lungo, 38 lettere) con Agenda «guardare e modificare», Cassa, Sala, Turni
+  e Ambulatori «solo guardare», riquadro aperto;
 - da un'altra scheda, sull'indirizzo della rete (quello di questo PC fuori da 127.*, come un altro PC): la pagina di
   accesso e la password da cambiare al primo accesso senza cornice, la riga «Entrato da un altro PC come…» con «Esci»
-  nella barra in alto (su una riga, a 1366 e a 1024 px, la pagina sotto e niente che scorre di lato; il gemello la
-  sposta sopra la pagina); il menu e le linguette con le sole pagine dell'utente, seguite tutte (200, nessun errore
-  JavaScript: Pazienti, Turni, Statistiche, Dove si fa, Configura ed «Esportazioni in Excel» non ci sono); il Modo
-  schermo senza cornice; in Agenda
+  nella barra in alto (su una riga e la barra alta 62 px come sul PC, a 1366, 1280, 1200 e 1024 px, anche sulle pagine
+  con il percorso più lungo, la pagina sotto e niente che scorre di lato; i gemelli la spostano sopra la pagina e
+  rimettono lo stile di prima della revisione dell'unione, con il percorso su due righe); il menu e le linguette con le
+  sole pagine dell'utente, seguite tutte (200, nessun errore JavaScript: Pazienti, Statistiche, Dove si fa, Configura ed
+  «Esportazioni in Excel» non ci sono); il Modo schermo senza cornice; in Turni (solo guardare) il clic su una cella e il
+  tasto M non aprono la scelta e non mandano niente, «Aggiungi» e «Schema a rotazione…» non ci sono (gemello: dal PC lo
+  stesso clic salva, poi Ctrl+Z); in Agenda
   la nota del giorno si salva, in Cassa la pagina si apre con «Salva il listino» spento e la riga «Solo guardare», in
   Sala le caselle della checklist spente, Pazienti (aperta dall'indirizzo: nel menu non c'è) risponde con la pagina in
   italiano, senza cornice, e «Torna alle pagine disponibili»;
@@ -39,7 +42,7 @@ from aiuti_browser import (barra_in_alto, indirizzo_di_prova, linguetta_accesa, 
 
 B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
-NOME = 'Sportello Esempietti'
+NOME = 'Sportello Esempietti Fittizi Provolone'     # lungo (38 lettere): nella barra si accorcia con i puntini
 PRIMA, NUOVA = 'pentola blu sul fuoco', 'barca verde nel lago'
 NOTA = 'Nota scritta da un altro PC Fintini'
 
@@ -97,14 +100,42 @@ def problemi_riga_utente(pg):
     p = []
     if not r['dentro']:
         p.append('la riga dell\'utente non è nella barra in alto')
-    if r['barra']['h'] > 80:
-        p.append('la barra in alto è alta %d px' % r['barra']['h'])
+    if r['barra']['h'] > 63:
+        p.append('la barra in alto è alta %d px, non 62 come sul PC (il percorso va a capo?)' % r['barra']['h'])
     if r['utente']['b'] < r['cerca']['t'] or r['utente']['t'] > r['cerca']['b']:
         p.append('la riga dell\'utente non sta accanto alla ricerca: %s' % r)
     if r['main']['t'] < r['barra']['b'] - 1:
         p.append('la pagina comincia sopra la fine della barra: %s' % r)
     if r['largo'] > r['finestra'] + 1:
         p.append('la pagina scorre di lato: %d px su %d' % (r['largo'], r['finestra']))
+    return p
+
+
+# le pagine con il percorso più lungo fra quelle dell'utente (revisione dell'unione: a 1280 e a 1200 px andavano su due
+# righe e la barra passava a 66 px), e le larghezze fra 1024 e 1366 px, con il menu intero (1200) e a sole icone (1199)
+PAGINE_BARRA = ('/oggi', '/ambulatori/settimana/{oggi}', '/ambulatori/mese/{mese}', '/ambulatori/riepilogo',
+                '/cassa/listino', '/sala/posti-letto')
+LARGHEZZE_BARRA = (1366, 1280, 1200, 1199, 1024)
+# lo stile della barra di prima della revisione dell'unione (per il gemello): la ricerca larga 320 px, il percorso che
+# va a capo
+BARRA_DI_PRIMA = ('.v-barra:has(.v-utente-rete) .v-cerca { flex: 0 1 320px !important; min-width: 0 !important; } '
+                  '.v-barra:has(.v-utente-rete) .v-percorso { flex-wrap: wrap !important; } '
+                  '.v-barra:has(.v-utente-rete) .v-percorso span { white-space: normal !important; }')
+
+
+def problemi_della_barra(pg, base):
+    """La riga dell'utente e la barra in alto su ogni pagina di PAGINE_BARRA, a ogni larghezza di LARGHEZZE_BARRA."""
+    p, oggi = [], date.today()
+    for w in LARGHEZZE_BARRA:
+        pg.set_viewport_size({'width': w, 'height': 657})
+        for u in PAGINE_BARRA:
+            u = u.format(oggi=oggi.isoformat(), mese=oggi.strftime('%Y-%m'))
+            r = pg.goto(base + u)
+            if not r or r.status != 200:
+                p.append('%s risponde %s' % (u, r.status if r else None))
+                continue
+            p += ['%d px, %s: %s' % (w, u, x) for x in problemi_riga_utente(pg)]
+    pg.set_viewport_size({'width': 1366, 'height': 900})
     return p
 
 
@@ -232,6 +263,7 @@ with sync_playwright() as p:
                                                                              exact=True).check()
     nuovo.get_by_role('row', name=nome_voce('Ambulatori e dashboard')).get_by_role('radio', name='solo guardare',
                                                                                     exact=True).check()
+    nuovo.get_by_role('row', name=nome_voce('Turni')).get_by_role('radio', name='solo guardare', exact=True).check()
     with pg.expect_navigation():
         nuovo.get_by_role('button', name='Aggiungi l\'utente', exact=True).click()
     m = messaggi(pg)
@@ -293,10 +325,17 @@ with sync_playwright() as p:
     ok('la riga «Entrato da un altro PC» nella barra in alto, accanto alla ricerca, con il suo stile (in riga)',
        stile == 'flex' and barra_in_alto(altro).get_by_role('region', name='Utente', exact=True).count() == 1
        and not problemi_riga_utente(altro), (stile, problemi_riga_utente(altro)))
-    altro.set_viewport_size({'width': 1024, 'height': 657})
-    ok('anche a 1024 px: la barra su una riga e niente che scorre di lato', not problemi_riga_utente(altro),
-       problemi_riga_utente(altro))
+    barra_male = problemi_della_barra(altro, RETE)
+    ok('a 1366, 1280, 1200, 1199 e 1024 px, sulle pagine con il percorso più lungo e con un nome di 38 lettere: la barra '
+       'alta 62 px come sul PC, la riga dell\'utente accanto alla ricerca, niente che scorre di lato', not barra_male,
+       barra_male[:4])
+    altro.set_viewport_size({'width': 1280, 'height': 657})
+    altro.goto(RETE + '/ambulatori/settimana/%s' % date.today().isoformat())
+    altro.add_style_tag(content=BARRA_DI_PRIMA)
+    ok('gemello: con lo stile di prima, a 1280 px il percorso va a capo e la barra è più alta di 62 px',
+       any('non 62' in x for x in problemi_riga_utente(altro)), problemi_riga_utente(altro))
     altro.set_viewport_size({'width': 1366, 'height': 900})
+    altro.goto(RETE + '/oggi')
     altro.evaluate("() => { const u = document.querySelector('[role=\"region\"][aria-label=\"Utente\"]'); "
                    "document.querySelector('main').before(u); }")
     ok('gemello: la riga spostata sopra la pagina si vede', 'non è nella barra in alto' in ' '.join(problemi_riga_utente(altro)),
@@ -306,8 +345,8 @@ with sync_playwright() as p:
     # il menu e le linguette dalla rete: solo le pagine dell'utente (Agenda, Cassa, Sala e Ambulatori), seguite tutte
     voci_rete = [' '.join(x.split()) for x in menu(altro).get_by_role('link').all_inner_texts()]
     ok('dalla rete il menu ha solo le voci delle parti date', all(v in ' '.join(voci_rete) for v in
-                                                                  ('Oggi', 'Agenda', 'Sala', 'Ambulatori', 'Cassa'))
-       and not [v for v in ('Pazienti', 'Turni', 'Dove si fa', 'Statistiche', 'Configura') if v in voci_rete], voci_rete)
+                                                                  ('Oggi', 'Agenda', 'Sala', 'Ambulatori', 'Cassa', 'Turni'))
+       and not [v for v in ('Pazienti', 'Dove si fa', 'Statistiche', 'Configura') if v in voci_rete], voci_rete)
     giro = ctx.new_page()
     prepara_domande(giro)
     giro.on('pageerror', lambda e: err.append('giro dalla rete: %s' % e))
@@ -335,6 +374,48 @@ with sync_playwright() as p:
     ok('gemello: senza ?schermo=1 la cornice c\'è, con la riga dell\'utente nella barra',
        giro.locator('[data-cornice="barra"]').count() == 1 and not problemi_riga_utente(giro), problemi_riga_utente(giro))
     giro.close()
+
+    # Turni da guardare (revisione dell'unione): la griglia si legge, ma il clic su una cella e il tasto M non aprono la
+    # scelta e non mandano niente; il motivo nel title della griglia e nella riga in cima; niente «Aggiungi» né «Schema a
+    # rotazione…». Una settimana lontana, vuota: il gemello dal PC la cambia e la rimette com'era (Ctrl+Z)
+    settimana = (date.today() + timedelta(weeks=30))
+    settimana = (settimana - timedelta(days=settimana.weekday())).isoformat()
+    mandati = []
+    altro.on('request', lambda q: mandati.append(q.url) if q.method == 'POST' and '/personale/turni/' in q.url else None)
+    altro.goto(RETE + '/personale/turni/settimana/%s' % settimana)
+    griglia = altro.locator('#griglia-turni')
+    cella = griglia.get_by_role('gridcell').first
+    cella.click()
+    altro.keyboard.press('m')
+    altro.wait_for_timeout(1500)
+    altro.keyboard.press('Enter')
+    altro.wait_for_timeout(500)
+    titolo = griglia.get_attribute('title') or ''
+    riga = altro.locator('[data-solo-guardare-riga]')
+    ok('Turni da guardare: clic su una cella e tasto M, nessuna scelta e niente mandato; il motivo nel title della '
+       'griglia e nella riga in cima',
+       not mandati and not altro.locator('#scelta-turno').is_visible() and 'Solo guardare: per «Turni»' in titolo
+       and riga.count() == 1 and 'Solo guardare: per «Turni»' in riga.inner_text() and not cella.text_content().strip(),
+       (mandati, titolo, riga.count()))
+    ok('Turni da guardare: niente «Aggiungi» nei ruoli, niente «Schema a rotazione…» né «Copia la settimana prima»; '
+       'Stampa e Scarica in Excel sì',
+       griglia.get_by_role('link', name='Aggiungi').count() == 0 and altro.locator('[data-apri-schema]').count() == 0
+       and altro.locator('[data-copia-settimana]').count() == 0
+       and altro.locator('[data-guida="turni-strumenti"] a[role="menuitem"]', has_text='Scarica in Excel').count() == 1)
+    pg.goto(B + '/personale/turni/settimana/%s' % settimana)
+    cella_pc = pg.locator('#griglia-turni').get_by_role('gridcell').first
+    prima_pc = cella_pc.text_content().strip()
+    cella_pc.click()
+    with pg.expect_response(lambda r: '/personale/turni/cambia' in r.url and r.request.method == 'POST') as salvato:
+        pg.keyboard.press('m')
+    pg.wait_for_timeout(300)
+    dopo_pc = cella_pc.text_content().strip()
+    with pg.expect_response(lambda r: '/personale/turni/cambia' in r.url and r.request.method == 'POST') as annullato:
+        pg.keyboard.press('Control+z')
+    pg.wait_for_timeout(300)
+    ok('gemello: dal PC lo stesso clic e il tasto M salvano il turno, e Ctrl+Z lo toglie',
+       salvato.value.status == 200 and annullato.value.status == 200 and dopo_pc.startswith('M') and not prima_pc
+       and not cella_pc.text_content().strip(), (salvato.value.status, prima_pc, dopo_pc, cella_pc.text_content()))
 
     # Agenda: guardare e modificare → la nota del giorno si salva
     vai_dal_menu(altro, 'Giorno')
@@ -415,7 +496,7 @@ with sync_playwright() as p:
     riquadro = pg.get_by_role('group', name='Utente %s' % NOME)
     ok('il riquadro dell\'utente, chiuso, dice le sue parti in una riga',
        riquadro.get_attribute('open') is None and 'Agenda, Cassa (solo guardare), Sala operatoria (solo guardare), '
-       'Ambulatori e dashboard (solo guardare)' in riquadro.locator('summary').inner_text(),
+       'Turni (solo guardare), Ambulatori e dashboard (solo guardare)' in riquadro.locator('summary').inner_text(),
        riquadro.locator('summary').inner_text())
     riquadro.locator('summary').click()
     with pg.expect_navigation():

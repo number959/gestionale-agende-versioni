@@ -14,7 +14,7 @@
 </div></div>
 {% else %}
 <div class="telaio telaio-giorno" id="vista-giorno" data-indirizzo="{{ url_for('personale.cambia') }}" data-giorno="{{ g.isoformat() }}"
-     data-ruolo="{{ ruolo }}" data-area="{{ area }}"{% if strutture|length > 1 %} data-struttura="{{ sid }}"{% endif %}>
+     data-ruolo="{{ ruolo }}" data-area="{{ area }}"{% if strutture|length > 1 %} data-struttura="{{ sid }}"{% endif %}{% if solo_guardare('turni') %} data-solo-guardare="{{ solo_guardare('turni') }}"{% endif %}>
   <div class="testa-giorno">
     {% if gi.festa %}<span class="festa-giorno">{{ icona('calendar-clock') }}{{ gi.festa }}</span>{% elif gi.festivo %}<span class="festa-giorno">{{ icona('calendar-clock') }}Domenica</span>{% endif %}
     <label class="aggiungi-turno">{{ icona('plus') }}<span>Turno a</span>
