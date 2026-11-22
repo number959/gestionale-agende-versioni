@@ -8,6 +8,7 @@ Dove si puo' il risultato si confronta con un calcolo fatto a parte (un
 oracolo) e non con quello che il programma stesso ha prodotto."""
 import io
 from prove_dove import dove
+import prove_messaggi as PM
 import json
 import os
 import random
@@ -31,6 +32,7 @@ import pazienti as PZ
 import backup
 import viste
 import app as A
+PM.segui(A.app)
 from modelli import (crea_sessione, Struttura, Risorsa, Operatore, Turno, Appuntamento, Prestazione,
                      Paziente, Attesa, Attivita, NotaGiorno, Documento, ModuloStampa, Tariffa, Assenza, Appunto,
                      STATI_ATTIVI, VERSIONE_SCHEMA, scrivi_impostazione)
@@ -74,7 +76,7 @@ def collega(S):
     A.Sessione = S
     A._registro = None
     viste._sessionmaker = lambda: S
-    return A.app.test_client()
+    return PM.segna(A.app.test_client())     # i messaggi di questo cliente non finiscono agli altri
 
 
 def mondo():
@@ -138,15 +140,7 @@ def html(r):
     return r.get_data(as_text=True)
 
 
-def avvisi(C, r=None):
-    from html import unescape
-    with C.session_transaction() as sess:
-        m = sess.get('_flashes', [])
-        sess['_flashes'] = []
-    testo = ' '.join(str(x[1]) for x in m)
-    if r is not None and r.status_code == 200:
-        testo += ' ' + ' '.join(unescape(x) for x in re.findall(r'class="avviso[^"]*">(.*?)</div>', html(r)))
-    return unescape(re.sub(r'<[^>]+>', '', testo))
+avvisi = PM.avvisi       # i messaggi presi da Flask (prove_messaggi.py); con una pagina 200 anche scritti lì
 
 
 def leggi(S, modello, ident):
@@ -1737,9 +1731,25 @@ def ap_notifiche_e_anagrafiche():
     s.close()
 
 
+def ap_messaggi_nella_pagina():
+    """I messaggi presi da Flask arrivano anche nella pagina: quello di un errore nella pagina ridisegnata, quello
+    di un salvataggio nella pagina dopo il rinvio, e una volta sola."""
+    S, C = mondo()
+    r = C.post('/pazienti/nuovo', data={'cognome': 'Fittizi', 'telefono': '12-34', 'canale': 'SMS'})
+    assert r.status_code == 200 and 'almeno 6 cifre' in avvisi(C, r, 'errore'), 'errore non detto'  # e scritto nella pagina
+    r = C.post('/pazienti/nuovo', data={'cognome': 'Fittizi', 'telefono': '3330001111', 'canale': 'SMS'})
+    assert r.status_code == 302, avvisi(C)
+    dopo = html(C.get(r.headers['Location']))          # prima di avvisi(), che svuota la sessione
+    assert 'Scheda salvata: Fittizi' in avvisi(C, categoria='ok'), 'conferma non data'
+    assert 'Scheda salvata: Fittizi' in dopo, 'conferma non scritta nella pagina dopo il rinvio'
+    assert 'Scheda salvata' not in html(C.get(r.headers['Location'])), 'la conferma torna a ogni pagina'
+    assert avvisi(C) == '', 'messaggi in più'
+
+
 prova('dal file alla prenotazione: conflitto, giornata, modulo compilato, chiusura', ap_dal_file_alla_prenotazione)
 prova('a mano, controlli, prenotazione di piu\' appunti insieme', ap_a_mano_e_insieme)
 prova('notifiche, unione ed eliminazione delle schede, medici', ap_notifiche_e_anagrafiche)
+prova('messaggi presi da Flask, scritti nella pagina ridisegnata e in quella dopo il rinvio', ap_messaggi_nella_pagina)
 
 
 area('foglio del giorno e tema scuro')

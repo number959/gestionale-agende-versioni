@@ -132,6 +132,12 @@ principale con quello della cartella, sugli stessi dati di prova copiati due vol
 le pagine senza parametri (ogni tipo di pagina al massimo 4 volte) e confronta risposte, moduli e campi (anche
 nascosti), collegamenti, `data-tasto`, `data-guida`, testo, JSON e Excel cella per cella. Nella veste nuova si
 lancia dopo ogni passo: le differenze che restano devono essere solo quelle volute, una per una.
+I messaggi per l'utente (`flash()`) in `prove_14.py` e `prove_funzioni.py` si prendono da Flask quando il programma
+li fa (`prove_messaggi.py`, segnale `message_flashed`), non dall'HTML: ogni test_client va segnato con
+`prove_messaggi.segna()`, e con una pagina 200 `avvisi(C, r)` controlla anche che i messaggi di quella richiesta
+siano scritti nella pagina. Dove si vedono (dentro la zona `.avvisi`, una volta sola, rossi solo gli errori, non
+tornano ricaricando) lo controlla `prove_sicurezza_browser.py`. Le altre raccolte hanno ancora un loro `avvisi()`
+che legge solo la sessione.
 Quando una prova cade, il messaggio dice anche file e riga (`prove_dove.py`). Alcune delle più vecchie escono con codice 0 anche se qualcosa non va: conta la
 riga finale («0 da sistemare»), ed è quella che legge `tutte_le_prove.py`.
 `PROVE_SOLO=nome1,nome2 python prove_15.py` rifà solo alcune prove di una raccolta. Le due

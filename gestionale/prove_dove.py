@@ -6,9 +6,13 @@ import os
 import traceback
 
 
+AIUTI = {'prove_dove.py', 'prove_messaggi.py'}       # i loro messaggi d'errore dicono già la riga di chi li chiama
+
+
 def dove(errore):
     passi = traceback.extract_tb(errore.__traceback__)
-    nostri = [p for p in passi if os.path.basename(p.filename).startswith(('prove', 'campagna'))]
+    nostri = [p for p in passi if os.path.basename(p.filename).startswith(('prove', 'campagna'))
+              and os.path.basename(p.filename) not in AIUTI]
     if not (nostri or passi):
         return '?'
     p = (nostri or passi)[-1]
