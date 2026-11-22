@@ -212,6 +212,16 @@ IL_MENU = r"""() => {
   const scorrevoli = [...nav.querySelectorAll('*')].filter(e => ['auto', 'scroll'].includes(getComputedStyle(e).overflowY));
   if (scorrevoli.length !== 1) { out.problemi.push('parti del menu che scorrono per conto loro: ' + scorrevoli.length); return out; }
   const s = scorrevoli[0];
+  // la voce accesa si vede tutta, nella parte che scorre o in fondo, appena aperta la pagina (a 1366x657 Cassa e
+  // Statistiche starebbero sotto il bordo: gestionale.js la porta in vista)
+  const accesa = nav.querySelector('[aria-current]');
+  if (accesa && accesa.getClientRects().length) {
+    const a = accesa.getBoundingClientRect(), dove = s.contains(accesa) ? s.getBoundingClientRect() : rl;
+    if (a.top < dove.top - 1 || a.bottom > dove.bottom + 1 || !finestra(accesa)) {
+      out.problemi.push('la voce accesa non si vede nel menu: ' + nome(accesa) + ' ' + Math.round(a.top) + '-' + Math.round(a.bottom) +
+                        ' (la parte delle voci ' + Math.round(dove.top) + '-' + Math.round(dove.bottom) + ')');
+    }
+  }
   const nella = voci.filter(v => s.contains(v)), fondo = voci.filter(v => !s.contains(v));
   out.voci = [nella.length, fondo.length];
   out.trabocca = s.scrollHeight > s.clientHeight + 1;
@@ -487,6 +497,146 @@ def struttura_portata(pg, sid):
     return senza, len(cose)
 
 
+# ---------------------------------------------------------------- la barra in alto su una riga, i riquadri nella finestra
+BARRA = r"""() => { const q = (s) => { const e = document.querySelector(s); if (!e || !e.getClientRects().length) { return null; }
+    const b = e.getBoundingClientRect(); return {t: Math.round(b.top), h: Math.round(b.height)}; };
+  return {barra: q('[data-cornice="barra"]'), cerca: q('[data-cornice="barra"] [role="search"]'),
+          campanella: q('[data-cornice="barra"] .v-posto-campanella')}; }"""
+BARRA_MASSIMA = 80                               # 62 px, e il percorso che va a capo su due o tre righe dentro la barra
+
+
+def problemi_barra(pg):
+    """Dai 600 px in su la barra in alto resta su una riga: la ricerca e il posto della campanella alla stessa altezza,
+    la barra al più BARRA_MASSIMA px (fra 683 e 760 px la campanella andava a capo da sola: 118 px)."""
+    r = pg.evaluate(BARRA)
+    if not r['barra'] or not r['cerca']:
+        return ['la barra o la ricerca non ci sono: %s' % r]
+    p = []
+    if r['barra']['h'] > BARRA_MASSIMA:
+        p.append('la barra è alta %d px' % r['barra']['h'])
+    if r['campanella'] and abs(r['campanella']['t'] - r['cerca']['t']) > 1:
+        p.append('il posto della campanella è andato a capo: %s' % r)
+    return p
+
+
+# i riquadri che scorrono per conto loro e devono stare dentro la finestra, con la loro barra di scorrimento di lato
+# (i Turni: alti la finestra meno quello che c'è sopra; con la barra in alto nuova finivano 70 px sotto il bordo)
+RIQUADRI = {'/personale/turni': '.scorri-turni', '/personale/turni/settimana/%s?struttura=1' % OGGI: '.scorri-turni'}
+RIQUADRO = r"""(sel) => { const e = document.querySelector(sel); if (!e) { return null; } window.scrollTo(0, 0);
+  const b = e.getBoundingClientRect(); return {fondo: Math.round(b.bottom), finestra: innerHeight}; }"""
+
+
+def problemi_riquadro(pg, sel):
+    r = pg.evaluate(RIQUADRO, sel)
+    if r is None:
+        return ['%s non c\'è' % sel]
+    return [] if r['fondo'] <= r['finestra'] else ['%s finisce a %d px, la finestra è alta %d' % (sel, r['fondo'], r['finestra'])]
+
+
+# l'ordine del tasto Tab: dall'ultima voce del menu (Configura) si va alla ricerca della barra in alto, poi alle
+# linguette e alla pagina; le notifiche (in basso a destra) vengono dopo la pagina
+def problemi_tab(pg):
+    pg.evaluate("document.activeElement && document.activeElement.blur && document.activeElement.blur()")
+    ultima = menu(pg).get_by_role('link').last
+    ultima.focus()
+    pg.keyboard.press('Tab')
+    dopo = pg.evaluate("""() => { const a = document.activeElement; return {id: a.id, tag: a.tagName.toLowerCase(),
+        nella_barra: !!a.closest('[data-cornice="barra"]'), testo: (a.textContent || '').trim().slice(0, 30)}; }""")
+    ordine = pg.evaluate("""() => { const m = document.querySelector('main'), n = document.querySelector('[data-cornice="campanella"]');
+        return !n || !!(m.compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING); }""")
+    p = []
+    if not dopo['nella_barra'] or dopo['id'] != 'ricerca-rapida':
+        p.append('dopo l\'ultima voce del menu il tasto Tab va a %s' % dopo)
+    if not ordine:
+        p.append('le notifiche vengono prima della pagina')
+    return p
+
+
+# ---------------------------------------------------------------- le pagine con parametri
+sys.path.append(os.path.join(CARTELLA, 'strumenti'))
+from confronta_rami import forma, interni  # noqa: E402
+
+# le pagine senza cornice: i fogli da stampare (le funzioni) e il modo schermo (prove_senza_menu.py ha i loro gemelli)
+SENZA_CORNICE_CON_PARAMETRI = {'viste.stampa', 'segreteria.agenda_medico', 'sala.lista_operatoria', 'cruscotto.riepilogo',
+                               'viste.promemoria', 'documenti.stampa_modulo', 'guida.stampa', 'dovesifa.stampa',
+                               'tariffari.stampa'}
+# pagine che scorrono di lato per il loro contenuto, già note (non per la cornice): la scheda della persona dei Turni
+# (la radio larga, da sistemare nella tappa 7, DECISIONI-VESTE.md)
+DI_LATO_NOTE = {'personale.persona'}
+
+
+def pagine_con_parametri(ctx, intere, massimo=400):
+    """Una pagina per ogni forma d'indirizzo con parametri (l'indirizzo con le cifre scritte N e i nomi dei parametri,
+    come confronta_rami.py: anche le guide, /aiuto/<nome>), seguendo i collegamenti delle pagine senza parametri e poi
+    quelli delle pagine trovate così, fino a quattro passi: solo GET, solo le pagine intere che rispondono 200. Torna
+    (indirizzi, quante forme saltate)."""
+    viste_forme = {forma(u) for u in intere}
+    scelte, saltate, giro = [], 0, list(intere)
+    for passo in range(4):
+        prossime = []
+        for u in giro:
+            r = ctx.request.get(B + u)
+            if 'text/html' not in r.headers.get('content-type', ''):
+                continue
+            for h in interni(u, re.findall(r'<a\s[^>]*href="([^"]+)"', r.text())):
+                h = h.replace('&amp;', '&')
+                f = forma(h)
+                if f in viste_forme:
+                    continue
+                viste_forme.add(f)
+                q = ctx.request.get(B + h)
+                corpo = q.text() if 'text/html' in q.headers.get('content-type', '') else ''
+                if q.status != 200 or not re.search(r'<html[\s>]', corpo[:600], re.I):
+                    saltate += 1
+                    continue
+                scelte.append(h)
+                prossime.append(h)
+                if len(scelte) >= massimo:
+                    return scelte, saltate
+        giro = prossime
+    return scelte, saltate
+
+
+def guarda_con_parametri(pg, errori, pagine):
+    """Ogni pagina con parametri, a 1366x657: con la cornice (o un foglio da stampare, o il modo schermo), nessun errore
+    JavaScript, una voce accesa e al più una linguetta, la voce accesa in vista e la pagina non spinta di lato dalla
+    cornice. Torna le pagine che scorrono di lato per il loro contenuto."""
+    di_lato = []
+    for u in pagine:
+        pg.goto(B + u)
+        pg.wait_for_timeout(120)
+        aspetta_animazioni(pg)
+        funzione = pg.evaluate('document.body.dataset.pagina')
+        e = errori_di(errori, u)
+        if pg.locator('[data-cornice]').count() == 0:
+            senza = funzione in SENZA_CORNICE_CON_PARAMETRI or 'schermo=1' in u
+            ok('%s (%s): senza cornice solo un foglio da stampare o il modo schermo; nessun errore JavaScript' % (u, funzione),
+               senza and not e, (senza, e[:3]))
+            continue
+        if 'guida=' in urlsplit(u).query:
+            # la pagina apre la guida sullo schermo, che la fa scorrere fino al suo primo punto: le misure della cornice
+            # (la barra in cima) non hanno senso; restano la voce accesa e gli errori JavaScript
+            p = accese(pg)[2]
+            ok('%s (%s): con la guida aperta una voce accesa, nessun errore JavaScript' % (u, funzione), not p and not e, (p + e)[:4])
+            continue
+        p, nota = problemi_con_parametri(pg, funzione)
+        if nota:
+            di_lato.append('%s: %s' % (u, nota))
+        ok('%s (%s): cornice, una voce accesa, il menu e la pagina al loro posto, nessun errore JavaScript' % (u, funzione),
+           not p and not e, (p + e)[:4])
+    return di_lato
+
+
+def problemi_con_parametri(pg, funzione):
+    """(problemi, nota): la cornice al suo posto, una voce accesa e al più una linguetta, il menu che scorre per conto
+    suo con la voce accesa in vista, e la pagina che non scorre di lato (tranne quelle già note, DI_LATO_NOTE: nota)."""
+    p = problemi_cornice(pg) + accese(pg)[2]
+    q, r = problemi_menu_che_scorre(pg)
+    if r.get('note') and funzione in DI_LATO_NOTE:
+        return p + q, r['note'][0]
+    return p + q + ['scorre di lato: %s' % x for x in r.get('note', [])], None
+
+
 # ---------------------------------------------------------------- 4. il menu stretto
 STRETTO = r"""() => {
   const lato = document.querySelector('[data-cornice="menu"]');
@@ -583,6 +733,24 @@ with sync_playwright() as p:
     ok('gemello: una pagina della Segreteria senza linguette si vede', senza_linguette(guasta)[1] == ['/attesa/nuova (Segreteria)'],
        senza_linguette(guasta)[1])
 
+    # ---------------------------------------------- 1-bis. le pagine con parametri, una per forma
+    con_parametri, senza_pagina = pagine_con_parametri(ctx, intere)
+    ok('pagine con parametri: %d forme da provare, prese dai collegamenti (saltate %d che non sono pagine intere)'
+       % (len(con_parametri), senza_pagina), len(con_parametri) >= 150, len(con_parametri))
+    di_lato += guarda_con_parametri(pg, errori, con_parametri)
+    # il tasto Tab: dal menu alla ricerca, e le notifiche dopo la pagina
+    for u in ('/giorno/%s?struttura=2' % ALTRO, '/conferme'):
+        pg.goto(B + u)
+        pg.wait_for_timeout(200)
+        p = problemi_tab(pg)
+        ok('%s: con il tasto Tab dall\'ultima voce del menu alla ricerca della barra, le notifiche dopo la pagina' % u, not p, p)
+    # i riquadri dei Turni dentro la finestra
+    for u, sel in sorted(RIQUADRI.items()):
+        pg.goto(B + u)
+        pg.wait_for_timeout(200)
+        p = problemi_riquadro(pg, sel)
+        ok('%s: il riquadro che scorre (%s) finisce dentro la finestra, con la sua barra di scorrimento' % (u, sel), not p, p)
+
     # ---------------------------------------------- 2. con soli clic dalla home
     strade = raggiungi(pg, viste)
 
@@ -604,14 +772,16 @@ with sync_playwright() as p:
                quante >= 12 and not senza, senza)
 
     # ---------------------------------------------- 4. sotto 1200 px solo le icone
-    for larghezza, stretto in ((1199, True), (1200, False), (1024, True), (683, True)):
+    for larghezza, stretto in ((1199, True), (1200, False), (1024, True), (760, True), (683, True)):
         pg.set_viewport_size({'width': larghezza, 'height': ALTO})
-        for u in ('/giorno/%s?struttura=2' % ALTRO, '/conferme?struttura=1', '/anagrafiche'):
+        for u in ('/giorno/%s?struttura=2' % ALTRO, '/conferme?struttura=1', '/conferme', '/anagrafiche'):
             pg.goto(B + u)
             pg.wait_for_timeout(300)
             pr, n = problemi_stretto(pg, stretto)
             ok('%d px, %s: %s (%d voci)' % (larghezza, urlsplit(u).path, 'menu a sole icone, i nomi per i lettori di schermo e nel title'
                                             if stretto else 'menu largo con i nomi', n), not pr, pr)
+            pr = problemi_barra(pg)
+            ok('%d px, %s: la barra in alto su una riga' % (larghezza, u), not pr, pr)
     pg.set_viewport_size({'width': LARGO, 'height': ALTO})
     e = errori_di(errori, 'giri')
     ok('nessun errore JavaScript nei giri (clic, tasti, menu stretto)', not e, e[:3])
@@ -652,6 +822,28 @@ with sync_playwright() as p:
     pg.goto(B + '/impostazioni')
     pg.add_style_tag(content='main { min-width: 1300px !important; }')
     gemello('la pagina spinta oltre il bordo destro si vede', problemi_menu_che_scorre(pg)[0], 'spinta oltre il bordo destro')
+    pg.goto(B + '/statistiche')
+    pg.evaluate("document.querySelector('[data-cornice=\"menu\"] [aria-current]').closest('nav').querySelectorAll('*')"
+                ".forEach(e => { if (getComputedStyle(e).overflowY === 'auto') { e.scrollTop = 0; } })")
+    gemello('la voce accesa sotto il bordo del menu (Statistiche, la parte delle voci in cima) si vede',
+            problemi_menu_che_scorre(pg)[0], 'la voce accesa non si vede')
+    pg.goto(B + '/personale/turni')
+    pg.add_style_tag(content='.v-cornice .scorri-turni { max-height: calc(100vh - 230px) !important; }')
+    gemello('il riquadro dei Turni alto come prima (finestra meno 230 px) esce dalla finestra', problemi_riquadro(pg, '.scorri-turni'),
+            'finisce a')
+    pg.goto(B + '/conferme')
+    pg.evaluate("""() => { const n = document.querySelector('[data-cornice="campanella"]'), b = document.createElement('button');
+                   b.textContent = 'Fatto'; n.appendChild(b); document.querySelector('[data-cornice="menu"]').after(n); }""")
+    gemello('le notifiche messe subito dopo il menu, come prima, prendono il tasto Tab', problemi_tab(pg), 'tasto Tab va a')
+    pg.set_viewport_size({'width': 683, 'height': ALTO})
+    pg.goto(B + '/giorno/%s?struttura=2' % ALTRO)
+    pg.add_style_tag(content='.v-barra { flex-wrap: wrap !important; }')
+    gemello('a 683 px la barra che va a capo (il posto della campanella sotto) si vede', problemi_barra(pg), 'alta')
+    pg.set_viewport_size({'width': LARGO, 'height': ALTO})
+    pg.goto(B + '/giorno/%s?struttura=2' % ALTRO)
+    pg.evaluate("""() => { const d = document.createElement('div'); d.style.cssText = 'width: 2400px; height: 4px;';
+                   document.querySelector('main').appendChild(d); }""")
+    gemello('una pagina con parametri che scorre di lato si vede', problemi_con_parametri(pg, 'giorno')[0], 'scorre di lato')
     pg.goto(B + '/pazienti')
     pg.evaluate("setTimeout(() => { throw new Error('errore di prova'); }, 0)")
     pg.wait_for_timeout(200)

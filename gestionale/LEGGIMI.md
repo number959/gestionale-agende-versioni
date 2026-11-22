@@ -2391,10 +2391,12 @@ python prove_17_browser.py http://127.0.0.1:5001   # 18 controlli: codice fiscal
                              # suggerimenti del luogo, prenotazione, pagina di controllo (salva pazienti di prova)
 python prove_tendine_browser.py http://127.0.0.1:5001   # 283 controlli: le tendine sopra la pagina e le notifiche, a 1366x657;
                              # dalla tappa 2 anche menu, barra e linguette che non coprono niente
-python prove_cornice_browser.py http://127.0.0.1:5001   # 385 controlli: la cornice nuova (tappa 2) sulle 53
-                             # pagine senza parametri a 1366x657, ogni pagina raggiunta con soli clic dalla home,
-                             # una voce e una linguetta accese, i tasti G E C D, la stampa, il menu che scorre
-                             # per conto suo, il menu a sole icone sotto 1200 px (non salva niente)
+python prove_cornice_browser.py http://127.0.0.1:5001   # 625 controlli: la cornice nuova (tappa 2) sulle 53
+                             # pagine senza parametri a 1366x657 e su una pagina per ogni forma con parametri (circa
+                             # 200), ogni pagina raggiunta con soli clic dalla home, una voce e una linguetta accese
+                             # (la voce sempre in vista), i tasti G E C D e il tasto Tab, la stampa, il menu che scorre
+                             # per conto suo, il menu a sole icone sotto 1200 px, la barra su una riga, il riquadro
+                             # dei Turni dentro la finestra (non salva niente)
 python prove_18_browser.py http://127.0.0.1:5001   # 61 controlli sui turni: griglia, tastiera (anche due codici scritti
                              # di seguito senza aspettare), annulla e rifai, scelta del turno (dove si apre, mai
                              # coperta), schema, giorno a ore, schermo stretto, movimento ridotto, la domanda prima
@@ -2552,23 +2554,29 @@ barra in alto e le linguette dell'area in cima al contenuto. Le pagine non cambi
 bottoni e dati; cambia solo quello che hanno intorno.
 
 - **Il menu** (`templates/_menu.html`, da `menu.py`): largo 248 px, con il logo della struttura (o il suo nome se non
-  ha logo) e sotto «Agende» con il nome; le voci con la loro icona di Lucide (dieci nuove in `_icone.html`, da
-  `strumenti/genera_icone.py`), alte 40 px, in tre gruppi: «Agende» (Oggi, Agenda, Sala), «Aree» (Pazienti, Turni,
+  ha logo) e sotto «Agende» con il nome; le voci con la loro icona di Lucide (nove nuove in `_icone.html`, da
+  `strumenti/genera_icone.py`; una, `bell`, è già lì per la campanella della tappa 3 e nessuna pagina la usa), alte 40 px, in tre gruppi: «Agende» (Oggi, Agenda, Sala), «Aree» (Pazienti, Turni,
   Ambulatori, Dove si fa, Segreteria con il numero da confermare, Cassa, Statistiche) e in fondo Aiuto (che resta una
   tendina, con le quattro voci di prima, e si apre a destra del menu) e Configura. Resta fermo mentre la pagina scorre;
-  a 1366×657 non ci sta tutto e scorre per conto suo la parte delle voci, mentre Aiuto e Configura restano in fondo.
-  Sotto 1200 px solo le icone (72 px; il nome resta per i lettori di schermo e compare sotto il mouse) e al posto del
-  logo le iniziali della struttura; sotto 600 px (il telefono) il menu torna in alto, su una riga di icone. Resta un
-  solo `<nav class="menu" aria-label="Pagine">`, che serve alla guida.
+  a 1366×657 non ci sta tutto e scorre per conto suo la parte delle voci, mentre Aiuto e Configura restano in fondo;
+  la voce della pagina aperta è sempre in vista (`gestionale.js` sposta la parte delle voci, mai la pagina: senza,
+  Statistiche e Cassa stavano sotto il bordo). Sotto 1200 px solo le icone (72 px; il nome resta per i lettori di schermo e compare sotto il mouse) e al posto del
+  logo le iniziali della struttura (il nome resta per i lettori di schermo); sotto 600 px (il telefono) il menu torna
+  in alto, su una riga di icone. Resta un solo `<nav class="menu" aria-label="Pagine">`, che serve alla guida; il
+  menu intero, con il logo (`alt=""`: il nome è scritto sotto), è un `<aside aria-label="Menu">`.
 - **La barra in alto** (`_barra.html`, alta 62 px): il percorso (struttura › voce › linguetta; la struttura solo per
   le aree che ne hanno una; i segni › li disegna il foglio di stile), la ricerca rapida di prima (stesso campo, stessi
   pezzi chiesti mentre si scrive, stesso tasto /) e il posto della campanella, che arriva nella tappa 3: fino ad allora
-  le notifiche restano quelle di prima, in basso a destra.
+  le notifiche restano quelle di prima, in basso a destra (nella pagina vengono dopo il contenuto, `_notifiche.html`:
+  con il tasto Tab si passa dal menu alla ricerca, alle linguette e alla pagina, e solo dopo alle notifiche). Dai 600 px
+  in su la barra resta su una riga: il percorso va a capo dentro il suo spazio.
 - **Le linguette** (`_linguette.html`, con il pezzo linguette di `_pezzi.html`): Agenda (Giorno · Settimana · Mese ·
   Elenco), Segreteria, Ambulatori e Configura passano dalle tendine alle linguette, con gli stessi indirizzi; la riga
   piccola di prima è il suggerimento sotto il mouse. Nella Segreteria l'Elenco del giorno ha la freccina: si apre
   nell'Agenda (e lì accende l'Agenda, non più la Segreteria). Per ora `base.html` le mette in cima al contenuto, nel
-  blocco `linguette`; nelle tappe 4-9 ogni area le sposta sotto il suo titolo, come nelle tavole.
+  blocco `linguette`, sopra il titolo della pagina; nelle tappe 4-9 ogni area le sposta sotto il suo titolo, come
+  nelle tavole. È uno scostamento voluto dalla decisione «Cornice (2-3)» («le linguette stanno sotto l'h1»), rinviato
+  alle tappe 4-9 e scritto in `piano/DECISIONI-VESTE.md`: le teste delle pagine cambiano lì, area per area.
 - **I tasti**: G sull'Agenda, C sulla Segreteria (porta alle Conferme), D su Dove si fa, E su un collegamento nascosto
   della cornice (l'Elenco del giorno); gli altri restano nelle pagine.
 - **Colori**: quelli della struttura con le varianti di `marchio.tema` (la voce accesa sul suo fondo tenue si legge
@@ -2665,6 +2673,75 @@ nessuno diverso. I sei mutanti, fatti su copie, sono presi (prima tutte verdi): 
 tappa 1, che con la cornice nuova prendono ancora il difetto: il clic su una tendina che non la apre, ora Aiuto e
 «Stampa e scarica» (`prove_tendine_browser.py` 124 controlli, `prove_guida_browser.py` 3), Esc che non chiude la tendina
 Aiuto (`prove_guida_browser.py` 1), il menu nel modo schermo del riepilogo live (`prove_112_browser.py` 2).
+
+### La revisione della tappa 2: correzioni e cose rimandate
+
+Tre revisori (equivalenza con il ramo principale, uso, piano) hanno guardato la tappa 2; ogni problema è stato
+riprodotto prima di toccarlo. Corretti, ognuno con la sua prova e il suo gemello o mutante:
+
+- **il lanciatore** confronta gli indirizzi della cornice di ogni pagina per forma (`indirizzi_per_forma`), non più
+  per voce: le voci che hanno cambiato nome (Giorno → Agenda, le voci delle tendine che diventano linguette e perdono
+  la riga piccola) non si appaiavano mai, e un errore di struttura o di giorno su di loro passava. In più, su ogni
+  pagina con il menu nuovo, una sola voce accesa e al più una linguetta (`accese_fuori_posto`), senza regole che lo
+  approvino (la regola «aggiunto accese@cornice menu «Agenda»» da sola accettava l'Agenda accesa ovunque);
+- **il percorso della barra in alto** ha la sua prova (`prove_menu.py`): la struttura della pagina letta dal database,
+  la voce e la linguetta accese lette dal disegno;
+- **la voce accesa** del menu sempre in vista a 1366×657 (Statistiche stava tutta sotto il bordo, Cassa a metà);
+- **i Turni**: il riquadro che scorre finisce dentro la finestra (prima 70 px sotto il bordo, con la sua barra di
+  scorrimento di lato fuori vista);
+- **la barra in alto** resta su una riga dai 600 px in su (fra 683 e 760 px il posto della campanella andava a capo:
+  118 px invece di 62);
+- **il contorno del fuoco** della tastiera nel menu e sulle linguette è il colore della struttura come testo
+  (`--v-fuoco`): con un verde o un azzurro scendeva sotto 3:1; `prove_mattoni.py` lo prova su 444 colori;
+- **tasto Tab e lettori di schermo**: le notifiche vengono dopo la pagina (`_notifiche.html`), il menu è un
+  `<aside aria-label="Menu">` con il logo `alt=""`, e nel menu stretto il nome della struttura resta per i lettori;
+- **la linguetta Elenco** dell'Agenda ha il suo title («tutti gli appuntamenti in ordine di ora»), e `prove_menu.py`
+  controlla che ogni linguetta porti la riga piccola del menu di prima;
+- **`menu.py` per i moduli**: una linguetta si può accendere per pagina (`pagine=`, per le quattro linguette della
+  Cassa nella tappa 6, tutte sulla sezione «cassa»); la condizione vale anche per linguette, voci della tendina e
+  collegamenti nascosti (con il loro tasto); `registra_voce` rifiuta una voce senza icona o con un'icona che non c'è
+  in `_icone.html`; le notizie su come era il menu di prima (servivano solo alle prove) stanno in `prove_menu.py`;
+- **`prove_cornice_browser.py`** apre anche una pagina per ogni forma d'indirizzo con parametri (la scheda del
+  paziente, l'appuntamento, Sposta, le guide, i giorni e le strutture…), presa dai collegamenti: cornice, voce accesa,
+  nessun errore JavaScript, niente che scorre di lato per colpa della cornice.
+
+Rimandati, con il motivo (da dire a Giovanni):
+
+- **le linguette sotto il titolo della pagina** (decisione «Cornice (2-3)»): nelle tappe 4-9, con le teste nuove delle
+  pagine; ora stanno sopra il titolo. Scritto in `piano/DECISIONI-VESTE.md`;
+- **le colonne dei Turni a 1366** (restano fuori, da scorrere, il 30 e Ore, Notti, Fest., Ass.: accanto al menu ci sono
+  1082 px, il mese ne vuole 1284): nella tappa 7, con le larghezze già decise (giorni 24 px, Ore 56, gli altri 30: 890
+  px, e quello che resta alla colonna dei nomi);
+- **le mezz'ore del Giorno**: a 1366×657 se ne vedono intere 5 (nel principale 7); la tappa 5 ha come traguardo «le
+  mezz'ore di oggi meno una» con la testa compatta (le linguette nella testa della pagina);
+- **l'Elenco del giorno** scorre di lato sotto 1250 px (11 px a 1242, cioè 1366 con lo zoom di Chrome al 110%; 53 px a
+  1024), il principale solo sotto 1002 px: nella tappa 5 (la colonna dei bottoni); la soglia del menu stretto (1200 px)
+  è una decisione presa;
+- **Riepilogo live** (la linea del tempo esce di 66 px a 1366) nella tappa 8; **la griglia del Giorno** (8 px) nella
+  tappa 5: le pagine dentro la cornice restano quelle di oggi, con i loro margini;
+- **le frasi della guida** che descrivono la cornice di prima («Menu Mese» due volte, «la casella Cerca nel menu», «il
+  numero arancione» della Segreteria, il passo «Il giorno» che illumina la voce Agenda): nella tappa 10, con le
+  immagini e i video della guida. La guida da stampare (`/aiuto/stampa`) è uno dei 9 fogli che il lanciatore confronta
+  in PDF pixel per pixel, e in questa tappa deve restare identica; i passi trovano tutti il loro punto;
+- **la zona delle notifiche** è una regione «Notifiche» anche quando è vuota: la campanella della tappa 3 la sostituisce
+  (le prove nel browser la cercano proprio per ruolo e nome);
+- **un modulo con una linguetta in Configura** (M2, «Aree e accessi») ha bisogno di una sua sezione dentro la voce
+  Configura: `registra_linguetta` rifiuta una linguetta che si accende fuori dalla sua voce, e oggi non c'è un modo di
+  aggiungere una sezione a una voce già registrata (da fare in M1-M2).
+
+Il 22/11/2026, dopo le correzioni, dalle due cartelle: tutte le prove senza browser verdi (36 raccolte, in 717 e 711 s;
+`prove_menu.py` 11 prove, `prove_mattoni.py` 22); nel browser 14 raccolte nella normale (1285 controlli,
+`prove_cornice_browser.py` 625, con 202 pagine con parametri) e 16 nell'animata (1350), tutte verdi (nell'animata, con
+le due cartelle provate insieme, `prove_cornice_browser.py` è caduta una volta sul menu che in fondo alla pagina dei
+turni del giorno sale di 10 px mentre la pagina entra, il caso già scritto qui sopra, ed è passata da sola: 625 su 625);
+il confronto con il ramo principale dalle due cartelle con 607 pagine e nessuna diversa (196 solo per i cambiamenti
+approvati), la cornice senza differenze (457 parti approvate, 31 regole di cui 25 solo per la cornice) e 49 fogli e
+pagine che si stampano in PDF, nessuno diverso. I mutanti della revisione, fatti su copie, sono presi: le linguette
+delle tendine che portano alla struttura 1 (M1) e l'Agenda accesa anche nelle pagine di Pazienti (M3) dal lanciatore
+(71 differenze della cornice, prima 0) e da `prove_menu.py` (6 prove su 11); il percorso con la struttura della prima
+pagina (M2) da `prove_menu.py` (1 su 11); nel browser, su un gestionale di prova fatto da una copia, la voce accesa non
+portata in vista, il riquadro dei Turni alto come prima, la barra che va a capo e le notifiche prima della pagina
+(`prove_cornice_browser.py`, 23 controlli).
 
 ### Il pacchetto di prova (dalla tappa 1 della base)
 

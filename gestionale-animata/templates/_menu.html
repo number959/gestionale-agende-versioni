@@ -13,8 +13,13 @@
     - data-tasto è il primo attributo del collegamento (prove_19.py e strumenti/prove_installato.py cercano
       «<a data-tasto="d" href=»); il nome di ogni voce resta nel testo, anche nel menu stretto a sole icone (lì
       veste.css lo nasconde agli occhi, e il title lo mostra sotto il mouse);
-    - il numero accanto a Segreteria tiene la classe «contatore» di prima: nell'animata rimbalza (animazioni.css).
-    #notifiche e #aiuto-tasti restano quelli di prima (la campanella vera arriva nella tappa 3). -#}
+    - il numero accanto a Segreteria tiene la classe «contatore» di prima: nell'animata rimbalza (animazioni.css);
+    - il logo ha alt="": il nome della struttura è scritto sotto (anche nel menu stretto, per i lettori di schermo), e
+      letto due volte darebbe fastidio. Il contenitore è un <aside> con il suo nome («Menu»): così anche logo e nome
+      stanno in una zona che i lettori di schermo annunciano.
+    #notifiche e #aiuto-tasti (quelli di prima: la campanella vera arriva nella tappa 3) li mette base.html dopo la
+    pagina (_notifiche.html): con il tasto Tab si passa dal menu alla ricerca, alle linguette e alla pagina, e solo
+    dopo alle notifiche in basso a destra. -#}
 {%- from "_icone.html" import icona -%}
 {#- una voce: un collegamento, o il pulsante della tendina (Aiuto) con le sue voci, come prima (le stesse parole, la riga
     piccola in <small>, gli stessi data-azione-guida) -#}
@@ -39,10 +44,10 @@
 {%- set _m = menu_della_pagina() -%}
 {%- set _sid = _m.sid -%}
 {%- set _marchio = marchio_di(_sid) %}
-<div class="v-lato" data-cornice="menu">
+<aside class="v-lato" data-cornice="menu" aria-label="Menu">
   <div class="v-marchio" data-iniziali="{{ iniziali_struttura(_marchio.nome) }}">
     {%- if _marchio.logo_url %}
-    <img class="v-marchio-logo" src="{{ _marchio.logo_url }}" alt="{{ _marchio.nome }}">
+    <img class="v-marchio-logo" src="{{ _marchio.logo_url }}" alt="">
     <span class="v-marchio-sotto"><b>Agende</b> <span>{{ _marchio.nome }}</span></span>
     {%- else %}
     <span class="v-marchio-nome">{{ _marchio.nome }}</span>
@@ -67,20 +72,4 @@
     <a{% if x.tasto %} data-tasto="{{ x.tasto }}"{% endif %} href="{{ x.url }}" hidden>{{ x.parola }}</a>
     {%- endfor %}
   </nav>
-</div>
-<div id="notifiche" class="notifiche" data-cornice="campanella" role="region" aria-label="Notifiche" aria-live="polite" data-indirizzo="{{ url_for('segreteria.notifiche', struttura=_sid) }}"></div>
-<div id="aiuto-tasti" class="aiuto-tasti" data-cornice="tasti" role="dialog" aria-label="Tasti rapidi" hidden>
-  <h2>Tasti rapidi</h2>
-  <table>
-    <tr><th>/</th><td>cerca un paziente, un medico, un giorno ("domani", "lunedì", "24/9") o dove si fa una prestazione</td></tr>
-    <tr><th>← →</th><td>giorno precedente e successivo</td></tr>
-    <tr><th>T</th><td>oggi</td></tr>
-    <tr><th>N</th><td>nuovo appuntamento</td></tr>
-    <tr><th>G · E · C</th><td>griglia, elenco, conferme del giorno</td></tr>
-    <tr><th>D</th><td>Dove si fa: in quale struttura del gruppo si fa una prestazione</td></tr>
-    <tr><th>Ctrl + Invio</th><td>salva il modulo che si sta compilando</td></tr>
-    <tr><th>Esc</th><td>chiude questo riquadro e i suggerimenti</td></tr>
-    <tr><th>?</th><td>mostra questo riquadro</td></tr>
-    <tr><th>Aiuto</th><td>nel menu: la guida sullo schermo di questa pagina e tutte le guide con le immagini</td></tr>
-  </table>
-</div>
+</aside>

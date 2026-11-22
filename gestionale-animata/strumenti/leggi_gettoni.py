@@ -44,6 +44,14 @@ COPPIE = [
     ('testo-medio', 'superficie-tenue', 'voci del menu'), ('primario-testo', 'superficie-tenue', 'voce del menu accesa, iniziali'),
 ]
 
+# I contorni (non testo: almeno 3:1, WCAG 1.4.11): il contorno del fuoco della tastiera (--v-fuoco) sui fondi dove sta,
+# cioè le voci del menu e le linguette (accese, sotto il mouse, spente) e la ricerca della barra in alto
+COPPIE_CONTORNO = [
+    ('fuoco', 'primario-tinta', 'fuoco sulla voce e sulla linguetta accese'), ('fuoco', 'superficie-tenue', 'fuoco nel menu'),
+    ('fuoco', 'incasso', 'fuoco sulla voce sotto il mouse'), ('fuoco', 'fondo', 'fuoco accanto alla linguetta'),
+    ('fuoco', 'superficie', 'ricerca della barra con il fuoco'),
+]
+
 # i colori della struttura su cui si provano le coppie: il predefinito, quello delle tavole, quelli delle prove, alcuni
 # al limite (chiari, grigi, gialli) e una griglia di tinte; il programma li passa da marchio.leggibile() (marchio.tema)
 COLORI_DI_PROVA = ['#154381', '#1C4184', '#6b4e9b', '#2e7d32', '#767676', '#0087B4', '#5B7F3E', '#C62828', '#FFD700',

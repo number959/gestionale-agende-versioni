@@ -160,8 +160,12 @@ ogni voce e linguetta porta ancora struttura e giorno, ogni collegamento disegna
 dal disegno, porta la struttura (tranne Pazienti e Configura, `SENZA_STRUTTURA`); il primo `data-tasto` della
 pagina per G, E, C e D porta alla voce giusta; parole, indirizzi, tasti e `data-guida` sono quelli del menu del ramo
 principale, voce per voce (oracolo: `prove_menu_principale.html`, la copia ferma del suo `_menu.html`, che la prova
-confronta con git quando c'è; le sole parole nuove stanno in `PAROLE_NUOVE`, con il perché); `registra_voce` aggiunge la
-voce di un modulo senza toccare i modelli. Ogni controllo ha il suo gemello.
+confronta con git quando c'è; le sole parole nuove stanno in `PAROLE_NUOVE`, e come il menu di prima disegnava le voci
+in `IN_FILA` e `NON_NEL_MENU_DI_PRIMA`, con il perché: `menu.py` non porta niente che serva solo alle prove);
+`registra_voce` aggiunge la voce di un modulo senza toccare i modelli; il percorso della barra in alto dice la struttura
+della pagina (letta dal database), la voce e la linguetta; ogni linguetta porta nel title la riga piccola del menu di
+prima; le linguette si accendono anche per pagina e le condizioni valgono anche per linguette e nascosti; il lanciatore
+vede gli indirizzi della cornice per forma e una seconda voce accesa. Ogni controllo ha il suo gemello.
 `prove_live_json.py` confronta `/riepilogo-live.json` e `/riepilogo-live/statistiche.json` con
 `riepilogo_live_atteso.json` (uguale nelle due cartelle) chiave per chiave, a ogni livello e anche nel tipo
 (1 non è 1.0), su un mondo di prova con soli nomi inventati e l'orologio fermo in sette momenti; un numero
@@ -185,8 +189,11 @@ confrontano per indirizzo, metodo e campi, anche loro senza ordine ma con le qua
 l'ordine, come nella tappa 1 (senza ordine due valori scambiati di posto non si vedono: nel dubbio, `--con-ordine`).
 La cornice (menu, barra in alto, linguette, campanella, zona dei messaggi, tasti rapidi) sta fuori dal confronto di ogni
 pagina e si confronta una volta a parte: per ogni tipo le voci (parola, indirizzo, `data-tasto`, `data-guida`), i segni
-e il testo; su ogni pagina quali tipi ci sono e quale voce è accesa; gli indirizzi interi delle voci (portano ancora
-struttura e giorno). Nella veste nuova ogni contenitore della cornice ha `data-cornice="<tipo>"` (`menu`, `barra`,
+e il testo; su ogni pagina quali tipi ci sono e quale voce è accesa; gli indirizzi interi delle voci per forma
+(`indirizzi_per_forma`: per ogni forma che c'è da tutte e due le parti gli stessi indirizzi, quindi struttura, giorno,
+data e mese anche per le voci che hanno cambiato nome, come Giorno → Agenda e le voci delle tendine diventate
+linguette); e, senza regole che lo possano approvare, una sola voce accesa e al più una linguetta su ogni pagina con
+il menu nuovo (`accese_fuori_posto`). `prove_menu.py` prova queste due parti con i loro gemelli. Nella veste nuova ogni contenitore della cornice ha `data-cornice="<tipo>"` (`menu`, `barra`,
 `linguette`, `campanella`, `messaggi`, `tasti`) e la voce accesa ha `aria-current`; in una pagina senza `data-cornice`,
 come nel principale, la cornice sono `nav.menu`, `#notifiche`, `#aiuto-tasti` e `.avvisi`, con la classe `attivo`
 (`CORNICE_DI_OGGI`): un pezzo della cornice nuova senza `data-cornice` finisce nel confronto delle pagine. Poi i 17
@@ -418,8 +425,12 @@ temporanea.
   `strumenti/genera_icone.py`), sezioni che la accendono, condizione (la Sala: `ci_sono_sale`), `data-tasto`,
   `data-guida` e contatore. Una voce nuova (anche di un modulo) si aggiunge con `menu.registra_voce(gruppo, chiave,
   endpoint, parola, argomenti, icona=…, sezioni=…)` e le sue pagine con `menu.registra_linguetta(chiave, endpoint,
-  parola, argomenti, sezioni=…, sotto=…)`: rifiutano una sezione, una chiave o un tasto già presi (ogni pagina accende una
-  voce sola) e una linguetta che si accenderebbe fuori dalla sua voce; nessun modello si tocca. Le parole si scrivono con
+  parola, argomenti, sezioni=…, sotto=…, pagine=…, condizione=…)`: rifiutano una sezione, una chiave o un tasto già presi
+  (ogni pagina accende una voce sola), una linguetta che si accenderebbe fuori dalla sua voce e una voce senza icona o
+  con un'icona che non c'è in `_icone.html` (`menu.collega` le legge); nessun modello si tocca. Una linguetta si accende
+  per sezione e, con `pagine=` (le funzioni, `request.endpoint`), solo in quelle pagine: così più linguette stanno sulla
+  stessa sezione (la Cassa nella tappa 6). La condizione vale per voci, linguette, voci della tendina e collegamenti
+  nascosti (con il loro tasto). Le parole si scrivono con
   `menu.testo` (l'apostrofo resta com'è). Il disegno è la cornice della veste nuova (tavole Nefro-*): `_menu.html` il
   menu a sinistra (248 px; sotto 1200 px solo icone e le iniziali della struttura al posto del logo; sotto 600 px una
   riga in alto), con un solo `<nav class="menu …" aria-label="Pagine">` (la guida e le prove lo cercano; dentro nessun

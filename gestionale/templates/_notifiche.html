@@ -1,0 +1,22 @@
+{#- Le notifiche e il riquadro dei tasti rapidi della cornice (tappa 2 della base): quelli di prima, che stavano in
+    _menu.html; base.html li mette dopo la pagina, dentro la cornice, perché con il tasto Tab si arrivi prima alla
+    ricerca, alle linguette e alla pagina (sullo schermo restano dove erano: in basso a destra e al centro). Nella tappa
+    3 la campanella prende il posto delle notifiche, nella barra in alto. Ognuno nel suo contenitore con data-cornice
+    (strumenti/confronta_rami.py li confronta a parte). -#}
+{%- set _m = menu_della_pagina() %}
+<div id="notifiche" class="notifiche" data-cornice="campanella" role="region" aria-label="Notifiche" aria-live="polite" data-indirizzo="{{ url_for('segreteria.notifiche', struttura=_m.sid) }}"></div>
+<div id="aiuto-tasti" class="aiuto-tasti" data-cornice="tasti" role="dialog" aria-label="Tasti rapidi" hidden>
+  <h2>Tasti rapidi</h2>
+  <table>
+    <tr><th>/</th><td>cerca un paziente, un medico, un giorno ("domani", "lunedì", "24/9") o dove si fa una prestazione</td></tr>
+    <tr><th>← →</th><td>giorno precedente e successivo</td></tr>
+    <tr><th>T</th><td>oggi</td></tr>
+    <tr><th>N</th><td>nuovo appuntamento</td></tr>
+    <tr><th>G · E · C</th><td>griglia, elenco, conferme del giorno</td></tr>
+    <tr><th>D</th><td>Dove si fa: in quale struttura del gruppo si fa una prestazione</td></tr>
+    <tr><th>Ctrl + Invio</th><td>salva il modulo che si sta compilando</td></tr>
+    <tr><th>Esc</th><td>chiude questo riquadro e i suggerimenti</td></tr>
+    <tr><th>?</th><td>mostra questo riquadro</td></tr>
+    <tr><th>Aiuto</th><td>nel menu: la guida sullo schermo di questa pagina e tutte le guide con le immagini</td></tr>
+  </table>
+</div>

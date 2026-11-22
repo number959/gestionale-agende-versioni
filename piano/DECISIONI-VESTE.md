@@ -39,6 +39,9 @@ strumenti/cambiamenti_approvati.txt con il perché.
   iniziali della struttura. A 1366×657 il menu scorre per conto suo; voci da 40 px.
 - Le righe piccole delle tendine di oggi diventano il title delle linguette, in tutte le aree (anche Ambulatori).
 - Le linguette stanno sotto l'h1 della pagina (blocco linguette nella testa della pagina), come nelle tavole.
+  Rinvio (revisione della tappa 2): nella tappa 2 stanno ancora in cima al contenuto, sopra l'h1 (blocco «linguette» di
+  base.html), perché le teste delle pagine sono quelle di oggi; vanno sotto l'h1 nelle tappe 4-9, area per area, con la
+  testa nuova. Da dire a Giovanni, che può chiederle sotto l'h1 già prima.
 - Logo della struttura: nel menu; quello della pagina si nasconde a schermo e resta in stampa.
 - Messaggi in basso: gli errori restano finché si chiudono; gli «ok» spariscono dopo 6 secondi (restano nella zona per
   i lettori di schermo fino al cambio pagina).

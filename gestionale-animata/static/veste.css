@@ -428,13 +428,32 @@ table.v-tabella td small, table.v-tabella .v-testo-piccolo { display: block; }
   .v-linguette-cornice .v-linguetta:focus-visible { outline: 2px solid var(--v-fuoco); outline-offset: 2px; }
 }
 
+/* dai 600 px in su la barra in alto resta su una riga: fra 683 e 760 px il posto della campanella andava a capo da solo
+   e la barra diventava alta 118 px (una riga vuota tolta all'agenda); il percorso va a capo dentro il suo spazio */
+@media screen and (min-width: 600px) {
+  .v-barra { flex-wrap: nowrap; }
+}
+
+/* i Turni (mese e settimana): il riquadro che scorre è alto «la finestra meno 230 px» (stile.css), pensato per il menu
+   in alto di 35 px; nella cornice comincia 89 px più in basso (la barra in alto, e la testa della pagina più stretta
+   che va a capo) e finiva 70 px sotto il bordo della finestra, con la sua barra di scorrimento di lato. Sotto 761 px
+   stile.css lo lascia alto quanto vuole: lì niente. Le colonne, che a 1366 accanto al menu non entrano tutte, le
+   sistema la tappa 7 (DECISIONI-VESTE.md, Turni) */
+@media screen and (min-width: 761px) {
+  .v-cornice .scorri-turni { max-height: calc(100vh - 320px); }
+}
+
 /* sotto 1200 px: solo le icone, il nome per i lettori di schermo e nel title; le iniziali al posto del logo */
 @media screen and (max-width: 1199px) {
   .v-cornice { grid-template-columns: 72px minmax(0, 1fr); }
   .v-cornice ~ .giro-invito { left: calc(72px + var(--v-spazio-6)); }
   .v-lato { padding: var(--v-spazio-6) var(--v-spazio-5); }
-  .v-marchio { align-items: center; padding: 0 0 var(--v-spazio-4); }
-  .v-marchio > * { display: none; }
+  .v-marchio { position: relative; align-items: center; padding: 0 0 var(--v-spazio-4); }
+  .v-marchio > img { display: none; }
+  /* il nome della struttura non si vede (ci sono le iniziali) ma resta per i lettori di schermo */
+  .v-marchio > span {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
   .v-marchio::before {
     content: attr(data-iniziali);
     display: flex; align-items: center; justify-content: center;

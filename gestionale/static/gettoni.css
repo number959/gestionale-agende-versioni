@@ -43,7 +43,10 @@
   --v-primario-chiaro: var(--primario-bordo);    /* bordo delle cose scelte (tavola #BCCCEC) */
   --v-primario-testo: var(--primario-testo);     /* il primario come testo: almeno 4,5:1 sulla tinta e sui fondi */
   --v-collegamento: var(--v-primario-testo);     /* collegamenti (tavola: il blu principale) */
-  --v-fuoco: var(--primario-fuoco);              /* contorno del pezzo con il fuoco della tastiera */
+  /* contorno del pezzo con il fuoco della tastiera: il primario come testo, che si legge (4,5:1) sulla tinta e sui fondi
+     con ogni colore della struttura; --primario-fuoco di oggi (il colore con un quarto di bianco) con un verde o un
+     azzurro scendeva sotto 3:1 sul fondo del menu. In scuro segue --v-primario-testo scuro */
+  --v-fuoco: var(--v-primario-testo);
 
   /* ---- stati. Dalla tavola approvata (Nefro-Colori); tre cambiano aspetto rispetto alle pagine di oggi, e si vedono
      nelle foto del catalogo: Non presentato (oggi marrone #9C4A1A, nella tavola rosso), Confermato (oggi verde #2E7D32,

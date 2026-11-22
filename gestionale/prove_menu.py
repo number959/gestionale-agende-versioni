@@ -14,6 +14,13 @@ voce accesa in cima al contenuto. Qui:
   LEGGIMI.md, storico dei difetti), e ogni collegamento disegnato è una voce di menu.py; nel disegno, anche senza
   menu.py, ogni collegamento della cornice porta la struttura, tranne quelli di SENZA_STRUTTURA (come nel menu di prima);
 - i tasti G, E, C e D: il primo [data-tasto] della pagina (quello che gestionale.js clicca) porta dove deve;
+- il percorso della barra in alto: il nome della struttura della pagina (non per Pazienti, Configura e Aiuto), la voce
+  accesa e la linguetta della pagina, letti dal disegno e dal database, non da menu.percorso;
+- ogni linguetta che nel menu di prima aveva una riga piccola la porta nel title;
+- le linguette accese per pagina («pagine», come serviranno alla Cassa nella tappa 6) e le condizioni anche su
+  linguette e collegamenti nascosti; registra_voce rifiuta una voce senza icona o con un'icona che non c'è;
+- il lanciatore (strumenti/confronta_rami.py) vede gli indirizzi della cornice di ogni pagina anche per le voci che
+  hanno cambiato nome, e una seconda voce accesa (le sue regole approvate non la coprono);
 - le parole, gli indirizzi, i tasti e i data-guida delle voci sono quelli del menu di prima: l'oracolo è il menu del
   ramo principale, prove_menu_principale.html, una copia ferma del suo templates/_menu.html (byte per byte; se git e il
   ramo ci sono, la prova lo controlla), disegnato sulla stessa pagina e confrontato voce per voce. Le sole parole nuove
@@ -30,6 +37,7 @@ import subprocess
 import sys
 import tempfile
 from datetime import date, timedelta
+from html import unescape
 from html.parser import HTMLParser
 from urllib.parse import parse_qsl, urlsplit
 
@@ -42,7 +50,10 @@ import flask  # noqa: E402
 import seed  # noqa: E402
 import app as A  # noqa: E402
 import menu as M  # noqa: E402
-from modelli import Appunto, Risorsa  # noqa: E402
+from modelli import Appunto, Risorsa, Struttura  # noqa: E402
+
+sys.path.append(os.path.join(CARTELLA, 'strumenti'))
+import confronta_rami as CR  # noqa: E402
 
 A.app.config['TESTING'] = True
 A.Sessione = seed.popola('sqlite:///' + os.path.join(PROVVISORIA, 'prove.db'))
@@ -62,6 +73,17 @@ PAROLE_NUOVE = {
 # l'unica voce che si accende in un altro posto: l'Elenco del giorno oggi accende la tendina Segreteria, nella veste
 # nuova la voce Agenda (tavola Nefro-Agenda4, «Agenda › Elenco»; ricognizione della cornice)
 ACCESA_ALTROVE = {'elenco': ('Segreteria', 'agenda')}
+# come il menu di prima (in alto, con le tendine) disegnava le voci di menu.py (scritto qui, non in menu.py: serve solo
+# a questo confronto): le linguette dell'Agenda stavano in fila nel menu (Giorno, Settimana, Mese); una voce con
+# linguette (Ambulatori, Segreteria, Configura) o con una tendina (Aiuto) era una tendina; le altre un collegamento.
+# La linguetta Elenco dell'Agenda lì non c'era (stava nella tendina Segreteria come «Elenco del giorno»)
+IN_FILA = {'agenda'}
+NON_NEL_MENU_DI_PRIMA = {('agenda', 'Elenco')}
+
+
+def come_era(v):
+    """Come il menu di prima disegnava la voce v (fatta da menu.costruisci): 'in_fila', 'tendina' o 'voce'."""
+    return 'in_fila' if v['chiave'] in IN_FILA else 'tendina' if v['linguette'] or v['tendina'] else 'voce'
 
 OGGI = date.today()
 ALTRO = OGGI + timedelta(days=9)                    # un giorno che non è oggi (e nemmeno di questa settimana)
@@ -229,6 +251,7 @@ def leggi_cornice(testo):
 
 # ---------------------------------------------------------------- le pagine
 CONTESTO = {}
+FINALI = {}                                 # indirizzo chiesto -> percorso della pagina dove si arriva
 
 
 @flask.template_rendered.connect_via(A.app)
@@ -241,8 +264,10 @@ def apri(url):
     CONTESTO.clear()
     with C:
         r = C.get(url, follow_redirects=True)
+        FINALI[url] = r.request.path        # dove si arriva, dopo i rimandi: per il percorso della barra
         testo = r.get_data(as_text=True) if 'text/html' in (r.content_type or '') else ''
-        menu = getattr(flask.g, 'menu_della_pagina', None)
+        fatti = getattr(flask.g, 'menu_fatti', None) or {}     # i menu fatti da menu_della_pagina: l'ultimo è della pagina
+        menu = list(fatti.values())[-1] if fatti else None
         principale = None
         if menu is not None and 'ultimo' in CONTESTO:
             with open(PRINCIPALE, encoding='utf-8') as f:
@@ -365,22 +390,32 @@ def m_registra_voce():
                 ('Prima', '/statistiche?struttura=2', 'page')], letto.linguette
             assert disegno.index('Modulo di prova') < disegno.index('data-guida="menu-aiuto"')
             assert accese_nel_disegno(disegno) == (['Modulo di prova'], ['Prima']), accese_nel_disegno(disegno)
-        # e rifiuta quello che romperebbe il menu: una sezione, una chiave, un tasto già presi, un gruppo sconosciuto
-        rifiutati = 0
-        for argomenti in (dict(gruppo='aree', chiave='doppia', endpoint='viste.statistiche', parola='x', sezioni={'cassa'}),
-                          dict(gruppo='aree', chiave='oggi', endpoint='viste.statistiche', parola='x'),
-                          dict(gruppo='aree', chiave='col-tasto', endpoint='viste.statistiche', parola='x', tasto='g'),
-                          dict(gruppo='altrove', chiave='fuori', endpoint='viste.statistiche', parola='x'),
-                          dict(gruppo='aree', chiave='dopo', endpoint='viste.statistiche', parola='x', dopo='oggi')):
+        # e rifiuta quello che romperebbe il menu: una sezione, una chiave, un tasto già presi, un gruppo sconosciuto, un
+        # «dopo» di un altro gruppo, una voce senza icona o con un'icona che non c'è (nel menu stretto resterebbe un
+        # quadrato vuoto); ognuna per il suo motivo (l'icona c'è in tutte le altre)
+        rifiutati = []
+        for argomenti, motivo in (
+                (dict(gruppo='aree', chiave='doppia', endpoint='viste.statistiche', parola='x', sezioni={'cassa'}), 'sezioni già'),
+                (dict(gruppo='aree', chiave='oggi', endpoint='viste.statistiche', parola='x'), 'voce già'),
+                (dict(gruppo='aree', chiave='col-tasto', endpoint='viste.statistiche', parola='x', tasto='g'), 'tasto già'),
+                (dict(gruppo='altrove', chiave='fuori', endpoint='viste.statistiche', parola='x'), 'gruppo sconosciuto'),
+                (dict(gruppo='aree', chiave='dopo', endpoint='viste.statistiche', parola='x', dopo='oggi'), '«dopo»'),
+                (dict(gruppo='aree', chiave='senza-icona', endpoint='viste.statistiche', parola='x', icona=None), 'vuole la sua icona'),
+                (dict(gruppo='aree', chiave='icona-finta', endpoint='viste.statistiche', parola='x', icona='calendario-finto'),
+                 'non c\'è in templates/_icone.html')):
+            argomenti.setdefault('icona', 'users')
             try:
                 M.registra_voce(**argomenti)
-            except ValueError:
-                rifiutati += 1
+            except ValueError as e:
+                if motivo in str(e):
+                    rifiutati.append(motivo)
         try:
             M.registra_linguetta('prova-modulo', 'viste.statistiche', 'Altrove', sezioni={'cassa'})
-        except ValueError:
-            rifiutati += 1                  # una linguetta accesa dove la sua voce è spenta
-        assert rifiutati == 6, rifiutati
+        except ValueError as e:
+            if 'si accende solo nelle pagine della sua voce' in str(e):
+                rifiutati.append('fuori dalla voce')        # una linguetta accesa dove la sua voce è spenta
+        assert len(rifiutati) == 8, rifiutati
+        assert M.ICONE and 'users' in M.ICONE, 'le icone di _icone.html non sono state lette (menu.collega)'
     finally:
         M.VOCI[:] = prima[0]
         M.LINGUETTE.clear()
@@ -612,14 +647,15 @@ def differenze(principale, menu):
             continue
         if t['guida'] != v['guida']:
             diff.append('tendina «%s»: data-guida %s, in menu.py %s' % (t['parola'], t['guida'], v['guida']))
-        dentro = [(x['url'], str(x['parola'])) for x in v['linguette'] if x['oggi']] + \
+        dentro = [(x['url'], str(x['parola'])) for x in v['linguette']
+                  if (v['chiave'], str(x['parola'])) not in NON_NEL_MENU_DI_PRIMA] + \
                  [(x['url'], str(x['parola'])) for x in v['tendina']]
         if [(a['href'], a['parola']) for a in t['voci']] != dentro:
             diff.append('tendina «%s»: %s, in menu.py %s' % (t['parola'], [a['parola'] for a in t['voci']], [p for _, p in dentro]))
     tendine = {t['parola']: t for t in vecchio.tendine}
     for tipo, chiave, x in cose:
         chi = x['url'] if x['url'] != '#' else '#' + (x.get('azione_guida') or '')
-        if tipo == 'voce' and x['oggi'] == 'tendina':
+        if tipo == 'voce' and come_era(x) == 'tendina':
             # oggi è una tendina (Ambulatori, Segreteria, Configura, Aiuto): la parola è quella del suo pulsante e la
             # voce porta a una delle sue pagine (la prima: ricognizione della cornice)
             t = tendine.get(str(x['parola']))
@@ -757,6 +793,213 @@ def m_tasti():
     return '%d pagine: G, E, C e D portano dove devono' % len(VISTE)
 
 
+# ---------------------------------------------------------------- 5. il percorso della barra in alto
+# le voci che nel percorso non hanno la struttura, come nelle tavole (scritte qui, non prese da menu.py)
+SENZA_STRUTTURA_NEL_PERCORSO = {'Pazienti', 'Configura', 'Aiuto'}
+
+
+def percorso_disegnato(testo):
+    """I pezzi del percorso della barra in alto (<p class="v-percorso"><span>…</span>…), None se non c'è."""
+    m = re.search(r'<p class="v-percorso">(.*?)</p>', testo, re.S)
+    if not m:
+        return None
+    return [' '.join(unescape(re.sub(r'<[^>]+>', '', x)).split()) for x in re.findall(r'<span>(.*?)</span>', m.group(1), re.S)]
+
+
+def nome_della_struttura(url):
+    """Il nome della struttura di una pagina, dal database: quella dell'indirizzo (?struttura=), se c'è ed è attiva,
+    altrimenti la prima attiva (come comune.struttura_scelta)."""
+    s = A.Sessione()
+    try:
+        attive = s.query(Struttura).filter(Struttura.attiva == True).order_by(Struttura.id).all()  # noqa: E712
+        sid = dict(parse_qsl(urlsplit(url).query)).get('struttura')
+        return next((x.nome for x in attive if str(x.id) == sid), attive[0].nome)
+    finally:
+        s.close()
+
+
+def percorso_atteso(url, testo, finale):
+    """Il percorso che la pagina deve avere, senza menu.percorso: [struttura della pagina (non per Pazienti, Configura,
+    Aiuto), la voce accesa disegnata, la linguetta accesa disegnata se porta proprio a questa pagina]."""
+    c = leggi_cornice(testo)
+    voci = [x['parola'] for x in c.voci if x['corrente'] == 'page'] + [t['parola'] for t in c.tendine if t['corrente'] == 'true']
+    if len(voci) != 1:
+        return None
+    pezzi = ([] if voci[0] in SENZA_STRUTTURA_NEL_PERCORSO else [nome_della_struttura(url)]) + voci
+    return pezzi + [x['parola'] for x in c.linguette if x['corrente'] == 'page' and urlsplit(x['href']).path == finale]
+
+
+def problemi_percorso(url, testo, finale):
+    atteso, disegnato = percorso_atteso(url, testo, finale), percorso_disegnato(testo)
+    return [] if atteso and disegnato == atteso else ['%s: percorso %s, atteso %s' % (url, disegnato, atteso)]
+
+
+def m_percorso():
+    if not VISTE:
+        m_una_voce_sola()
+    problemi, lunghi = [], 0
+    for url, (testo, menu, _) in sorted(VISTE.items()):
+        problemi += problemi_percorso(url, testo, FINALI[url])
+        lunghi += len(percorso_disegnato(testo) or ()) == 3
+    assert not problemi, problemi[:6]
+    # la prova non passa da sola: ci sono pagine della seconda struttura con tre pezzi, e Pazienti senza la struttura
+    seconda = nome_della_struttura('/?struttura=2')
+    url = '/chiusura/%s?struttura=2' % D
+    testo = VISTE[url][0]
+    assert percorso_disegnato(testo) == [seconda, 'Segreteria', 'Chiusura della giornata'], percorso_disegnato(testo)
+    assert percorso_disegnato(VISTE['/pazienti'][0]) == ['Pazienti'], percorso_disegnato(VISTE['/pazienti'][0])
+    # gemelli: la struttura sbagliata (la prima al posto della seconda: il percorso diceva la struttura della prima
+    # pagina, non quella della pagina), la linguetta che manca, la struttura su Pazienti si vedono
+    prima = nome_della_struttura('/')
+    assert prima != seconda
+    sbagliata = testo.replace('<p class="v-percorso"><span>%s</span>' % seconda, '<p class="v-percorso"><span>%s</span>' % prima, 1)
+    assert sbagliata != testo and problemi_percorso(url, sbagliata, FINALI[url]), 'la struttura sbagliata nel percorso passa'
+    corto = re.sub(r'<span>Chiusura della giornata</span></p>', '</p>', testo, count=1)
+    assert corto != testo and problemi_percorso(url, corto, FINALI[url]), 'il percorso senza la linguetta passa'
+    p = VISTE['/pazienti'][0]
+    con = p.replace('<p class="v-percorso"><span>Pazienti</span>', '<p class="v-percorso"><span>%s</span><span>Pazienti</span>' % prima, 1)
+    assert con != p and problemi_percorso('/pazienti', con, FINALI['/pazienti']), 'la struttura su Pazienti passa'
+    return '%d pagine, %d con struttura › voce › linguetta' % (len(VISTE), lunghi)
+
+
+# ---------------------------------------------------------------- 6. il title delle linguette
+def problemi_titoli(testo, principale):
+    """Ogni linguetta disegnata che nel menu di prima aveva una riga piccola (stesso indirizzo) la porta nel title."""
+    righe = {a['href']: ' '.join(a['sotto'].split()) for a in leggi_menu(principale).collegamenti if a['sotto']}
+    return ['«%s» %s: title %r, nel menu di prima «%s»' % (x['parola'], x['href'], x['titolo'], righe[x['href']])
+            for x in leggi_cornice(testo).linguette
+            if x['href'] in righe and ' '.join((x['titolo'] or '').split()) != righe[x['href']]]
+
+
+def m_titoli():
+    if not VISTE:
+        m_una_voce_sola()
+    problemi, viste = [], 0
+    for url, (testo, _, principale) in sorted(VISTE.items()):
+        problemi += ['%s: %s' % (url, p) for p in problemi_titoli(testo, principale)]
+        viste += len(leggi_cornice(testo).linguette)
+    assert not problemi, problemi[:6]
+    # gemello: la linguetta Elenco dell'Agenda senza il title (com'era) si vede
+    testo, _, principale = VISTE['/giorno/%s?struttura=2' % D]
+    senza = re.sub(r'(<a class="v-linguetta" href="/giorno/[^"]*/elenco[^"]*")[^>]*>', r'\1>', testo, count=1)
+    assert senza != testo and problemi_titoli(senza, principale), 'una linguetta senza il title passa'
+    return '%d linguette guardate' % viste
+
+
+# ---------------------------------------------------------------- 7. linguette per pagina, condizioni
+def m_linguette_e_condizioni():
+    """Le linguette che si accendono per pagina (request.endpoint), dentro la stessa sezione, come serviranno alla
+    Cassa (tappa 6); le condizioni anche su linguette e collegamenti nascosti (un modulo spento toglie anche loro)."""
+    prima = (list(M.VOCI), copy.deepcopy(M.LINGUETTE), list(M.NASCOSTI))
+    acceso = {'si': False}
+    try:
+        M.registra_voce('aree', 'prova-pagine', 'viste.statistiche', 'Pagine di prova', ('struttura',), icona='euro',
+                        sezioni={'prova-pagine'})
+        M.registra_linguetta('prova-pagine', 'viste.statistiche', 'Una', ('struttura',), sezioni={'prova-pagine'},
+                             pagine={'viste.statistiche'}, etichetta='Pagine di prova')
+        M.registra_linguetta('prova-pagine', 'viste.conferme', 'Due', ('struttura',), sezioni={'prova-pagine'},
+                             pagine={'viste.conferme', 'segreteria.chiusura'})
+        M.registra_linguetta('prova-pagine', 'viste.mese', 'Del modulo', ('mese', 'struttura'), sezioni={'prova-pagine'},
+                             pagine={'viste.mese'}, condizione=lambda: acceso['si'])
+        M.NASCOSTI.append(dict(endpoint='viste.statistiche', argomenti=('struttura',), parola='Nascosto di prova', tasto='x',
+                               condizione=lambda: acceso['si']))
+        # due linguette che si pestano: senza pagine sulla stessa sezione, o con una pagina in comune
+        rifiutate = 0
+        for pagine in ((), {'viste.conferme'}):
+            try:
+                M.registra_linguetta('prova-pagine', 'viste.settimana', 'Tre', sezioni={'prova-pagine'}, pagine=pagine)
+            except ValueError as e:
+                rifiutate += 'sezioni già' in str(e)
+        assert rifiutate == 2, rifiutate
+        accese = {}
+        for endpoint, indirizzo in (('viste.statistiche', '/statistiche'), ('viste.conferme', '/conferme'),
+                                    ('segreteria.chiusura', '/chiusura'), ('viste.mese', '/mese/2026-11')):
+            with A.app.test_request_context(indirizzo + '?struttura=2'):
+                m = M.costruisci('prova-pagine', 2, D, endpoint=endpoint)
+                accese[endpoint] = [str(x['parola']) for x in m['linguette'] if x['accesa']]
+                # e la cornice disegna la stessa linguetta accesa (l'endpoint arriva da request.endpoint)
+                funzioni = dict(sezione='prova-pagine', sid=2, data_menu=D, oggi_iso=OGGI.isoformat(),
+                                ci_sono_sale=lambda: True, n_da_confermare=lambda: 0, marchio_di=A.marchio_di)
+                if flask.request.endpoint == endpoint:
+                    disegno = A.app.jinja_env.get_template('_linguette.html').render(**funzioni)
+                    assert accese_nel_disegno(disegno)[1] == accese[endpoint], (endpoint, accese_nel_disegno(disegno))
+                pezzi = M.percorso(m, endpoint, 'Struttura')
+                assert pezzi == ['Struttura', 'Pagine di prova'] + accese[endpoint], (endpoint, pezzi)
+        assert accese == {'viste.statistiche': ['Una'], 'viste.conferme': ['Due'], 'segreteria.chiusura': ['Due'],
+                          'viste.mese': []}, accese
+        # le condizioni: spenta, la linguetta del modulo e il collegamento nascosto (con il suo tasto) non ci sono, né
+        # nell'elenco né nel disegno; accesa, ci sono, e la linguetta si accende nella sua pagina
+        funzioni = dict(sezione='prova-pagine', sid=2, data_menu=D, oggi_iso=OGGI.isoformat(),
+                        ci_sono_sale=lambda: True, n_da_confermare=lambda: 0, marchio_di=A.marchio_di)
+        with A.app.test_request_context('/mese/%s?struttura=2' % D[:7]):
+            for si in (False, True):
+                acceso['si'] = si
+                flask.g.pop('menu_fatti', None)
+                m = M.costruisci('prova-pagine', 2, D, endpoint='viste.mese')
+                v = next(v for v in m['voci'] if v['chiave'] == 'prova-pagine')
+                disegno = ''.join(A.app.jinja_env.get_template(n).render(**funzioni) for n in ('_menu.html', '_linguette.html'))
+                c = leggi_cornice(disegno)
+                ci_sono = ('Del modulo' in [str(x['parola']) for x in v['linguette']],
+                           'Nascosto di prova' in [str(x['parola']) for x in m['nascosti']],
+                           'Del modulo' in [x['parola'] for x in c.linguette], c.primi_tasti.get('x') is not None)
+                assert ci_sono == (si,) * 4, (si, ci_sono)
+                assert accese_nel_disegno(disegno)[1] == (['Del modulo'] if si else []), accese_nel_disegno(disegno)
+    finally:
+        M.VOCI[:] = prima[0]
+        M.LINGUETTE.clear()
+        M.LINGUETTE.update(prima[1])
+        M.NASCOSTI[:] = prima[2]
+    assert 'prova-pagine' not in [v['chiave'] for v in M.VOCI] and 'prova-pagine' not in M.LINGUETTE
+    assert not [x for x in M.NASCOSTI if x['parola'] == 'Nascosto di prova']
+
+
+# ---------------------------------------------------------------- 8. il lanciatore vede la cornice di ogni pagina
+def cornici_del_lanciatore(testo, principale):
+    """(cornice del principale, cornice di qui) di una pagina come le legge strumenti/confronta_rami.py: qui la pagina
+    disegnata, nel principale il suo menu (prove_menu_principale.html) disegnato sulla stessa pagina."""
+    html_ = {'Content-Type': 'text/html; charset=utf-8'}
+    prima = CR.riassunto(200, html_, ('<!doctype html><html><body>%s</body></html>' % principale).encode('utf-8'), True)[2]
+    qui = CR.riassunto(200, html_, testo.encode('utf-8'), True)[2]
+    return prima, qui
+
+
+def problemi_del_lanciatore(pagine):
+    """Le differenze che confronta_cornice trova pagina per pagina (gli indirizzi per forma, le voci accese con le
+    regole approvate, la voce accesa sola), su [(indirizzo, testo, principale)]."""
+    regole = CR.leggi_approvati(os.path.join(CARTELLA, 'strumenti', 'cambiamenti_approvati.txt'))
+    vuoto = {k: set() for k in CR.CATALOGO}
+    righe, n, _, _ = CR.confronta_cornice({'principale': vuoto, 'qui': vuoto},
+                                          [(u,) + cornici_del_lanciatore(t, p) for u, t, p in pagine], regole)
+    assert len(righe) == (n + 1 if n else 0), righe
+    return righe[1:]
+
+
+def m_lanciatore():
+    if not VISTE:
+        m_una_voce_sola()
+    pagine = [(u, VISTE[u][0], VISTE[u][2]) for u in PAGINE_SECONDA + ['/conferme', '/pazienti', '/anagrafiche', '/statistiche']]
+    problemi = problemi_del_lanciatore(pagine)
+    assert not problemi, problemi[:4]
+    # il gemello M1 della revisione: le linguette che venivano dalle tendine (qui quelle della Segreteria) portano alla
+    # struttura 1 da una pagina della seconda. Per voce (parola → forma) non si vedeva: nel principale la parola ha la
+    # riga piccola («Lista d'attesa chi vuole un posto prima»), qui no
+    url = '/chiusura/%s?struttura=2' % D
+    testo, _, principale = VISTE[url]
+    i = testo.index('data-cornice="linguette"')
+    guasto = testo[:i] + testo[i:].replace('?struttura=2', '?struttura=1', 3)
+    trovati = problemi_del_lanciatore([(url, guasto, principale)])
+    assert any('/attesa?struttura' in x or '/conferme?struttura' in x or '/da-confermare?struttura' in x for x in trovati), trovati
+    # l'Agenda (era Giorno) che torna a oggi, vista da una pagina della Segreteria dove l'Agenda non ha linguette
+    oggi = testo.replace('href="/giorno/%s?struttura=2" class="v-voce"' % D, 'href="/giorno/%s?struttura=2" class="v-voce"' % OGGI, 1)
+    assert oggi != testo and any('/giorno/N-N-N?struttura' in x for x in problemi_del_lanciatore([(url, oggi, principale)]))
+    # il gemello M3: una seconda voce accesa (Agenda anche su Pazienti) passerebbe con la regola «aggiunto accese@cornice
+    # menu «Agenda»»: il controllo fisso la vede
+    t, _, pr = VISTE['/pazienti']
+    due = re.sub(r'(<a data-tasto="g" href="[^"]*" class="v-voce" title="Agenda")', r'\1 aria-current="page"', t, count=1)
+    assert due != t and any('voci accese qui: 2' in x for x in problemi_del_lanciatore([('/pazienti', due, pr)]))
+    return '%d pagine: indirizzi della cornice per forma e una voce accesa sola, come li vede il lanciatore' % len(pagine)
+
+
 prova('ogni voce, linguetta e collegamento si costruisce con url_for', m_url_for)
 prova('ogni voce del menu ha un\'icona che c\'è in _icone.html', m_icone)
 prova('registra_voce: una voce di un modulo, con condizione e linguette; i doppioni rifiutati', m_registra_voce)
@@ -764,6 +1007,10 @@ prova('ogni pagina senza parametri accende una voce sola e, se ha le linguette, 
 prova('dalla seconda struttura, in un giorno che non è oggi, tutto porta struttura e giorno', m_struttura_e_giorno)
 prova('i tasti G, E, C e D portano alla pagina giusta', m_tasti)
 prova('parole, indirizzi, tasti e guide come nel menu del ramo principale, voce per voce', m_come_oggi)
+prova('il percorso della barra in alto: struttura della pagina, voce e linguetta', m_percorso)
+prova('le linguette portano nel title la riga piccola del menu di prima', m_titoli)
+prova('linguette accese per pagina; condizioni anche su linguette e collegamenti nascosti', m_linguette_e_condizioni)
+prova('il lanciatore vede gli indirizzi della cornice per forma e una seconda voce accesa', m_lanciatore)
 
 shutil.rmtree(PROVVISORIA, ignore_errors=True)
 for stato, nome, nota in esiti:

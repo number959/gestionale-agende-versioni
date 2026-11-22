@@ -111,6 +111,34 @@ def gemello_contrasti():
     assert 'testo-tenue' in a and 'primario-premuto' in b and 'segno-grigio' in c, (a, b, c)
 
 
+def controlla_contorni(gettoni, coppie=L.COPPIE_CONTORNO, colori=None):
+    """Il contorno del fuoco della tastiera: almeno 3:1 sui fondi dove sta, in chiaro e in scuro, per ogni colore."""
+    male, minimo = [], (99, '')
+    for colore in colori or COLORI:
+        for tema in ('chiaro', 'scuro'):
+            for testo, fondo, dove_, x in L.contrasti(colore, tema, coppie, gettoni=gettoni, tema_scuro=TEMA_SCURO, base=BASE):
+                if x is None or x < 3:
+                    male.append('%s su %s in %s con %s (%s): %s' % (testo, fondo, tema, colore, dove_, x and '%.2f' % x))
+                elif x < minimo[0]:
+                    minimo = (x, '%s su %s in %s con %s' % (testo, fondo, tema, colore))
+    assert not male, '%d contorni sotto 3:1: %s' % (len(male), sorted(set(male))[:6])
+    return minimo
+
+
+def g_contorni():
+    x, dove_ = controlla_contorni(GETTONI)
+    return '%d coppie × %d colori × 2 temi; il più basso %.2f (%s)' % (len(L.COPPIE_CONTORNO), len(COLORI), x, dove_)
+
+
+def gemello_contorni():
+    # il contorno di prima (il colore della struttura con un quarto di bianco): con il verde #2E7D32 sotto 3:1
+    prima = cambia(GETTONI, '--v-fuoco: var(--v-primario-testo);', '--v-fuoco: var(--primario-fuoco);')
+    a = cade(controlla_contorni, prima, L.COPPIE_CONTORNO, ['#2E7D32'])
+    assert 'fuoco su' in a and '#2E7D32' in a and 'in chiaro' in a, a
+    # con il blu di oggi il contorno di prima bastava: il controllo non cade per il colore predefinito
+    controlla_contorni(prima, L.COPPIE_CONTORNO, ['#154381'])
+
+
 # ================================================================ gettoni: il valore scuro
 def controlla_scuro(gettoni):
     css = L.senza_commenti(gettoni)
@@ -259,13 +287,14 @@ def gemello_strato():
 
 # ================================================================ prefisso: i nomi nuovi non pestano quelli vecchi
 TENUTE = {'primario', 'gruppo-comandi', 'apri-gruppo', 'tendina', 'aperto', 'numeri', 'allarme'}   # agganci del JavaScript di oggi
-# dalla tappa 2: due classi delle pagine di oggi che la cornice nasconde o sposta, solo dentro la cornice (in un selettore
-# che comincia da un pezzo v-, «.v-cornice .marchio»): il logo della pagina (c'è già nel menu; resta in stampa) e
-# «Prima volta qui?» della guida, che in basso a sinistra coprirebbe Aiuto e Configura
-DALLA_CORNICE = {'marchio', 'giro-invito'}
+# dalla tappa 2: tre classi delle pagine di oggi che la cornice nasconde, sposta o accorcia, solo dentro la cornice (in
+# un selettore che comincia da un pezzo v-, «.v-cornice .marchio»): il logo della pagina (c'è già nel menu; resta in
+# stampa), «Prima volta qui?» della guida, che in basso a sinistra coprirebbe Aiuto e Configura, e il riquadro dei
+# Turni, alto quanto la finestra meno il menu in alto di prima (sotto la barra nuova finiva oltre il bordo)
+DALLA_CORNICE = {'marchio', 'giro-invito', 'scorri-turni'}
 NUOVI = {'veste.css', 'gettoni.css', '_pezzi.html',
          '_menu.html', '_barra.html', '_linguette.html'}        # dalla tappa 2 i modelli della cornice, fatti con i pezzi v-
-CORNICE = ('_menu.html', '_barra.html', '_linguette.html')
+CORNICE = ('_menu.html', '_barra.html', '_linguette.html', '_notifiche.html')
 
 
 def classi_vecchie():
@@ -558,6 +587,8 @@ def gemello_risorse():
 
 prova('gettoni: contrasto almeno 4,5:1 di ogni coppia testo/fondo, in chiaro e in scuro, per ogni colore della struttura', g_contrasti)
 prova('gemello: un testo chiaro, il premuto schiarito in scuro e un colore senza coppia fanno cadere i contrasti', gemello_contrasti)
+prova('gettoni: il contorno del fuoco della tastiera almeno 3:1 sui fondi del menu e delle linguette, per ogni colore', g_contorni)
+prova('gemello: il contorno di prima (il colore con un quarto di bianco) con un verde scende sotto 3:1', gemello_contorni)
 prova('gettoni: ogni colore ha il suo valore scuro, solo a schermo', g_scuro)
 prova('gemello: un valore scuro tolto, il tema scuro anche in stampa', gemello_scuro)
 prova('nessun colore scritto a mano nei file nuovi (veste.css, _pezzi.html, catalogo, testa di base.html)', g_colori)

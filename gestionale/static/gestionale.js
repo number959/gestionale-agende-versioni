@@ -771,3 +771,15 @@
     if (!e.target.closest || !e.target.closest('.menu .gruppo, .gruppo-comandi')) { chiudiTutti(); }
   });
 })();
+
+// la voce accesa del menu sempre in vista (dalla tappa 2): a 1366x657 il menu a sinistra non ci sta e la parte delle
+// voci scorre per conto suo; ogni pagina la apre dall'inizio, e Cassa e Statistiche starebbero sotto il bordo, con la
+// voce della pagina aperta nascosta. Si muove solo la parte delle voci, mai la pagina
+(function () {
+  var parte = document.querySelector('.v-menu-scorre');
+  var voce = parte && parte.querySelector('[aria-current]');
+  if (!voce) { return; }
+  var v = voce.getBoundingClientRect(), p = parte.getBoundingClientRect();
+  if (v.bottom > p.bottom) { parte.scrollTop += v.bottom - p.bottom + 8; }
+  else if (v.top < p.top) { parte.scrollTop -= p.top - v.top + 8; }
+})();

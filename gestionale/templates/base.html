@@ -50,8 +50,10 @@
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='icona.png') }}">
 </head>
 <body{% block classe_body %}{% endblock %} data-pagina="{{ request.endpoint or '' }}" data-aiuto="{{ url_for('guida.indice') }}" data-guide="{{ guide_della_pagina() if guide_della_pagina is defined else '[]' }}">
-{#- La cornice (dalla tappa 2 della base): il menu a sinistra (_menu.html, con le notifiche e i tasti rapidi), la barra in
-    alto (_barra.html) e le linguette in cima al contenuto (_linguette.html), in una griglia (.v-cornice, veste.css).
+{#- La cornice (dalla tappa 2 della base): il menu a sinistra (_menu.html), la barra in alto (_barra.html), le linguette
+    in cima al contenuto (_linguette.html) e, dopo la pagina, le notifiche e i tasti rapidi di prima (_notifiche.html:
+    dopo, perché il tasto Tab passi dal menu alla ricerca, alle linguette e alla pagina, e solo poi alle notifiche), in
+    una griglia (.v-cornice, veste.css).
     Le 11 pagine senza menu (i fogli da stampare, la dashboard nel modo schermo) svuotano solo il blocco «menu», come
     prima: qui il blocco si legge una volta (self.menu(), scritto prima dentro un «if false» perché non esca due volte)
     e la cornice intera c'è solo se il menu non è vuoto. Una pagina può svuotare anche «barra» e «linguette» (per
@@ -80,6 +82,7 @@
 {% block corpo %}{% endblock %}
 </main>
 {%- if _menu %}
+{% include "_notifiche.html" %}
 </div>
 {%- endif %}
 {% include "_popup_aggiornamento.html" %}

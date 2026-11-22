@@ -23,7 +23,9 @@ una volta (l'ora può scattare fra le due richieste). Nessuna richiesta che camb
 La cornice (menu, barra in alto, linguette, campanella, zona dei messaggi, tasti rapidi) sta fuori dal confronto di
 ogni pagina e si confronta una volta a parte (confronta_cornice): le voci di ogni tipo (parola, forma
 dell'indirizzo, data-tasto, data-guida), i segni e il testo, su ogni pagina quali tipi ci sono e quale voce è
-accesa, e gli indirizzi interi delle voci (struttura e giorno della pagina). Nella veste nuova la cornice sta nei
+accesa, e gli indirizzi interi delle voci, per forma (struttura, giorno, data e mese della pagina, anche per le voci
+che hanno cambiato nome); in più, qui, su ogni pagina con il menu una voce sola accesa e al più una linguetta, senza
+regole che lo possano approvare. Nella veste nuova la cornice sta nei
 contenitori con data-cornice="<tipo>"; nel programma di oggi, che data-cornice non lo ha, sono nav.menu,
 #notifiche, #aiuto-tasti e .avvisi (CORNICE_DI_OGGI).
 
@@ -332,7 +334,7 @@ def riassunto(stato, intestazioni, corpo, con_testo, dati='', con_ordine=False):
         c = p.cornice
         cornice = {'voci': sorted(set(c['voci'])), 'segni': sorted(set(c['segni'])), 'cornici': sorted(set(c['cornici'])),
                    'accese': sorted(c['accese']), 'indirizzi': {k: sorted(v) for k, v in c['indirizzi'].items()},
-                   'messaggi': ordina(c['messaggi'])}
+                   'messaggi': ordina(c['messaggi']), 'nuova': p._con_data_cornice}
         if con_testo:                          # la grandezza del database cambia di poco fra i due programmi
             r['testo'] = ordina([re.sub(r'\b\d+([.,]\d+)? (MB|KB|kB)\b', 'N \\2', x) for x in p.testo])
             cornice['testo'] = sorted(set(c['testo']))
@@ -523,14 +525,43 @@ def _senza_tipo(voce):
     return voce.split(' ', 1)[1] if ' ' in voce else voce
 
 
+def indirizzi_per_forma(indirizzi):
+    """Gli indirizzi interi delle voci della cornice di una pagina, raggruppati per forma: {«/attesa?struttura»:
+    {«/attesa?struttura=2»}}, i moduli con il metodo davanti. Per forma e non per voce: una voce che ha cambiato nome
+    (Giorno → Agenda, le voci delle tendine che diventano linguette e perdono la riga piccola) ha una chiave diversa
+    da tutte e due le parti, e per voce non si confronterebbe mai. Gli indirizzi senza forma (#, le voci della guida)
+    non contano."""
+    uscita = {}
+    for tutti in indirizzi.values():
+        for h in tutti:
+            m = re.match(r'^((?:get|post) )?(/.*)$', h)
+            if m:
+                uscita.setdefault((m.group(1) or '') + forma(m.group(2)), set()).add(h)
+    return uscita
+
+
+def accese_fuori_posto(cornice):
+    """Su una pagina con il menu della veste nuova (con data-cornice): una sola voce del menu accesa e al più una
+    linguetta. Un controllo fisso, che le regole approvate non toccano: «aggiunto accese@cornice menu «Agenda»»
+    accetterebbe da solo l'Agenda accesa anche nelle pagine di un'altra voce. Il menu di prima (senza data-cornice)
+    accende anche il pulsante della tendina: lì non vale."""
+    if not cornice.get('nuova') or 'menu' not in cornice['cornici']:
+        return None
+    voci = [a for a in cornice['accese'] if a.startswith('menu ')]
+    linguette = [a for a in cornice['accese'] if a.startswith('linguette ')]
+    return None if len(voci) == 1 and len(linguette) <= 1 else (voci, linguette)
+
+
 def confronta_cornice(catalogo, pagine, regole):
     """La cornice, una volta sola. catalogo: {lato: {voci, segni, testo: insiemi su tutte le pagine}}; pagine:
     [(percorso, cornice del principale, cornice di qui)]. Si confrontano (1) voci, segni e testo della cornice, per
     tipo (la voce comincia con il suo tipo); (2) su ogni pagina quali tipi di cornice ci sono, quali voci sono accese
     e i messaggi del programma (la zona dei messaggi: sono di quella pagina); (3) su ogni pagina gli indirizzi interi
-    delle voci che ci sono da tutte e due le parti (stessa parola e stessa forma, anche in un tipo diverso): portano
-    ancora struttura e giorno della pagina. Le regole approvate valgono anche qui: «segni» e «testo» come nelle
-    pagine, «voci», «cornici», «accese» e «messaggi» solo per la cornice.
+    delle voci, per forma (indirizzi_per_forma): per ogni forma che c'è da tutte e due le parti gli stessi indirizzi,
+    cioè la stessa struttura, lo stesso giorno, la stessa data e lo stesso mese della pagina; (4) qui, su ogni pagina
+    con il menu, una sola voce accesa e al più una linguetta (accese_fuori_posto). Le regole approvate valgono in (1)
+    e (2): «segni» e «testo» come nelle pagine, «voci», «cornici», «accese» e «messaggi» solo per la cornice; (3) e
+    (4) non hanno regole.
     Torna (righe del resoconto, differenze, parti diverse solo per i cambiamenti approvati, riga di testa)."""
     righe, n, approvate = [], 0, 0
     ra = {k: sorted(catalogo['principale'][k]) for k in CATALOGO}
@@ -565,10 +596,15 @@ def confronta_cornice(catalogo, pagine, regole):
                     solo_a, solo_b = solo_da_una_parte(pa2[k], pb2[k])
                     gruppi.setdefault((forma(percorso), '%s: solo nel principale %s; solo qui %s' % (
                         k, solo_a, solo_b)), []).append(percorso)
-        for chiave in sorted(set(ca['indirizzi']) & set(cb['indirizzi'])):
-            if ca['indirizzi'][chiave] != cb['indirizzi'][chiave]:
-                gruppi.setdefault((forma(percorso), 'indirizzo della voce %s: principale %s; qui %s' % (
-                    chiave, ca['indirizzi'][chiave], cb['indirizzi'][chiave])), []).append(percorso)
+        fa, fb = indirizzi_per_forma(ca['indirizzi']), indirizzi_per_forma(cb['indirizzi'])
+        for f in sorted(set(fa) & set(fb)):
+            if fa[f] != fb[f]:
+                gruppi.setdefault((forma(percorso), 'indirizzi delle voci di forma %s: principale %s; qui %s' % (
+                    f, sorted(fa[f]), sorted(fb[f]))), []).append(percorso)
+        fuori = accese_fuori_posto(cb)
+        if fuori:
+            gruppi.setdefault((forma(percorso), 'voci accese qui: %d del menu %s e %d linguette %s (una voce sola, al più '
+                               'una linguetta)' % (len(fuori[0]), fuori[0], len(fuori[1]), fuori[1])), []).append(percorso)
     for (f, cosa), quali in sorted(gruppi.items()):
         n += 1
         righe.append('  su %d %s %s (per esempio %s): %s' % (len(quali), 'pagina' if len(quali) == 1 else 'pagine', f,
