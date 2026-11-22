@@ -27,6 +27,8 @@ ICONE = [
     # dove si fa (1.9)
     'search', 'signpost', 'map-pin', 'phone', 'mail', 'message-circle', 'globe', 'building-2', 'external-link',
     'upload', 'history', 'user', 'map', 'send',
+    # veste nuova (1.13, tappa 1-bis): la freccia delle tendine e la tessera del codice fiscale
+    'chevron-down', 'id-card',
 ]
 
 

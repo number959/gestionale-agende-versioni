@@ -115,6 +115,11 @@ s, b, _ = get('/oggi')
 # a_popup(), con lo stesso pezzo cercato nell'HTML della stessa /oggi ('data-popup="aggiornamento"' in t)
 controlla('Aggiornamenti (1.12.6): senza una versione nuova pronta nessun popup', s == 200 and
           'data-popup="aggiornamento"' not in b.decode('utf-8', 'replace'), s)
+t = b.decode('utf-8', 'replace')
+posti = [t.find(x) for x in ('@import url("/static/stile.css") layer(vecchio);', '@layer vecchio { :root { --primario:',
+                             'href="/static/gettoni.css"', 'href="/static/veste.css"')]
+controlla('veste nuova (1.13): i fogli di oggi nello strato «vecchio», gettoni.css e veste.css fuori',
+          s == 200 and -1 not in posti and posti == sorted(posti), (s, posti))
 s, b, _ = get('/ambulatori/riepilogo.json?struttura=1&periodo=settimana')
 d = json.loads(b) if s == 200 else {}
 controlla('Riepilogo del periodo (1.12.2): il JSON con stanze, medici e giorni', s == 200 and all(k in d for k in ('stanze', 'medici', 'giorni', 'totale')), (s, list(d)[:8]))
@@ -145,6 +150,7 @@ s, b, h = get('/static/video/prenotare.webm', {'Range': 'bytes=1000-1999'})
 controlla('video: scorrimento (Range → 206)', s == 206 and len(b) == 1000 and h.get('Content-Range', '').startswith('bytes 1000-1999/'),
           (s, len(b), h.get('Content-Range')))
 for p, tipo in (('/static/guida.js', 'text/javascript'), ('/static/stile.css', 'text/css'),
+                ('/static/gettoni.css', 'text/css'), ('/static/veste.css', 'text/css'),       # 1.13: i mattoni
                 ('/static/fonts/inter-latin.woff2', 'font/woff2'), ('/static/guida/aggiornare.png', 'image/png')):
     s, b, h = get(p)
     controlla('tipo di %s: %s' % (p, tipo), s == 200 and h.get('Content-Type', '').startswith(tipo), h.get('Content-Type'))

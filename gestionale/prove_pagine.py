@@ -43,6 +43,7 @@ esiti = []
 
 ESTERNO = re.compile(r'^\s*(https?:)?//', re.I)
 URL_ESTERNO = re.compile(r'(url\(\s*[\'"]?\s*(https?:)?//|@import\s+[\'"]\s*(https?:)?//)', re.I)
+IMPORT = re.compile(r'@import\s+(?:url\(\s*)?["\']?([^"\')\s;]+)', re.I)        # l'indirizzo di un @import
 
 
 def prova(nome, f):
@@ -126,6 +127,8 @@ class Guarda(HTMLParser):
     def handle_data(self, data):
         if self._stile and URL_ESTERNO.search(data):
             self.esterni.append('<style> %s' % URL_ESTERNO.search(data).group(0))
+        if self._stile:     # 1.13: i fogli di oggi arrivano con @import url("…") layer(vecchio) in un <style> di base.html
+            self.fonti += IMPORT.findall(data)
 
     def ripetuti(self):
         return sorted(k for k, v in self.id.items() if v > 1)
@@ -351,6 +354,12 @@ def g_variante():
     finally:
         AG.VARIANTE = vera
     altra = vera != 'animata'
+    # il controllo riconosce il foglio delle animazioni nelle due forme di base.html: <link> (fogli da stampare) e
+    # @import nello strato «vecchio» (le altre pagine, dalla 1.13); fuori da <style> un @import è solo testo
+    assert guarda('<link rel="stylesheet" href="/static/animazioni.css">').fonti == ['/static/animazioni.css']
+    assert guarda('<style>@layer vecchio;\n@import url("/static/animazioni.css") layer(vecchio);</style>').fonti == \
+        ['/static/animazioni.css'], 'il controllo non vede gli @import'
+    assert guarda('<p>@import url("/static/animazioni.css")</p>').fonti == []
     assert gri.griglie, 'nessuna griglia nella pagina del giorno'
     assert sorted(righe_della_variante(imp, altra) + righe_della_variante(gri, altra)) == [], 'non reagiscono'
     assert len(righe_della_variante(imp, not altra)) == 3 and righe_della_variante(gri, not altra) == \

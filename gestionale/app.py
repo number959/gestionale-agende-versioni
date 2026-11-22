@@ -1008,11 +1008,15 @@ def richieste_ferme():
     return [adesso - inizio for inizio, _ in list(_in_corso.values())]
 
 
+RISORSE_DA_CONTROLLARE = (('template_folder', 'base.html'), ('static_folder', 'stile.css'),
+                          # 1.13: i mattoni della veste nuova; senza, i pezzi nuovi resterebbero senza aspetto
+                          ('static_folder', 'gettoni.css'), ('static_folder', 'veste.css'))
+
+
 def risorse_presenti():
     """I file del programma ci sono? L'eseguibile li apre in una cartella
     temporanea di Windows, che la pulizia del disco puo' cancellare."""
-    return os.path.isfile(os.path.join(app.template_folder, 'base.html')) and \
-        os.path.isfile(os.path.join(app.static_folder, 'stile.css'))
+    return all(os.path.isfile(os.path.join(getattr(app, cartella), nome)) for cartella, nome in RISORSE_DA_CONTROLLARE)
 
 
 PAGINA_AVVIO_NON_RIUSCITO = """<!doctype html><html lang="it"><head><meta charset="utf-8">

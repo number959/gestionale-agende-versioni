@@ -91,7 +91,9 @@ Windows recenti, mai usarlo; l'elenco delle radici di Windows c'è sempre; una p
 127.0.0.1 si dice rifiutata solo dopo un paio di secondi).
 
 Senza `--solo` e con `--browser` le lancia tutte, anche quelle nel browser (Playwright con
-Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_tendine_browser.py`,
+Chromium): `prove_guida_browser.py`, `prove_sicurezza_browser.py`, `prove_mattoni_browser.py` (dalla tappa 1-bis: avvia
+da sé il catalogo dei pezzi su una porta libera e controlla i colori dei pezzi nuovi in chiaro e in scuro, i margini, lo
+scorrimento di lato e la tendina «Stampa e scarica»), `prove_tendine_browser.py`,
 `prove_15_browser.py`, `prove_17_browser.py`, `prove_18_browser.py`, `prove_19_browser.py`,
 `prove_191_browser.py` (salva le impostazioni email della prova e poi rimette quelle di
 partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova),
@@ -137,7 +139,11 @@ controllano che lo stesso canarino si veda nelle pagine normali.
 volte) e controlla che in nessuna ci siano moduli dentro altri moduli, id ripetuti o cose prese da internet
 (script, fogli di stile, immagini, caratteri; lo stesso nei fogli di `static/`); controlla anche che le righe
 della sola animata (fogli e script delle animazioni, `data-giorno` della griglia, riquadro *Animazioni*) ci siano
-solo nell'animata, e il gemello cambia `aggiornamenti.VARIANTE` e le vede comparire o sparire.
+solo nell'animata, e il gemello cambia `aggiornamenti.VARIANTE` e le vede comparire o sparire (dalla tappa 1-bis i
+fogli delle pagine arrivano con gli `@import` dello strato, e il controllo li legge anche lì).
+`prove_mattoni.py` (dalla tappa 1-bis) prova i mattoni della veste nuova senza browser: contrasti dei gettoni, valori
+scuri, nessun colore scritto a mano nei file nuovi, lo strato in `base.html`, il prefisso `v-`, i pezzi con le variabili
+rigide, le icone, `euro()`, `marchio.tema` e l'autoriparazione; ogni prova ha il gemello con il suo mutante.
 `prove_live_json.py` confronta `/riepilogo-live.json` e `/riepilogo-live/statistiche.json` con
 `riepilogo_live_atteso.json` (uguale nelle due cartelle) chiave per chiave, a ogni livello e anche nel tipo
 (1 non è 1.0), su un mondo di prova con soli nomi inventati e l'orologio fermo in sette momenti; un numero
@@ -163,7 +169,8 @@ solo quelle volute, una per una. Quelle approvate stanno in `strumenti/cambiamen
 cartelle; regole «aggiunto» e «sostituisci» per chiave), che il lanciatore conta a parte; `--senza-approvati` le
 mostra tutte. Un cambiamento nuovo si approva scrivendo la regola nello stesso commit, con il perché.
 I passi della guida indicano un punto della pagina solo con `[data-guida="…"]` o con un id (mai una classe o un
-tag, che cambiano con la veste): lo controlla `prove_guida.py`, che vuole anche che il nome esista in un modello.
+tag, che cambiano con la veste): lo controlla `prove_guida.py`, che vuole anche che il nome esista in un modello (scritto
+`data-guida="nome"` o, dalla tappa 1-bis, passato a un pezzo di `_pezzi.html` con `guida='nome'`).
 I messaggi per l'utente (`flash()`) in `prove_14.py` e `prove_funzioni.py` si prendono da Flask quando il programma
 li fa (`prove_messaggi.py`, segnale `message_flashed`), non dall'HTML: ogni test_client va segnato con
 `prove_messaggi.segna()`, e con una pagina 200 `avvisi(C, r)` controlla anche che i messaggi di quella richiesta
@@ -405,6 +412,32 @@ temporanea.
   di Inno Setup la prende per una sua direttiva). File in UTF-8 con BOM e a capo CRLF.
 - Dopo una modifica ai colori di `static/stile.css`: `python strumenti/genera_tema_scuro.py`
   (correzioni a mano in `strumenti/tema-scuro-correzioni.css`); `prove_14.py` se ne accorge.
+- Veste nuova, i mattoni (dalla 1.13, tappa 1-bis). I fogli di oggi (`stile.css`, nell'animata `animazioni.css`,
+  `tema-scuro.css`) e il `:root` con il colore della struttura stanno nello strato `@layer vecchio`, scritto in
+  `base.html` con gli `@import … layer(vecchio)` dentro un `<style>`, nell'ordine di ogni variante; `gettoni.css` e
+  `veste.css` vengono dopo, fuori dallo strato, e vincono sempre. Mai sotto-strati (`vecchio.tema`…): l'ordine degli
+  strati vincerebbe sul peso dei selettori e le pagine di oggi cambierebbero; mai il `:root` della struttura fuori dallo
+  strato (in scuro i collegamenti di oggi diventerebbero blu scuro). I fogli da stampare (`foglio_carta`) restano con i
+  link di oggi, senza strato e senza fogli nuovi. `stile.css`, `tema-scuro.css` e il loro generatore non si toccano per
+  la veste nuova. Regola dei gettoni: i colori nuovi si scrivono solo in `static/gettoni.css`, con un nome di ruolo
+  (`--v-…`), il valore scuro sotto `@media screen { html.scuro { … } }` e la loro coppia testo/fondo in
+  `strumenti/leggi_gettoni.py` (`COPPIE`): `prove_mattoni.py` le calcola tutte, per il colore della struttura predefinito,
+  quelli delle prove e una griglia di 444 colori, e vuole almeno 4,5:1 in chiaro e in scuro. `veste.css`, `_pezzi.html` e
+  le pagine nuove usano solo `var(--v-…)`, mai un colore scritto (nemmeno con un nome, come `teal`). Le varianti del colore della struttura per la veste
+  (`tinta`, `bordo`, `profondo`, `testo`) le calcola `marchio.varianti_veste` dentro `marchio.tema`, senza cambiare le
+  cinque di sempre (`prove_mattoni.py` ne tiene una copia ferma). Le classi nuove hanno il prefisso `v-` e nessuna è già
+  usata dalle pagine di oggi; ogni selettore di `veste.css` prende solo un pezzo `v-` (un `.v-` dentro `:not()`, o in
+  una sola delle scelte di `:is()` e `:where()`, non basta: `a:not(.v-bottone)` prenderebbe i collegamenti di oggi); i pezzi comuni stanno in `templates/_pezzi.html` (macro con `{% call %}`: il pezzo dà il
+  contenitore, moduli, campi e bottoni restano scritti nella pagina) e tengono gli agganci di oggi (`primario`,
+  `gruppo-comandi`, `apri-gruppo`, `tendina`, `ul.numeri` per l'animata). Un pezzo che tiene una classe di oggi riscrive in
+  `veste.css` ogni proprietà che quella cambierebbe (margini compresi: `elenco`, `vuoto`, `ricerca`, `numeri`). Il
+  catalogo dei pezzi è un gestionale di prova a sé, `python strumenti/catalogo_pezzi.py` (`/catalogo-pezzi`, porta 5141;
+  `--foto CARTELLA` fa le foto a 1366, 1024 e 683 px in chiaro e in scuro): modello e codice stanno in `strumenti/`,
+  fuori dall'eseguibile, e `demo.py` non lo conosce. L'autoriparazione (`app.risorse_presenti`) e
+  `strumenti/prove_installato.py` controllano anche `gettoni.css` e `veste.css`. Le pagine di oggi devono restare uguali
+  al pixel: `python strumenti/foto_pagine.py --principale <ramo o commit>` (due programmi sugli stessi dati, uno alla
+  volta, con l'ora ferma; 35 pagine a 1366×657 e intere, in chiaro e in scuro, più tendine, fuoco, messaggi e stampa)
+  finisce con «… 0 diverse» o dice il rumore. `@import` con `layer()` vuole Chrome o Edge 99 o più nuovi.
 - Caratteri: Manrope (titoli) e Inter (testo), quelli del sito della clinica, dentro
   `static/fonts` (licenza OFL); niente font da internet, il programma gira offline.
 - Immagini della guida: `python strumenti/genera_immagini_guida.py http://127.0.0.1:5001`

@@ -203,8 +203,40 @@ def mescola(colore, altro, quota):
     return _esadecimale(tuple(x + (y - x) * quota for x, y in zip(a, b)))
 
 
+# I fondi chiari della veste nuova su cui il colore della struttura si usa come testo: --v-fondo, --v-incasso e
+# --v-superficie di static/gettoni.css (prove_mattoni.py controlla che siano gli stessi).
+FONDI_DEL_TESTO = ('#F3F6FA', '#EEF2F8', '#FFFFFF')
+
+
+def _hls(colore):
+    return colorsys.rgb_to_hls(*(x / 255 for x in _rgb(colore)))
+
+
+def _da_hls(h, l, s):
+    return _esadecimale(tuple(x * 255 for x in colorsys.hls_to_rgb(h, l, s)))
+
+
+def varianti_veste(base):
+    """Le quattro varianti del colore della struttura per la veste nuova (1.13, gettoni.css): stessa tinta, con la
+    luce e la saturazione delle tavole del gruppo (con #1C4184: tinta #E7EDF9, bordo #BACCED, profondo #112851; le
+    tavole hanno #E7EEF8, #BCCCEC, #14294F). «testo» è il colore della struttura scurito finché si legge (4,5:1)
+    sulla tinta e sui fondi chiari: linguetta accesa, collegamenti, linguetta sotto il mouse."""
+    h, l, s = _hls(base)
+    tinta = _da_hls(h, .94, min(s, .59))            # fondo della voce e della linguetta accese
+    bordo = _da_hls(h, .83, min(s, .59))            # bordo delle cose scelte
+    profondo = _da_hls(h, l * .61, s)               # bottone principale premuto e sotto il mouse
+    testo, rgb = base, _rgb(base)
+    for _ in range(40):
+        if min(contrasto(testo, f) for f in (tinta,) + FONDI_DEL_TESTO) >= 4.5:
+            break
+        rgb = tuple(x * 0.92 for x in rgb)
+        testo = _esadecimale(rgb)
+    return {'tinta': tinta, 'bordo': bordo, 'profondo': profondo, 'testo': testo}
+
+
 def tema(colore):
-    """Le varianti del colore principale usate dal foglio di stile."""
+    """Le varianti del colore principale usate dal foglio di stile. Le prime cinque sono quelle di sempre (stile.css,
+    tema-scuro.css); dalla 1.13 le quattro della veste nuova (varianti_veste), che non cambiano le altre."""
     base = leggibile(colore) or '#154381'
     return {
         'primario': base,
@@ -212,4 +244,5 @@ def tema(colore):
         'tenue': mescola(base, '#ffffff', 0.92),          # fondo delle fasce libere al passaggio
         'chiaro': mescola(base, '#ffffff', 0.62),         # testo secondario sulle intestazioni
         'fuoco': mescola(base, '#ffffff', 0.25),          # contorno del campo attivo
+        **varianti_veste(base),
     }
