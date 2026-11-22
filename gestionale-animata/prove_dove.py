@@ -6,7 +6,7 @@ import os
 import traceback
 
 
-AIUTI = {'prove_dove.py', 'prove_messaggi.py'}       # i loro messaggi d'errore dicono già la riga di chi li chiama
+AIUTI = {'prove_dove.py', 'prove_messaggi.py', 'prove_gemelli.py'}       # i loro messaggi d'errore dicono già la riga di chi li chiama
 
 
 def dove(errore):
