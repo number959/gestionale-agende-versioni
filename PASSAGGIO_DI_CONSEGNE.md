@@ -1215,6 +1215,29 @@ le decisioni prese per eseguirlo e le ricognizioni delle aree stanno in `piano/`
   nuovo prima di mandarlo a Giovanni (in Wine: `bash strumenti/wine/costruisci.sh --prova ../gestionale-animata`, poi
   `prova_isolamento.py`).
 
+**Dove si è fermati (22 novembre 2026, sera, su richiesta di Giovanni: «Arriva ad un punto concreto e fermati»).**
+Nel ramo `ccr-interfaccia` (commit 7856656 e il commit di questa nota), provati e caricati:
+- tappa 1 (la rete di prove), 1-bis (i mattoni e il catalogo), 2 (menu a sinistra, barra in alto, linguette,
+  `menu.py`): le pagine sono quelle di oggi dentro la cornice nuova;
+- l'accesso dagli altri PC per utente e per area (*Configura → Aree e accessi*; resoconto in
+  `piano/resoconti/accessi-dagli-altri-pc.md`), unito alla tappa 2: dalla rete il menu mostra solo le parti permesse.
+Prove: tutte verdi su Linux nelle due cartelle (37 raccolte senza browser; nel browser 15 nella normale e 17
+nell'animata); `confronta_rami.py`: 610 pagine, 0 diverse oltre ai cambiamenti approvati, 49 fogli in PDF identici. Su
+Windows (GitHub) tutte le raccolte senza browser passano; `prove_prova.py` cadeva solo per git letto male sulla riga di
+comando di Windows, corretto in 7856656. Le prove nel browser su Windows di questo ramo vanno guardate nella pagina
+*Actions* (esecuzioni del 22/11 sera).
+**Non fatto**: la tappa 3 (campanella, messaggi in basso, domande nella pagina) è stata fermata al primo passo; il
+lavoro a metà, non provato, è solo nel ramo locale `tappa3` della sessione nel cloud (commit 9be9aa7) e va rifatto da
+capo partendo da `ccr-interfaccia`. Poi le tappe 4-10 e i moduli M1, M3-M10, come in `piano/`.
+**Da decidere con Giovanni** (scritto anche in `piano/DECISIONI-VESTE.md` ed `ESECUZIONE.md`): le linguette per ora
+stanno sopra il titolo della pagina (sotto arrivano con le tappe 4-9); nel Giorno a 1366×657 si vedono 5 mezz'ore
+invece di 7 fino alla tappa 5; a 1024 px le linguette di Configura e Segreteria vanno su due righe; Chrome o Edge
+almeno 111 in clinica; i predefiniti degli accessi (una copia rimessa non riporta indietro utenti e password; in
+Statistiche e report nomi solo con Pazienti o Agenda e importi solo con la Cassa).
+**Per provarlo sul PC di Giovanni** (senza toccare il programma della clinica): dal ramo `ccr-interfaccia`, in
+`gestionale-animata`, `CREA_PROVA.bat` (il pacchetto di prova, porta 5050, dati inventati, cartella sua); oppure
+`python strumenti/demo.py --porta 5001` e il browser su http://127.0.0.1:5001.
+
 ## Cose aperte
 
 - **Altri PC e «Statistiche e report»** (21 novembre 2026, Giovanni: «voglio pure che il modulo agenda sala operatoria
