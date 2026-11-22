@@ -31,10 +31,11 @@ from datetime import date, timedelta
 
 from playwright.sync_api import expect, sync_playwright
 
-from aiuti_browser import (apri_comandi, apri_gruppo, gruppo_attivo, menu, messaggi, nome_voce, prepara_domande,
-                           rispondi, tendina_aperta)
+from aiuti_browser import (GRUPPI, NOME_MENU, apri_comandi, apri_gruppo, gruppo, gruppo_attivo, menu, messaggi, nome_voce,
+                           prepara_domande, rispondi, tendina_aperta)
 
-B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 OGGI = date.today()
 LUN = OGGI - timedelta(days=OGGI.weekday()) + timedelta(days=7)        # il lunedi della settimana prossima: tutta nel futuro
@@ -71,6 +72,31 @@ def notifiche(anche_nascoste=False):
     return pg.get_by_role('region', name='Notifiche', exact=True, include_hidden=anche_nascoste)
 
 
+def menu_anche_nascosto():
+    """Il menu anche se nascosto. «Senza menu» vuol dire che il menu non c'è nella pagina, come contava prima
+    nav.menu: per ruolo un menu nascosto non si vede, ma i suoi collegamenti e i suoi tasti rapidi ci sarebbero."""
+    return pg.get_by_role('navigation', name=NOME_MENU, exact=True, include_hidden=True)
+
+
+# l'aspetto del pulsante di un gruppo del menu: quello che cambia fra il gruppo attivo e gli altri
+ASPETTO = ("b => { const s = getComputedStyle(b); return [s.color, s.backgroundColor, s.opacity, s.fontWeight,"
+           " s.borderBottomColor, s.boxShadow, s.textDecorationLine].join(' | '); }")
+
+
+def gruppo_segnato():
+    """Il gruppo attivo del menu (gruppo_attivo: aria-current, per chi usa un lettore di schermo), ma solo se si vede
+    anche: il suo pulsante deve avere un aspetto diverso da quello di ogni altro gruppo. Prima la prova guardava la
+    classe «attivo», che lo colora: aria-current da solo non vedrebbe un menu che non lo colora più."""
+    nome = gruppo_attivo(pg)
+    if nome not in GRUPPI:
+        return nome
+    pg.mouse.move(2, 500)                    # niente mouse sopra i gruppi: passandoci sopra cambiano aspetto
+    pg.wait_for_timeout(300)                 # nell'animata il cambio dura .15 secondi
+    aspetto = {g: gruppo(pg, g).evaluate(ASPETTO) for g in GRUPPI}
+    come = [g for g in GRUPPI if g != nome and aspetto[g] == aspetto[nome]]
+    return nome if not come else '%s, ma si vede come %s' % (nome, ', '.join(come))
+
+
 def ok(n, c, d=''):
     esiti.append(bool(c))
     print(('OK ' if c else 'KO ') + n, '' if c else d)
@@ -105,7 +131,8 @@ with sync_playwright() as p:
     ok('Lippiello in Ambulatorio 1 tutte le mattine (dati di prova)', len(mattine) == 6 and all('Lippiello' in x and '08:00–14:00' in x for x in mattine), mattine[:2])
     pomeriggi = riga.locator('td').evaluate_all("tds => tds.filter((td, i) => i % 2 === 1).map(td => td.className)")
     ok('i pomeriggi di Ambulatorio 1 liberi', len(pomeriggi) == 6 and all('libera' in x for x in pomeriggi), pomeriggi)
-    ok('il menu: il gruppo Ambulatori è segnato attivo', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg) or 'nessun gruppo attivo')
+    attivo = gruppo_segnato()
+    ok('il menu: il gruppo Ambulatori è segnato attivo', attivo == 'Ambulatori', attivo or 'nessun gruppo attivo')
     pg.mouse.move(2, 500)
     voci = apri_gruppo(pg, 'Ambulatori').get_by_role('link').all_inner_texts()
     ok('nel gruppo: Pianificazione della settimana, Programmazione del mese, Riepilogo live, Riepilogo del periodo, Esportazioni',
@@ -136,7 +163,15 @@ with sync_playwright() as p:
     ok('il nome apre il turno e torna qui', '/anagrafiche/turni/' in (cella.locator('.turno-sett a').first.get_attribute('href') or '')
        and 'torna=' in (cella.locator('.turno-sett a').first.get_attribute('href') or ''), cella.locator('.turno-sett a').first.get_attribute('href'))
 
-    # Togli: la «x» chiede conferma, poi la cella torna disponibile
+    # Togli: la «x» chiede conferma; con Annulla il turno resta (la pagina non cambia), con OK la cella torna disponibile
+    url_prima = pg.url
+    with rispondi(pg, si=False) as d:
+        cella.get_by_role('button', name=re.compile('^Togli ')).click()
+    pg.wait_for_timeout(600)                 # un modulo partito lo stesso cambierebbe pagina in questo tempo
+    pg.wait_for_load_state()
+    cella = pg.locator('td[data-cella="%s"]' % chiave)
+    ok('la «x» con Annulla: il turno resta', d.testo and 'Togliere Galasso' in d.testo and pg.url == url_prima
+       and cella.locator('.turno-sett a').all_inner_texts() == ['Galasso'], (d.testo, pg.url))
     with pg.expect_navigation():
         with rispondi(pg) as d:
             cella.get_by_role('button', name=re.compile('^Togli ')).click()
@@ -194,7 +229,8 @@ with sync_playwright() as p:
     ok('la programmazione ha le sue righe, con Lippiello tutti i giorni in Ambulatorio 1',
        righe.count() > 6 and corpo.count('Lippiello') >= 6 and 'Ambulatorio 1' in corpo, (righe.count(), corpo.count('Lippiello')))
     ok('le date del mese sono numeri separati da virgole', any(',' in x for x in pg.locator('#programmazione-ambulatori tr td:nth-child(4)').all_inner_texts()))
-    ok('anche qui il gruppo Ambulatori è attivo', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
+    attivo = gruppo_segnato()
+    ok('anche qui il gruppo Ambulatori è attivo', attivo == 'Ambulatori', attivo)
     with pg.expect_download() as scaricato:
         pg.locator('a.bottone.primario', has_text='Scarica in Excel').click()
     ok('la programmazione in Excel si scarica con il nome del mese',
@@ -240,7 +276,8 @@ with sync_playwright() as p:
     pg.wait_for_selector('#esportazioni')
     ok('esportazioni: cambiando la data cambiano i pulsanti',
        ((OGGI + timedelta(days=40)).isoformat() + '.xlsx') in (pulsanti.first.get_attribute('href') or ''), pulsanti.first.get_attribute('href'))
-    ok('esportazioni: il gruppo Ambulatori è attivo', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
+    attivo = gruppo_segnato()
+    ok('esportazioni: il gruppo Ambulatori è attivo', attivo == 'Ambulatori', attivo)
     pg.set_viewport_size({'width': 390, 'height': 800})
     largo = pg.evaluate('document.documentElement.scrollWidth')
     ok('esportazioni: sul telefono niente scorrimento laterale', largo <= 392, largo)
@@ -287,7 +324,8 @@ with sync_playwright() as p:
     ok('riepilogo live: la linea di adesso in ogni stanza, o in nessuna fuori orario',
        linee == (len(dati['stanze']) if dati['asse']['adesso'] is not None else 0), linee)
     ok('riepilogo live: le notifiche non coprono la pagina (la zona c\'è, ma nascosta)',
-       notifiche(anche_nascoste=True).count() == 1 and notifiche().count() == 0, (notifiche(anche_nascoste=True).count(), notifiche().count()))
+       notifiche(anche_nascoste=True).count() == 1 and notifiche().count() == 0 and not notifiche(anche_nascoste=True).is_visible(),
+       (notifiche(anche_nascoste=True).count(), notifiche().count(), notifiche(anche_nascoste=True).is_visible()))
     pg.wait_for_timeout(1500)
     ok('riepilogo live: le notifiche non si chiedono nemmeno (non risultano viste nelle altre pagine)',
        not richieste_notifiche and pg.evaluate("sessionStorage.getItem('notifiche-viste')") in (None, '{}') and
@@ -302,7 +340,7 @@ with sync_playwright() as p:
     pg.set_viewport_size({'width': 1366, 'height': 820})
     pg.goto(B + '/riepilogo-live?struttura=1&schermo=1')
     pg.wait_for_selector('#riepilogo-live .linea-live')
-    ok('riepilogo live: il modo schermo senza menu, con la linea del tempo', menu(pg).count() == 0 and
+    ok('riepilogo live: il modo schermo senza menu, con la linea del tempo', menu_anche_nascosto().count() == 0 and
        pg.locator('.linea-live .riga-live').count() == len(dati['stanze']) + 1)
 
     # 1.12.2: il riepilogo del periodo
@@ -326,7 +364,8 @@ with sync_playwright() as p:
     ok('riepilogo del periodo: l\'Excel si scarica con il suo nome',
        scarico.value.suggested_filename == 'riepilogo-ambulatori-%s.xlsx' % (OGGI - timedelta(days=1)).isoformat(),
        scarico.value.suggested_filename)
-    ok('riepilogo del periodo: il gruppo Ambulatori è attivo', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
+    attivo = gruppo_segnato()
+    ok('riepilogo del periodo: il gruppo Ambulatori è attivo', attivo == 'Ambulatori', attivo)
     pg.set_viewport_size({'width': 390, 'height': 844})
     pg.wait_for_timeout(300)
     ok('riepilogo del periodo: sul telefono la pagina non scorre di lato (scorrono le tabelle)',
@@ -363,7 +402,7 @@ with sync_playwright() as p:
     pg.click('[data-guida="live-statistiche"]')
     pg.wait_for_selector('.pagina-periodo .frase-live')
     ok('dashboard: «Riepilogo del periodo» apre il riepilogo senza menu, nel modo schermo',
-       '/riepilogo-live/statistiche' in pg.url and 'schermo=1' in pg.url and menu(pg).count() == 0, pg.url)
+       '/riepilogo-live/statistiche' in pg.url and 'schermo=1' in pg.url and menu_anche_nascosto().count() == 0, pg.url)
     pg.locator('.parti-periodo a', has_text='Sala operatoria').click()
     pg.wait_for_selector('.pagina-periodo .frase-live')
     pg.locator('.periodi-pronti a', has_text='Questo mese').click()

@@ -42,6 +42,15 @@ NEL_BROWSER = ['prove_guida_browser.py', 'prove_sicurezza_browser.py', 'prove_an
                'prove_16_browser.py']
 
 
+def senza_porta_vera(nome):
+    """Una raccolta nel browser prende l'indirizzo solo da aiuti_browser.indirizzo_di_prova(sys.argv), che si ferma
+    senza indirizzo o con la porta 5000: fino alla tappa 1 della base, lanciate senza argomento, andavano sulla 5000,
+    cioè sul programma vero, e ci salvavano dati."""
+    with open(os.path.join(QUI, nome), encoding='utf-8') as f:
+        testo = f.read()
+    return 'indirizzo_di_prova(sys.argv)' in testo and not re.search(r"['\"]https?://[^'\"]*:5000", testo)
+
+
 def giudica(nome, codice, uscita):
     """(andata, riga da mostrare) dalla riga finale della prova e dal codice d'uscita."""
     righe = [r.strip() for r in uscita.splitlines() if r.strip()]
@@ -82,6 +91,10 @@ def main():
     if a.solo_browser and not a.browser:
         print('--solo-browser vuole anche --browser URL')
         return 2
+    if a.browser and re.search(r':5000(?:/|$)', a.browser.strip()):
+        print('La porta 5000 è quella del programma vero: le prove nel browser salvano dati e vanno solo su un '
+              'gestionale di prova (python strumenti/demo.py --porta 5001).')
+        return 2
     elenco = [] if a.solo_browser else [(n, []) for n in SENZA_BROWSER]
     if a.browser:
         elenco += [(n, [a.browser.rstrip('/')]) for n in NEL_BROWSER]
@@ -107,6 +120,11 @@ def main():
     for nome, argomenti in elenco:
         inizio = time.monotonic()
         registro = os.path.join(giro, nome.replace('.py', '.log'))
+        if argomenti and not senza_porta_vera(nome):
+            risultati.append((False, nome))
+            print('KO %-28s     0 s  non prende l\'indirizzo da aiuti_browser.indirizzo_di_prova (che rifiuta la '
+                  'porta 5000): non lanciata' % nome, flush=True)
+            continue
         try:
             r = subprocess.run([sys.executable, nome] + argomenti, cwd=QUI, env=ambiente, timeout=a.limite,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

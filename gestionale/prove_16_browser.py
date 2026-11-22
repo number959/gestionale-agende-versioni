@@ -1,6 +1,6 @@
 """Prove nel browser della 1.6, su un gestionale gia' avviato con i dati di
 prova e un aggiornamento finto pronto (vedi LEGGIMI, «Prove»):
-    python prove_16_browser.py http://127.0.0.1:5000
+    python prove_16_browser.py http://127.0.0.1:5001
 - «Guarda il video» apre il video grande e lo fa partire; Esc, Chiudi o un
   clic fuori lo chiudono e lo fermano; nell'indice ogni guida ha il segno
   "video"; anche le novita' aprono il loro video;
@@ -13,6 +13,10 @@ prova e un aggiornamento finto pronto (vedi LEGGIMI, «Prove»):
 - «Rimetti l'indirizzo predefinito» riporta l'indirizzo delle versioni su
   GitHub (alla fine: il controllo che parte va su internet);
 - nessun errore JavaScript nelle pagine nuove.
+La cornice (le notifiche, i messaggi, le domande del browser) si cerca per
+ruolo e nome con gli aiuti di aiuti_browser.py, come un lettore di schermo
+(tappa 1 della base); una domanda del browser che nessuno aspettava fa cadere
+la prova.
 Cambia l'indirizzo degli aggiornamenti del gestionale su cui gira: usarla su un
 gestionale di prova, mai su quello vero."""
 import hashlib
@@ -29,8 +33,10 @@ from playwright.sync_api import sync_playwright
 import guida
 import novita
 import aggiornamenti as AG
+from aiuti_browser import messaggi, prepara_domande
 
-B = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000'
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 
 
@@ -59,6 +65,7 @@ with sync_playwright() as p:
     ctx = br.new_context(viewport={'width': 1366, 'height': 900})
     ctx.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); } catch (e) {}")
     pg = ctx.new_page()
+    domande = prepara_domande(pg)            # subito: ogni domanda del browser passa da qui (nessuna e' attesa)
     err = []
     pg.on('pageerror', lambda e: err.append(str(e)))
     pg.on('console', lambda m: err.append(m.text) if m.type == 'error' else None)
@@ -106,7 +113,8 @@ with sync_playwright() as p:
     # ------------------------------------------------- notifica e pagina
     # le notifiche si mostrano quattro alla volta: le altre del giorno si segnano come chiuse
     pg.goto(B + '/oggi')
-    lista = pg.evaluate("() => fetch(document.getElementById('notifiche').getAttribute('data-indirizzo')).then(r => r.json())")
+    notifiche = pg.get_by_role('region', name='Notifiche', exact=True)       # la zona delle notifiche nel menu
+    lista = pg.evaluate("(u) => fetch(u).then(r => r.json())", notifiche.get_attribute('data-indirizzo'))
     agg = [x for x in lista if x['titolo'] == 'Aggiornamento disponibile']
     ok('fra le notifiche c\'è «Aggiornamento disponibile», con il collegamento alla pagina',
        len(agg) == 1 and agg[0]['link'] == '/aggiornamenti', lista)
@@ -114,8 +122,10 @@ with sync_playwright() as p:
     pg.evaluate("(c) => sessionStorage.setItem('notifiche-chiuse', JSON.stringify(c))", altre)
     pg.reload()
     try:
-        pg.wait_for_selector('.notifica:has-text("Aggiornamento disponibile")', timeout=5000)
-        pg.click('.notifica:has-text("Aggiornamento disponibile") a')
+        # ogni notifica e' un «status» dentro la zona; la si riconosce dal titolo e si segue il suo collegamento
+        agg = notifiche.get_by_role('status').filter(has_text='Aggiornamento disponibile')
+        agg.wait_for(timeout=5000)
+        agg.get_by_role('link').click(timeout=5000)
         pg.wait_for_url(re.compile(r'.*/aggiornamenti$'), timeout=5000)
         notifica = True
     except Exception:
@@ -201,7 +211,7 @@ with sync_playwright() as p:
     ok('con un altro indirizzo c\'è «Rimetti l\'indirizzo predefinito»', rimetti.count() == 1 and rimetti.is_visible())
     with pg.expect_navigation():
         rimetti.click()
-    avviso = pg.text_content('body') or ''
+    avviso = messaggi(pg)
     for _ in range(60):                  # la pagina segue il controllo (riesce o no secondo la rete) e si ricarica
         try:
             if pg.get_attribute('#stato-aggiornamento', 'data-in-corso', timeout=2000) == '0':
@@ -216,6 +226,7 @@ with sync_playwright() as p:
        and 'È l\'indirizzo predefinito' in t and pg.locator('button[data-guida="rimetti-predefinito"]').count() == 0,
        (valore, avviso[:200], t[:200]))
     ok('nessun errore JavaScript', not err, err[:3])
+    ok('nessuna domanda del browser inattesa', not domande.inattese, domande.inattese)
     br.close()
 print('\n%d prove nel browser, %d superate' % (len(esiti), sum(esiti)))
 sys.exit(0 if all(esiti) else 1)

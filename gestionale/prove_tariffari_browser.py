@@ -21,7 +21,8 @@ from playwright.sync_api import sync_playwright
 
 from aiuti_browser import messaggi, prepara_domande, rispondi
 
-B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 
 

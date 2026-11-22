@@ -4,7 +4,7 @@ stesso PC, il caso piu' vicino) prova a mandare moduli al gestionale in tre
 modi, e il gestionale li deve rifiutare tutti; i moduli delle sue pagine
 invece passano. Da lanciare sui dati di prova:
 
-    python prove_sicurezza_browser.py http://127.0.0.1:5000
+    python prove_sicurezza_browser.py http://127.0.0.1:5001
 
 Non cambia niente nel database: le richieste rifiutate non scrivono e quella
 buona rimette il testo che c'era.
@@ -30,7 +30,8 @@ from playwright.sync_api import sync_playwright
 # aiuti comuni delle prove nel browser: se la veste cambia la zona, si cambia lì
 from aiuti_browser import nella_zona, zona_messaggi  # noqa: E402
 
-B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 
 

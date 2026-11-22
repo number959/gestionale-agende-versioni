@@ -70,8 +70,25 @@ def coppie_112(pg, err):
     diagnosi di apri_stampa_e_scarica), «Metti» e la «×» come nella raccolta, con i messaggi e la domanda (alla fine
     i dati sono come prima), le tendine della pagina lette come le legge la raccolta, il gruppo attivo in ogni pagina,
     le notifiche e il menu nella dashboard e nel modo schermo (in una scheda nuova: niente notifiche chiuse prima)."""
+    from aiuti_browser import NOME_MENU
     aperte_vecchio = ("() => [...document.querySelectorAll('nav.menu .gruppo')].filter(g => { const t = g.querySelector('.tendina');"
                       " return t && getComputedStyle(t).display !== 'none'; }).length")    # il TENDINE_MENU_APERTE di prima
+    aspetto = ("b => { const s = getComputedStyle(b); return [s.color, s.backgroundColor, s.opacity, s.fontWeight,"
+               " s.borderBottomColor, s.boxShadow, s.textDecorationLine].join(' | '); }")    # l'ASPETTO di prove_112_browser.py
+
+    def si_vede_attivo(pagina):
+        """Come gruppo_segnato() della raccolta: il gruppo che si vede diverso da tutti gli altri (l'aspetto del pulsante)
+        è quello con la classe attivo, che la prova guardava prima, ed è il gruppo_attivo() di aria-current."""
+        pg.evaluate('() => document.activeElement && document.activeElement.blur()')
+        pg.mouse.move(2, 500)
+        pg.wait_for_timeout(300)
+        aspetti = {g: gruppo(pg, g).evaluate(aspetto) for g in GRUPPI}
+        diversi = [g for g in GRUPPI if all(aspetti[g] != aspetti[h] for h in GRUPPI if h != g)]
+        if len(diversi) != 1:
+            ok('112 %s: un gruppo solo si vede diverso dagli altri' % pagina, False, aspetti)
+            return
+        stesso(pg, '112 %s: il gruppo che si vede diverso dagli altri' % pagina, 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, diversi[0]))
+        ok('112 %s: ed è il gruppo_attivo()' % pagina, diversi[0] == gruppo_attivo(pg), (diversi, gruppo_attivo(pg)))
     pg.goto(B + '/ambulatori/settimana/%s?struttura=1' % LUN.isoformat())
     pg.wait_for_selector('#matrice-ambulatori')
     pg.mouse.move(2, 500)
@@ -90,6 +107,7 @@ def coppie_112(pg, err):
        (pg.evaluate(aperte_vecchio), tendina_aperta(pg).count()))
     stesso(pg, '112 matrice: il gruppo attivo', 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, 'Ambulatori'))
     ok('112 matrice: gruppo_attivo() è Ambulatori', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
+    si_vede_attivo('matrice')
     # «Metti» Galasso in una cella libera, poi la «×»: Annulla lascia il turno, OK lo toglie
     cella = pg.locator('#matrice-ambulatori td.libera:has(details.metti)').first
     chiave = cella.get_attribute('data-cella')
@@ -126,6 +144,7 @@ def coppie_112(pg, err):
     pg.wait_for_selector('#programmazione-ambulatori')
     stesso(pg, '112 mese: il gruppo attivo', 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, 'Ambulatori'))
     ok('112 mese: gruppo_attivo() è Ambulatori', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
+    si_vede_attivo('mese')
     t = apri_comandi(pg, 'Altre esportazioni')
     stesso(pg, '112 mese: Altre esportazioni (voci)', '[data-guida="programmazione-altre"] .tendina a', t.get_by_role('link'), 'lista')
     pg.set_viewport_size({'width': 390, 'height': 844})
@@ -137,9 +156,11 @@ def coppie_112(pg, err):
     pg.set_viewport_size({'width': 1366, 'height': 820})
     pg.goto(B + '/esportazioni?struttura=1&data=%s' % OGGI.isoformat())
     stesso(pg, '112 esportazioni: il gruppo attivo', 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, 'Ambulatori'))
+    si_vede_attivo('esportazioni')
     pg.goto(B + '/ambulatori/riepilogo?struttura=1&periodo=oggi')
     stesso(pg, '112 riepilogo del periodo: il gruppo attivo', 'nav.menu .gruppo.attivo .apri-gruppo', gruppo(pg, 'Ambulatori'))
     ok('112 riepilogo del periodo: gruppo_attivo() è Ambulatori', gruppo_attivo(pg) == 'Ambulatori', gruppo_attivo(pg))
+    si_vede_attivo('riepilogo del periodo')
 
     p2 = pg.context.new_page()
     p2.on('pageerror', lambda e: err.append(str(e)))
@@ -161,8 +182,8 @@ def coppie_112(pg, err):
     p2.wait_for_selector('#riepilogo-live .frase-live')
     stesso(p2, '112 riepilogo live: il menu', 'nav.menu', menu(p2))
     ok('112 riepilogo live: le notifiche nascoste, per stile e per ruolo (la zona c\'è)',
-       p2.evaluate(stile) == 'none' and notifiche.count() == 0 and anche_nascoste.count() == 1,
-       (p2.evaluate(stile), notifiche.count(), anche_nascoste.count()))
+       p2.evaluate(stile) == 'none' and notifiche.count() == 0 and anche_nascoste.count() == 1 and not anche_nascoste.is_visible(),
+       (p2.evaluate(stile), notifiche.count(), anche_nascoste.count(), anche_nascoste.is_visible()))
     stesso(p2, '112 riepilogo live: la zona delle notifiche, nascosta', '#notifiche', anche_nascoste)
     stesso(p2, '112 riepilogo live: nessuna notifica, nemmeno nascosta', '#notifiche .notifica',
            anche_nascoste.get_by_role('status', include_hidden=True), 'nessuno')
@@ -171,6 +192,8 @@ def coppie_112(pg, err):
         p2.goto(B + indirizzo)
         p2.wait_for_selector('.frase-live')
         stesso(p2, '112 %s: %s' % (indirizzo, 'il menu' if col_menu else 'nessun menu'), 'nav.menu', menu(p2), 'uno' if col_menu else 'nessuno')
+        stesso(p2, '112 %s: %s, anche nascosto' % (indirizzo, 'il menu' if col_menu else 'nessun menu'), 'nav.menu',
+               p2.get_by_role('navigation', name=NOME_MENU, exact=True, include_hidden=True), 'uno' if col_menu else 'nessuno')
     ok('112: nessuna domanda inattesa nella seconda scheda', not domande2.inattese, domande2.inattese)
     p2.close()
 
@@ -200,6 +223,9 @@ def coppie_guida_tendine(br, err):
         stesso(pg, 'tendine: la zona delle notifiche (.notifiche)', '.notifiche', zona)
         stesso(pg, 'tendine: le notifiche della griglia', '.notifiche .notifica', notifiche, 'lista')
         stesso(pg, 'tendine: i loro collegamenti', '.notifiche .notifica a', notifiche.get_by_role('link'), 'lista')
+        figli = ("z => { const a = [...z.children], b = [...document.querySelectorAll('.notifiche .notifica')];"
+                 " return a.length > 0 && a.length === b.length && a.every((x, i) => x === b[i]); }")
+        ok('tendine: le notifiche (.notifica) sono i riquadri nella zona (fine_animazioni)', zona.evaluate(figli))
         # prove_guida: clic, Esc, passandoci sopra, «Stampa e scarica», clic fuori
         pg.mouse.move(700, 700)
         gruppo(pg, 'Segreteria').click()
@@ -378,6 +404,129 @@ def coppie_18_tariffari(br, err):
     except Exception as e:  # noqa: BLE001
         ok('coppie di prove_18 e prove_tariffari: arrivano in fondo', False, '%s: %s' % (type(e).__name__, str(e)[:400]))
     ok('coppie di prove_18 e prove_tariffari: nessuna domanda inattesa', not domande.inattese, domande.inattese)
+    ctx.close()
+
+
+def coppie_altre(br, err):
+    """Le coppie di prove_19_browser.py, prove_16_browser.py, prove_17_browser.py e prove_191_browser.py (la cornice
+    che toccano), fatte come le fanno quelle raccolte: in Dove si fa la barra del menu (altezza, e bordo di sotto con
+    la scheda aperta, anche scorrendo un poco) e la ricerca rapida col tasto / («holter», e una parola che non trova
+    niente); in Oggi l'indirizzo delle notifiche letto dalla zona (la notifica «Aggiornamento disponibile» e il suo
+    collegamento sono già nel giro); i messaggi dopo un indirizzo degli aggiornamenti sbagliato (non cambia niente e
+    non va su internet), dopo un paziente nuovo con il codice fiscale calcolato dai dati (poi eliminato, con la sua
+    domanda) e dopo «Salva» delle impostazioni email senza cambiare niente. In una scheda sua: un pezzo che non si
+    trova si conta e il giro di prima arriva in fondo lo stesso. Alla fine i dati di prova sono come prima."""
+    import random
+    ctx = br.new_context(viewport={'width': 1366, 'height': 768}, locale='it-IT')
+    ctx.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); "
+                        "localStorage.setItem('gestionale-tema', 'chiaro'); } catch (e) {}")
+    pg = ctx.new_page()
+    pg.on('pageerror', lambda e: err.append(str(e)))
+    domande = prepara_domande(pg)
+    misure = "() => { const r = document.querySelector('.menu').getBoundingClientRect(); return [r.height, r.bottom]; }"
+
+    def barra(nome):
+        """Altezza e bordo di sotto della barra: quelli di «.menu» (il querySelector di prima) e quelli per ruolo."""
+        vecchie, b = pg.evaluate(misure), menu(pg).bounding_box()
+        nuove = [b['height'], b['y'] + b['height']] if b else None
+        ok('%s: altezza e bordo di sotto del menu per ruolo sono quelli di «.menu»' % nome,
+           nuove is not None and all(abs(x - y) < 0.5 for x, y in zip(vecchie, nuove)), (vecchie, nuove))
+    try:
+        # prove_19: il tasto D apre Dove si fa; il menu resta su una riga
+        pg.goto(B + '/oggi')
+        pg.keyboard.press('d')
+        pg.wait_for_url(re.compile(r'/dove-si-fa/'))
+        stesso(pg, '19 Dove si fa: la barra del menu («.menu»)', '.menu', menu(pg))
+        barra('19 Dove si fa')
+        # prove_19: la scheda della struttura comincia sotto il menu
+        pg.goto(B + '/dove-si-fa/?q=rm+ginocchio')
+        pg.locator('#risultati-dove a.sede', has_text='Centro Nord').first.click()
+        pg.wait_for_selector('#scheda-dove:not([hidden]) .dentro-scheda')
+        pg.wait_for_function("() => document.getAnimations().every(a => a.playState !== 'running')")
+        stesso(pg, '19 scheda aperta: la barra del menu («.menu»)', '.menu', menu(pg))
+        barra('19 scheda aperta')
+        pg.mouse.move(300, 500)
+        pg.mouse.wheel(0, 20)
+        pg.wait_for_timeout(300)
+        barra('19 scheda aperta, scorsa di 20 pixel')
+        pg.keyboard.press('Escape')
+        # prove_19: la ricerca rapida col tasto /, poi «holter» (solo prestazioni)
+        pg.goto(B + '/oggi')
+        pg.keyboard.press('/')
+        zona = menu(pg).get_by_role('search')
+        campo = zona.get_by_role('searchbox')
+        stesso(pg, '19 ricerca rapida: il campo', '#ricerca-rapida', campo)
+        ok('19 ricerca rapida: il tasto / porta nel campo trovato per ruolo', campo.evaluate('c => c === document.activeElement'))
+        pg.keyboard.type('holter')
+        rapidi = zona.get_by_role('link')
+        rapidi.or_(zona.get_by_text('Nessun risultato.')).first.wait_for(timeout=5000)
+        pg.wait_for_timeout(300)
+        stesso(pg, '19 ricerca rapida «holter»: le prestazioni sono tutti i risultati', '#risultati-rapidi a[data-gruppo="prestazione"]',
+               rapidi, 'lista')
+        stesso(pg, '19 ricerca rapida «holter»: tutti i risultati', '#risultati-rapidi a.voce-rapida', rapidi, 'lista')
+        stesso(pg, '19 ricerca rapida «holter»: la prima prestazione', pg.locator('#risultati-rapidi a[data-gruppo="prestazione"]').first,
+               rapidi.first)
+        # una parola che non trova niente: nessun collegamento, e «Nessun risultato.» (l'attesa della raccolta)
+        campo.fill('')
+        pg.keyboard.type('zzqxw')
+        rapidi.or_(zona.get_by_text('Nessun risultato.')).first.wait_for(timeout=5000)
+        pg.wait_for_timeout(300)
+        stesso(pg, '19 ricerca rapida senza risultati: nessun collegamento', '#risultati-rapidi a', rapidi, 'nessuno')
+        stesso(pg, '19 ricerca rapida senza risultati: «Nessun risultato.»', '#risultati-rapidi .nessuno', zona.get_by_text('Nessun risultato.'))
+        pg.keyboard.press('Escape')
+
+        # prove_16: l'indirizzo da cui si leggono le notifiche, dalla zona per ruolo (prima getElementById)
+        pg.goto(B + '/oggi')
+        notifiche = pg.get_by_role('region', name='Notifiche', exact=True)
+        stesso(pg, '16 Oggi: la zona delle notifiche', '#notifiche', notifiche)
+        vecchio = pg.evaluate("() => document.getElementById('notifiche').getAttribute('data-indirizzo')")
+        ok('16 Oggi: l\'indirizzo delle notifiche letto dalla zona per ruolo è quello di #notifiche',
+           bool(vecchio) and notifiche.get_attribute('data-indirizzo') == vecchio, (vecchio, notifiche.get_attribute('data-indirizzo')))
+        # prove_16: il messaggio della pagina Aggiornamenti, prima cercato nel testo di tutta la pagina
+        pg.goto(B + '/aggiornamenti')
+        pg.fill('#indirizzo-aggiornamenti', 'http://example.invalid/versioni')
+        with pg.expect_navigation():
+            pg.click('form[data-guida="aggiornamenti-indirizzo"] button[type="submit"]')
+        stesso(pg, '16 Aggiornamenti: la zona dei messaggi', '.avvisi', zona_messaggi(pg))
+        frase = 'Serve un indirizzo che comincia con https://'
+        ok('16 Aggiornamenti: il messaggio del testo della pagina è in messaggi()', frase in (pg.text_content('body') or '')
+           and frase in messaggi(pg) and messaggi(pg) == pg.locator('.avvisi').inner_text(), messaggi(pg)[:150])
+
+        # prove_17: un paziente nuovo con il codice fiscale calcolato dai dati, il messaggio, poi eliminato
+        cognome = 'Testaequi' + ''.join(random.choice('bcdfglmnprstvz') + random.choice('aeiou') for _ in range(2))
+        pg.goto(B + '/pazienti/nuovo')
+        pg.fill('#cognome', cognome)
+        pg.fill('#nome', 'Ugo')
+        pg.fill('#telefono', '333%07d' % random.randint(0, 9999999))
+        pg.select_option('#sesso', 'M')
+        pg.fill('#data_nascita', '1969-07-04')
+        pg.fill('#luogo_nascita_testo', 'Napoli')
+        pg.press('#luogo_nascita_testo', 'Tab')
+        pg.wait_for_function("() => document.getElementById('codice_fiscale').value.length === 16", timeout=5000)
+        with pg.expect_navigation():
+            pg.click('form.modulo-paziente button.primario[type="submit"]')
+        scheda = pg.url
+        stesso(pg, '17 paziente salvato: la zona dei messaggi', '.avvisi', zona_messaggi(pg))
+        frase = 'Codice fiscale calcolato dai dati: '
+        ok('17 paziente salvato: il messaggio del testo della pagina è in messaggi()', frase in (pg.text_content('body') or '')
+           and frase in messaggi(pg) and messaggi(pg) == pg.locator('.avvisi').inner_text(), messaggi(pg)[:150])
+        with pg.expect_navigation():
+            with rispondi(pg) as d:
+                pg.get_by_role('button', name='Elimina', exact=True).click()
+        ok('17: il paziente della prova eliminato dopo la domanda (i dati come prima)',
+           d.testo == 'Eliminare questa scheda?' and pg.request.get(scheda).status == 404, (d.testo, scheda))
+
+        # prove_191: «Salva» delle impostazioni email senza cambiare niente (la password vuota resta quella salvata)
+        pg.goto(B + '/invii#email')
+        with pg.expect_navigation():
+            pg.click('#modulo-email button[type="submit"]')
+        stesso(pg, '191 email salvata: la zona dei messaggi', '.avvisi', zona_messaggi(pg))
+        vecchio = ' '.join(pg.locator('.avviso').all_inner_texts())
+        ok('191 email salvata: i testi di «.avviso» sono le righe di messaggi()', 'Impostazioni salvate' in vecchio
+           and vecchio == ' '.join(x.strip() for x in messaggi(pg).split('\n') if x.strip()), (vecchio, messaggi(pg)))
+    except Exception as e:  # noqa: BLE001
+        ok('coppie di prove_19, prove_16, prove_17 e prove_191: arrivano in fondo', False, '%s: %s' % (type(e).__name__, str(e)[:400]))
+    ok('coppie di prove_19, prove_16, prove_17 e prove_191: nessuna domanda inattesa', not domande.inattese, domande.inattese)
     ctx.close()
 
 
@@ -655,6 +804,7 @@ def giro(br):
     ctx2.close()
     coppie_guida_tendine(br, err)
     coppie_18_tariffari(br, err)
+    coppie_altre(br, err)
 
     ok('nessun errore JavaScript', not err, err[:3])
     ok('nessuna domanda inattesa', not domande.inattese, domande.inattese)

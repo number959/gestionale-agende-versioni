@@ -99,7 +99,13 @@ partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova),
 `prove_tariffari_browser.py` (il prezzo del tariffario nella prenotazione, carica ed elimina un tariffario), nell'animata
 `prove_animazioni.py` e `prove_icone_animate.py`, e per ultima `prove_16_browser.py`, che
 cambia l'indirizzo degli aggiornamenti. Le prove nel browser salvano dati: sempre su un
-gestionale di prova, mai su quello vero.
+gestionale di prova, mai su quello vero. Dalla tappa 1 della base prendono l'indirizzo solo da
+`aiuti_browser.indirizzo_di_prova(sys.argv)`, che si ferma senza indirizzo o con la porta 5000; `tutte_le_prove.py`
+rifiuta `--browser` sulla 5000 e non lancia una raccolta nel browser che non passa da lì. Menu, tendine, ricerca
+rapida, messaggi e domande del browser si cercano per ruolo e nome con gli aiuti di `aiuti_browser.py` (mai per
+classe); un selettore vecchio si toglie solo dopo che `strumenti/equivalenza_selettori.py` ha visto che il nuovo
+trova lo stesso elemento. Ogni pagina aperta chiama subito `prepara_domande(pg)`, e ogni domanda voluta passa da
+`with rispondi(pg, si=...)`: una domanda che nessuno aspettava fa cadere la prova.
 
 Le prove senza browser: `prove.py`, `prove2.py`, `prove100.py`, `prove200.py`,
 `prove_anagrafiche.py`, `prove_personalizzazione.py`, `prove_funzioni.py`, `prove_14.py`,

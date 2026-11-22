@@ -1,6 +1,6 @@
 """Prove nel browser della guida sullo schermo e del menu a gruppi, su un
 gestionale gia' avviato con i dati di prova:
-    python prove_guida_browser.py http://127.0.0.1:5000
+    python prove_guida_browser.py http://127.0.0.1:5001
 Non usarla sul database vero (non modifica niente, ma e' pensata per i dati di prova).
 Il menu, le tendine e le domande del browser si cercano per ruolo e nome, come un lettore di schermo, con gli
 aiuti di aiuti_browser.py (tappa 1 della base): una veste nuova puo' cambiare classi e posti senza rompere la
@@ -10,7 +10,8 @@ from playwright.sync_api import Error as ErrorePlaywright, sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import guida
 from aiuti_browser import apri_comandi, gruppo, menu, nome_voce, prepara_domande, principale, tendina_aperta
-B = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000'
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 def ok(n, c, d=''):
     esiti.append(bool(c)); print(('OK ' if c else 'KO ') + n, '' if c else d)

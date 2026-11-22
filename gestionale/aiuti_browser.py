@@ -35,6 +35,20 @@ GRUPPI = ('Ambulatori', 'Segreteria', 'Aiuto', 'Configura')       # i gruppi del
 ZONA = 'Messaggi'               # la zona dei messaggi del programma in base.html: role="status" aria-label="Messaggi"
 
 
+def indirizzo_di_prova(argv):
+    """L'indirizzo del gestionale di prova, dal primo argomento della raccolta (tutte_le_prove.py lo passa sempre).
+    Senza indirizzo, o con la porta 5000 (quella del programma vero), la raccolta si ferma prima di aprire il
+    browser: le prove nel browser salvano dati e vanno solo su un gestionale di prova (strumenti/demo.py)."""
+    if len(argv) < 2 or not argv[1].strip():
+        raise SystemExit('Manca l\'indirizzo del gestionale di prova: per esempio\n'
+                         '    python strumenti/demo.py --porta 5001\n    python %s http://127.0.0.1:5001' % argv[0])
+    b = argv[1].strip().rstrip('/')
+    if re.search(r':5000(?:/|$)', b):
+        raise SystemExit('Il gestionale sulla porta 5000 è quello vero: le prove nel browser salvano dati e vanno '
+                         'solo su un gestionale di prova (python strumenti/demo.py --porta 5001).')
+    return b
+
+
 def nome_voce(testo):
     """Il nome di una voce del menu comincia con le parole in grassetto e continua con la spiegazione in piccolo
     («Conferme telefonate per il prossimo giorno»), quello di un gruppo può avere il contatore («Segreteria 3»):
@@ -67,13 +81,13 @@ def tendina_aperta(pg):
 
 
 def apri_gruppo(pg, nome):
-    """Apre un gruppo del menu con un clic, come una persona, e torna la sua tendina."""
+    """Apre un gruppo del menu con un clic, come una persona, e torna la sua tendina: quella con il nome del gruppo
+    (aria-label in _menu.html). wait_for vuole una tendina sola aperta: con due aperte la prova cade."""
     b = _uno(gruppo(pg, nome), 'il pulsante «%s» del menu' % nome)
     if b.get_attribute('aria-expanded') != 'true':
         b.click()
-    t = tendina_aperta(pg)
-    t.wait_for(state='visible', timeout=5000)
-    return t
+    tendina_aperta(pg).wait_for(state='visible', timeout=5000)
+    return _uno(menu(pg).get_by_role('menu', name=nome, exact=True), 'la tendina «%s» del menu' % nome)
 
 
 def voce_del_menu(pg, gruppo_o_voce, voce=None):

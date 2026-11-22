@@ -35,7 +35,8 @@ import calendario  # noqa: E402
 from aiuti_browser import apri_comandi, messaggi, nome_voce, prepara_domande, rispondi  # noqa: E402
 from playwright.sync_api import sync_playwright
 
-B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 OGGI = date.today()
 # un mese lontano, ogni volta diverso: le celle partono vuote (PROVE_MESE=AAAA-MM per sceglierlo)
@@ -509,6 +510,7 @@ with sync_playwright() as p:
     piccolo = br.new_context(viewport={'width': 390, 'height': 844}, locale='it-IT', reduced_motion='reduce')
     piccolo.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); } catch (e) {}")
     q = piccolo.new_page()
+    domande_q = prepara_domande(q)           # anche qui: una domanda inattesa non passa in silenzio
     q.on('pageerror', lambda e: err.append(str(e)))
     q.goto(B + '/personale/turni/mese/' + AAAAMM)
     q.locator('#griglia-turni td.cella').nth(40).click()
@@ -525,7 +527,8 @@ with sync_playwright() as p:
         pg.goto(B + u)
         pg.wait_for_timeout(300)
     ok('nessun errore JavaScript', not err, err[:3])
-    ok('nessuna domanda del browser inattesa', not domande.inattese, domande.inattese)
+    ok('nessuna domanda del browser inattesa', not domande.inattese and not domande_q.inattese,
+       domande.inattese + domande_q.inattese)
     br.close()
 print('\n%d prove nel browser, %d superate' % (len(esiti), sum(esiti)))
 sys.exit(0 if all(esiti) else 1)

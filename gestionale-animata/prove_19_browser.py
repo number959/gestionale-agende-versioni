@@ -11,6 +11,10 @@ inventato di strumenti/catalogo_prova.py):
   con Annulla; WhatsApp e Stampa si segnano da sole, una volta sola;
 - il paziente scelto dalla pagina; la ricerca rapida del menu;
 - schermo stretto, tema scuro, nessun errore JavaScript.
+La cornice (il menu, la ricerca rapida, le domande del browser) si cerca per
+ruolo e nome con gli aiuti di aiuti_browser.py, come un lettore di schermo
+(tappa 1 della base); una domanda del browser che nessuno aspettava fa cadere
+la prova.
 Segna e toglie pazienti indirizzati: usarla su un gestionale di prova, mai su
 quello vero."""
 import os
@@ -18,9 +22,13 @@ import re
 import sys
 from urllib.parse import unquote
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Error as ErrorePlaywright, sync_playwright
 
-B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from aiuti_browser import menu, prepara_domande  # noqa: E402
+
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 
 
@@ -38,10 +46,10 @@ with sync_playwright() as p:
     # WhatsApp non si apre davvero: una pagina finta al posto di wa.me
     ctx.route(re.compile(r'^https://wa\.me/'), lambda r: r.fulfill(status=200, content_type='text/plain', body='finto'))
     pg = ctx.new_page()
+    domande = prepara_domande(pg)            # subito: ogni domanda del browser passa da qui (nessuna e' attesa)
     err = []
     pg.on('pageerror', lambda e: err.append(str(e)))
     pg.on('console', lambda m: err.append(m.text) if m.type == 'error' else None)
-    pg.on('dialog', lambda d: d.accept())
 
     def avviso():
         loc = pg.locator('#avvisi-dove .avviso-turni')
@@ -71,7 +79,7 @@ with sync_playwright() as p:
     ok('senza ricerca: branche, strutture e ultimi indirizzati',
        pg.locator('.branche-dove a').count() >= 15 and pg.locator('a.sede-grande').count() == 6 and
        pg.locator('.recenti-dove li').count() >= 3)
-    ok('il menu resta su una riga', pg.evaluate("document.querySelector('.menu').getBoundingClientRect().height") < 40)
+    ok('il menu resta su una riga', menu(pg).bounding_box()['height'] < 40, menu(pg).bounding_box())
 
     # ------------------------------------------------ la ricerca mentre si scrive
     pg.evaluate('window.__stessa = 1')
@@ -145,9 +153,10 @@ with sync_playwright() as p:
     ok('la struttura scelta si vede fra i risultati', 'scelta' in (chip.get_attribute('class') or ''))
     ok('l\'indirizzo ricorda la scheda aperta', 'gruppo=' in pg.url and 'voce=' in pg.url, pg.url)
     r = sc.bounding_box()
-    menu = pg.evaluate("document.querySelector('.menu').getBoundingClientRect().bottom")
-    ok('la scheda comincia sotto il menu e arriva al bordo destro', abs(r['y'] - menu) <= 1 and
-       abs(r['x'] + r['width'] - 1366) <= 1, (r, menu))
+    barra = menu(pg).bounding_box()
+    sotto = barra['y'] + barra['height']
+    ok('la scheda comincia sotto il menu e arriva al bordo destro', abs(r['y'] - sotto) <= 1 and
+       abs(r['x'] + r['width'] - 1366) <= 1, (r, sotto))
     pag = pg.locator('#pagina-dove').bounding_box()
     ok('la pagina lascia posto alla scheda (i risultati non finiscono sotto)', pag['x'] + pag['width'] <= r['x'] + 1,
        (pag, r))
@@ -224,24 +233,34 @@ with sync_playwright() as p:
        pg.locator('[data-azione="whatsapp"]').get_attribute('href').startswith('https://wa.me/39347'))
 
     # ------------------------------------------------ la ricerca rapida del menu
+    # il tasto / porta nel campo (resta: prova la scorciatoia), poi si scrive come una persona; i risultati sono i
+    # collegamenti della zona di ricerca del menu: per «holter» solo prestazioni, la prima e' Holter ECG
     pg.goto(B + '/oggi')
     pg.keyboard.press('/')
     pg.keyboard.type('holter')
-    pg.wait_for_selector('#risultati-rapidi a[data-gruppo="prestazione"]')
-    voce = pg.locator('#risultati-rapidi a[data-gruppo="prestazione"]').first.inner_text()
-    ok('ricerca rapida: le prestazioni e dove si fanno', voce.startswith('Holter ECG') and 'si fa a:' in voce, voce)
-    pg.locator('#risultati-rapidi a[data-gruppo="prestazione"]').first.click()
-    pg.wait_for_url(re.compile(r'/dove-si-fa/\?q=holter'))
-    pg.wait_for_timeout(300)
-    ok('dalla ricerca rapida: la prestazione in evidenza, pronta da scegliere',
+    zona = menu(pg).get_by_role('search')
+    rapidi = zona.get_by_role('link')
+    try:
+        rapidi.or_(zona.get_by_text('Nessun risultato.')).first.wait_for(timeout=5000)
+    except ErrorePlaywright:
+        pass                                 # niente risultati: la prova qui sotto cade e dice cosa c'e'
+    voce = rapidi.first.inner_text() if rapidi.count() else ''
+    ok('ricerca rapida: le prestazioni e dove si fanno', voce.startswith('Holter ECG') and 'si fa a:' in voce,
+       voce or zona.inner_text())
+    if voce:
+        rapidi.first.click()
+        pg.wait_for_url(re.compile(r'/dove-si-fa/\?q=holter'))
+        pg.wait_for_timeout(300)
+    ok('dalla ricerca rapida: la prestazione in evidenza, pronta da scegliere', bool(voce) and
        pg.locator('.voce-dove.evidenziata h2').inner_text() == 'Holter ECG' and
-       pg.evaluate("document.activeElement.classList.contains('sede')"))
+       pg.evaluate("document.activeElement.classList.contains('sede')"), pg.url)
 
     # ------------------------------------------------ schermo stretto e tema scuro
     piccolo = br.new_context(viewport={'width': 390, 'height': 844}, locale='it-IT')
     piccolo.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); "
                             "localStorage.setItem('gestionale-tema', 'scuro'); } catch (e) {}")
     q = piccolo.new_page()
+    domande_q = prepara_domande(q)
     q.on('pageerror', lambda e: err.append(str(e)))
     q.goto(B + '/dove-si-fa/?q=rm+ginocchio')
     ok('schermo stretto: la pagina non scorre di lato',
@@ -260,6 +279,8 @@ with sync_playwright() as p:
         pg.goto(B + u)
         pg.wait_for_timeout(300)
     ok('nessun errore JavaScript', not err, err[:3])
+    ok('nessuna domanda del browser inattesa', not domande.inattese and not domande_q.inattese,
+       domande.inattese + domande_q.inattese)
     br.close()
 print('\n%d prove nel browser, %d superate' % (len(esiti), sum(esiti)))
 sys.exit(0 if all(esiti) else 1)

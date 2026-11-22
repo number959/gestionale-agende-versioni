@@ -33,7 +33,8 @@ from playwright.sync_api import Error as ErrorePlaywright, sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from aiuti_browser import apri_comandi, apri_gruppo, cerca_rapido, menu, prepara_domande  # noqa: E402
 
-B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 oggi = date.today()
 mar = oggi - timedelta(days=(oggi.weekday() - 1) % 7)       # i giorni dei dati di prova (strumenti/demo.py)
@@ -70,10 +71,11 @@ def zona_notifiche(pg):
 
 
 def fine_animazioni(pg):
-    """Le notifiche dell'animata entrano scorrendo da destra, una dopo l'altra: si aspetta che sia ferma ogni
-    animazione dentro la zona delle notifiche."""
+    """Le notifiche dell'animata entrano scorrendo da destra, una dopo l'altra: si aspetta che siano ferme le
+    animazioni delle notifiche, i riquadri che stanno nella zona. Non quelle dei pezzi dentro: la barretta del
+    tempo che resta scorre per 15 secondi."""
     pg.wait_for_function("(zona) => document.getAnimations().every(a => a.playState !== 'running' || !(a.effect && "
-                         "a.effect.target && zona.contains(a.effect.target)))",
+                         "a.effect.target && a.effect.target.parentElement === zona))",
                          arg=zona_notifiche(pg).element_handle(), timeout=8000)
 
 
@@ -151,20 +153,29 @@ with sync_playwright() as p:
                 controlla(pg, apri(pg, gruppo, dove), '%s: %s' % (dove, gruppo))
             chiudi(pg)
             if nome == 'oggi':
-                # appena aperta la pagina, mentre le animazioni d'entrata sono ancora in corso
+                # appena aperta la pagina, mentre le animazioni d'entrata sono ancora in corso. Le notifiche già
+                # viste nella prima visita non tornerebbero per due ore (gestionale.js, vistaDaPoco): si dimenticano,
+                # così tornano come in una sessione nuova, quante che siano nei dati di prova
+                pg.evaluate("() => { try { sessionStorage.removeItem('notifiche-viste'); } catch (e) {} }")
                 pg.goto(B + '/giorno/%s?struttura=1' % g.isoformat())
                 controlla(pg, apri(pg, STAMPA, '%s, giorno appena aperto' % dim), '%s, giorno appena aperto: Stampa e scarica' % dim)
                 chiudi(pg)
                 # le notifiche arrivano 0,8 secondi dopo la pagina: si aspettano (prima si guardava subito e il
-                # controllo non partiva quasi mai); di ognuna il riquadro e il collegamento
+                # controllo non partiva quasi mai). I dati di prova ne hanno sempre (almeno «Aggiornamento
+                # disponibile» e «Messaggi non partiti»): se non arrivano la prova cade, non si salta
                 notifiche = zona_notifiche(pg).get_by_role('status')
                 try:
-                    notifiche.first.wait_for(timeout=3000)
+                    notifiche.first.wait_for(timeout=5000)
                 except ErrorePlaywright:
                     pass
                 if notifiche.count():
                     fine_animazioni(pg)
-                    controlla(pg, notifiche.or_(notifiche.get_by_role('link')), '%s: notifiche' % dim)
+                    # di ognuna il riquadro, il collegamento e il titolo: il titolo (<b>) non ha un ruolo e si
+                    # prende dentro le notifiche trovate per ruolo, come lo prendeva la prova di prima
+                    controlla(pg, notifiche.or_(notifiche.get_by_role('link')).or_(notifiche.locator('p, b, strong')),
+                              '%s: notifiche' % dim)
+                else:
+                    ok('%s: notifiche (arrivano)' % dim, False, 'nessuna notifica in 5 secondi')
                 pg.keyboard.press('?')
                 pg.wait_for_timeout(300)
                 controlla(pg, pg.get_by_role('dialog', name='Tasti rapidi', exact=True).get_by_role('row'), '%s: tasti rapidi' % dim)

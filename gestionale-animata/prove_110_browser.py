@@ -11,6 +11,8 @@ fasce da 15 minuti, il resto della struttura resta a 30):
 - la guida sullo schermo «Le fasce di ogni ambulatorio» illumina i suoi punti;
 - agenda della settimana del medico, modulo del turno, tema scuro, schermo
   stretto; nessun errore JavaScript.
+Le domande del browser passano da aiuti_browser.py (tappa 1 della base): una
+domanda che nessuno aspettava fa cadere la prova.
 Non salva niente."""
 import os
 import re
@@ -19,7 +21,11 @@ from datetime import date, timedelta
 
 from playwright.sync_api import sync_playwright
 
-B = (sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000').rstrip('/')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from aiuti_browser import prepara_domande  # noqa: E402
+
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
 OGGI = date.today()
 MAR = OGGI - timedelta(days=(OGGI.weekday() - 1) % 7)       # il martedi di questa settimana, come demo.py
@@ -66,6 +72,7 @@ with sync_playwright() as p:
     ctx.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); "
                         "localStorage.setItem('gestionale-tema', 'chiaro'); } catch (e) {}")
     pg = ctx.new_page()
+    domande = prepara_domande(pg)            # subito: ogni domanda del browser passa da qui (nessuna e' attesa)
     err = []
     pg.on('pageerror', lambda e: err.append(str(e)))
     pg.on('console', lambda m: err.append(m.text) if m.type == 'error' else None)
@@ -170,6 +177,7 @@ with sync_playwright() as p:
     ctx2.add_init_script("try { localStorage.setItem('guida-benvenuto','1'); localStorage.setItem('guida-viste', '{\"*\":1}'); "
                          "localStorage.setItem('gestionale-tema', 'scuro'); } catch (e) {}")
     pg2 = ctx2.new_page()
+    domande2 = prepara_domande(pg2)
     pg2.on('pageerror', lambda e: err.append(str(e)))
     pg2.goto(giorno)
     pg2.wait_for_timeout(500)
@@ -193,6 +201,8 @@ with sync_playwright() as p:
     larga = pg.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
     ok('schermo stretto: la pagina non si allarga (scorre solo la griglia)', larga)
     ok('nessun errore JavaScript', not err, err[:3])
+    ok('nessuna domanda del browser inattesa', not domande.inattese and not domande2.inattese,
+       domande.inattese + domande2.inattese)
     br.close()
 
 print('%d prove nel browser, %d superate' % (len(esiti), sum(esiti)))

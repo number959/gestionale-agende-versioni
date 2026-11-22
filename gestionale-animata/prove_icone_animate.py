@@ -1,10 +1,11 @@
 """Prove delle icone animate (Lottie) e del riquadro di attesa, nel browser, su un
 gestionale gia' avviato con dati di prova che abbiano interventi domani e una
-notte senza letti: python prove_icone_animate.py http://127.0.0.1:5000
+notte senza letti: python prove_icone_animate.py http://127.0.0.1:5001
 Non usarla sul database vero: spunta e toglie caselle della checklist."""
 import sys, time, os, datetime as dt
 from playwright.sync_api import sync_playwright
-B = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5000'
+from aiuti_browser import indirizzo_di_prova  # noqa: E402
+B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 F = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prove_animazioni_foto') + os.sep
 os.makedirs(F, exist_ok=True)
 oggi=dt.date.today(); domani=oggi+dt.timedelta(days=1)
