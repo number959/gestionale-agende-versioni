@@ -487,20 +487,27 @@ def pl_avvisi():
     r = C.post('/appuntamento', data=modulo_app(I, 'Sala B', 'Mancini', MAR + timedelta(days=1), degenza='NOTTE'))
     m = avvisi(C)
     assert r.status_code == 302 and 'servono 2 letti e ce ne sono 1' in m, m
-    # i «non c'è» di sotto hanno per gemello questo avviso, letto nello stesso modo: comincia con «Posti letto»
+    # i «non c'è» di sotto hanno per gemello questo avviso, letto nello stesso modo: comincia con «Posti letto».
+    # Prima di ognuno: l'appuntamento è stato salvato davvero (se non si salva, l'avviso non c'è comunque)
     # un DH non occupa letti: nessun avviso
     C.post('/appuntamento', data=modulo_app(I, 'Sala B', 'Mancini', MAR + timedelta(days=2), ora='12:00', degenza='DH'))
-    manca(avvisi(C), 'Posti letto', dove_ce=m, perche='un DH non occupa letti')
+    a = avvisi(C)
+    assert 'Appuntamento salvato' in a, 'appuntamento non salvato: %r' % a
+    manca(a, 'Posti letto', dove_ce=m, perche='un DH non occupa letti')
     # dopo il ricovero il letto e' libero
     C.post('/appuntamento', data=modulo_app(I, 'Sala B', 'Ferri', MAR + timedelta(days=3), ora='12:00', degenza='NOTTE'))
-    manca(avvisi(C), 'Posti letto', dove_ce=m, perche='dopo il ricovero il letto è libero')
+    a = avvisi(C)
+    assert 'Appuntamento salvato' in a, 'appuntamento non salvato: %r' % a
+    manca(a, 'Posti letto', dove_ce=m, perche='dopo il ricovero il letto è libero')
     # letti non indicati: nessun controllo
     s = S()
     s.get(Struttura, 1).posti_letto = None
     s.commit()
     s.close()
     C.post('/appuntamento', data=modulo_app(I, 'Sala A', 'Ferri', MAR + timedelta(days=1), ora='14:00', degenza='NOTTE'))
-    manca(avvisi(C), 'Posti letto', dove_ce=m, perche='con i letti non indicati non si controlla')
+    a = avvisi(C)
+    assert 'Appuntamento salvato' in a, 'appuntamento non salvato: %r' % a
+    manca(a, 'Posti letto', dove_ce=m, perche='con i letti non indicati non si controlla')
 
 
 def pl_notifica_e_struttura():

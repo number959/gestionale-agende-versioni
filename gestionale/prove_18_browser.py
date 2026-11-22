@@ -388,8 +388,12 @@ with sync_playwright() as p:
 
     # ------------------------------------------------ la settimana: copia e schema
     lun = lunedi_dopo(MESE + timedelta(days=1))
-    pg.goto(B + '/personale/turni/settimana/' + lun.isoformat())
-    ok('settimana: il turno con l\'orario', '7–14' in pg.inner_text('#griglia-turni') or True)
+    # la settimana con il giorno 5, dove sopra si è messa la Mattina: le celle piene scrivono anche l'orario
+    pg.goto(B + '/personale/turni/settimana/' + (MESE + timedelta(days=4) - timedelta(days=(MESE + timedelta(days=4)).weekday())).isoformat())
+    piene = pg.locator('#griglia-turni td.cella.piena')
+    ok('settimana: il turno con l\'orario', piene.count() > 0 and
+       all(re.search(r'\d{1,2}–\d{1,2}', piene.nth(i).inner_text()) for i in range(piene.count())),
+       [piene.nth(i).inner_text() for i in range(min(piene.count(), 5))])
     pg.goto(B + '/personale/turni/settimana/' + (lun + timedelta(days=7)).isoformat())
     prima_n = pg.locator('#griglia-turni td.cella.piena').count()
     pg.click('.gruppo-comandi .apri-gruppo')

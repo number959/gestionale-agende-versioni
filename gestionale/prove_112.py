@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import random
+import re
 import shutil
 import sys
 import tempfile
@@ -1255,7 +1256,13 @@ def d_mese():
                       '/ambulatori/settimana/boh.xlsx', '/ambulatori/mese/boh.xlsx'):
         r = C.get(indirizzo)
         assert r.status_code == 200, (indirizzo, r.status_code)
-    assert OGGI.strftime('%Y-%m') in testo(C.get('/ambulatori/mese/boh')) or True
+    # il mese di oggi, letto dal titolo della pagina (i collegamenti al mese prima e dopo non bastano); gemello: un
+    # mese scritto bene dà il suo titolo, diverso
+    titolo = lambda u: re.search(r'<h1 class="giorno">(.*?)</h1>', testo(C.get(u)), re.S).group(1)
+    oggi_mese = '%s %d' % (servizi.MESI[OGGI.month - 1], OGGI.year)
+    assert titolo('/ambulatori/mese/boh').endswith(oggi_mese), titolo('/ambulatori/mese/boh')
+    altro = date(OGGI.year + 1, OGGI.month, 1)
+    assert titolo('/ambulatori/mese/%s' % altro.strftime('%Y-%m')).endswith('%s %d' % (servizi.MESI[altro.month - 1], altro.year))
     assert 'data-lunedi="%s"' % calendario.lunedi_di(OGGI).isoformat() in testo(C.get('/ambulatori/settimana/boh'))
 
 

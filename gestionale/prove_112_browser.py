@@ -311,8 +311,6 @@ with sync_playwright() as p:
        scarico.value.suggested_filename)
     attivo = pg.locator('nav.menu .gruppo.attivo .apri-gruppo').first
     ok('riepilogo del periodo: il gruppo Ambulatori è attivo', attivo.count() and 'Ambulatori' in attivo.inner_text())
-    ok('riepilogo del periodo (gemello del modo schermo della dashboard, piu\' sotto): il menu c\'è',
-       pg.locator('nav.menu').count() == 1, pg.locator('nav.menu').count())
     pg.set_viewport_size({'width': 390, 'height': 844})
     pg.wait_for_timeout(300)
     ok('riepilogo del periodo: sul telefono la pagina non scorre di lato (scorrono le tabelle)',
@@ -330,6 +328,15 @@ with sync_playwright() as p:
         pg.click('[data-guida="periodo-excel"]')
     ok('riepilogo del periodo: l\'Excel della sala si scarica con il suo nome',
        scarico.value.suggested_filename.startswith('riepilogo-sala-operatoria-'), scarico.value.suggested_filename)
+    # gemello di «apre il riepilogo senza menu, nel modo schermo» (piu' sotto): nella dashboard normale lo stesso pulsante
+    # apre la stessa pagina (/riepilogo-live/statistiche senza schermo=1), e li' il menu c'è
+    pg.goto(B + '/riepilogo-live?struttura=1')
+    pg.wait_for_selector('#riepilogo-live .frase-live')
+    pg.click('[data-guida="live-statistiche"]')
+    pg.wait_for_selector('.pagina-periodo .frase-live')
+    ok('dashboard normale (gemello): «Riepilogo del periodo» apre il riepilogo con il menu',
+       '/riepilogo-live/statistiche' in pg.url and 'schermo=1' not in pg.url and pg.locator('nav.menu').count() == 1,
+       (pg.url, pg.locator('nav.menu').count()))
     pg.goto(B + '/riepilogo-live?struttura=1&schermo=1')
     pg.wait_for_selector('#riepilogo-live .frase-live')
     fuori = [h for h in pg.eval_on_selector_all('a[href], form[action]', 'els => els.map(e => e.getAttribute("href") || e.getAttribute("action"))')

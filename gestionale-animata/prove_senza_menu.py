@@ -16,6 +16,7 @@ il menu. Il giro di prove_pagine.py controlla il menu in tutte le altre pagine.
     python prove_senza_menu.py
 """
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -145,6 +146,10 @@ def senza_menu(senza, funzione, gemelle):
     return p
 
 
+# il blocco del menu scritto in ogni modo che Jinja accetta: {% block menu %}, {%- block menu -%}, {%block menu%}
+BLOCCO_MENU = re.compile(r'\{%[-+]?\s*block\s+menu\s*[-+]?%\}')
+
+
 def p_undici():
     """I modelli che cambiano il blocco del menu di base.html sono proprio quelli dell'elenco. (Legato a come sono
     fatti i modelli oggi: quando la veste nuova toglie il menu in un altro modo, si riscrive.)"""
@@ -153,7 +158,7 @@ def p_undici():
     for n in os.listdir(cartella):
         if n.endswith('.html') and n != 'base.html':
             with open(os.path.join(cartella, n), encoding='utf-8') as f:
-                if '{% block menu %}' in f.read():
+                if BLOCCO_MENU.search(f.read()):
                     tolti.add(n)
     attesi = {c[1] for c in COPPIE}
     assert tolti == attesi, 'modelli che tolgono il menu e non sono nell\'elenco: %s; nell\'elenco e non lo tolgono ' \
@@ -163,18 +168,23 @@ def p_undici():
 
 
 def g_selettore():
-    """Il gemello del selettore: vede il menu scritto in altri modi, e non vede quello che menu non è."""
+    """Il gemello del selettore e del blocco del menu: vedono il menu scritto in altri modi, e non vedono quello che
+    menu non è."""
     assert guarda('<nav class="menu" aria-label="Pagine"></nav>').menu == 1
     assert guarda('<nav aria-label="Pagine" class="barra menu"></nav>').menu == 1
     assert guarda('<nav class="menu-secondario"></nav><div class="menu"></div><nav class="passi"></nav>'
                   '<p>Apri il menu a sinistra</p>').menu == 0
     assert guarda('<body class="x" data-pagina="viste.giorno">').funzione == 'viste.giorno'
+    # e il blocco del menu nei modelli (p_undici): in ogni forma, e non un altro blocco che comincia con «menu»
+    assert all(BLOCCO_MENU.search(m) for m in ('{% block menu %}{% endblock %}', '{%- block menu -%}{%- endblock -%}',
+                                                 '{%block menu%}{%endblock%}', '{%+ block  menu %}'))
+    assert not BLOCCO_MENU.search('{% block menu_extra %}{% endblock %}{% block menubar %}{% block corpo %}')
 
 
 prova('i modelli che tolgono il menu sono gli undici dell\'elenco', p_undici)
 for nome, _, senza, funzione, gemelle in COPPIE:
     prova('%s: senza menu, con il menu nella gemella' % nome, senza_menu(senza, funzione, gemelle))
-prova('gemello: il selettore vede il menu in ogni forma, e solo il menu', g_selettore)
+prova('gemello: il selettore e il blocco del menu lo vedono in ogni forma, e solo il menu', g_selettore)
 
 shutil.rmtree(PROVVISORIA, ignore_errors=True)
 for esito, nome, dettaglio in esiti:
