@@ -44,6 +44,7 @@ VOCE_DELLA_LINGUETTA = {
     'Riepilogo live': 'Ambulatori', 'Riepilogo del periodo': 'Ambulatori', 'Esportazioni in Excel': 'Ambulatori',
     'Anagrafiche': 'Configura', 'Strutture del gruppo': 'Configura', 'Email e WhatsApp': 'Configura',
     'Importa da Excel': 'Configura', 'Impostazioni': 'Configura', 'Aggiornamenti': 'Configura',
+    'Aree e accessi': 'Configura',      # la settima, dall'unione con l'accesso dagli altri PC (accessi.py)
 }
 
 

@@ -928,8 +928,11 @@ def autoriparazione():
                            eventi=autoripara.eventi()[:30], sid=None, sezione='impostazioni')
 
 
-# l'accesso dagli altri PC della rete (1.13): dopo tutte le pagine, perche' il censimento le trovi tutte
+# l'accesso dagli altri PC della rete (1.13): dopo tutte le pagine, perche' il censimento le trovi tutte. Dalla rete il
+# menu mostra solo le pagine che l'utente puo' aprire: la condizione per pagina di menu.py e' accessi.si_apre (l'area
+# della pagina presa dal censimento); sul PC principale e' sempre vera e il menu resta quello di sempre
 accessi.installa(app, ses, LUCCHETTO, lambda: Sessione)
+menu.condizione_per_pagina(accessi.si_apre)
 
 
 def porta_in_uso(porta):

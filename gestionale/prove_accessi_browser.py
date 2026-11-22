@@ -2,14 +2,21 @@
 """Prove nel browser dell'accesso dagli altri PC (1.13, accessi.py), su un gestionale gia' avviato con i dati di
 prova (strumenti/demo.py), tutto il giro come lo fa la segreteria:
     python prove_accessi_browser.py http://127.0.0.1:5001
-- dal PC principale: Configura → Impostazioni → «Aree e accessi»; l'accesso dagli altri PC acceso su una porta libera
+- dal PC principale: Configura → Aree e accessi (la settima linguetta di Configura, dall'unione con la tappa 2; e
+  anche dal bottone in Impostazioni); l'accesso dagli altri PC acceso su una porta libera
   (mai la 5080 della clinica), con l'indirizzo da scrivere sugli altri PC, «nessuna richiesta da un altro PC» e il
   firewall spiegato (i comandi in «Per l'assistenza»); un utente rifiutato (la password con il suo nome) torna con nome e
-  parti scritti; poi l'utente nuovo con Agenda «guardare e modificare», Cassa e Sala «solo guardare», riquadro aperto;
+  parti scritti; poi l'utente nuovo con Agenda «guardare e modificare», Cassa, Sala e Ambulatori «solo guardare»,
+  riquadro aperto;
 - da un'altra scheda, sull'indirizzo della rete (quello di questo PC fuori da 127.*, come un altro PC): la pagina di
-  accesso, la password da cambiare al primo accesso, la barra «Entrato da un altro PC come…» con il suo stile; in Agenda
+  accesso e la password da cambiare al primo accesso senza cornice, la riga «Entrato da un altro PC come…» con «Esci»
+  nella barra in alto (su una riga, a 1366 e a 1024 px, la pagina sotto e niente che scorre di lato; il gemello la
+  sposta sopra la pagina); il menu e le linguette con le sole pagine dell'utente, seguite tutte (200, nessun errore
+  JavaScript: Pazienti, Turni, Statistiche, Dove si fa, Configura ed «Esportazioni in Excel» non ci sono); il Modo
+  schermo senza cornice; in Agenda
   la nota del giorno si salva, in Cassa la pagina si apre con «Salva il listino» spento e la riga «Solo guardare», in
-  Sala le caselle della checklist spente, Pazienti risponde con la pagina in italiano e «Torna alle pagine disponibili»;
+  Sala le caselle della checklist spente, Pazienti (aperta dall'indirizzo: nel menu non c'è) risponde con la pagina in
+  italiano, senza cornice, e «Torna alle pagine disponibili»;
   «Esci», e la pagina dopo chiede di nuovo l'accesso;
 - di nuovo dal PC principale: la pagina di accesso non c'è, il registro dice chi è entrato, uscito e cosa ha salvato; il
   riquadro chiuso dell'utente con le parti in una riga; «Togli» fa la domanda; l'accesso spento chiude davvero la porta;
@@ -27,8 +34,8 @@ from datetime import date, timedelta
 from playwright.sync_api import sync_playwright
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from aiuti_browser import (indirizzo_di_prova, messaggi, nome_voce, prepara_domande, principale, rispondi,  # noqa: E402
-                           vai_dal_menu)
+from aiuti_browser import (barra_in_alto, indirizzo_di_prova, linguetta_accesa, linguette, menu, messaggi,  # noqa: E402
+                           nome_voce, prepara_domande, principale, rispondi, vai_dal_menu, voce_accesa)
 
 B = indirizzo_di_prova(sys.argv)   # mai la porta 5000, quella del programma vero
 esiti = []
@@ -72,6 +79,47 @@ def indirizzo_di_un_altro_pc():
     return '127.0.0.1'
 
 
+# la riga di chi è entrato da un altro PC: nella barra in alto (banner), sulla riga della ricerca, la barra alta al più
+# 80 px, la pagina sotto la barra e niente che scorre di lato
+RIGA_UTENTE = r"""() => { const q = (s) => { const e = document.querySelector(s); if (!e || !e.getClientRects().length) { return null; }
+    const b = e.getBoundingClientRect(); return {t: Math.round(b.top), b: Math.round(b.bottom), h: Math.round(b.height)}; };
+  const u = document.querySelector('[role="region"][aria-label="Utente"]');
+  return {barra: q('[data-cornice="barra"]'), cerca: q('[data-cornice="barra"] [role="search"]'),
+          utente: q('[role="region"][aria-label="Utente"]'), main: q('main'),
+          dentro: !!(u && u.closest('[data-cornice="barra"]')), largo: document.documentElement.scrollWidth,
+          finestra: innerWidth}; }"""
+
+
+def problemi_riga_utente(pg):
+    r = pg.evaluate(RIGA_UTENTE)
+    if not r['utente'] or not r['barra'] or not r['cerca']:
+        return ['la riga dell\'utente, la barra o la ricerca non ci sono: %s' % r]
+    p = []
+    if not r['dentro']:
+        p.append('la riga dell\'utente non è nella barra in alto')
+    if r['barra']['h'] > 80:
+        p.append('la barra in alto è alta %d px' % r['barra']['h'])
+    if r['utente']['b'] < r['cerca']['t'] or r['utente']['t'] > r['cerca']['b']:
+        p.append('la riga dell\'utente non sta accanto alla ricerca: %s' % r)
+    if r['main']['t'] < r['barra']['b'] - 1:
+        p.append('la pagina comincia sopra la fine della barra: %s' % r)
+    if r['largo'] > r['finestra'] + 1:
+        p.append('la pagina scorre di lato: %d px su %d' % (r['largo'], r['finestra']))
+    return p
+
+
+def senza_cornice(pg):
+    """La pagina non ha la cornice: nessun contenitore data-cornice, niente menu, niente barra, niente riga dell'utente."""
+    return pg.locator('[data-cornice]').count() == 0 and menu(pg).count() == 0 and \
+        pg.get_by_role('region', name='Utente', exact=True).count() == 0
+
+
+def collegamenti_della_cornice(pg):
+    """Gli indirizzi del menu (anche le voci della tendina Aiuto e i collegamenti nascosti dei tasti) e delle linguette."""
+    return pg.evaluate("""() => [...document.querySelectorAll('nav.menu a[href], [data-cornice="linguette"] a[href]')]
+        .map(a => a.getAttribute('href')).filter(h => h && h.startsWith('/'))""")
+
+
 def chiusa(host, porta):
     try:
         socket.create_connection((host, porta), timeout=5).close()
@@ -103,6 +151,13 @@ with sync_playwright() as p:
         principale(pg).get_by_role('link', name='Aree e accessi', exact=True).click()
     ok('da Impostazioni si arriva ad «Aree e accessi»', pg.url.endswith('/configura/accessi')
        and pg.get_by_role('heading', name='Aree e accessi', exact=True).count() == 1, pg.url)
+    # dall'unione con la tappa 2: la settima linguetta di Configura, accesa con la voce Configura
+    pg.goto(B + '/oggi')
+    vai_dal_menu(pg, 'Configura', 'Aree e accessi')
+    nomi_linguette = [' '.join(x.split()) for x in linguette(pg).get_by_role('link').all_inner_texts()]
+    ok('dal menu: Configura → Aree e accessi, la settima linguetta, accesa con la voce Configura',
+       pg.url.endswith('/configura/accessi') and voce_accesa(pg) == 'Configura' and linguetta_accesa(pg) == 'Aree e accessi'
+       and len(nomi_linguette) == 7 and nomi_linguette[-1] == 'Aree e accessi', (pg.url, nomi_linguette))
     if pg.get_by_role('group', name='Utente %s' % NOME).count():
         # una prova di prima fermata a metà: si riparte da capo (il riquadro dell'utente si apre con un clic sul nome)
         riquadro = pg.get_by_role('group', name='Utente %s' % NOME)
@@ -175,6 +230,8 @@ with sync_playwright() as p:
     nuovo.get_by_label('Password per il primo accesso').fill(PRIMA)
     nuovo.get_by_role('row', name=nome_voce('Sala operatoria')).get_by_role('radio', name='solo guardare',
                                                                              exact=True).check()
+    nuovo.get_by_role('row', name=nome_voce('Ambulatori e dashboard')).get_by_role('radio', name='solo guardare',
+                                                                                    exact=True).check()
     with pg.expect_navigation():
         nuovo.get_by_role('button', name='Aggiungi l\'utente', exact=True).click()
     m = messaggi(pg)
@@ -221,6 +278,7 @@ with sync_playwright() as p:
     with altro.expect_navigation():
         altro.get_by_role('button', name='Entra', exact=True).click()
     ok('primo accesso: prima si sceglie una password propria', altro.url.endswith('/accesso/password'), altro.url)
+    ok('la pagina della password, come l\'accesso, senza cornice', senza_cornice(altro), altro.url)
     altro.get_by_label('Password di adesso').fill(PRIMA)
     altro.get_by_label('Password nuova', exact=False).first.fill(NUOVA)
     altro.get_by_label('Password nuova, di nuovo').fill(NUOVA)
@@ -231,8 +289,52 @@ with sync_playwright() as p:
        altro.url.endswith('/oggi') and barra.count() == 1 and NOME in barra.inner_text()
        and barra.get_by_role('button', name='Esci', exact=True).count() == 1, altro.url)
     ok('il messaggio «Password cambiata.»', 'Password cambiata.' in messaggi(altro), messaggi(altro))
-    stile = barra.evaluate("e => { const s = getComputedStyle(e); return [s.display, s.paddingLeft]; }")
-    ok('la barra «Entrato da un altro PC» ha il suo stile (in riga, allineata alla pagina)', stile == ['flex', '18px'], stile)
+    stile = barra.evaluate("e => getComputedStyle(e).display")
+    ok('la riga «Entrato da un altro PC» nella barra in alto, accanto alla ricerca, con il suo stile (in riga)',
+       stile == 'flex' and barra_in_alto(altro).get_by_role('region', name='Utente', exact=True).count() == 1
+       and not problemi_riga_utente(altro), (stile, problemi_riga_utente(altro)))
+    altro.set_viewport_size({'width': 1024, 'height': 657})
+    ok('anche a 1024 px: la barra su una riga e niente che scorre di lato', not problemi_riga_utente(altro),
+       problemi_riga_utente(altro))
+    altro.set_viewport_size({'width': 1366, 'height': 900})
+    altro.evaluate("() => { const u = document.querySelector('[role=\"region\"][aria-label=\"Utente\"]'); "
+                   "document.querySelector('main').before(u); }")
+    ok('gemello: la riga spostata sopra la pagina si vede', 'non è nella barra in alto' in ' '.join(problemi_riga_utente(altro)),
+       problemi_riga_utente(altro))
+    altro.reload()
+
+    # il menu e le linguette dalla rete: solo le pagine dell'utente (Agenda, Cassa, Sala e Ambulatori), seguite tutte
+    voci_rete = [' '.join(x.split()) for x in menu(altro).get_by_role('link').all_inner_texts()]
+    ok('dalla rete il menu ha solo le voci delle parti date', all(v in ' '.join(voci_rete) for v in
+                                                                  ('Oggi', 'Agenda', 'Sala', 'Ambulatori', 'Cassa'))
+       and not [v for v in ('Pazienti', 'Turni', 'Dove si fa', 'Statistiche', 'Configura') if v in voci_rete], voci_rete)
+    giro = ctx.new_page()
+    prepara_domande(giro)
+    giro.on('pageerror', lambda e: err.append('giro dalla rete: %s' % e))
+    giro.on('console', lambda m: err.append('giro dalla rete: %s' % m.text) if m.type == 'error' else None)
+    visti, coda, male = set(), ['/oggi', '/ambulatori/settimana/%s' % date.today().isoformat(), '/cassa/listino'], []
+    while coda and len(visti) < 80:
+        h = coda.pop(0)
+        if h in visti:
+            continue
+        visti.add(h)
+        r = giro.goto(RETE + h)
+        if not r or r.status != 200:
+            male.append((h, r.status if r else None))
+            continue
+        coda += [x for x in collegamenti_della_cornice(giro) if x not in visti]
+    ok('ogni voce e linguetta dalla rete apre una pagina (%d pagine, seguite tutte)' % len(visti), not male and len(visti) > 10,
+       male[:5])
+    giro.goto(RETE + '/ambulatori/settimana/%s' % date.today().isoformat())
+    ok('dalla rete, senza Statistiche e report, «Esportazioni in Excel» non è fra le linguette di Ambulatori',
+       linguette(giro).get_by_role('link', name='Esportazioni in Excel').count() == 0
+       and linguette(giro).get_by_role('link', name='Riepilogo del periodo').count() == 1)
+    giro.goto(RETE + '/riepilogo-live?schermo=1')
+    ok('il Modo schermo dalla rete: senza cornice', senza_cornice(giro), giro.url)
+    giro.goto(RETE + '/riepilogo-live')
+    ok('gemello: senza ?schermo=1 la cornice c\'è, con la riga dell\'utente nella barra',
+       giro.locator('[data-cornice="barra"]').count() == 1 and not problemi_riga_utente(giro), problemi_riga_utente(giro))
+    giro.close()
 
     # Agenda: guardare e modificare → la nota del giorno si salva
     vai_dal_menu(altro, 'Giorno')
@@ -267,11 +369,12 @@ with sync_playwright() as p:
     ok('Sala da guardare: le caselle della checklist sono spente', caselle is not None and caselle.count()
        and all(caselle.nth(i).is_disabled() for i in range(caselle.count())), caselle.count() if caselle else 'nessuna')
 
-    # Pazienti: non disponibile → la pagina in italiano, con il ritorno e chi chiedere
-    vai_dal_menu(altro, 'Pazienti')
+    # Pazienti: non disponibile (e nel menu non c'è) → dall'indirizzo, la pagina in italiano, con il ritorno e chi chiedere
+    altro.goto(RETE + '/pazienti')
     corpo = altro.locator('main').inner_text()
-    ok('Pazienti non data: «non è fra le parti disponibili», chi chiedere',
-       'non è fra le parti disponibili per questo utente' in corpo and 'Aree e accessi' in corpo, corpo[:200])
+    ok('Pazienti non data: «non è fra le parti disponibili», chi chiedere (Configura → Aree e accessi), senza cornice',
+       'non è fra le parti disponibili per questo utente' in corpo and 'Configura → Aree e accessi' in corpo
+       and senza_cornice(altro), corpo[:200])
     with altro.expect_navigation():
         altro.get_by_role('link', name='Torna alle pagine disponibili').click()
     ok('di nuovo «Torna alle pagine disponibili»: Oggi', altro.url.endswith('/oggi'), altro.url)
@@ -311,8 +414,9 @@ with sync_playwright() as p:
     pg.goto(B + '/configura/accessi')
     riquadro = pg.get_by_role('group', name='Utente %s' % NOME)
     ok('il riquadro dell\'utente, chiuso, dice le sue parti in una riga',
-       riquadro.get_attribute('open') is None and 'Agenda, Cassa (solo guardare), Sala operatoria (solo guardare)'
-       in riquadro.locator('summary').inner_text(), riquadro.locator('summary').inner_text())
+       riquadro.get_attribute('open') is None and 'Agenda, Cassa (solo guardare), Sala operatoria (solo guardare), '
+       'Ambulatori e dashboard (solo guardare)' in riquadro.locator('summary').inner_text(),
+       riquadro.locator('summary').inner_text())
     riquadro.locator('summary').click()
     with pg.expect_navigation():
         with rispondi(pg, si=True) as d:

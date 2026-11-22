@@ -106,9 +106,12 @@ struttura nel menu con le proporzioni del suo file, anche quadrato o alto, sosti
 partenza), `prove_110_browser.py` (le fasce dei turni sul martedi della prova),
 `prove_112_browser.py` (la pianificazione degli ambulatori: mette e toglie un turno, scarica i due Excel),
 `prove_tariffari_browser.py` (il prezzo del tariffario nella prenotazione, carica ed elimina un tariffario),
-`prove_accessi_browser.py` (dalla 1.13: il giro della segreteria in *Aree e accessi*, accesso dalla rete acceso su una porta
-libera, mai la 5080, un utente con Agenda da modificare e Cassa da guardare, poi da un'altra scheda sull'indirizzo della
-rete: accesso, password nuova, nota salvata, «Solo guardare», Pazienti negata, Esci; alla fine tutto come prima), nell'animata
+`prove_accessi_browser.py` (dalla 1.13: il giro della segreteria in *Aree e accessi*, dal menu Configura → Aree e accessi
+e dal bottone di Impostazioni, accesso dalla rete acceso su una porta libera, mai la 5080, un utente con Agenda da
+modificare e Cassa, Sala e Ambulatori da guardare, poi da un'altra scheda sull'indirizzo della rete: accesso e password
+nuova senza cornice, la riga con il nome ed «Esci» nella barra in alto su una riga a 1366 e 1024 px, il menu e le
+linguette con le sole sue pagine seguite tutte, il Modo schermo senza cornice, nota salvata, «Solo guardare», Pazienti
+negata senza cornice, Esci; alla fine tutto come prima), nell'animata
 `prove_animazioni.py` e `prove_icone_animate.py`, e per ultima `prove_16_browser.py`, che
 cambia l'indirizzo degli aggiornamenti. Le prove nel browser salvano dati: sempre su un
 gestionale di prova, mai su quello vero. Dalla tappa 1 della base prendono l'indirizzo solo da
@@ -154,7 +157,11 @@ pagina, richieste dall'indirizzo di questo PC fuori da 127.* (come un altro PC) 
 raggiungibile, «solo guardare» che non salva, rete spenta che chiude davvero la porta, riavvio con la porta della rete
 occupata (il PC principale parte lo stesso); ogni prova ha il suo gemello. Le prove `z_…` sono quelle della revisione del
 22/11 (assenze e chiusure, ricerca dei pazienti, Cassa, lista d'attesa, Conferme, incasso, tentativi con tanti nomi e
-mandati insieme, collegamenti per PC, cookie da un altro PC, sessioni per utente, Excel troppo compressi).
+mandati insieme, collegamenti per PC, cookie da un altro PC, sessioni per utente, Excel troppo compressi); dall'unione con
+la tappa 2 `z_menu_per_area` (per ogni area un utente che ha solo quella segue ogni voce e linguetta della cornice dalla
+sua prima pagina: tutte 200, almeno una della sua area, niente tolto che per lui si apre; sul PC il menu identico a quello
+senza la condizione; gemello: senza la condizione le voci delle altre aree portano al 403), `z_menu_voce_al_posto` e
+`z_cornice_dalla_rete` (la riga dell'utente nella barra, accesso, password, rifiuto e Modo schermo senza cornice).
 `prove_canarino.py` è la guardia del Modo schermo: un paziente inventato apposta (il «canarino»), con appuntamenti
 di oggi in ogni stato, un intervento, la lista d'attesa e il nome scritto in note, cose da fare e appunti, non deve
 comparire in nessuna pagina sotto `/riepilogo-live*`, con e senza schermo, per ogni struttura e periodo; i suoi gemelli
@@ -178,7 +185,9 @@ pagina per G, E, C e D porta alla voce giusta; parole, indirizzi, tasti e `data-
 principale, voce per voce (oracolo: `prove_menu_principale.html`, la copia ferma del suo `_menu.html`, che la prova
 confronta con git quando c'è; le sole parole nuove stanno in `PAROLE_NUOVE`, e come il menu di prima disegnava le voci
 in `IN_FILA` e `NON_NEL_MENU_DI_PRIMA`, con il perché: `menu.py` non porta niente che serva solo alle prove);
-`registra_voce` aggiunge la voce di un modulo senza toccare i modelli; il percorso della barra in alto dice la struttura
+`registra_voce` aggiunge la voce di un modulo senza toccare i modelli (e `registra_sezioni` una sezione a una voce per la
+linguetta di un modulo; la condizione per pagina toglie quello che non si apre, `m_condizione_per_pagina`); il percorso
+della barra in alto dice la struttura
 della pagina (letta dal database), la voce e la linguetta; ogni linguetta porta nel title la riga piccola del menu di
 prima; le linguette si accendono anche per pagina e le condizioni valgono anche per linguette e nascosti; il lanciatore
 vede gli indirizzi della cornice per forma e una seconda voce accesa. Ogni controllo ha il suo gemello.
@@ -375,8 +384,8 @@ temporanea.
   della seduta. Un medico o una prestazione usati da un tariffario non si eliminano. `prove_tariffari.py`.
 - Accesso dagli altri PC della rete (dalla 1.13, `accessi.py`, richiesta di Giovanni del 22/11/2026): spento di partenza;
   il PC principale resta su 127.0.0.1:5000 senza accesso e con tutte le pagine (con la rete spenta le sue pagine sono
-  quelle di prima, byte per byte). Acceso da *Configura → Aree e accessi* (`/configura/accessi`, per ora dalla pagina
-  Impostazioni), il programma ascolta anche su 0.0.0.0:<porta della rete> (5080) con un server suo (`AscoltoRete`,
+  quelle di prima, byte per byte). Acceso da *Configura → Aree e accessi* (`/configura/accessi`, la settima linguetta
+  di Configura, e il bottone in Impostazioni), il programma ascolta anche su 0.0.0.0:<porta della rete> (5080) con un server suo (`AscoltoRete`,
   fili e limiti suoi). «Dalla rete» = la presa della rete, un'intestazione di un portiere (X-Forwarded-For, Forwarded,
   X-Real-Ip, X-Forwarded-Host: per questo `crea_server` ha `clear_untrusted_proxy_headers=False`) o un indirizzo non del
   PC. Utenti, aree e livelli («solo guardare» = solo GET) fra le impostazioni (`rete_utenti`, JSON: id casuale,
@@ -438,7 +447,17 @@ temporanea.
   (predefinito deciso, piano/ESECUZIONE.md): nomi, telefoni, email e note dei pazienti solo con Pazienti o Agenda
   (`cruscotto.con_pazienti`, `servizi.esporta_giorno(con_pazienti=)`), importi e incassi solo con la Cassa, colonne tolte
   (`cruscotto.togli_colonne`), sul PC tutto come prima. Il rifiuto e la pagina d'attesa dicono `PERCORSO_PAGINA`
-  («Configura → Impostazioni → Aree e accessi»: all'unione con la tappa 2 la linguetta). Nella pagina le cose da
+  («Configura → Aree e accessi», la linguetta). Menu e accessi insieme (dall'unione con la tappa 2): `accessi.py`
+  registra la linguetta «Aree e accessi» in Configura (sezione sua «accessi», con `menu.registra_sezioni`; condizione
+  `sul_pc_principale`), e app.py dà al menu la condizione per pagina `accessi.si_apre` (`menu.condizione_per_pagina`):
+  dalla rete voci, linguette, voci della tendina Aiuto e collegamenti nascosti dei tasti ci sono solo se la loro pagina
+  si apre per l'utente (l'area della pagina presa dal censimento, `area_della_pagina`: il Sistema mai), e una voce la cui
+  pagina non si apre porta alla prima sua linguetta che si apre, senza il tasto (Configura a chi ha solo Email e
+  WhatsApp); sul PC sempre vera, e il menu è quello della tappa 2. Una pagina nuova non va scritta in nessuna lista del
+  menu: basta il censimento. Nascondere non protegge: protegge `controlla_accesso`. La riga dell'utente («Entrato da un
+  altro PC come», il nome, «La mia password», «Esci») sta nella barra in alto (`_barra.html`, `_utente_rete.html`):
+  le pagine senza menu (accesso, password, fogli, Modo schermo) non l'hanno, e il rifiuto (`PAGINA_NO`) resta una
+  pagina a sé. Nella pagina le cose da
   tecnico stanno in `<details class="per-assistenza">`, gli utenti in `<details>` chiusi (aperto quello appena salvato,
   `?aperto=`).
 - Popup dell'aggiornamento (dalla 1.12.6): `aggiornamenti.popup_aggiornamento` decide, `_popup_aggiornamento.html` lo
@@ -525,7 +544,10 @@ temporanea.
   con un'icona che non c'è in `_icone.html` (`menu.collega` le legge); nessun modello si tocca. Una linguetta si accende
   per sezione e, con `pagine=` (le funzioni, `request.endpoint`), solo in quelle pagine: così più linguette stanno sulla
   stessa sezione (la Cassa nella tappa 6). La condizione vale per voci, linguette, voci della tendina e collegamenti
-  nascosti (con il loro tasto). Le parole si scrivono con
+  nascosti (con il loro tasto), e così la condizione per pagina (`menu.condizione_per_pagina`, da app.py:
+  `accessi.si_apre`; dalla rete una voce la cui pagina non si apre porta alla prima sua linguetta che si apre, senza
+  tasto). La linguetta di un modulo sotto la voce di un altro si accende su una sezione sua, data con
+  `menu.registra_sezioni(voce, sezioni)` (che rifiuta una sezione di un'altra voce). Le parole si scrivono con
   `menu.testo` (l'apostrofo resta com'è). Il disegno è la cornice della veste nuova (tavole Nefro-*): `_menu.html` il
   menu a sinistra (248 px; sotto 1200 px solo icone e le iniziali della struttura al posto del logo; sotto 600 px una
   riga in alto), con un solo `<nav class="menu …" aria-label="Pagine">` (la guida e le prove lo cercano; dentro nessun

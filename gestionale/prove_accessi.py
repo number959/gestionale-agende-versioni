@@ -39,6 +39,8 @@ import app as A  # noqa: E402
 import prove_messaggi as PM  # noqa: E402
 import accessi  # noqa: E402
 import invii  # noqa: E402
+import menu as MENU  # noqa: E402
+import prove_cornice as PC_  # noqa: E402
 from modelli import (Appuntamento, Appunto, Attesa, Attivita, Invio, NotaGiorno, Operatore, Paziente, Prestazione,  # noqa: E402
                      Risorsa, StrutturaGruppo, leggi_impostazione, scrivi_impostazione)
 from sqlalchemy import event, func, select  # noqa: E402
@@ -167,6 +169,12 @@ def primo(modello, *dove_):
 
 def testo(r):
     return r.get_data(as_text=True)
+
+
+def entrato_come(t, nome):
+    """La riga di chi è entrato da un altro PC, con il suo nome (_utente_rete.html: «Entrato da un altro PC come» per i
+    lettori di schermo, il nome in grassetto)."""
+    return bool(re.search(r'<span class="v-utente-come">Entrato da un altro PC come </span><b>%s</b>' % re.escape(nome), t))
 
 
 def rifiutata(r):
@@ -1237,7 +1245,7 @@ def s_rifiuto_in_italiano():
     assert chiedi(c, 'GET', '/pazienti').status_code == 200, 'gemello: guardare sì'
     # la barra di chi è entrato da un altro PC: nome, la sua password, Esci
     t = testo(chiedi(c, 'GET', '/oggi'))
-    assert 'Entrato da un altro PC come <b>Anna Esempietti</b>' in t and '/accesso/password' in t
+    assert entrato_come(t, 'Anna Esempietti') and '/accesso/password' in t
     assert 'Entrato da un altro PC' not in locale().get('/oggi').get_data(as_text=True), 'gemello: sul PC no'
     return '9 aree negate con la pagina italiana; solo guardare: 403 e niente salvato; la barra con Esci'
 
@@ -1696,7 +1704,7 @@ def y_programma_vero():
                                                                    'ancora': 'barca verde nel lago'})
         assert s == 302 and dove_va.endswith('/oggi'), ('password cambiata', s, dove_va)
         s, _, t = rete_.chiedi('GET', '/oggi')
-        assert s == 200 and 'Entrato da un altro PC come <b>Rete Esempietti</b>' in t, s
+        assert s == 200 and entrato_come(t, 'Rete Esempietti'), s
         s, _, _ = rete_.chiedi('POST', '/note-giorno', {'struttura': '1', 'data': oggi, 'testo': 'Nota dalla rete Fintini'})
         assert s == 302, ('Agenda da modificare: la nota non si salva', s)
         s, _, _ = rete_.chiedi('GET', '/cassa/listino')
@@ -2628,14 +2636,16 @@ def z_nv_checklist_solo_guardare():
 def z_nv_scarica_degli_ambulatori():
     """Problema 5: chi ha solo Ambulatori trovava nelle tendine «La sala operatoria in Excel», «Ambulatori e sala in
     Excel» e «Tutte le esportazioni», che rispondevano 403 (sono di Statistiche e report). Ora non ci sono; gemelli: con
-    Statistiche e report e sul PC ci sono. Le voci degli Ambulatori restano."""
+    Statistiche e report e sul PC ci sono. Le voci degli Ambulatori restano. Dall'unione con la tappa 2 anche la
+    linguetta «Esportazioni in Excel» della cornice sparisce a chi non ha Statistiche e report (la condizione per pagina
+    del menu: z_menu_per_area); con Statistiche e report e sul PC c'è."""
     _, _, sid = intervento_in_sala()
     ospiti(('Ambulatori Soli', {'ambulatori': 'guarda'}), ('Ambulatori Statistiche', {'ambulatori': 'guarda', 'statistiche': 'guarda'}))
     lunedi = date.today() - timedelta(days=date.today().weekday())
     pagine = ('/ambulatori/settimana/%s?struttura=%d' % (lunedi.isoformat(), sid),
               '/ambulatori/mese/%s?struttura=%d' % (OGGI[:7], sid))
 
-    def corpo(t):                           # il menu (_menu.html) non si tocca fino alla tappa 2: solo la pagina
+    def corpo(t):                           # la pagina, senza la cornice (le linguette si guardano a parte)
         return t[t.index('<main id="principale">'):]
     soli = dentro_come('Ambulatori Soli', '192.168.1.231')
     stat = dentro_come('Ambulatori Statistiche', '192.168.1.232')
@@ -2643,8 +2653,10 @@ def z_nv_scarica_degli_ambulatori():
         t = corpo(testo(chiedi(soli, 'GET', url)))
         assert chiedi(soli, 'GET', url).status_code == 200 and '/esportazioni' not in t, (url, 'voci che portano al 403')
         assert '.xlsx' in t, (url, 'le voci degli Ambulatori sono sparite')
+        assert '/esportazioni' not in PC_.linguette_html(testo(chiedi(soli, 'GET', url))), (url, 'la linguetta al 403')
         for t2 in (testo(chiedi(stat, 'GET', url)), locale().get(url).get_data(as_text=True)):
             assert '/esportazioni' in corpo(t2), (url, 'gemello: con Statistiche e report le voci ci sono')
+            assert '/esportazioni' in PC_.linguette_html(t2), (url, 'gemello: con Statistiche e report la linguetta c\'è')
     for x in re.findall(r'href="(/[^"]+\.xlsx[^"]*)"', corpo(testo(chiedi(soli, 'GET', pagine[0])))):
         assert chiedi(soli, 'GET', x.replace('&amp;', '&')).status_code == 200, x
     return 'settimana e mese: niente esportazioni di Statistiche e report a chi ha solo Ambulatori; i suoi Excel si scaricano'
@@ -2926,7 +2938,8 @@ def z_nv_nuovo_utente_rifiutato():
 
 
 def z_nv_rifiuto_e_pagina_per_la_segreteria():
-    """Problema 14: la pagina 403 mandava a «Configura → Aree e accessi», che nel menu non c'è; nella pagina, in mezzo
+    """Problema 14: la pagina 403 mandava a «Configura → Aree e accessi», che nel menu di allora non c'era (dall'unione
+    con la tappa 2 è la settima linguetta di Configura, e il percorso è di nuovo quello); nella pagina, in mezzo
     alle scelte di tutti i giorni, c'erano Caddy, Caddyfile, netsh e «Altri nomi»; ogni utente era una tabella aperta di 13
     righe; la barra «Entrato da un altro PC» non aveva stile. Ora: il percorso vero (gemello: in Impostazioni c'è il
     bottone «Aree e accessi»), le cose da tecnico in riquadri chiusi «Per l'assistenza», gli utenti chiusi con le parti in
@@ -2937,9 +2950,11 @@ def z_nv_rifiuto_e_pagina_per_la_segreteria():
         'gemello: con altri nomi scritti il loro riquadro resta aperto'
     imposta(rete_nomi='')
     t = testo(chiedi(c, 'GET', '/pazienti'))
-    assert 'Configura → Impostazioni → Aree e accessi' in t, 'il percorso della pagina nel rifiuto'
+    assert 'Configura → Aree e accessi' in t, 'il percorso della pagina nel rifiuto'
+    assert 'href="%s"' % per('accessi.pagina') in PC_.linguette_html(locale().get('/anagrafiche').get_data(as_text=True)), \
+        'gemello: il percorso è vero (Aree e accessi è una linguetta di Configura)'
     assert 'href="%s"' % per('accessi.pagina') in locale().get('/impostazioni').get_data(as_text=True), \
-        'gemello: il percorso è vero (Impostazioni ha il bottone)'
+        'e il bottone in Impostazioni resta'
     assert 'v-utente-rete' in testo(chiedi(c, 'GET', '/oggi'))
     with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'veste.css'), encoding='utf-8') as f:
         assert '.v-utente-rete {' in f.read()
@@ -3019,6 +3034,188 @@ def z_nv_statistiche_e_report():
             for x in di_soldi:
                 assert (x in testi) == con_soldi, (nome or 'PC', chiave, x, 'gemello: ci sono' if con_soldi else 'importi')
     return 'pagine ed Excel di Statistiche e report: pazienti con Pazienti o Agenda, importi con la Cassa, colonne tolte'
+
+
+# ======================================================= il menu della tappa 2 e gli accessi insieme (unione, 22/11)
+
+def collegamenti_della_cornice(t):
+    """Gli indirizzi che la cornice di una pagina offre: il menu (con le voci della tendina Aiuto e i collegamenti
+    nascosti dei tasti) e le linguette; non '#' (le voci della guida sullo schermo)."""
+    pezzi = PC_.menu_html(t) + PC_.linguette_html(t)
+    return {h.replace('&amp;', '&') for h in re.findall(r'href="(/[^"#]*)"', pezzi)}
+
+
+def area_dell_indirizzo(url):
+    """L'area che serve alla pagina di un indirizzo dalla rete (accessi.area_della_pagina, dal censimento)."""
+    with A.app.test_request_context():
+        endpoint, _ = A.app.url_map.bind('x').match(urllib.parse.urlsplit(url).path, method='GET')
+    return accessi.area_della_pagina(endpoint)
+
+
+def segui(c, url, volte=5):
+    """GET con i rimandi interni seguiti (le pagine come /personale/turni rimandano alla loro vista): la risposta finale."""
+    r = chiedi(c, 'GET', url)
+    while r.status_code in (301, 302, 303) and volte:
+        dove_ = urllib.parse.urlsplit(r.headers['Location'])
+        r = chiedi(c, 'GET', dove_._replace(scheme='', netloc='').geturl())
+        volte -= 1
+    return r
+
+
+def giro_della_cornice(c, inizio, massimo=300):
+    """Dalla pagina «inizio», ogni indirizzo del menu e delle linguette, e così via dalle pagine che si aprono: (stato di
+    ogni pagina vista, collegamenti della cornice di ogni pagina HTML)."""
+    stati, cornici, coda = {}, {}, [inizio]
+    while coda and len(stati) < massimo:
+        url = coda.pop(0)
+        if url in stati:
+            continue
+        r = segui(c, url)
+        stati[url] = r.status_code
+        if r.status_code == 200 and r.mimetype == 'text/html':
+            cornici[url] = collegamenti_della_cornice(testo(r))
+            coda += sorted(cornici[url] - set(stati))
+    return stati, cornici
+
+
+def problemi_del_menu_per_area(area, ip):
+    """Un utente con la sola «area» (da guardare), dalla rete: ogni voce e linguetta della cornice di ogni pagina
+    raggiunta apre una pagina 200 per lui; almeno una porta alla sua area; e niente di quello che sul PC c'è e che lui
+    può aprire è tolto. Torna (problemi, pagine viste)."""
+    nome = 'Menu %s' % area
+    c = dentro_come(nome, ip)
+    inizio = chiedi(c, 'GET', '/').headers['Location']
+    inizio = urllib.parse.urlsplit(inizio)._replace(scheme='', netloc='').geturl()
+    stati, cornici = giro_della_cornice(c, inizio)
+    p = ['%s: %s risponde %d' % (area, u, s) for u, s in sorted(stati.items()) if s != 200]
+    offerti = set().union(*cornici.values()) if cornici else set()
+    if not offerti:
+        p.append('%s: nessuna voce nel menu' % area)
+    elif not [u for u in offerti if area_dell_indirizzo(u) == area]:
+        p.append('%s: nessuna voce porta alla sua area: %s' % (area, sorted(offerti)[:6]))
+    pc = locale()
+    for url, suoi in sorted(cornici.items()):
+        if url == inizio and not suoi:
+            continue
+        for h in sorted(collegamenti_della_cornice(segui(pc, url).get_data(as_text=True)) - suoi):
+            if segui(c, h).status_code == 200:
+                p.append('%s: su %s la cornice non offre %s, che per lui si apre' % (area, url, h))
+    return p, len(stati)
+
+
+def z_menu_per_area():
+    """Unione della tappa 2 con gli accessi: dalla rete il menu, le linguette, la tendina Aiuto e i collegamenti nascosti
+    dei tasti mostrano solo le pagine dell'utente (la condizione per pagina di menu.py, accessi.si_apre). Per ogni area,
+    un utente che ha solo quella: partendo dalla sua prima pagina e seguendo ogni voce e linguetta della cornice, ogni
+    pagina risponde 200; almeno una voce porta alla sua area; niente che sul PC c'è e che lui può aprire è tolto. Sul PC
+    il menu è identico a quello senza la condizione (tutte le voci, anche «Aree e accessi» in Configura). Gemello: tolta la
+    condizione per pagina, dalla rete le voci delle altre aree portano al 403."""
+    intervento_in_sala()
+    ospiti(*[('Menu %s' % a, {a: 'guarda'}) for a in accessi.CODICI_AREE])
+    problemi, viste = [], 0
+    for i, area in enumerate(accessi.CODICI_AREE):
+        p, n = problemi_del_menu_per_area(area, '192.168.6.%d' % (i + 1))
+        problemi += p
+        viste += n
+    assert not problemi, problemi[:6]
+    # sul PC: tutte le voci, come senza la condizione per pagina (il menu della tappa 2)
+    pc, pagine = locale(), ('/oggi', '/anagrafiche', '/configura/accessi', '/invii', '/conferme',
+                            '/esportazioni?data=%s&struttura=1' % OGGI, '/aiuto')
+    con = {u: pc.get(u).get_data(as_text=True) for u in pagine}
+    prima, MENU.SI_APRE = MENU.SI_APRE, None
+    try:
+        senza = {u: pc.get(u).get_data(as_text=True) for u in pagine}
+        gemello, _ = problemi_del_menu_per_area('agenda', '192.168.6.99')
+    finally:
+        MENU.SI_APRE = prima
+    assert prima is accessi.si_apre, 'app.py non ha dato al menu la condizione per pagina (accessi.si_apre)'
+    for u in pagine:
+        assert con[u] == senza[u], ('sul PC il menu cambia con la condizione per pagina', u)
+    linguette = [p_ for p_, _, _ in PC_.linguette(con['/anagrafiche'])]
+    assert linguette == ['Anagrafiche', 'Strutture del gruppo', 'Email e WhatsApp', 'Importa da Excel', 'Impostazioni',
+                         'Aggiornamenti', 'Aree e accessi'], linguette
+    assert gemello and any('403' in x for x in gemello), ('gemello: senza la condizione le voci delle altre aree '
+                                                         'dovrebbero portare al 403', gemello[:3])
+    return '%d aree, %d pagine viste dalla rete: ogni voce e linguetta si apre, la sua c\'è; sul PC tutte (7 linguette ' \
+           'in Configura); gemello: senza la condizione %d voci al 403' % (len(accessi.CODICI_AREE), viste, len(gemello))
+
+
+def z_menu_voce_al_posto():
+    """Una voce la cui pagina non si apre porta alla prima delle sue linguette che si apre, senza il suo tasto (Configura
+    a chi ha solo Email e WhatsApp: alle Email e WhatsApp; Ambulatori a chi ha solo Statistiche e report: alle
+    Esportazioni in Excel, che spariscono a chi non ha Statistiche); senza linguette che si aprono la voce non c'è. Sul PC
+    le voci di sempre, con i loro tasti."""
+    ospiti(('Voce Email', {'comunicazioni': 'guarda'}), ('Voce Statistiche', {'statistiche': 'guarda'}),
+           ('Voce Agenda', {'agenda': 'modifica'}), ('Voce Ambulatori', {'ambulatori': 'guarda'}))
+    def voce(t, guida):
+        m = re.search(r'<a (?:data-tasto="(\w)" )?href="([^"]*)"[^>]*data-guida="%s"' % guida, PC_.menu_html(t))
+        return (m.group(2).replace('&amp;', '&'), m.group(1)) if m else None
+    t = testo(chiedi(dentro_come('Voce Email', '192.168.7.1'), 'GET', '/invii'))
+    assert voce(t, 'menu-configura') == ('/invii', None), voce(t, 'menu-configura')
+    assert PC_.voce_accesa(t, 'menu-configura') and PC_.linguetta_accesa(t) == 'Email e WhatsApp'
+    assert [x for x, _, _ in PC_.linguette(t)] == ['Email e WhatsApp'], PC_.linguette(t)
+    st = dentro_come('Voce Statistiche', '192.168.7.2')
+    t = testo(chiedi(st, 'GET', '/statistiche'))
+    assert voce(t, 'menu-ambulatori')[0].startswith('/esportazioni?'), voce(t, 'menu-ambulatori')
+    am = testo(chiedi(dentro_come('Voce Ambulatori', '192.168.7.4'), 'GET', '/ambulatori/settimana/%s?struttura=1' % OGGI))
+    assert '/esportazioni' not in am and [x for x, _, _ in PC_.linguette(am)] == [
+        'Pianificazione della settimana', 'Programmazione del mese', 'Riepilogo live', 'Riepilogo del periodo'], \
+        PC_.linguette(am)
+    ag = testo(chiedi(dentro_come('Voce Agenda', '192.168.7.3'), 'GET', '/oggi'))
+    assert voce(ag, 'menu-segreteria') == ('/disponibilita?struttura=1', None), voce(ag, 'menu-segreteria')
+    assert voce(ag, 'menu-giorno')[1] == 'g' and 'data-tasto="e"' in PC_.menu_html(ag), 'Agenda: i tasti G ed E restano'
+    for guida in ('menu-pazienti', 'menu-turni', 'menu-configura', 'menu-dove'):
+        assert guida not in PC_.menu_html(ag), (guida, 'voce di un\'area che non ha')
+    t = locale().get('/oggi').get_data(as_text=True)
+    assert voce(t, 'menu-segreteria') == ('/conferme?struttura=1', 'c') and voce(t, 'menu-configura') == ('/anagrafiche', None), \
+        ('gemello: sul PC le voci di sempre', voce(t, 'menu-segreteria'), voce(t, 'menu-configura'))
+    return 'Configura → Email e WhatsApp, Ambulatori → Esportazioni, Segreteria → Prima disponibilità (senza il tasto C); ' \
+           'le voci senza pagine non ci sono; sul PC come sempre'
+
+
+def z_cornice_dalla_rete():
+    """La cornice nuova dalla rete: nome, «La mia password» ed «Esci» nella barra in alto (data-cornice="barra"), non
+    sopra la pagina; l'accesso, la propria password, il rifiuto e il Modo schermo senza cornice (e senza quella riga);
+    il rifiuto dice dove si cambia: «Configura → Aree e accessi», la settima linguetta di Configura sul PC (gemello: il
+    percorso è vero), che dalla rete non c'è nemmeno per chi ha tutte le parti."""
+    ospiti(('Cornice Rete', {'agenda': 'modifica', 'ambulatori': 'guarda'}))
+    c = dentro_come('Cornice Rete', '192.168.8.1')
+    t = testo(chiedi(c, 'GET', '/oggi'))
+    barra = re.search(r'<header class="v-barra" data-cornice="barra">(.*?)</header>', t, re.S)
+    assert barra and entrato_come(barra.group(1), 'Cornice Rete') and \
+        'action="/esci"' in barra.group(1) and '/accesso/password' in barra.group(1), 'la riga dell\'utente nella barra'
+    assert t.count('class="utente-rete v-utente-rete"') == 1 and 'Entrato da un altro PC' not in t[t.index('<main'):]
+    assert 'Entrato da un altro PC' not in locale().get('/oggi').get_data(as_text=True), 'gemello: sul PC no'
+    senza = {'/accesso/password': chiedi(c, 'GET', '/accesso/password'), '/pazienti': chiedi(c, 'GET', '/pazienti'),
+             '/riepilogo-live?schermo=1': chiedi(c, 'GET', '/riepilogo-live?schermo=1'),
+             '/accesso': chiedi(rete(ip='192.168.8.2'), 'GET', '/accesso')}
+    for url, r in senza.items():
+        assert r.status_code in (200, 403), (url, r.status_code)
+        assert 'data-cornice=' not in testo(r) and not PC_.CON_MENU.search(testo(r)) and \
+            'Entrato da un altro PC' not in testo(r), (url, 'con la cornice')
+    assert 'data-cornice="barra"' in testo(chiedi(c, 'GET', '/riepilogo-live')), 'gemello: senza schermo la cornice c\'è'
+    r = senza['/pazienti']
+    assert rifiutata(r) and 'Configura → Aree e accessi' in testo(r) and 'Impostazioni →' not in testo(r)
+    assert accessi.PERCORSO_PAGINA in accessi.PAGINA_ATTESA % (1, 'o')
+    pc = locale().get('/anagrafiche').get_data(as_text=True)
+    assert ('Aree e accessi', '/configura/accessi', False) in PC_.linguette(pc), 'gemello: il percorso è vero'
+    t = locale().get('/configura/accessi').get_data(as_text=True)
+    assert PC_.voce_accesa(t, 'menu-configura') and PC_.linguetta_accesa(t) == 'Aree e accessi'
+    assert 'Configura</span><span>Aree e accessi</span>' in t, 'il percorso nella barra in alto'
+    c3 = rete(ip='192.168.8.3')
+    entra(c3, 'Tutto Provolo')
+    t = testo(chiedi(c3, 'GET', '/anagrafiche'))
+    assert [x for x, _, _ in PC_.linguette(t)] == ['Anagrafiche', 'Strutture del gruppo', 'Email e WhatsApp',
+                                                    'Importa da Excel'], PC_.linguette(t)
+    # «Aree e accessi» ha anche la sua condizione (solo sul PC principale): vale anche senza la condizione per pagina
+    prima, MENU.SI_APRE = MENU.SI_APRE, None
+    try:
+        nomi = [x for x, _, _ in PC_.linguette(testo(chiedi(c3, 'GET', '/anagrafiche')))]
+    finally:
+        MENU.SI_APRE = prima
+    assert 'Aree e accessi' not in nomi and 'Impostazioni' in nomi, ('«Aree e accessi» senza la sua condizione', nomi)
+    return 'barra con Esci al suo posto; accesso, password, rifiuto e Modo schermo senza cornice; percorso «%s»' % \
+        accessi.PERCORSO_PAGINA
 
 
 if __name__ == '__main__':

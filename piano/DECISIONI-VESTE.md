@@ -85,4 +85,5 @@ strumenti/cambiamenti_approvati.txt con il perché.
 - Pazienti/Statistiche (4): titolo diviso di Statistiche approvato; righe delle tabelle compatte (~40 px) per vedere quasi
   le righe di oggi; sotto 900 px una colonna; Paziente.dc.html superata da Paz2-Scheda.
 - Configura (9): testa approvata anche nelle pagine secondarie; «Tasti rapidi» resta un collegamento; la settima linguetta
-  è «Aree e accessi», che arriva in M2.
+  è «Aree e accessi», arrivata con l'unione dell'accesso dagli altri PC (22/11: registrata da accessi.py su una sezione
+  sua, solo sul PC principale; dalla rete il menu mostra solo le pagine dell'utente).

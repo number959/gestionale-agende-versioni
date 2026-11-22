@@ -501,13 +501,21 @@ table.v-tabella td small, table.v-tabella .v-testo-piccolo { display: block; }
 }
 
 /* ------------------------------------------------------------------ chi è entrato da un altro PC (1.13, accessi.py)
-   Nella barra in alto, dopo la ricerca, solo dagli altri PC (templates/_utente_rete.html dentro _barra.html): il
-   nome, «La mia password» ed «Esci» sulla stessa riga; se lo spazio non basta va a capo dentro il suo posto (la barra
-   resta su una riga e la pagina non scorre di lato). Fuori dalla barra (nessuna pagina oggi) resta una riga semplice. */
+   Nella barra in alto, dopo la ricerca, solo dagli altri PC (templates/_utente_rete.html dentro _barra.html): l'icona,
+   il nome, «La mia password» ed «Esci» su una riga; «Entrato da un altro PC come» resta per i lettori di schermo e nel
+   title (scritto per intero, a 1366 px il percorso andava a capo). Un nome lungo si accorcia con i puntini. Fuori dalla
+   barra (nessuna pagina oggi) resta la riga intera. */
 .v-utente-rete {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-3) var(--v-spazio-4);
   margin: 0; font-size: var(--v-car-m); line-height: var(--v-int-m);
 }
 .v-utente-rete form { display: inline; margin: 0; }
-.v-barra .v-utente-rete { flex: 0 1 auto; min-width: 0; color: var(--v-testo-medio); }
-.v-barra .v-utente-rete b { color: var(--v-testo); font-weight: var(--v-peso-forte); }
+.v-barra .v-utente-rete { flex: none; flex-wrap: nowrap; gap: var(--v-spazio-3); white-space: nowrap; color: var(--v-testo-medio); }
+.v-barra .v-utente-rete > svg { flex: none; width: 18px; height: 18px; }
+.v-barra .v-utente-rete b {
+  display: inline-block; max-width: 12em; overflow: hidden; text-overflow: ellipsis;
+  color: var(--v-testo); font-weight: var(--v-peso-forte);
+}
+.v-barra .v-utente-come {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}

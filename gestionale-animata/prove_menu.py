@@ -76,9 +76,11 @@ ACCESA_ALTROVE = {'elenco': ('Segreteria', 'agenda')}
 # come il menu di prima (in alto, con le tendine) disegnava le voci di menu.py (scritto qui, non in menu.py: serve solo
 # a questo confronto): le linguette dell'Agenda stavano in fila nel menu (Giorno, Settimana, Mese); una voce con
 # linguette (Ambulatori, Segreteria, Configura) o con una tendina (Aiuto) era una tendina; le altre un collegamento.
-# La linguetta Elenco dell'Agenda lì non c'era (stava nella tendina Segreteria come «Elenco del giorno»)
+# La linguetta Elenco dell'Agenda lì non c'era (stava nella tendina Segreteria come «Elenco del giorno»); la linguetta
+# «Aree e accessi» di Configura (1.13, registrata da accessi.py) nemmeno: la sua pagina nel ramo principale non c'è
+# (strumenti/cambiamenti_approvati.txt, regola «nuova»), e lì si accende lei sola, dove il menu di prima non accende niente
 IN_FILA = {'agenda'}
-NON_NEL_MENU_DI_PRIMA = {('agenda', 'Elenco')}
+NON_NEL_MENU_DI_PRIMA = {('agenda', 'Elenco'), ('configura', 'Aree e accessi')}
 
 
 def come_era(v):
@@ -665,6 +667,8 @@ def differenze(principale, menu):
                 diff.append('voce %s: %s non è fra le pagine della tendina «%s»' % (chiave, x['url'], x['parola']))
             continue
         if chi not in parole_di_oggi:
+            if tipo == 'linguetta' and (chiave, str(x['parola'])) in NON_NEL_MENU_DI_PRIMA:
+                continue                # una pagina che il principale non ha (Aree e accessi)
             diff.append('%s %s/%s: %s non è nel menu di oggi' % (tipo, chiave, x['parola'], chi))
         elif str(x['parola']) != parole_di_oggi[chi] and (tipo, chiave, str(x['parola'])) not in PAROLE_NUOVE:
             diff.append('%s %s: «%s», oggi «%s» (%s)' % (tipo, chiave, x['parola'], parole_di_oggi[chi], chi))
@@ -673,6 +677,10 @@ def differenze(principale, menu):
     linguetta = [x for v in menu['voci'] for x in v['linguette'] if x['accesa']]
     voce = menu['accesa']
     nuovo = linguetta[0]['url'] if linguetta else (voce['url'] if voce and voce['url'] != '#' else None)
+    if linguetta and linguetta[0]['url'] not in parole_di_oggi and \
+            any((v['chiave'], str(linguetta[0]['parola'])) in NON_NEL_MENU_DI_PRIMA for v in menu['voci']
+                if linguetta[0] in v['linguette']):
+        nuovo = None                    # la pagina di una linguetta nuova (Aree e accessi): il menu di prima non accende niente
     if (accesi[0] if accesi else None) != nuovo:
         diff.append('accesa: oggi %s, in menu.py %s' % (accesi, nuovo))
     tendina = [t['parola'] for t in vecchio.tendine if t['attivo']]
@@ -953,6 +961,63 @@ def m_linguette_e_condizioni():
     assert not [x for x in M.NASCOSTI if x['parola'] == 'Nascosto di prova']
 
 
+# ---------------------------------------------------------------- 7-bis. la condizione per pagina e le sezioni dei moduli
+def m_condizione_per_pagina():
+    """La condizione per pagina (dalla 1.13, data da app.py: accessi.si_apre) toglie voci, linguette, voci della tendina e
+    collegamenti nascosti la cui pagina non si apre; una voce la cui pagina non si apre porta alla prima delle sue
+    linguette che si apre, senza il suo tasto, o non c'è. registra_sezioni dà a una voce una sezione per la linguetta di
+    un modulo (Aree e accessi in Configura) e rifiuta una sezione di un'altra voce. Gemello: senza condizione tutto."""
+    import accessi
+    assert M.SI_APRE is accessi.si_apre, 'app.py non ha dato al menu la condizione per pagina'
+    prima_si_apre = M.SI_APRE
+    cassa = next(v for v in M.VOCI if v['chiave'] == 'cassa')
+    sezioni_di_prima = cassa['sezioni']
+    funzioni = dict(sezione='anagrafiche', sid=2, data_menu=D, oggi_iso=OGGI.isoformat(), ci_sono_sale=lambda: True,
+                    n_da_confermare=lambda: 0, marchio_di=A.marchio_di)
+    chiusi = {'anagrafiche.elenco', 'viste.elenco_giorno', 'guida.indice', 'pazienti.elenco'}
+    try:
+        # le sezioni di un modulo: la voce Cassa si accende anche sulla sezione nuova; una sezione di un'altra voce no
+        M.registra_sezioni('cassa', {'prova-sezione'})
+        with A.app.test_request_context('/'):
+            assert M.costruisci('prova-sezione', 2, D)['accesa']['chiave'] == 'cassa'
+        rifiuti = []
+        for voce, sezioni in (('cassa', {'giorno'}), ('nessuna', {'altra'})):
+            try:
+                M.registra_sezioni(voce, sezioni)
+            except ValueError as e:
+                rifiuti.append(str(e).split(':')[0])
+        assert rifiuti == ['sezioni già di un\'altra voce', 'voce sconosciuta'], rifiuti
+        assert 'accessi' in next(v for v in M.VOCI if v['chiave'] == 'configura')['sezioni'], 'la sezione di Aree e accessi'
+        for si_apre, atteso in ((None, 'tutto'), (lambda e: e not in chiusi, 'alcune'), (lambda e: False, 'nessuna')):
+            M.SI_APRE = si_apre
+            with A.app.test_request_context('/anagrafiche'):
+                m = M.costruisci('anagrafiche', 2, D, funzioni, 'anagrafiche.elenco')
+                disegno = ''.join(A.app.jinja_env.get_template(n).render(**funzioni) for n in ('_menu.html', '_linguette.html'))
+            voci = {v['chiave']: v for v in m['voci']}
+            cose = list(tutte_le_voci(m))
+            c = leggi_cornice(disegno)
+            if atteso == 'tutto':
+                assert voci['configura']['url'] == '/anagrafiche' and 'pazienti' in voci and m['nascosti'] and \
+                    c.primi_tasti.get('e'), 'gemello: senza condizione tutte le voci'
+                tutte = len(cose)
+            elif atteso == 'alcune':
+                assert voci['configura']['url'] == '/dove-si-fa/strutture' and voci['configura']['tasto'] is None
+                assert 'pazienti' not in voci and not m['nascosti'] and c.primi_tasti.get('e') is None
+                assert [str(x['parola']) for x in voci['aiuto']['tendina']] == [
+                    'Guida di questa pagina', 'Novità', 'Tasti rapidi'], voci['aiuto']['tendina']
+                assert not [x for _, _, x in cose if x.get('endpoint') in chiusi], 'una cosa chiusa è rimasta'
+                assert '/dove-si-fa/strutture' in [x['href'] for x in c.voci if x['parola'] == 'Configura'], \
+                    'il disegno: Configura porta alle Strutture del gruppo'
+                assert len(cose) < tutte
+            else:
+                assert list(voci) == ['aiuto'] and not m['nascosti'] and not m['linguette'], list(voci)
+                assert [str(x['parola']) for x in voci['aiuto']['tendina']] == ['Guida di questa pagina', 'Tasti rapidi']
+    finally:
+        M.SI_APRE = prima_si_apre
+        cassa['sezioni'] = sezioni_di_prima
+    return 'senza condizione %d cose nel menu; con la condizione voci, linguette, Aiuto e tasto E tolti, Configura alle ' \
+           'Strutture del gruppo senza tasto; sezioni dei moduli' % tutte
+
 # ---------------------------------------------------------------- 8. il lanciatore vede la cornice di ogni pagina
 def cornici_del_lanciatore(testo, principale):
     """(cornice del principale, cornice di qui) di una pagina come le legge strumenti/confronta_rami.py: qui la pagina
@@ -1010,6 +1075,7 @@ prova('parole, indirizzi, tasti e guide come nel menu del ramo principale, voce 
 prova('il percorso della barra in alto: struttura della pagina, voce e linguetta', m_percorso)
 prova('le linguette portano nel title la riga piccola del menu di prima', m_titoli)
 prova('linguette accese per pagina; condizioni anche su linguette e collegamenti nascosti', m_linguette_e_condizioni)
+prova('la condizione per pagina (dalla rete) e le sezioni dei moduli', m_condizione_per_pagina)
 prova('il lanciatore vede gli indirizzi della cornice per forma e una seconda voce accesa', m_lanciatore)
 
 shutil.rmtree(PROVVISORIA, ignore_errors=True)

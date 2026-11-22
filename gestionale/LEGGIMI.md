@@ -1807,8 +1807,8 @@ programma dagli altri PC* (gruppo Configurazione).
 
 **Per chi lo usa.** È spento di partenza: il PC della segreteria apre il programma da http://127.0.0.1:5000 come
 sempre, senza password e con tutte le pagine, e con l'accesso spento le sue pagine sono quelle di prima, byte per byte.
-Si accende dal PC della segreteria, *Configura → Impostazioni → Aree e accessi* (dopo la tappa 2 sarà una linguetta di
-Configura): la spunta «Gli altri PC della rete possono aprire il programma», la porta (5080 di partenza) e Salva. Da
+Si accende dal PC della segreteria, *Configura → Aree e accessi* (la settima linguetta di Configura; c'è anche il
+bottone in *Impostazioni*): la spunta «Gli altri PC della rete possono aprire il programma», la porta (5080 di partenza) e Salva. Da
 quel momento il programma ascolta anche su tutte le schede di rete del PC, su quella porta, e la pagina dice
 l'indirizzo da aprire negli altri PC (`http://NOME-DEL-PC:5080/`, o con i numeri del PC). La prima volta Windows chiede se
 il programma può usare la rete: «Reti private» sì, «Reti pubbliche» no, «Consenti accesso» (serve un amministratore);
@@ -1826,8 +1826,9 @@ parole). Per ogni parte del programma (Agenda, Pazienti, Segreteria, Cassa, Sala
 dashboard, Statistiche e report, Dove si fa, Email e WhatsApp, Anagrafiche, Guida e aiuto): «non disponibile», «solo
 guardare» (si aprono le pagine e si scaricano i file, non si salva niente) o «guardare e modificare». Il Sistema
 (aggiornamenti, copie e ripristino, controllo del programma, impostazioni, la casella email e WhatsApp, la pagina degli
-accessi) resta sempre e solo sul PC della segreteria. Dall'altro PC si entra con nome e password; in alto si vede con
-quale nome si è entrati, con «La mia password» ed «Esci». Una parte non data risponde con una pagina in italiano che
+accessi) resta sempre e solo sul PC della segreteria. Dall'altro PC si entra con nome e password; nella barra in alto
+si vede con quale nome si è entrati, con «La mia password» ed «Esci», e il menu e le linguette mostrano solo le pagine
+che quell'utente può aprire. Una parte non data risponde con una pagina in italiano che
 dice a chi chiedere. Nel riquadro di ogni utente: le parti, «Può entrare» (togliendo la spunta esce subito da tutti i
 PC), la password nuova se l'ha dimenticata, «Fai uscire», «Togli» (con la domanda). Chi sbaglia la password 5 volte da un
 PC aspetta un quarto d'ora; un PC che sbaglia 30 volte con nomi qualsiasi aspetta un quarto d'ora per tutti i nomi;
@@ -1942,10 +1943,21 @@ password» aprono `http://NOME-DEL-PC:5080/riepilogo-live?schermo=1` senza Caddy
 - *La pagina*: spegnere l'accesso fa uscire tutti (le sessioni restano solo nei riavvii); il riquadro rosso di una porta
   solo se la rete deve essere accesa e non è in ascolto (l'errore della volta va nel messaggio); un nuovo utente
   rifiutato torna con quello che si era scritto, tranne la password, e il motivo accanto al modulo; le password date
-  dalla segreteria si vedono mentre si scrivono; il rifiuto manda a *Configura → Impostazioni → Aree e accessi*
-  (`PERCORSO_PAGINA`: dopo l'unione con la tappa 2 diventa la linguetta); Caddy, i comandi del firewall e gli altri nomi
+  dalla segreteria si vedono mentre si scrivono; il rifiuto manda a *Configura → Aree e accessi* (`PERCORSO_PAGINA`:
+  dall'unione con la tappa 2 è la linguetta; prima diceva *Configura → Impostazioni → Aree e accessi*); Caddy, i comandi del firewall e gli altri nomi
   del PC stanno in riquadri chiusi «Per l'assistenza»; gli utenti sono chiusi, con le parti in una riga; la barra
-  «Entrato da un altro PC» ha il suo stile (`.v-utente-rete` in `veste.css`).
+  «Entrato da un altro PC» ha il suo stile (`.v-utente-rete` in `veste.css`; dall'unione con la tappa 2 sta nella barra
+  in alto).
+- *Menu e accessi insieme* (dall'unione con la tappa 2, 22/11): `accessi.py` registra «Aree e accessi» come settima
+  linguetta di Configura (`menu.registra_sezioni` le dà la sezione «accessi», `menu.registra_linguetta` con la
+  condizione `sul_pc_principale`), e `app.py` dà al menu la condizione per pagina `accessi.si_apre`
+  (`menu.condizione_per_pagina`): dalla rete voci, linguette, voci della tendina Aiuto e collegamenti nascosti dei tasti
+  ci sono solo se la loro pagina si apre per l'utente, con l'area presa dal censimento (`accessi.area_della_pagina`; il
+  Sistema mai). Una funzione sola, nessuna lista a mano: una pagina nuova basta scriverla nel censimento. Una voce la
+  cui pagina non si apre porta alla prima delle sue linguette che si apre, senza il suo tasto (Configura, a chi ha
+  solo Email e WhatsApp, porta lì; Ambulatori, a chi ha solo Statistiche e report, alle Esportazioni in Excel), e senza
+  linguette che si aprono non c'è. «Ambulatori → Esportazioni in Excel» sparisce a chi non ha Statistiche e report. Sul
+  PC principale la condizione è sempre vera e il menu è quello della tappa 2, byte per byte.
 
 ## Dove stanno i dati
 
@@ -2061,7 +2073,7 @@ la transazione si annulla e il database resta com'era. Il registro riporta ogni 
 | `templates/_icone.html`, `static/icone/LICENZE.txt` | Le icone (Lucide, licenza ISC) scritte dentro le pagine, con le licenze (anche Radix Colors, MIT, per i colori dei turni) |
 | `importa.py` | Importazione da Excel e CSV: riconoscimento, anteprima, esecuzione |
 | `marchio.py` | Controllo e pulizia del logo, colore proposto, contrasto |
-| `menu.py` | Il menu in un elenco (dalla tappa 2 della base): voci, linguette, tendina Aiuto e collegamento nascosto del tasto E, ognuno con la sua pagina, gli argomenti che porta (struttura, giorno, mese), parola, icona, sezioni che lo accendono, condizione, tasto e guida; `registra_voce` e `registra_linguetta` per i moduli. Lo disegna la cornice: `templates/_menu.html` (il menu a sinistra), `_barra.html` (la barra in alto) e `_linguette.html` (le linguette, con il pezzo di `_pezzi.html`), messi da `base.html` in contenitori con `data-cornice` |
+| `menu.py` | Il menu in un elenco (dalla tappa 2 della base): voci, linguette, tendina Aiuto e collegamento nascosto del tasto E, ognuno con la sua pagina, gli argomenti che porta (struttura, giorno, mese), parola, icona, sezioni che lo accendono, condizione, tasto e guida; `registra_voce`, `registra_linguetta` e `registra_sezioni` per i moduli; la condizione per pagina (`condizione_per_pagina`, da `app.py`: `accessi.si_apre`) che dalla rete toglie quello che l'utente non può aprire. Lo disegna la cornice: `templates/_menu.html` (il menu a sinistra), `_barra.html` (la barra in alto) e `_linguette.html` (le linguette, con il pezzo di `_pezzi.html`), messi da `base.html` in contenitori con `data-cornice` |
 | `servizi.py` | Griglia (con le fasce dei turni), turni effettivi (assenze, chiusure, festivi), conflitti (fasce intere), disponibilità, statistiche, export in Excel |
 | `modelli.py` | Le tabelle del database e il suo aggiornamento da una versione all'altra |
 | `comune.py` | Le funzioni di servizio di tutte le pagine: numeri e date dall'indirizzo, ritorno sicuro, struttura scelta, JSON, Excel da scaricare, collegamenti email |
@@ -2877,7 +2889,9 @@ Rimandati, con il motivo (da dire a Giovanni):
   (le prove nel browser la cercano proprio per ruolo e nome);
 - **un modulo con una linguetta in Configura** (M2, «Aree e accessi») ha bisogno di una sua sezione dentro la voce
   Configura: `registra_linguetta` rifiuta una linguetta che si accende fuori dalla sua voce, e oggi non c'è un modo di
-  aggiungere una sezione a una voce già registrata (da fare in M1-M2).
+  aggiungere una sezione a una voce già registrata (da fare in M1-M2).. Fatto all'unione con l'accesso dagli altri PC
+  (22/11): `menu.registra_sezioni` dà a una voce una sezione per la linguetta di un modulo, e «Aree e accessi» si accende
+  sulla sezione «accessi» (sotto, «L'unione della tappa 2 con l'accesso dagli altri PC»)
 
 Il 22/11/2026, dopo le correzioni, dalle due cartelle: tutte le prove senza browser verdi (36 raccolte, in 717 e 711 s;
 `prove_menu.py` 11 prove, `prove_mattoni.py` 22); nel browser 14 raccolte nella normale (1285 controlli,
@@ -2902,6 +2916,56 @@ di prova) diventava un'ellisse piatta. Corretto con `align-self: flex-start` su 
 browser con `page.route` (non si salva niente), uno quadrato, uno alto e uno larghissimo devono avere le proporzioni
 del file e stare in 216×36 px; il gemello rimette il difetto (`align-self: stretch`) e lo vede. Il mutante, su una
 copia senza la correzione, rompe 6 controlli su 634 (tutti i loghi tranne il larghissimo, che il difetto non tocca).
+
+### L'unione della tappa 2 con l'accesso dagli altri PC (22/11/2026)
+
+I due lavori erano partiti dallo stesso punto (b52870b): la tappa 2 (la cornice nuova, `menu.py`) e l'accesso dagli
+altri PC (`accessi.py`, ramo `ccr-interfaccia`). L'unione tiene tutte e due le parti, file per file (`app.py`:
+`menu.collega` e `accessi.installa`; `gestionale.js`: la voce accesa in vista e i moduli da solo guardare; il lanciatore:
+la cornice senza ordine e le regole «nuova» e «foglio», con la cornice di una pagina nuova solo nel catalogo di qui;
+tutte le regole approvate e tutte le raccolte nuove dei due lati), e poi le fa lavorare insieme:
+
+- **«Aree e accessi» è la settima linguetta di Configura**, registrata da `accessi.py` con `menu.registra_linguetta`
+  su una sezione sua («accessi», data alla voce Configura con `menu.registra_sezioni`, la funzione che mancava ai moduli,
+  qui sopra fra i rimandati) e con la condizione `sul_pc_principale`. Il bottone in *Impostazioni* resta. Il rifiuto e
+  la pagina d'attesa dicono `PERCORSO_PAGINA`, «Configura → Aree e accessi», e così la guida «Far usare il programma
+  dagli altri PC» (il riassunto e il primo passo; il passo indica la voce Configura con `data-guida`). L'immagine e il
+  video di quella guida mostrano ancora il bottone di Impostazioni: si rifanno nella tappa 10 con le altre (nessuna
+  prova li vuole uguali al testo).
+- **Dalla rete il menu mostra solo le pagine dell'utente**: la condizione per pagina di `menu.py`
+  (`menu.condizione_per_pagina`, data da `app.py`: `accessi.si_apre`) vale per voci, linguette, voci della tendina Aiuto
+  e collegamenti nascosti dei tasti, con l'area della pagina presa dal censimento (`accessi.area_della_pagina`: il Modo
+  schermo con il menu vuole Ambulatori e dashboard, il Sistema mai). Una funzione sola, nessuna lista a mano. Una voce la
+  cui pagina non si apre porta alla prima delle sue linguette che si apre, senza il suo tasto (Configura a chi ha solo
+  Email e WhatsApp, Ambulatori a chi ha solo Statistiche e report, Segreteria a chi ha solo l'Agenda: Prima
+  disponibilità), e senza linguette che si aprono non c'è. «Ambulatori → Esportazioni in Excel» sparisce a chi non ha
+  Statistiche e report. Sul PC principale la condizione è sempre vera: il menu è quello della tappa 2, byte per byte
+  (`z_menu_per_area` lo confronta con il menu senza condizione).
+- **La cornice dalla rete**: il nome, «La mia password» ed «Esci» stanno nella barra in alto, dopo la ricerca
+  (`_utente_rete.html` dentro `_barra.html`, `data-cornice="barra"`), non più sopra la pagina; si vedono l'icona e il
+  nome, «Entrato da un altro PC come» resta per i lettori di schermo e nel title (scritto per intero, a 1366 px il
+  percorso andava a capo). L'accesso, la propria password, il rifiuto (una pagina a sé) e il Modo schermo non hanno la
+  cornice, e nemmeno quella riga. Sotto 1024 px la barra dalla rete va su più righe dentro di sé (a 683 px 114 px: il
+  percorso a capo), senza far scorrere la pagina di lato.
+
+Le prove: in `prove_accessi.py` `z_menu_per_area` (per ognuna delle 12 aree un utente che ha solo quella, dalla sua
+prima pagina, segue ogni voce e linguetta della cornice: tutte 200, almeno una della sua area, niente tolto che per lui
+si apre; sul PC il menu identico a quello senza condizione, con le 7 linguette di Configura; gemello: senza la
+condizione le voci delle altre aree portano al 403), `z_menu_voce_al_posto` e `z_cornice_dalla_rete`; in
+`prove_menu.py` `m_condizione_per_pagina` (la condizione su un menu costruito, e `registra_sezioni` con i suoi rifiuti);
+in `prove_accessi_browser.py` la linguetta dal menu, la riga dell'utente nella barra su una riga a 1366 e 1024 px (il
+gemello la sposta sopra la pagina), il menu dalla rete seguito tutto, le pagine senza cornice. I mutanti, fatti su una
+copia in /dev/shm, sono presi tutti: la condizione per pagina tolta alle linguette, alla tendina Aiuto, ai collegamenti
+nascosti o alle voci, la voce al posto con il suo tasto, `app.py` che non la dà al menu, la condizione propria di «Aree
+e accessi» tolta, la riga dell'utente sopra la pagina, il percorso di prima nel rifiuto.
+
+Il 22/11/2026, dopo l'unione e l'integrazione, dalle due cartelle: tutte le prove senza browser verdi (37 raccolte, in
+765 e 762 s; `prove_accessi.py` 57 prove, `prove_menu.py` 12); nel browser, con le due cartelle provate insieme (porte
+5501 e 5502), 15 raccolte nella normale (1366 controlli; `prove_cornice_browser.py` 652, `prove_accessi_browser.py` 46)
+e 17 nell'animata (1431), tutte verdi; il confronto con il ramo principale dalle due cartelle con 610 pagine e nessuna
+diversa (206 solo per i cambiamenti approvati, 43 regole di cui 26 solo per la cornice), la cornice senza differenze
+(457 parti approvate) e 49 fogli e pagine che si stampano in PDF, nessuno diverso (la guida da stampare con le 2 pagine
+della guida nuova, approvata dalla sua regola «foglio»); `allinea_animata.py`: 262 file comuni, tutti uguali.
 
 ### Il pacchetto di prova (dalla tappa 1 della base)
 

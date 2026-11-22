@@ -24,7 +24,16 @@ NASCOSTI sono i collegamenti che servono solo a un tasto (E, l'Elenco del giorno
 nascosti hanno anche loro la condizione, come le voci: un modulo spento toglie anche una sua linguetta messa sotto la
 voce di un altro (per esempio in Configura) e il suo tasto.
 
-I moduli (dalla 1.14) aggiungono voci e linguette con registra_voce() e registra_linguetta(), senza toccare i modelli.
+I moduli (dalla 1.14) aggiungono voci e linguette con registra_voce() e registra_linguetta(), senza toccare i modelli;
+una linguetta di un modulo sotto la voce di un altro si accende su una sezione sua, data alla voce con registra_sezioni()
+(«Aree e accessi», la settima linguetta di Configura, la registra accessi.py sulla sezione «accessi»).
+
+La condizione per pagina (dalla 1.13, l'accesso dagli altri PC): oltre alla condizione di ognuna, voci, linguette, voci
+della tendina e collegamenti nascosti ci sono solo se la loro pagina si apre per chi guarda. La decide una funzione sola,
+data da app.py con condizione_per_pagina() (accessi.si_apre: l'area della pagina presa dal censimento di accessi.py, e
+il livello dell'utente in quell'area); sul PC principale è sempre vera e il menu resta quello di sempre. Dalla rete una
+voce la cui pagina non si apre porta alla prima delle sue linguette che si apre, senza il suo tasto (Configura, a chi ha
+solo Email e WhatsApp, porta lì); se non ne ha nessuna, non c'è.
 Ogni voce vuole la sua icona, che deve essere in templates/_icone.html (collega() le controlla quando i modelli ci
 sono: senza, nel menu stretto resterebbe un quadrato vuoto). costruisci() fa le voci per la pagina aperta, con gli
 indirizzi scritti da url_for; nei modelli è menu_della_pagina().
@@ -57,6 +66,7 @@ LINGUETTE = {}                  # chiave della voce -> dict(etichetta=..., voci=
 AIUTO = []                      # la tendina Aiuto, come oggi
 NASCOSTI = []                   # collegamenti senza voce, solo per un tasto
 ICONE = None                    # i nomi delle icone di templates/_icone.html, letti da collega()
+SI_APRE = None                  # la condizione per pagina: funzione(endpoint) -> la pagina si apre? (condizione_per_pagina)
 
 
 def testo(s):
@@ -113,6 +123,28 @@ def registra_voce(gruppo, chiave, endpoint, parola, argomenti=(), icona=None, se
         posto = len([v for v in VOCI if ordine.index(v['gruppo']) <= ordine.index(gruppo)])
     VOCI.insert(posto, voce)
     return voce
+
+
+def registra_sezioni(voce, sezioni):
+    """Dà alla voce «voce» (la chiave) altre sezioni, per la linguetta di un modulo che sta sotto di lei e ha una pagina
+    sua (accessi.py: «Aree e accessi» in Configura, sezione «accessi»). Una sezione già di un'altra voce è rifiutata:
+    ogni pagina accende una voce sola. Torna la voce."""
+    sua = next((v for v in VOCI if v['chiave'] == voce), None)
+    if sua is None:
+        raise ValueError('voce sconosciuta: %s' % voce)
+    sezioni = frozenset(sezioni or ())
+    doppie = [(v['chiave'], s) for v in VOCI if v is not sua for s in sezioni & v['sezioni']]
+    if doppie:
+        raise ValueError('sezioni già di un\'altra voce: %s' % doppie)
+    sua['sezioni'] = sua['sezioni'] | sezioni
+    return sua
+
+
+def condizione_per_pagina(funzione):
+    """La condizione per pagina (vedi in testa): funzione(endpoint) dice se la pagina si apre per chi guarda; None la
+    toglie (tutte le voci, come sul PC principale). La dà app.py: accessi.si_apre."""
+    global SI_APRE
+    SI_APRE = funzione
 
 
 def _controlla_icona(chiave, icona):
@@ -259,7 +291,7 @@ registra_linguetta('configura', 'viste.impostazioni', 'Impostazioni', sezioni={'
                    sotto='backup, messaggi, stampa, tema')
 registra_linguetta('configura', 'aggiornamenti.pagina', 'Aggiornamenti', sezioni={'aggiornamenti'},
                    sotto='versione installata, Aggiorna adesso')
-# M2: qui la settima linguetta, «Aree e accessi» (DECISIONI-VESTE.md, Configura)
+# la settima linguetta, «Aree e accessi» (DECISIONI-VESTE.md, Configura), la registra accessi.py, con la sua sezione
 
 
 # ---------------------------------------------------------------- le voci per la pagina aperta
@@ -291,8 +323,9 @@ def costruisci(sezione, sid, data, funzioni=None, endpoint=None):
     del modello; endpoint: la funzione della pagina (request.endpoint), per le linguette che dicono le loro «pagine».
     Torna un dizionario: voci (solo quelle la cui condizione è vera, con indirizzo, accesa, linguette…), gruppi, accese
     e accesa (la voce accesa, se è una sola), linguette ed etichetta_linguette (quelle della voce accesa), nascosti.
-    Linguette, voci della tendina e nascosti con una condizione falsa non ci sono. Le parole sono testo semplice: le
-    scrive testo()."""
+    Linguette, voci della tendina e nascosti con una condizione falsa non ci sono, e nemmeno quelli la cui pagina non si
+    apre (la condizione per pagina, SI_APRE: dalla rete); una voce la cui pagina non si apre porta alla prima delle sue
+    linguette che si apre, senza il suo tasto, o non c'è. Le parole sono testo semplice: le scrive testo()."""
     funzioni = funzioni if funzioni is not None else {}
     sez = sezione or ''
     contatori = {}
@@ -304,6 +337,10 @@ def costruisci(sezione, sid, data, funzioni=None, endpoint=None):
             return bool(condizione())
         f = funzioni.get(condizione)
         return bool(f()) if callable(f) else False
+
+    def si_apre(x):
+        # la condizione per pagina: chi non porta a una pagina (le voci della guida sullo schermo) c'è sempre
+        return SI_APRE is None or not x.get('endpoint') or bool(SI_APRE(x['endpoint']))
 
     def conta(nome):
         if not nome:
@@ -332,17 +369,28 @@ def costruisci(sezione, sid, data, funzioni=None, endpoint=None):
         if not vale(v['condizione']):
             continue
         linguette = [fatta(x, fuori=x['fuori'], accesa=linguetta_accesa(x))
-                     for x in LINGUETTE.get(v['chiave'], dict(voci=[]))['voci'] if vale(x.get('condizione'))]
+                     for x in LINGUETTE.get(v['chiave'], dict(voci=[]))['voci']
+                     if vale(x.get('condizione')) and si_apre(x)]
         tendina = [fatta(x, classe=x.get('classe'), azione_guida=x.get('azione_guida'), nascosta=x.get('nascosta', False),
-                         accesa=False) for x in (v['tendina'] or []) if vale(x.get('condizione'))]
-        voci.append(fatta(v, chiave=v['chiave'], gruppo=v['gruppo'], icona=v['icona'], accesa=sez in v['sezioni'],
-                          titolo_contatore=v['titolo_contatore'], linguette=linguette, tendina=tendina,
-                          etichetta_linguette=LINGUETTE.get(v['chiave'], {}).get('etichetta')))
+                         accesa=False) for x in (v['tendina'] or []) if vale(x.get('condizione')) and si_apre(x)]
+        al_posto = None
+        if not si_apre(v):
+            # dalla rete: la sua pagina non si apre, la voce porta alla prima delle sue linguette che si apre (mai una
+            # «fuori», che è di un'altra voce), senza il tasto (porterebbe altrove); senza linguette non c'è
+            al_posto = next((x for x in linguette if not x['fuori']), None)
+            if al_posto is None:
+                continue
+        voce = fatta(v, chiave=v['chiave'], gruppo=v['gruppo'], icona=v['icona'], accesa=sez in v['sezioni'],
+                     titolo_contatore=v['titolo_contatore'], linguette=linguette, tendina=tendina,
+                     etichetta_linguette=LINGUETTE.get(v['chiave'], {}).get('etichetta'))
+        if al_posto is not None:
+            voce.update(endpoint=al_posto['endpoint'], argomenti=al_posto['argomenti'], url=al_posto['url'], tasto=None)
+        voci.append(voce)
     accese = [v for v in voci if v['accesa']]
     menu = dict(sezione=sez, sid=sid, data=data, voci=voci,
                 gruppi=[(g, testo(t), [v for v in voci if v['gruppo'] == g]) for g, t in GRUPPI],
                 accesa=accese[0] if len(accese) == 1 else None, accese=accese, endpoint=endpoint,
-                nascosti=[fatta(x, accesa=False) for x in NASCOSTI if vale(x.get('condizione'))])
+                nascosti=[fatta(x, accesa=False) for x in NASCOSTI if vale(x.get('condizione')) and si_apre(x)])
     menu['linguette'] = menu['accesa']['linguette'] if menu['accesa'] else []
     menu['etichetta_linguette'] = testo(menu['accesa']['etichetta_linguette']) if menu['accesa'] else None
     # per il pezzo linguette di _pezzi.html: la riga piccola delle tendine di prima diventa il title; la linguetta che

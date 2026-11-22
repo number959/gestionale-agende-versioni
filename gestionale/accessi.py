@@ -31,7 +31,11 @@ Tutto in un posto solo:
 - i tentativi sbagliati: bloccati per PC e nome (5 in un quarto d'ora), per PC con qualsiasi nome (30 in un quarto
   d'ora) e per nome da qualsiasi PC (dopo 20 l'attesa raddoppia a ogni errore, fino a un'ora); «Sblocca» nella pagina;
 - il registro: accessi/accessi-AAAA-MM-GG.log, un file per giorno, senza caratteri di controllo (i tentativi sbagliati
-  dallo stesso PC: al massimo una riga al minuto, con quanti erano).
+  dallo stesso PC: al massimo una riga al minuto, con quanti erano);
+- il menu (menu.py, dalla tappa 2 della base): «Aree e accessi» è la settima linguetta di Configura, sulla sezione sua
+  «accessi», solo sul PC principale; e dalla rete menu, linguette, tendina Aiuto e collegamenti nascosti dei tasti
+  mostrano solo le pagine che l'utente può aprire (si_apre, la condizione per pagina di menu.py data da app.py: l'area
+  della pagina dal censimento, come la guardia). Nascondere una voce non protegge niente: protegge controlla_accesso.
 """
 import collections
 import hashlib
@@ -54,6 +58,8 @@ from flask import g as contesto
 from flask.sessions import SecureCookieSessionInterface
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
+
+import menu
 
 bp = Blueprint('accessi', __name__)
 registro = logging.getLogger('gestionale.accessi')
@@ -465,6 +471,36 @@ def pagina_notifica(chiave):
 # ================================================= per le pagine del programma
 def utente_attuale():
     return getattr(contesto, 'utente_rete', None) if has_request_context() else None
+
+
+def sul_pc_principale():
+    """Per le pagine e il menu: la richiesta è del PC principale (non dalla rete)."""
+    return not dalla_rete()
+
+
+def area_della_pagina(endpoint):
+    """L'area che serve per aprire una pagina (GET) dalla rete, dal censimento, come la vede controlla_accesso: il Modo
+    schermo con il menu vuole gli Ambulatori; le pagine libere, quelle per chi è entrato e le trasversali non ne vogliono
+    (None); il Sistema e le pagine fuori dal censimento sono SISTEMA."""
+    area = area_di(endpoint)
+    if area == SCHERMO:
+        return 'ambulatori'
+    if area in (LIBERO, UTENTE, TRASVERSALE):
+        return None
+    if endpoint == RICERCA_PAZIENTI:
+        return 'pazienti'               # mai nel menu; per sicurezza la più stretta
+    return area
+
+
+def si_apre(endpoint):
+    """La condizione per pagina del menu (menu.condizione_per_pagina, da app.py): la pagina di questa voce, linguetta,
+    voce della tendina o collegamento nascosto si apre per chi guarda? Sul PC principale sempre (il menu resta quello di
+    sempre); dalla rete con il livello dell'utente nell'area della pagina, presa dal censimento: il Sistema mai. Una
+    funzione sola per tutto il menu, nessuna lista a mano: una pagina nuova ha già la sua area nel censimento."""
+    if not dalla_rete():
+        return True
+    area = area_della_pagina(endpoint)
+    return area is None or livello(utente_attuale(), area) != 'no'
 
 
 def puo(area):
@@ -1091,10 +1127,17 @@ def prepara_registro(cartella):
 
 
 # ============================================================= il controllo
-# Dove si trova la pagina degli accessi nel menu di oggi (revisione del 22/11: il rifiuto diceva «Configura → Aree e
-# accessi», che nel menu non c'è). Quando la tappa 2 la mette fra le linguette di Configura, all'unione diventa
-# «Configura → Aree e accessi».
-PERCORSO_PAGINA = 'Configura → Impostazioni → Aree e accessi'
+# Dove si trova la pagina degli accessi nel menu (revisione del 22/11: il rifiuto diceva «Configura → Aree e accessi»,
+# che nel menu di allora non c'era: si arrivava da Impostazioni). Dall'unione con la tappa 2 è la settima linguetta di
+# Configura (qui sotto, LINGUETTA); il bottone in Impostazioni resta.
+PERCORSO_PAGINA = 'Configura → Aree e accessi'
+# «Aree e accessi», la settima linguetta di Configura (DECISIONI-VESTE.md, Configura): una sezione sua dentro la voce
+# Configura (menu.registra_sezioni), e solo sul PC principale, come la pagina (che è del Sistema: dalla rete la toglie
+# anche la condizione per pagina, si_apre; questa condizione lo dice anche qui)
+menu.registra_sezioni('configura', {'accessi'})
+LINGUETTA = menu.registra_linguetta('configura', 'accessi.pagina', 'Aree e accessi', sezioni={'accessi'},
+                                    sotto='chi può aprire il programma dagli altri PC, e quali parti',
+                                    condizione=sul_pc_principale)
 PAGINA_NO = '''<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ titolo }}</title><link rel="stylesheet" href="/static/stile.css"><link rel="icon" type="image/png" href="/static/icona.png"></head><body>
 <main class="pagina" style="max-width:40em;margin:4em auto"><h1>{{ titolo }}</h1><p>{{ motivo }}</p>
@@ -1755,7 +1798,7 @@ def _mostra_pagina(s, codice=200, **in_piu):
                   indirizzi=indirizzi_da_usare(porta), eventi=ultimi_accessi(), giorni_registro=7,
                   bloccati=tentativi.bloccati(), entrati=sessioni.quante, firewall=comandi_firewall(porta),
                   consiglio=CONSIGLIO_PASSWORD, minimo=MINIMO_PASSWORD, aperto=request.args.get('aperto') or '',
-                  nuovo={'nome': '', 'aree': {}}, errore_nuovo='', riassunto=riassunto_aree, sezione='impostazioni',
+                  nuovo={'nome': '', 'aree': {}}, errore_nuovo='', riassunto=riassunto_aree, sezione='accessi',
                   sid=None)
     valori.update(in_piu)
     return render_template('accessi.html', **valori), codice
@@ -1770,8 +1813,8 @@ def riassunto_aree(aree):
 
 @bp.route('/configura/accessi', methods=['GET', 'POST'])
 def pagina():
-    """Configura → Impostazioni → Aree e accessi (PERCORSO_PAGINA), la parte «Accesso dagli altri PC». Solo dal PC
-    principale (Sistema)."""
+    """Configura → Aree e accessi (PERCORSO_PAGINA; anche dal bottone in Impostazioni), la parte «Accesso dagli altri
+    PC». Solo dal PC principale (Sistema)."""
     from modelli import scrivi_impostazione
     ses, LUCCHETTO = _programma['ses'], _programma['lucchetto']
     s = ses()

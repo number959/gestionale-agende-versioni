@@ -573,13 +573,13 @@ ARTICOLI = [
                'giorno e ogni due ore se ci sono modifiche.'),
          ]),
     dict(slug='altri-pc', gruppo='Configurazione', titolo='Far usare il programma dagli altri PC',
-         in_breve='Dal PC della segreteria, Configura → Impostazioni → Aree e accessi: si accende l\'accesso dalla '
+         in_breve='Dal PC della segreteria, Configura → Aree e accessi: si accende l\'accesso dalla '
                   'rete, si crea un utente per ogni persona e si sceglie, parte per parte, cosa può guardare o '
                   'modificare dagli altri PC della clinica.',
          endpoint='accessi.pagina', apri=('accessi.pagina', {}), foto='/configura/accessi',
          passi=[
-             P('Apri «Aree e accessi»', 'Solo dal PC della segreteria: menu Configura → Impostazioni → Aree e '
-               'accessi. Questo PC continua ad aprire tutto senza password, come sempre.', '[data-guida="menu-configura"]'),
+             P('Apri «Aree e accessi»', 'Solo dal PC della segreteria: menu Configura → Aree e accessi. Questo PC '
+               'continua ad aprire tutto senza password, come sempre.', '[data-guida="menu-configura"]'),
              P('Accendi l\'accesso', 'Spuntare «Gli altri PC della rete possono aprire il programma» e Salva. La porta '
                'è la 5080: si cambia solo se un altro programma la usa già.', '[data-guida="accessi-rete"]'),
              P('Il firewall di Windows', 'La prima volta Windows chiede se il programma può usare la rete: spuntare '

@@ -1,4 +1,7 @@
 {#- chi è entrato da un altro PC della rete (accessi.py): il nome, la sua password e «Esci», nella barra in alto
-    (_barra.html, dentro data-cornice="barra"). Sul PC principale non c'è. #}
-<div class="utente-rete v-utente-rete" role="region" aria-label="Utente">Entrato da un altro PC come <b>{{ utente_rete.nome }}</b> · <a href="{{ url_for('accessi.password') }}">La mia password</a>
+    (_barra.html, dentro data-cornice="barra"). Sul PC principale non c'è. Nella barra «Entrato da un altro PC come»
+    resta per i lettori di schermo e nel title, e si vedono l'icona e il nome (veste.css): con il percorso e la ricerca
+    la barra resta su una riga anche a 1024 px. -#}
+{%- from "_icone.html" import icona -%}
+<div class="utente-rete v-utente-rete" role="region" aria-label="Utente" title="Entrato da un altro PC come {{ utente_rete.nome }}">{{ icona('user') }}<span class="v-utente-come">Entrato da un altro PC come </span><b>{{ utente_rete.nome }}</b> · <a href="{{ url_for('accessi.password') }}">La mia password</a>
   <form method="post" action="{{ url_for('accessi.esci') }}" class="in-linea"><button class="bottone piccolo" type="submit">Esci</button></form></div>
