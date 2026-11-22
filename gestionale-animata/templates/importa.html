@@ -6,14 +6,14 @@
   <p class="sotto">La rubrica dei pazienti oppure un'agenda: il programma riconosce le colonne da solo e mostra un'anteprima. Niente si salva finché non si conferma, e prima di importare si fa un backup. <a href="{{ url_for('viste.impostazioni') }}">Torna alle impostazioni</a></p>
   <form method="post" enctype="multipart/form-data">
     <div class="campo"><label for="file">File (.xlsx o .csv, al massimo 10 MB)</label>
-      <input type="file" id="file" name="file" accept=".xlsx,.csv,.txt" required></div>
+      <input type="file" id="file" name="file" data-guida="importa-file" accept=".xlsx,.csv,.txt" required></div>
     <div class="campo"><label for="tipo">Cosa contiene</label>
       <select id="tipo" name="tipo">
         <option value="">lo capisce il programma</option>
         <option value="pazienti">una rubrica di pazienti</option>
         <option value="appuntamenti">un'agenda di appuntamenti</option>
       </select></div>
-    <div class="azioni"><button class="bottone primario" type="submit">Carica e mostra l'anteprima</button></div>
+    <div class="azioni"><button class="bottone primario" type="submit" data-guida="importa-carica">Carica e mostra l'anteprima</button></div>
   </form>
   <div class="riquadro-elenco">
     <h2>Cosa riconosce</h2>

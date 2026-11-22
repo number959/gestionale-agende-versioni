@@ -16,10 +16,10 @@
     </select></form>
     {% endif %}
     <span class="separa"></span>
-    <a class="bottone" href="{{ url_for('cassa.cassa_mese', aaaamm=g.strftime('%Y-%m'), struttura=sid) }}">Mese</a>
+    <a class="bottone" href="{{ url_for('cassa.cassa_mese', aaaamm=g.strftime('%Y-%m'), struttura=sid) }}" data-guida="cassa-mese">Mese</a>
     <a class="bottone" href="{{ url_for('cassa.listino', struttura=sid) }}">Listino</a>
     <a class="bottone" href="{{ url_for('tariffari.elenco', struttura=sid) }}">Tariffari</a>
-    <button class="bottone" type="button" onclick="window.print()">Stampa la chiusura di cassa</button>
+    <button class="bottone" type="button" data-guida="cassa-stampa" onclick="window.print()">Stampa la chiusura di cassa</button>
   </div>
 </div>
 <div class="contenuto">
@@ -51,7 +51,7 @@
       <td>{{ a.prestazione.nome if a.prestazione else '' }}{% if a.convenzione %}<div class="nota-riga">{{ a.convenzione }}</div>{% endif %}</td>
       <td>{{ a.etichetta_stato }}</td>
       <td class="numero">{% if a.importo_cent %}{{ a.importo_testo }} €{% else %}<span class="senza">non indicato</span>{% endif %}</td>
-      <td class="azione">{% if a.importo_cent %}{% for codice, etichetta in metodi[:2] %}<form method="post" action="{{ url_for('cassa.pagamento', aid=a.id) }}" class="in-linea"><input type="hidden" name="metodo" value="{{ codice }}"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit">{{ etichetta }}</button></form> {% endfor %}{% endif %}
+      <td class="azione">{% if a.importo_cent %}{% for codice, etichetta in metodi[:2] %}<form method="post" action="{{ url_for('cassa.pagamento', aid=a.id) }}" class="in-linea"><input type="hidden" name="metodo" value="{{ codice }}"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit" data-guida="cassa-incassa">{{ etichetta }}</button></form> {% endfor %}{% endif %}
         <a class="bottone piccolo" href="{{ url_for('appuntamento', aid=a.id, struttura=sid) }}#incasso">Altro…</a></td></tr>
     {% endfor %}
   </table>

@@ -53,27 +53,27 @@ ARTICOLI = [
              P('Per cominciare', 'Il gestionale si apre sempre sulla pagina Oggi: quello che serve sapere entrando la mattina. '
                'Questo giro mostra dove sono le cose; si chiude quando si vuole con Esc o con la ×.'),
              P('Oggi', 'Chi aspettare adesso e nelle prossime due ore, con il pulsante Arrivato; sotto, interventi, '
-               'cose da fare, telefonate e cassa.', 'nav.menu [data-guida="menu-oggi"]'),
+               'cose da fare, telefonate e cassa.', '[data-guida="menu-oggi"]'),
              P('Il giorno', 'La griglia del giorno: una colonna per stanza, una riga per fascia oraria. È da qui che si prenota.',
-               'nav.menu [data-guida="menu-giorno"]'),
+               '[data-guida="menu-giorno"]'),
              P('Pazienti', 'L\'anagrafica: cercare, aprire la scheda, vedere gli appuntamenti e i documenti di un paziente.',
-               'nav.menu [data-guida="menu-pazienti"]'),
+               '[data-guida="menu-pazienti"]'),
              P('Turni', 'I turni del personale (medici, infermieri, OSS e gli altri) nel mese, nella settimana e nel '
-               'giorno a ore.', 'nav.menu [data-guida="menu-turni"]'),
+               'giorno a ore.', '[data-guida="menu-turni"]'),
              P('Dove si fa', 'In quale struttura del gruppo si fa una prestazione: si scrive la prestazione e si vedono le '
-               'strutture, i loro recapiti e il messaggio pronto per il paziente.', 'nav.menu [data-guida="menu-dove"]'),
+               'strutture, i loro recapiti e il messaggio pronto per il paziente.', '[data-guida="menu-dove"]'),
              P('Segreteria', 'Il lavoro di tutti i giorni oltre a prenotare: conferme, da confermare, chiusura della '
                'giornata, cose da fare, lista d\'attesa. Il numero arancione dice quante prenotazioni sono in sospeso.',
-               'nav.menu [data-guida="menu-segreteria"]'),
+               '[data-guida="menu-segreteria"]'),
              P('Cerca', 'Scrivere qui (o premere il tasto /) un cognome, un telefono, un giorno come "domani" o "24/9", '
-               'oppure una prestazione per sapere dove si fa.', 'nav.menu [data-guida="menu-cerca"]'),
+               'oppure una prestazione per sapere dove si fa.', '[data-guida="menu-cerca"]'),
              P('Aiuto', 'Da qui si torna sempre a questa guida: "Guida di questa pagina" per un giro sulla pagina aperta, '
                '"Come fare…" per tutte le guide, con le immagini e i video, "Novità" per cosa c\'è di nuovo.',
-               'nav.menu [data-guida="menu-aiuto"]'),
+               '[data-guida="menu-aiuto"]'),
              P('Configura', 'Stanze, medici e turni, l\'importazione da Excel, le impostazioni e gli aggiornamenti: si '
-               'usano di rado.', 'nav.menu [data-guida="menu-configura"]'),
+               'usano di rado.', '[data-guida="menu-configura"]'),
              P('Adesso', 'In cima a Oggi: chi è in ritardo e chi arriva, con i pulsanti per segnarlo arrivato.',
-               '.scheda-oggi.larga'),
+               '[data-guida="oggi-adesso"]'),
          ]),
     dict(slug='medici-turni', gruppo='Primi passi', titolo='Aggiungere un medico e i suoi turni',
          in_breve='Senza turni la griglia resta grigia: i turni dicono chi c\'è, dove e a che ora.',
@@ -81,14 +81,14 @@ ARTICOLI = [
          passi=[
              P('Apri le anagrafiche', 'Menu Configura → Anagrafiche. In alto, "Per cominciare" dice cosa manca ancora.'),
              P('Aggiungi il medico', 'Cognome, nome, specialità e colore (serve a riconoscerlo nella griglia). '
-               'Email e telefono servono per mandargli la sua agenda.', 'a.bottone.aggiungi', 'Aggiungi medico'),
+               'Email e telefono servono per mandargli la sua agenda.', '[data-guida="anagrafiche-medico-nuovo"]'),
              P('Aggiungi un turno', 'Medico, stanza, giorno della settimana e orario: per esempio Lippiello, Ambulatorio 1, '
                'lunedì dalle 8 alle 14. Si ripete ogni settimana. "Durata delle fasce" dice ogni quanto comincia una '
-               'visita in quel turno (vedi Le fasce di ogni ambulatorio).', 'a.bottone.aggiungi', 'Aggiungi turno'),
+               'visita in quel turno (vedi Le fasce di ogni ambulatorio).', '[data-guida="anagrafiche-turno-nuovo"]'),
              P('Chi viene senza giorno fisso', 'Per una sostituzione o per chi viene ogni tanto c\'è il turno di un giorno solo.',
-               'a.bottone.aggiungi', 'Aggiungi turno di un giorno'),
+               '[data-guida="anagrafiche-turno-giorno"]'),
              P('Ferie e assenze', 'Nei giorni di assenza i turni del medico non aprono fasce, e il programma elenca gli '
-               'appuntamenti da spostare.', 'a.bottone.aggiungi', 'Aggiungi assenza'),
+               'appuntamenti da spostare.', '[data-guida="anagrafiche-assenza-nuova"]'),
              P('Quando un turno finisce', 'Si apre il turno e si scrive la data in "Fino al". Eliminarlo toglierebbe le '
                'sue ore anche dalle statistiche dei mesi già passati.'),
              P('Le sue email', 'Aprendo il medico, in fondo ci sono le email automatiche ai suoi pazienti e "Nuova email '
@@ -97,19 +97,19 @@ ARTICOLI = [
     dict(slug='fasce-turno', gruppo='Primi passi', titolo='Le fasce di ogni ambulatorio',
          in_breve='Ogni turno può avere fasce sue (visite ogni 20 minuti, endoscopia ogni 15): la prestazione '
                   'occupa le fasce intere che le servono.',
-         endpoint='giorno', apri=('giorno', {'iso': 'FASCE'}), condizione='thead .fasce-turno',
+         endpoint='giorno', apri=('giorno', {'iso': 'FASCE'}), condizione='[data-guida="giorno-fasce-turno"]',
          foto='/giorno/{martedi}?struttura=1',
          passi=[
              P('La durata delle fasce', 'Configura → Anagrafiche, Modifica sul turno, "Durata delle fasce": ogni quanto '
                'comincia una fascia, dall\'ora di inizio del turno. "Come la struttura" lascia le fasce di tutta la '
                'clinica, che si scelgono nella struttura.'),
              P('Nella griglia', 'La colonna lo dice in alto: "fasce da 15\'". Le altre stanze restano come prima.',
-               'thead .fasce-turno'),
+               '[data-guida="giorno-fasce-turno"]'),
              P('Le fasce libere', 'Ogni fascia libera mostra la sua ora: un clic e il modulo si apre con quell\'orario e '
-               'il medico di turno.', 'td.aperta a.con-ora'),
+               'il medico di turno.', '[data-guida="giorno-fascia-ora"]'),
              P('Fasce intere', 'La prestazione occupa tutte le fasce che tocca: una colonscopia da 45 minuti con fasce da '
                '15 ne occupa tre, una visita più corta della fascia la occupa tutta. Nella stessa fascia il programma '
-               'non salva un altro appuntamento.', 'td.occupata', 'Colonscopia'),
+               'non salva un altro appuntamento.', '[data-guida="giorno-occupata"]', 'Colonscopia'),
              P('Prima disponibilità e orari a mano', 'Prima disponibilità e Sposta propongono le ore delle fasce. Un\'ora '
                'scritta a mano che non è l\'inizio di una fascia si salva, con un avviso che lo dice.'),
          ]),
@@ -134,31 +134,31 @@ ARTICOLI = [
              P('Giorno e ora', 'Si possono cambiare anche qui. Se la stanza o il medico sono già occupati il programma lo '
                'dice e non salva.', '#data'),
              P('Salva', 'Salva appuntamento (anche Ctrl + Invio). Si torna alla giornata con l\'appuntamento al suo posto.',
-               '#modulo-appuntamento button.primario[type="submit"]'),
+               '[data-guida="appuntamento-salva"]'),
          ]),
     dict(slug='mese', gruppo='Tutti i giorni', titolo='Il mese: chi c\'è e la sala operatoria',
          in_breve='Menu Mese: giorno per giorno appuntamenti, posti liberi, medici e interventi in sala.',
          endpoint='viste.mese', apri=('viste.mese', {'aaaamm': 'MESE'}), foto='/mese/{mese}?struttura=1',
          passi=[
              P('Apri il mese', 'Menu Mese: il mese del giorno che si sta guardando; le frecce cambiano mese.',
-               'nav.menu [data-guida="menu-mese"]'),
+               '[data-guida="menu-mese"]'),
              P('Ogni giorno', 'Quanti appuntamenti, quante fasce sono ancora libere e chi è di turno. Clic sul giorno per '
-               'aprire la sua griglia.', 'a.giorno-mese'),
+               'aprire la sua griglia.', '[data-guida="mese-giorno"]'),
              P('Sala operatoria', 'Gli interventi del giorno con i chirurghi. "Sala libera" dice chi opera di solito in '
-               'quel giorno della settimana e non ha ancora interventi: lì c\'è posto.', '.sala-mese'),
+               'quel giorno della settimana e non ha ancora interventi: lì c\'è posto.', '[data-guida="mese-sala"]'),
              P('Un medico solo', 'Scelto un medico, il mese mostra solo i suoi appuntamenti. Stampa per il foglio.',
-               'select[name="medico"]'),
+               '[data-guida="mese-medico"]'),
          ]),
     dict(slug='cercare', gruppo='Tutti i giorni', titolo='Trovare un paziente o un giorno',
          in_breve='La casella Cerca in alto trova pazienti, medici e giorni, da qualsiasi pagina.',
          endpoint='pazienti.elenco', apri=('pazienti.elenco', {}), foto='/pazienti?q=sepe',
          passi=[
              P('Da ogni pagina', 'Tasto / oppure clic sulla casella Cerca nel menu. Si scrive un cognome, un numero di '
-               'telefono, un medico o un giorno ("domani", "lunedì", "24/9").', 'nav.menu [data-guida="menu-cerca"]'),
+               'telefono, un medico o un giorno ("domani", "lunedì", "24/9").', '[data-guida="menu-cerca"]'),
              P('La pagina Pazienti', 'Per cercare con più calma, vedere gli ultimi inseriti o aggiungere un paziente senza '
-               'prenotare.', 'form.ricerca'),
+               'prenotare.', '[data-guida="pazienti-cerca"]'),
              P('La scheda', 'Clic sul nome: telefono, appuntamenti passati e futuri, documenti, cose da fare.',
-               'table.elenco a[href*="/pazienti/"]'),
+               '[data-guida="pazienti-apri"]'),
              P('Doppioni', 'Se lo stesso paziente è stato scritto due volte, dalla scheda "Possibili doppioni" si uniscono '
                'le due schede senza perdere niente.'),
          ]),
@@ -203,12 +203,12 @@ ARTICOLI = [
          ]),
     dict(slug='stato', gruppo='Tutti i giorni', titolo='Arrivato, disdetto, non presentato',
          in_breve='Un clic sull\'appuntamento e un clic sullo stato. I disdetti liberano la fascia.',
-         endpoint='appuntamento', apri=('giorno', {'iso': 'OGGI'}), condizione='.barra-stato',
+         endpoint='appuntamento', apri=('giorno', {'iso': 'OGGI'}), condizione='[data-guida="appuntamento-stato"]',
          foto='/appuntamento/{app_esempio}',
          passi=[
              P('Apri l\'appuntamento', 'Nella griglia si clicca sull\'appuntamento colorato.'),
              P('Cambia lo stato', 'Confermato (ha risposto alla conferma), Arrivato (è in sala d\'attesa), Non presentato, '
-               'Disdetto. Rimetti prenotato annulla l\'ultimo cambio.', '.barra-stato'),
+               'Disdetto. Rimetti prenotato annulla l\'ultimo cambio.', '[data-guida="appuntamento-stato"]'),
              P('Più veloce', 'Dalla pagina Oggi e dalla Chiusura della giornata il pulsante Arrivato è già accanto al nome, '
                'senza aprire l\'appuntamento.'),
              P('Posto liberato', 'Se un appuntamento futuro viene disdetto, il programma dice chi in lista d\'attesa va bene '
@@ -216,10 +216,10 @@ ARTICOLI = [
          ]),
     dict(slug='spostare', gruppo='Tutti i giorni', titolo='Spostare un appuntamento',
          in_breve='Dall\'appuntamento, Sposta: il programma propone i primi posti liberi dello stesso medico.',
-         endpoint='appuntamento', apri=('giorno', {'iso': 'OGGI'}), condizione='.barra-stato',
+         endpoint='appuntamento', apri=('giorno', {'iso': 'OGGI'}), condizione='[data-guida="appuntamento-stato"]',
          foto='/appuntamento/{app_esempio}',
          passi=[
-             P('Sposta', 'Nell\'appuntamento, in alto, il collegamento Sposta.', 'p.sotto a[href*="/sposta"]'),
+             P('Sposta', 'Nell\'appuntamento, in alto, il collegamento Sposta.', '[data-guida="appuntamento-sposta"]'),
              P('Scegli il posto', 'Sposta qui accanto a uno dei posti proposti, oppure data e ora a mano. Il messaggio per '
                'avvisare il paziente è già scritto.'),
              P('Tutti gli appuntamenti di un medico', 'Per ferie o assenza: Anagrafiche → Aggiungi assenza, poi il '
@@ -230,11 +230,11 @@ ARTICOLI = [
          endpoint='viste.conferme', apri=('viste.conferme', {}), foto='/conferme',
          passi=[
              P('Apri le conferme', 'Menu Segreteria → Conferme (tasto C). Si apre il prossimo giorno di lavoro: il venerdì '
-               'mostra il sabato o il lunedì.', 'nav.menu [data-guida="menu-segreteria"]'),
+               'mostra il sabato o il lunedì.', '[data-guida="menu-segreteria"]'),
              P('Contatta', 'WhatsApp o Email aprono il messaggio già scritto con giorno, ora e indicazioni: resta solo da '
-               'inviarlo. Chiama compone il numero.', '.contatti-rapidi'),
+               'inviarlo. Chiama compone il numero.', '[data-guida="stato-contatti"]'),
              P('Segna la risposta', 'Confermato quando il paziente risponde; Disdetto se rinuncia (la fascia si libera).',
-               '.pulsanti-stato'),
+               '[data-guida="stato-pulsanti"]'),
              P('Promemoria automatici', 'Con i promemoria accesi (Configura → Email e WhatsApp) la colonna Promemoria dice '
                'cosa è partito da solo; Manda lo manda adesso. Restano da chiamare solo gli altri.'),
              P('Il testo', 'Il messaggio si cambia in Configura → Impostazioni → Messaggi ai pazienti.'),
@@ -245,7 +245,7 @@ ARTICOLI = [
          passi=[
              P('Apri la chiusura', 'Menu Segreteria → Chiusura della giornata. Dopo le 18 arriva anche una notifica.'),
              P('Seleziona e segna', 'Si spuntano i pazienti e si preme Segna i selezionati come arrivati (o come non '
-               'presentati).', 'button[value="arrivati"]'),
+               'presentati).', '[data-guida="chiusura-arrivati"]'),
              P('Da incassare', 'Sotto, chi è arrivato con un importo e non ha ancora pagato.'),
              P('Giorni indietro', 'Se qualche giornata passata è rimasta aperta, è elencata in fondo e fra le notifiche.'),
          ]),
@@ -254,9 +254,9 @@ ARTICOLI = [
          endpoint='segreteria.da_confermare', apri=('segreteria.da_confermare', {}), foto='/da-confermare',
          passi=[
              P('Scrivi l\'appunto', 'Cosa c\'è da confermare, e se si sa giorno, ora, medico, paziente. Aggiungi.',
-               'textarea[name="testo"], input[name="testo"]'),
+               '[data-guida="da-confermare-testo"]'),
              P('Prenota', 'Quando si sa tutto, Prenota apre il modulo già compilato; salvando, l\'appunto si chiude.',
-               'a.bottone.primario', 'Prenota'),
+               '[data-guida="da-confermare-prenota"]'),
              P('Più insieme', 'Spuntati più appunti e scelta la stanza, Prenota i selezionati li mette tutti in agenda.',
                '#prenota-insieme'),
              P('Nella giornata', 'Gli appunti di un giorno compaiono anche in cima alla griglia di quel giorno.'),
@@ -266,7 +266,7 @@ ARTICOLI = [
          endpoint='segreteria.attesa', apri=('segreteria.attesa', {}), foto='/attesa',
          passi=[
              P('Aggiungi', 'Paziente, medico o prestazione se contano, e da quando a quando va bene.',
-               'a.bottone.primario', 'Aggiungi alla lista'),
+               '[data-guida="attesa-nuova"]'),
              P('Posto libero', 'Quando un appuntamento futuro viene disdetto, il programma avvisa e propone chi in lista va '
                'bene, dal più vecchio.'),
              P('Prima disponibilità', 'Da ogni riga si cerca il primo posto libero di quel medico.'),
@@ -276,10 +276,10 @@ ARTICOLI = [
          endpoint='segreteria.cose_da_fare', apri=('segreteria.cose_da_fare', {}), foto='/cose-da-fare',
          passi=[
              P('Scrivi cosa', 'Cosa fare e per che giorno. Anche dalla scheda del paziente o dall\'appuntamento, con '
-               '"Ricordami di…".', 'form.filtri'),
+               '"Ricordami di…".', '[data-guida="cose-da-fare-nuova"]'),
              P('Le notifiche', 'Nel giorno indicato compare una notifica in basso a destra, con Fatto e Domani. Si chiude con '
                'la ×; ricompare solo se c\'è qualcosa di nuovo.'),
-             P('Fatto', 'Fatto la toglie; Domani la rimanda di un giorno.', 'button', 'Fatto'),
+             P('Fatto', 'Fatto la toglie; Domani la rimanda di un giorno.', '[data-guida="cose-da-fare-fatto"]'),
          ]),
     # ---------------------------------------------------------- sala operatoria
     # ------------------------------------------------------------- dove si fa
@@ -290,7 +290,7 @@ ARTICOLI = [
          foto='/dove-si-fa/?q=rm+ginocchio&voce=1&gruppo=2&struttura=1',
          passi=[
              P('Apri la pagina', 'Menu Dove si fa, o il tasto D. Si può anche scrivere la prestazione nella ricerca in alto '
-               '(tasto /): le prestazioni compaiono insieme ai pazienti.', 'nav.menu [data-guida="menu-dove"]'),
+               '(tasto /): le prestazioni compaiono insieme ai pazienti.', '[data-guida="menu-dove"]'),
              P('Scrivi la prestazione', 'Come la dice il paziente: «risonanza ginocchio», «tac torace», «eco addome», '
                '«holter». Bastano le prime lettere; valgono le sigle d\'uso (RM, TC, RX, ECG, MOC) e i sinonimi del '
                'database. Una parola scritta male si corregge da sola.', '#q-dove'),
@@ -298,7 +298,7 @@ ARTICOLI = [
                'struttura; «da confermare» vuol dire che il database non ne è sicuro: meglio chiedere alla struttura '
                'prima di mandarci il paziente.', '[data-guida="dove-sedi"]'),
              P('La scheda della struttura', 'Un clic sulla struttura apre la sua scheda: indirizzo con la mappa, telefoni, '
-               'prenotazione online, orari e come si prenota. Esc la chiude.', '.recapiti-scheda'),
+               'prenotazione online, orari e come si prenota. Esc la chiude.', '[data-guida="dove-recapiti"]'),
              P('Il messaggio per il paziente', 'Già scritto, con la prestazione e i recapiti; si può cambiare. Copia, '
                'WhatsApp, Email, oppure Stampa per un foglio da dare al paziente allo sportello.',
                '[data-guida="dove-azioni"]'),
@@ -316,7 +316,7 @@ ARTICOLI = [
                   'versione; i recapiti delle strutture si scrivono nel programma.',
          endpoint='dovesifa.strutture', apri=('dovesifa.strutture', {}), foto='/dove-si-fa/strutture',
          passi=[
-             P('Apri la pagina', 'Menu Configura → Strutture del gruppo.', 'nav.menu [data-guida="menu-configura"]'),
+             P('Apri la pagina', 'Menu Configura → Strutture del gruppo.', '[data-guida="menu-configura"]'),
              P('Carica il database', 'Il file Excel del database delle prestazioni: una riga per prestazione e una colonna '
                'per struttura, con una X dove si fa. Prima si vede cosa cambia e si conferma; il programma fa una copia '
                'di sicurezza.', '[data-guida="gruppo-carica"]'),
@@ -339,7 +339,7 @@ ARTICOLI = [
          passi=[
              P('Apri i turni', 'Menu Turni: il foglio del mese, con una riga per persona divisa per ruolo (medici, '
                'infermieri, OSS, tecnici, accettazione, ausiliari) e una colonna per giorno.',
-               'nav.menu [data-guida="menu-turni"]'),
+               '[data-guida="menu-turni"]'),
              P('Giorno, settimana, mese', 'Il mese è il foglio dei turni con i codici. La settimana mostra anche orari e '
                'aree, e le ore di ciascuno contro quelle del contratto. Il giorno è a ore: chi c\'è e quando.',
                '[data-guida="turni-viste"]'),
@@ -359,7 +359,7 @@ ARTICOLI = [
                'cella ha un triangolino arancione.'),
              P('Totali e copertura', 'In fondo alla riga le ore lavorate (con quelle del contratto), le notti, i festivi e '
                'i giorni di assenza. Sotto ogni ruolo la copertura del giorno, quanti per turno: in rosso dove manca '
-               'qualcuno rispetto alle coperture minime.', 'tr.copertura'),
+               'qualcuno rispetto alle coperture minime.', '[data-guida="turni-copertura"]'),
              P('Filtri', 'Solo un ruolo (per esempio gli infermieri) o solo un\'area.', '[data-guida="turni-filtri"]'),
              P('Stampa ed Excel', 'In Strumenti: il foglio da stampare in orizzontale e il mese in Excel, con un secondo '
                'foglio di un turno per riga (per le paghe).', '[data-guida="turni-strumenti"]'),
@@ -371,15 +371,15 @@ ARTICOLI = [
          foto='/personale/turni/giorno/{martedi}',
          passi=[
              P('Il giorno a ore', 'Una riga per chi ha un turno quel giorno, sulla linea delle 24 ore; la notte cominciata '
-               'il giorno prima parte da sinistra. La linea rossa è adesso.', '.scala-ore'),
+               'il giorno prima parte da sinistra. La linea rossa è adesso.', '[data-guida="turni-scala-ore"]'),
              P('Quanti al lavoro', 'Per ogni ruolo, le barre dicono quante persone sono al lavoro ora per ora. «Manca '
-               'qualcuno» se una copertura minima non è raggiunta.', '.riga-presenze .presenze'),
+               'qualcuno» se una copertura minima non è raggiunta.', '[data-guida="turni-presenze"]'),
              P('Gli ambulatori', 'Per i medici collegati all\'agenda si vedono anche i loro ambulatori del giorno, '
                'tratteggiati (sotto il turno, se c\'è anche quello): così turno e agenda si confrontano a colpo '
                'd\'occhio.'),
              P('Cambiare un turno', 'Clic sulla riga della persona (o Invio, con il tasto Tab fin lì): si apre la stessa '
-               'scelta della griglia. Si può anche scrivere il codice.', '.pista'),
-             P('Riposi e assenze', 'Valgono tutto il giorno e compaiono accanto al nome.', '.nome-giorno .giorno-intero'),
+               'scelta della griglia. Si può anche scrivere il codice.', '[data-guida="turni-pista"]'),
+             P('Riposi e assenze', 'Valgono tutto il giorno e compaiono accanto al nome.', '[data-guida="turni-giorno-intero"]'),
              P('Un turno a chi non c\'è', '«Turno a…»: si sceglie la persona e poi il turno.', '#aggiungi-persona'),
          ]),
     dict(slug='turni-schema', gruppo='Turni del personale', titolo='Schema a rotazione e copia della settimana',
@@ -415,7 +415,7 @@ ARTICOLI = [
                'vista del giorno si vedono anche i loro ambulatori. Il pulsante c\'è finché qualche medico manca.'),
              P('Chi non lavora più', 'Nella sua scheda si toglie la spunta «In servizio»: non compare nei turni nuovi ma '
                'resta in quelli passati. Si può eliminare solo chi non ha turni.'),
-             P('Modificare', 'Modifica, sulla riga della persona.', 'table.elenco-persone td.azione a'),
+             P('Modificare', 'Modifica, sulla riga della persona.', '[data-guida="persone-modifica"]'),
          ]),
     dict(slug='turni-tipi', gruppo='Turni del personale', titolo='Tipi di turno e coperture minime',
          in_breve='Turni → Tipi di turno: codici, orari e colori dei turni, e quante persone servono almeno, per ruolo '
@@ -438,9 +438,9 @@ ARTICOLI = [
          in_breve='Esami, consenso, anestesista, preparazione, acconto: le caselle si salvano da sole.',
          endpoint='sala.giornata', apri=('sala.giornata', {'iso': 'OGGI'}), foto='/sala/{domani}',
          passi=[
-             P('La pagina Sala', 'Menu Sala: gli interventi del giorno o dei prossimi sette.', 'nav.menu [data-guida="menu-sala"]'),
+             P('La pagina Sala', 'Menu Sala: gli interventi del giorno o dei prossimi sette.', '[data-guida="menu-sala"]'),
              P('Spunta', 'Clic sulla casella: si salva subito, con data e ora. Il numero dice quante sono fatte.',
-               'form.checklist'),
+               '[data-guida="sala-checklist"]'),
              P('Nella griglia', 'Ogni intervento mostra quante voci mancano (3/5); passandoci sopra, quali.'),
              P('Il giorno prima', 'Arriva una notifica con gli interventi di domani ancora da completare.'),
              P('Le voci', 'Si cambiano in Configura → Impostazioni → Checklist pre-operatoria.'),
@@ -451,9 +451,9 @@ ARTICOLI = [
          passi=[
              P('Degenza', 'Nel modulo dell\'intervento: Day hospital, Una notte o Ricovero con le notti.'),
              P('Stampa la lista operatoria', 'Una tabella per sala con età, telefono, chirurgo, anestesista, degenza e cosa '
-               'manca della checklist.', 'a.bottone', 'Stampa la lista operatoria'),
+               'manca della checklist.', '[data-guida="sala-lista-operatoria"]'),
              P('Posti letto', 'Notte per notte, quanti letti sono occupati. Salvando un intervento che non trova letto '
-               'compare un avviso.', 'a.bottone', 'Posti letto'),
+               'compare un avviso.', '[data-guida="sala-posti-letto"]'),
              P('Quanti letti', 'Il numero si scrive una volta in Configura → Anagrafiche → Nome, logo e colori.'),
          ]),
     dict(slug='chirurghi', gruppo='Sala operatoria', titolo='Giorni di sala dei chirurghi',
@@ -461,8 +461,8 @@ ARTICOLI = [
          endpoint='sala.chirurghi', apri=('sala.chirurghi', {}), foto='/sala/chirurghi',
          passi=[
              P('Proponi dagli interventi', 'Il programma spunta i giorni in cui ciascuno ha operato almeno due volte.',
-               'a.bottone', 'Proponi dagli interventi'),
-             P('Controlla e salva', 'Si tolgono o aggiungono spunte e si salva.', 'table.giorni-sala'),
+               '[data-guida="chirurghi-proponi"]'),
+             P('Controlla e salva', 'Si tolgono o aggiungono spunte e si salva.', '[data-guida="chirurghi-giorni"]'),
              P('A cosa serve', 'La riga Sala operatoria in cima alla griglia dice chi è in sala e chi, operando di solito quel '
                'giorno, è ancora libero. Prenotando un chirurgo in un altro giorno compare un avviso.'),
          ]),
@@ -473,9 +473,9 @@ ARTICOLI = [
          passi=[
              P('Apri la cassa', 'Menu Cassa: gli incassi del giorno e chi deve ancora pagare.'),
              P('Registra', 'Accanto a chi deve pagare, il pulsante del metodo (Contanti, POS…) registra l\'importo previsto. '
-               'Altro… per un importo diverso.', '.pulsanti-stato, form.in-linea button', 'Contanti'),
-             P('Chiusura', 'Stampa la chiusura di cassa: totali per metodo di pagamento.', 'button', 'Stampa la chiusura'),
-             P('Il mese', 'Mese mostra i totali giorno per giorno, anche in Excel.', 'a.bottone', 'Mese'),
+               'Altro… per un importo diverso.', '[data-guida="cassa-incassa"]', 'Contanti'),
+             P('Chiusura', 'Stampa la chiusura di cassa: totali per metodo di pagamento.', '[data-guida="cassa-stampa"]'),
+             P('Il mese', 'Mese mostra i totali giorno per giorno, anche in Excel.', '[data-guida="cassa-mese"]'),
          ]),
     dict(slug='tariffari', gruppo='Cassa e fogli', titolo='I tariffari dei medici',
          in_breve='Cassa → Tariffari: i prezzi di ogni medico, con pacchetti e voci aggiuntive, caricati da un Excel o '
@@ -502,7 +502,7 @@ ARTICOLI = [
          in_breve='Da Statistiche: un foglio per medico da stampare, scaricare in Excel o mandare per email.',
          endpoint='viste.statistiche', apri=('viste.statistiche', {}), foto='/statistiche',
          passi=[
-             P('Dalle statistiche', 'Menu Statistiche → Riepilogo del mese per medico.', 'a.bottone', 'Riepilogo del mese'),
+             P('Dalle statistiche', 'Menu Statistiche → Riepilogo del mese per medico.', '[data-guida="statistiche-riepilogo-medici"]'),
              P('Scegli', 'Tutti i medici o uno solo; frecce per il mese prima e dopo.'),
              P('Manda', 'Stampa (un medico per pagina), Scarica in Excel, o Manda per email con il messaggio già scritto.'),
          ]),
@@ -521,27 +521,27 @@ ARTICOLI = [
          endpoint='giorno', apri=('giorno', {'iso': 'OGGI'}), foto='/giorno/{domani}?struttura=1',
          passi=[
              P('Un giorno alla volta', 'Le frecce cambiano giorno (anche ← → sulla tastiera), Vai a oggi torna a oggi.',
-               '.barra .comandi .passo'),
+               '[data-guida="giorno-passo"]'),
              P('Fasce libere', 'Le celle bianche con "libero" sono dentro un turno: clic per prenotare. Le grigie sono chiuse.',
-               'td.aperta'),
+               '[data-guida="giorno-libera"]'),
              P('Gli appuntamenti', 'Il bordo colorato è il medico. Verde: arrivato; ✓: confermato. Clic per aprirlo.',
-               'a.voce'),
+               '[data-guida="giorno-appuntamento"]'),
              P('Interventi', 'Negli interventi il numero arancione è la checklist (3/5) e il riquadro viola la degenza.',
-               '.segni-sala'),
+               '[data-guida="giorno-segni-sala"]'),
              P('Sala operatoria', 'La riga in alto: quanti interventi, checklist da completare, letti della notte, chi è in '
                'sala e quanti interventi fa ciascun chirurgo quel giorno.',
-               '.sala-giorno'),
+               '[data-guida="giorno-sala"]'),
              P('Nota del giorno', 'Un appunto per tutta la giornata: "Lippiello arriva alle 10". Si vede anche in stampa.',
-               'details.nota-giorno, .nota-giorno'),
+               '[data-guida="giorno-nota"]'),
          ]),
     dict(slug='importare', gruppo='Configurazione', titolo='Importare dai file Excel',
          in_breve='Rubrica dei pazienti o agende vecchie: il programma riconosce le colonne e mostra un\'anteprima.',
          endpoint='importa.carica', apri=('importa.carica', {}), foto='/importa',
          passi=[
              P('Scegli il file', '.xlsx o .csv (va bene anche il .txt "Testo Unicode" di Excel). Il vecchio .xls va '
-               'salvato prima come .xlsx da Excel.', 'input[type="file"]'),
+               'salvato prima come .xlsx da Excel.', '[data-guida="importa-file"]'),
              P('Anteprima', 'Carica e mostra l\'anteprima: niente viene salvato finché non si conferma. Le colonne si possono '
-               'correggere.', 'button[type="submit"]', 'Carica'),
+               'correggere.', '[data-guida="importa-carica"]'),
              P('Importa', 'Prima di importare il programma fa un backup. Le righe in conflitto finiscono fra i Da confermare.'),
          ]),
     dict(slug='backup', gruppo='Configurazione', titolo='Backup e ripristino',
@@ -550,7 +550,7 @@ ARTICOLI = [
          passi=[
              P('Automatico', 'Ogni giorno il programma fa una copia verificata e tiene le ultime 30 più una al mese.',
                '#backup'),
-             P('Adesso', 'Fai un backup adesso, prima di un\'operazione importante.', 'button', 'Fai un backup adesso'),
+             P('Adesso', 'Fai un backup adesso, prima di un\'operazione importante.', '[data-guida="backup-adesso"]'),
              P('Un\'altra cartella', 'Meglio una chiavetta o una cartella di rete: si sceglie nella stessa sezione.'),
          ]),
     dict(slug='autoriparazione', gruppo='Configurazione', titolo='Il programma si ripara da solo',
@@ -562,7 +562,7 @@ ARTICOLI = [
                'sottofondo e lo spazio sul disco. Si apre da Impostazioni → Controllo del programma.',
                '#stato-programma'),
              P('Controlla adesso', 'Il controllo completo del database, dei lavori e dello spazio: qualche secondo. '
-               'Se trova un guasto lo ripara subito.', 'button', 'Controlla adesso'),
+               'Se trova un guasto lo ripara subito.', '[data-guida="autoriparazione-controlla"]'),
              P('Cosa ha fatto da solo', 'Ogni riparazione resta scritta qui, con quando e cosa; la campanella la dice '
                'anche nei giorni dopo. Se c\'è da ricontrollare qualcosa, lo dice.', '#diario'),
              P('Se si blocca', 'Se il programma non risponde più, basta cliccare di nuovo l\'icona Agende: quello '
@@ -618,16 +618,16 @@ ARTICOLI += [
          foto='/ambulatori/settimana/{lunedi_prossimo}?struttura=1',
          passi=[
              P('Apri la pianificazione', 'Menu Ambulatori → Pianificazione della settimana: una riga per stanza, una '
-               'colonna per ogni mattina e pomeriggio dei giorni di apertura.', 'nav.menu [data-guida="menu-ambulatori"]'),
+               'colonna per ogni mattina e pomeriggio dei giorni di apertura.', '[data-guida="menu-ambulatori"]'),
              P('Chi c\'è', 'In ogni cella il medico con l\'orario, calcolato dai turni scritti in Anagrafiche. Una cella '
                'senza nessuno è DISPONIBILE, in verde; se avanza almeno un\'ora, la cella dice «libero» e da che ora. Un '
                'medico assente lascia la stanza libera solo in quella settimana.', '[data-guida="matrice-spiegazione"]'),
              P('Mettere un medico', 'Il «+» in alto a destra della cella: si sceglie il medico, le ore (proposte quelle '
                'libere) e se vale ogni settimana da questa in poi o quel giorno solo. Le regole sono quelle dei turni: '
-               'una stanza ospita un medico alla volta.', 'details.metti summary'),
+               'una stanza ospita un medico alla volta.', '[data-guida="matrice-metti"]'),
              P('Cambiare o togliere', 'Clic sul nome apre il turno, con tutte le sue impostazioni (fasce, fino al…). '
                'La «×» accanto al nome toglie il medico da quella settimana in poi: le settimane già fatte restano '
-               'com\'erano, anche nelle statistiche.', 'table.matrice .turno-sett a'),
+               'com\'erano, anche nelle statistiche.', '[data-guida="matrice-turno"]'),
              P('La sala operatoria', 'In fondo alla tabella la sala operatoria: per ogni sala, mattina e pomeriggio, i '
                'chirurghi in turno e, sotto ciascuno, quanti interventi fa (clic per aprirli nella pagina Sala); chi '
                'opera senza un turno è segnato, con i suoi. Qui si guarda soltanto: la sala si programma dalla pagina Sala e non conta nelle stanze '
@@ -645,7 +645,7 @@ ARTICOLI += [
          foto='/ambulatori/mese/{mese}?struttura=1',
          passi=[
              P('Apri la programmazione', 'Menu Ambulatori → Programmazione del mese; le frecce cambiano mese.',
-               'nav.menu [data-guida="menu-ambulatori"]'),
+               '[data-guida="menu-ambulatori"]'),
              P('Una riga per turno', 'Raggruppate per specialità del medico (si scrive nella sua scheda): il giorno '
                'della settimana, le date del mese in cui viene davvero, l\'orario e la stanza. Le note dicono i giorni '
                'saltati e perché (assente, chiusura, festivo), da quando vale un turno nuovo e fino a quando uno che '
@@ -729,7 +729,7 @@ ARTICOLI += [
              P('Apri le esportazioni', 'Menu Ambulatori → Esportazioni in Excel. Ci si arriva anche da «Altre '
                'esportazioni» nel giorno e nella programmazione del mese, e da «Stampa e scarica» nella '
                'pianificazione della settimana.',
-               'nav.menu [data-guida="menu-ambulatori"]'),
+               '[data-guida="menu-ambulatori"]'),
              P('La data', 'Si sceglie un giorno e «Mostra»: la tabella propone quel giorno, la sua settimana (da lunedì '
                'a domenica) e il suo mese.', '[data-guida="esportazioni-data"]'),
              P('Nove file', 'Una riga per il giorno, la settimana e il mese; una colonna per gli ambulatori, la sala '
@@ -750,7 +750,7 @@ ARTICOLI += [
                   'password), Aruba, Gmail o un altro server.',
          endpoint='invii.pagina', apri=('invii.pagina', {}), foto='/invii#email',
          passi=[
-             P('Apri la pagina', 'Menu Configura → Email e WhatsApp.', 'nav.menu [data-guida="menu-configura"]'),
+             P('Apri la pagina', 'Menu Configura → Email e WhatsApp.', '[data-guida="menu-configura"]'),
              P('Il tipo di casella', 'Va bene qualsiasi casella. Quella del sito della clinica (per esempio segreteria@ e '
                'il dominio del sito) è la più semplice: bastano indirizzo e password, niente verifica in due passaggi. '
                'Poi Aruba, Gmail (vuole la password per le app) o un altro server.', '[data-guida="email-tipo"]'),
@@ -781,7 +781,7 @@ ARTICOLI += [
                'nuovo) e Manda il promemoria adesso.'),
              P('Il registro', 'Registro, in alto, porta in fondo alla pagina: cosa è partito, cosa è in coda, cosa non è '
                'partito e perché. Senza rete si riprova da solo; per un errore da correggere, Riprova.',
-               '.stato-invii a[href="#registro"]'),
+               '[data-guida="invii-registro"]'),
          ]),
     dict(slug='email-per-medico', gruppo='Email e WhatsApp', titolo='Un\'email diversa per ogni medico',
          in_breve='Ogni medico può avere le sue informative: per le sue prestazioni parte la sua email, non quella '
@@ -789,10 +789,10 @@ ARTICOLI += [
          endpoint='invii.pagina', apri=('invii.pagina', {}), foto='/invii#regole',
          passi=[
              P('Una per medico', 'Ogni medico ha il suo gruppo, con le sue email e i suoi PDF. "Nuova email per…" sotto il '
-               'gruppo ne aggiunge un\'altra per lui.', '.gruppo-regole h3'),
+               'gruppo ne aggiunge un\'altra per lui.', '[data-guida="regole-medico"]'),
              P('Chi parte', 'Per la stessa prestazione parte l\'email del medico al posto di quella per tutti i medici: '
                'sotto ogni email è scritto dove ne sostituisce un\'altra. Un\'email del medico senza prestazioni spuntate '
-               'si aggiunge alle altre.', '.gruppo-regole .nota-riga', 'Al posto di'),
+               'si aggiunge alle altre.', '[data-guida="regole-al-posto-di"]'),
              P('Per un medico nuovo', 'Si sceglie il medico e Crea: il medico è già scelto, restano prestazioni, testo e PDF.',
                '[data-guida="nuova-regola"]'),
              P('Partire da una già fatta', 'Aperta un\'email, in fondo "Duplica per un altro medico": una copia spenta con '
@@ -825,7 +825,7 @@ ARTICOLI += [
                'verifica in due passaggi il PIN è quello; altrimenti questo diventa il suo PIN. Conservarlo.',
                '[data-guida="whatsapp-registra"]'),
              P('La prova', 'Una prova al proprio cellulare: se arriva, i promemoria del giorno prima possono partire.',
-               'input[name="a"][type="tel"]'),
+               '[data-guida="whatsapp-prova"]'),
              P('Se qualcosa non va', 'Il messaggio dice cosa fare in parole semplici: token scaduto, PIN sbagliato, numero '
                'non registrato, modello non approvato. Nel Registro, in fondo alla pagina, l\'esito di ogni messaggio.'),
          ]),

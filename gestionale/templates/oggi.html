@@ -22,7 +22,7 @@
 {% if q.nota %}<div class="avvio nota-oggi"><b>Nota del giorno:</b> {{ q.nota }}</div>{% endif %}
 <div class="cruscotto">
 
-  <section class="scheda-oggi larga">
+  <section class="scheda-oggi larga" data-guida="oggi-adesso">
     <h2>Adesso e nelle prossime due ore <small>{{ q.adesso.strftime('%H:%M') }}</small></h2>
     {% if q.in_ritardo or q.tra_poco %}
     <table class="elenco compatta">

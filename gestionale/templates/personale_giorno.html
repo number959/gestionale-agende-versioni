@@ -30,7 +30,7 @@
   <p class="avvio">Nessun turno in questo giorno{% if ruolo or area %} con questi filtri{% endif %}. Si mettono qui sopra («Turno a…») o nella vista della settimana.</p>
   {% else %}
   <div class="linea-tempo" data-guida="turni-ore">
-    <div class="scala-ore" aria-hidden="true">
+    <div class="scala-ore" data-guida="turni-scala-ore" aria-hidden="true">
       <span class="spazio-nome"></span>
       <div class="ore">{% for h in range(0, 25, 2) %}<span style="left: {{ h * 100 / 24 }}%">{{ '%02d' % h }}</span>{% endfor %}</div>
     </div>
@@ -39,15 +39,15 @@
       <div class="riga-giorno riga-presenze">
         <div class="nome-giorno"><span class="icona-ruolo">{{ icona(gr.icona) }}</span><b>{{ gr.nome }}</b>
           {% if gr.carenze %}<span class="badge-manca" title="{{ gr.carenze|join('; ') }}">{{ icona('triangle-alert') }}manca qualcuno</span>{% endif %}</div>
-        <div class="presenze" role="img" aria-label="Al lavoro ora per ora: {% for n in gr.per_ora %}{{ loop.index0 }}: {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}">
+        <div class="presenze" data-guida="turni-presenze" role="img" aria-label="Al lavoro ora per ora: {% for n in gr.per_ora %}{{ loop.index0 }}: {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}">
           {% for n in gr.per_ora %}<span class="ora-pres{% if not n %} zero{% endif %}" style="--h: {{ (n * 100 / gr.massimo)|round(1) }}%" title="{{ '%02d' % loop.index0 }}:00 – {{ n }} al lavoro"><i></i>{% if n %}<em>{{ n }}</em>{% endif %}</span>{% endfor %}
         </div>
       </div>
       {% for r in gr.righe %}{% set p = r.persona %}
       <div class="riga-giorno" data-persona="{{ p.id }}">
         <div class="nome-giorno"><a href="{{ url_for('personale.persona', pid=p.id) }}">{{ p.etichetta }}</a>{% if p.qualifica %}<small>{{ p.qualifica }}</small>{% endif %}
-          {%- for t in r.giorno_intero %}<span class="giorno-intero" style="--c: {{ t.tipo.colore_sicuro }}; --t: {{ t.tipo.colore_testo }}" data-id="{{ t.id }}" data-desc="{{ descrizione(t) }}" data-codice="{{ t.codice }}"><b>{{ t.codice }}</b>{{ t.tipo.nome }}</span>{% endfor %}</div>
-        <div class="pista{% if r.ambulatori and r.barre %} con-agenda{% endif %}" role="button" tabindex="0" data-k="{{ p.id }}_{{ g.isoformat() }}" aria-label="Turni di {{ p.etichetta }}: {% for t in r.turni %}{{ descrizione(t) }}{% if not loop.last %}, {% endif %}{% else %}nessuno{% endfor %}{% for a in r.ambulatori %}; in agenda {{ a.turno.risorsa.nome }} {{ a.turno.ora_inizio.strftime('%H:%M') }}–{{ a.turno.ora_fine.strftime('%H:%M') }}{% endfor %}. Invio per cambiare.">
+          {%- for t in r.giorno_intero %}<span class="giorno-intero" data-guida="turni-giorno-intero" style="--c: {{ t.tipo.colore_sicuro }}; --t: {{ t.tipo.colore_testo }}" data-id="{{ t.id }}" data-desc="{{ descrizione(t) }}" data-codice="{{ t.codice }}"><b>{{ t.codice }}</b>{{ t.tipo.nome }}</span>{% endfor %}</div>
+        <div data-guida="turni-pista" class="pista{% if r.ambulatori and r.barre %} con-agenda{% endif %}" role="button" tabindex="0" data-k="{{ p.id }}_{{ g.isoformat() }}" aria-label="Turni di {{ p.etichetta }}: {% for t in r.turni %}{{ descrizione(t) }}{% if not loop.last %}, {% endif %}{% else %}nessuno{% endfor %}{% for a in r.ambulatori %}; in agenda {{ a.turno.risorsa.nome }} {{ a.turno.ora_inizio.strftime('%H:%M') }}–{{ a.turno.ora_fine.strftime('%H:%M') }}{% endfor %}. Invio per cambiare.">
           {% for h in range(1, 24) %}<i class="tacca{% if h % 6 == 0 %} forte{% endif %}" style="left: {{ h * 100 / 24 }}%"></i>{% endfor %}
           {% for a in r.ambulatori %}
           <span class="seduta" style="left: {{ a.sinistra|round(3) }}%; width: {{ a.larghezza|round(3) }}%" title="Agenda: {{ a.turno.risorsa.nome }} {{ a.turno.ora_inizio.strftime('%H:%M') }}–{{ a.turno.ora_fine.strftime('%H:%M') }}">{{ a.turno.risorsa.nome }}</span>

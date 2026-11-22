@@ -88,7 +88,7 @@
       <label class="largo">Cartella <input type="text" name="cartella" value="{{ scelta }}" placeholder="{{ predefinita }}" style="width:420px"></label>
       <button class="bottone" type="submit">Salva cartella</button>
     </form>
-    <form method="post" class="in-linea"><input type="hidden" name="azione" value="backup_ora"><button class="bottone primario" type="submit">Fai un backup adesso</button></form>
+    <form method="post" class="in-linea"><input type="hidden" name="azione" value="backup_ora"><button class="bottone primario" type="submit" data-guida="backup-adesso">Fai un backup adesso</button></form>
   </div>
 
   {% if copie %}

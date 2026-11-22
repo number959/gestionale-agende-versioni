@@ -75,7 +75,7 @@
       {{ totali(testi_totali(r.conti, r.previsto), vista) }}
     </tr>
     {% endfor %}
-    <tr class="copertura">
+    <tr class="copertura" data-guida="turni-copertura">
       <th scope="row" class="nome-col"><span>Copertura</span></th>
       {% for g, conteggi, carenze in gr.copertura %}
       <td class="cop{% if carenze %} manca{% endif %}" data-c="{{ gr.ruolo }}_{{ g.isoformat() }}" title="{{ ('Manca: ' ~ carenze|join('; ')) if carenze else ('Al lavoro: ' ~ (testo_copertura(conteggi) or 'nessuno')) }}">{% if carenze %}<i class="segno-manca" aria-hidden="true"></i>{% endif %}{% for x in testo_copertura(conteggi).split() %}<span>{{ x }}</span>{% endfor %}</td>

@@ -9,12 +9,12 @@
   <h1>{% if a %}Modifica appuntamento{% else %}Nuovo appuntamento{% endif %}</h1>
   <p class="sotto"><a href="{{ url_for('giorno', iso=g.isoformat(), struttura=sid) }}">Torna alla giornata</a>
     {%- if a %} · <a href="{{ url_for('viste.promemoria', aid=a.id) }}" target="_blank">Stampa promemoria per il paziente</a>
-    · <a href="{{ url_for('segreteria.sposta', aid=a.id) }}">Sposta</a>{% endif %}
+    · <a href="{{ url_for('segreteria.sposta', aid=a.id) }}" data-guida="appuntamento-sposta">Sposta</a>{% endif %}
     {%- if serie|length > 1 %} · <a href="{{ url_for('segreteria.serie', codice=a.serie) }}">Serie di {{ serie|length }}</a>{% endif %}
     {%- if p %} · <a href="{{ url_for('pazienti.scheda', pid=p.id) }}">Scheda di {{ p.etichetta }}</a>{% endif %}</p>
 
   {% if a %}
-  <div class="barra-stato">
+  <div class="barra-stato" data-guida="appuntamento-stato">
     <span>Stato: <b class="stato-{{ a.stato|lower }}">{{ a.etichetta_stato }}</b>{% if a.stato == 'ARRIVATO' and a.arrivato_alle %} alle {{ a.arrivato_alle.strftime('%H:%M') }}{% endif %}</span>
     {% for codice, etichetta in [('CONFERMATO', 'Confermato'), ('ARRIVATO', 'Arrivato'), ('NON_PRESENTATO', 'Non presentato'), ('DISDETTO', 'Disdetto'), ('PRENOTATO', 'Rimetti prenotato')] %}
       {% if codice != a.stato %}
@@ -247,7 +247,7 @@
     {% endif %}
 
     <div class="azioni">
-      <button class="bottone primario" type="submit">Salva appuntamento</button>
+      <button class="bottone primario" type="submit" data-guida="appuntamento-salva">Salva appuntamento</button>
       {% if a %}
       <button class="bottone elimina" type="submit" name="azione" value="elimina"
               onclick="return confirm('Eliminare questo appuntamento? Se il paziente ha disdetto, meglio segnarlo come Disdetto: resta nello storico.')">Elimina</button>

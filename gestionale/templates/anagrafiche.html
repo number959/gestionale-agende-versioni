@@ -37,7 +37,7 @@
     {% endfor %}
   </table>
 
-  <h2 class="sezione">Medici <a class="bottone aggiungi" href="{{ url_for('anagrafiche.medico') }}">Aggiungi medico</a></h2>
+  <h2 class="sezione">Medici <a class="bottone aggiungi" href="{{ url_for('anagrafiche.medico') }}" data-guida="anagrafiche-medico-nuovo">Aggiungi medico</a></h2>
   {% if operatori %}
   <table class="elenco">
     <tr><th>Cognome e nome</th><th>Specialità</th><th>Colore</th><th>Stato</th><th></th></tr>
@@ -56,7 +56,7 @@
   {% endif %}
 
   <h2 class="sezione">Turni ricorrenti
-    {% if medici_attivi %}<a class="bottone aggiungi" href="{{ url_for('anagrafiche.turno') }}">Aggiungi turno</a>{% endif %}</h2>
+    {% if medici_attivi %}<a class="bottone aggiungi" href="{{ url_for('anagrafiche.turno') }}" data-guida="anagrafiche-turno-nuovo">Aggiungi turno</a>{% endif %}</h2>
   {% if turni %}
   <table class="elenco">
     <tr><th>Giorno</th><th>Orario</th><th>Medico</th><th>Stanza</th><th>Validità</th><th></th></tr>
@@ -82,7 +82,7 @@
   {% endif %}
 
   <h2 class="sezione">Turni di un giorno
-    {% if medici_attivi %}<a class="bottone aggiungi" href="{{ url_for('anagrafiche.turno', ripetizione='giorno') }}">Aggiungi turno di un giorno</a>{% endif %}</h2>
+    {% if medici_attivi %}<a class="bottone aggiungi" href="{{ url_for('anagrafiche.turno', ripetizione='giorno') }}" data-guida="anagrafiche-turno-giorno">Aggiungi turno di un giorno</a>{% endif %}</h2>
   {% if turni_giorno %}
   <table class="elenco">
     <tr><th>Giorno</th><th>Orario</th><th>Medico</th><th>Stanza</th><th></th></tr>
@@ -101,7 +101,7 @@
   {% endif %}
 
   <h2 class="sezione">Assenze dei medici
-    {% if medici_attivi %}<a class="bottone aggiungi" href="{{ url_for('anagrafiche.assenza') }}">Aggiungi assenza</a>{% endif %}</h2>
+    {% if medici_attivi %}<a class="bottone aggiungi" href="{{ url_for('anagrafiche.assenza') }}" data-guida="anagrafiche-assenza-nuova">Aggiungi assenza</a>{% endif %}</h2>
   {% if assenze %}
   <table class="elenco">
     <tr><th>Medico</th><th>Periodo</th><th>Motivo</th><th></th></tr>

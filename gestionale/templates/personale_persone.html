@@ -39,7 +39,7 @@
       <td>{{ p.ore_settimana }}</td>
       <td>{{ p.telefono }}</td>
       <td>{% if gr.ruolo == 'MEDICO' %}{% if p.operatore %}<span class="collegato">{{ icona('check') }}{{ p.operatore.etichetta }}</span>{% else %}<span class="senza">non collegato</span>{% endif %}{% else %}{{ p.struttura.nome if p.struttura else 'tutte' }}{% endif %}</td>
-      <td class="azione"><a href="{{ url_for('personale.persona', pid=p.id) }}">Modifica</a></td>
+      <td class="azione"><a href="{{ url_for('personale.persona', pid=p.id) }}" data-guida="persone-modifica">Modifica</a></td>
     </tr>
     {% endfor %}
   </table>

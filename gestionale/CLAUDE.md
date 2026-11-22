@@ -143,7 +143,11 @@ nascosti), collegamenti, `data-tasto`, `data-guida`, testo, JSON e Excel cella p
 stampare (fino a 3 pagine di ognuno, prese dal giro) in PDF come con Ctrl+P, pixel per pixel (`strumenti/fogli_pdf.py`,
 vuole `pdftoppm`; senza, foto in modo stampa che vedono meno; `--senza-pdf` per saltarli). Un foglio mai incontrato
 nel giro conta come diverso. Nella veste nuova si lancia dopo ogni passo: le differenze che restano devono essere
-solo quelle volute, una per una.
+solo quelle volute, una per una. Quelle approvate stanno in `strumenti/cambiamenti_approvati.txt` (uguale nelle due
+cartelle; regole «aggiunto» e «sostituisci» per chiave), che il lanciatore conta a parte; `--senza-approvati` le
+mostra tutte. Un cambiamento nuovo si approva scrivendo la regola nello stesso commit, con il perché.
+I passi della guida indicano un punto della pagina solo con `[data-guida="…"]` o con un id (mai una classe o un
+tag, che cambiano con la veste): lo controlla `prove_guida.py`, che vuole anche che il nome esista in un modello.
 I messaggi per l'utente (`flash()`) in `prove_14.py` e `prove_funzioni.py` si prendono da Flask quando il programma
 li fa (`prove_messaggi.py`, segnale `message_flashed`), non dall'HTML: ogni test_client va segnato con
 `prove_messaggi.segna()`, e con una pagina 200 `avvisi(C, r)` controlla anche che i messaggi di quella richiesta

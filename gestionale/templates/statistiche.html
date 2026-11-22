@@ -18,7 +18,7 @@
     <label>Al <input type="date" name="al" value="{{ al.isoformat() }}"></label>
     <button class="bottone primario" type="submit">Aggiorna</button>
     <a class="bottone" href="{{ url_for('viste.statistiche_excel', struttura=sid, dal=dal.isoformat(), al=al.isoformat()) }}">Scarica in Excel</a>
-    <a class="bottone" href="{{ url_for('cruscotto.riepilogo', aaaamm=dal.strftime('%Y-%m'), struttura=sid if strutture|length > 1 else none) }}">Riepilogo del mese per medico</a>
+    <a class="bottone" href="{{ url_for('cruscotto.riepilogo', aaaamm=dal.strftime('%Y-%m'), struttura=sid if strutture|length > 1 else none) }}" data-guida="statistiche-riepilogo-medici">Riepilogo del mese per medico</a>
   </form>
 
   <ul class="numeri grandi">

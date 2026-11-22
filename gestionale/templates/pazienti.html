@@ -4,7 +4,7 @@
 <div class="pagina larga">
   <h1>Pazienti</h1>
   <p class="sotto">{{ totale }} in anagrafica. La ricerca non bada a maiuscole, accenti e apostrofi; un numero si cerca nei telefoni.</p>
-  <form method="get" class="ricerca">
+  <form method="get" class="ricerca" data-guida="pazienti-cerca">
     <input type="search" name="q" value="{{ q }}" placeholder="cognome, nome, telefono, email o codice fiscale" autofocus>
     <button class="bottone primario" type="submit">Cerca</button>
     <a class="bottone" href="{{ url_for('pazienti.scheda') }}">Nuovo paziente</a>
@@ -19,7 +19,7 @@
     {% for p in risultati %}
     {% set pr = prossimi.get(p.id) %}
     <tr>
-      <td><a href="{{ url_for('pazienti.scheda', pid=p.id) }}">{{ p.etichetta }}</a></td>
+      <td><a href="{{ url_for('pazienti.scheda', pid=p.id) }}" data-guida="pazienti-apri">{{ p.etichetta }}</a></td>
       <td>{{ p.data_nascita.strftime('%d/%m/%Y') if p.data_nascita else '' }}</td>
       <td>{{ p.telefono or '' }}</td>
       <td>{{ p.email or '' }}</td>

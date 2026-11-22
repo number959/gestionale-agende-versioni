@@ -6,9 +6,9 @@
   <p class="sotto">In che giorni della settimana opera di solito ciascun chirurgo. La griglia e la pagina Sala operatoria dicono chi è in sala e chi, pur operando quel giorno, è ancora libero; salvando un intervento in un altro giorno compare un avviso.</p>
   <p class="nota">Il numero è quante volte ha operato in quel giorno della settimana dal {{ dal.strftime('%d/%m/%Y') }} al {{ al.strftime('%d/%m/%Y') }}.
     {% if proponi %}<b>Proposta dagli interventi:</b> spuntati i giorni con almeno due interventi. Controllare e salvare. <a href="{{ url_for('sala.chirurghi', struttura=sid) }}">Annulla la proposta</a>
-    {% else %}<a class="bottone piccolo" href="{{ url_for('sala.chirurghi', struttura=sid, proponi=1) }}">Proponi dagli interventi</a>{% endif %}</p>
+    {% else %}<a class="bottone piccolo" href="{{ url_for('sala.chirurghi', struttura=sid, proponi=1) }}" data-guida="chirurghi-proponi">Proponi dagli interventi</a>{% endif %}</p>
   <form method="post" class="libero">
-    <table class="elenco giorni-sala">
+    <table class="elenco giorni-sala" data-guida="chirurghi-giorni">
       <tr><th>Chirurgo</th>{% for g in giorni %}<th class="giorno-sala">{{ g }}</th>{% endfor %}</tr>
       {% for r in chirurghi %}
       <tr>

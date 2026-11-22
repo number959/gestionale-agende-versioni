@@ -104,12 +104,12 @@ def principale():
             percorso = a['foto']
             if '{app_esempio}' in percorso:
                 pg.goto(B + '/giorno/%s?struttura=1' % valori['martedi'])
-                href = pg.locator('a.voce').first.get_attribute('href')
+                href = pg.locator('[data-guida="giorno-appuntamento"]').first.get_attribute('href')
                 valori['app_esempio'] = href.split('/appuntamento/')[1].split('?')[0]
             if '{paziente_esempio}' in percorso:
                 # la scheda di un paziente di prova con il codice fiscale giusto (Fintini Prova)
                 pg.goto(B + '/pazienti?q=Fintini')
-                href = pg.locator('table.elenco a[href*="/pazienti/"]').first.get_attribute('href')
+                href = pg.locator('[data-guida="pazienti-apri"]').first.get_attribute('href')
                 valori['paziente_esempio'] = href.rstrip('/').split('/')[-1]
             pg.goto(B + percorso.format(**valori))
             pg.add_style_tag(content='#notifiche, .giro-invito { display: none !important; } '

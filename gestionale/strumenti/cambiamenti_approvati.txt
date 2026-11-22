@@ -1,0 +1,11 @@
+# I cambiamenti approvati della veste nuova (tappa 1 della base, 22/11/2026): strumenti/confronta_rami.py non li conta
+# come differenze, ma li conta a parte e li scrive nel resoconto. Ogni riga, con i campi separati da un TAB:
+#
+#   aggiunto      <chiave>   <espressione>                 <perché>
+#       un elemento che c'è solo qui (non nel principale) e che corrisponde all'espressione non conta;
+#   sostituisci   <chiave>   <espressione>  <al posto>     <perché>
+#       nel principale l'espressione diventa «al posto» (re.sub), poi si confronta: per le parole approvate.
+#
+# <chiave> è una parte del riassunto di una pagina: segni (data-tasto, data-guida), testo, collegamenti, moduli.
+# Tolto o cambiato qualcosa che non è in questo elenco: è una differenza vera, da guardare.
+aggiunto	segni	^data-guida=[a-z0-9-]+$	tappa 1: i passi della guida indicano i punti con data-guida invece che con una classe

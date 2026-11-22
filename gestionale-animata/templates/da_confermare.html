@@ -13,7 +13,7 @@
   <td><b>{{ x.testo }}</b>{% if x.origine %}<div class="nota-riga">{{ x.origine }}</div>{% endif %}</td>
   <td class="azione">
     {% if x.aperto %}
-    <a class="bottone piccolo primario" href="{{ indirizzo_prenota(x) }}">Prenota</a>
+    <a class="bottone piccolo primario" href="{{ indirizzo_prenota(x) }}" data-guida="da-confermare-prenota">Prenota</a>
     <form method="post" action="{{ url_for('segreteria.appunto_azione', xid=x.id, azione='chiudi') }}" class="in-linea"><input type="hidden" name="torna" value="{{ torna }}"><button class="bottone piccolo" type="submit" title="Non serve più: resta fra quelli chiusi">Chiudi</button></form>
     {% else %}
     <span class="nota-riga">{{ 'prenotato' if x.esito == 'PRENOTATO' else 'chiuso' }} il {{ x.chiuso_il.strftime('%d/%m %H:%M') }}</span>
@@ -41,7 +41,7 @@
     <form method="post" style="margin-top:10px">
       <input type="hidden" name="torna" value="{{ torna }}">
       <div class="filtri">
-        <label style="flex:1;min-width:260px">Cosa c'è da confermare<br><input type="text" name="testo" maxlength="1000" required style="width:100%" placeholder="Richiama per confermare l'orario; stanza da decidere"></label>
+        <label style="flex:1;min-width:260px">Cosa c'è da confermare<br><input type="text" name="testo" data-guida="da-confermare-testo" maxlength="1000" required style="width:100%" placeholder="Richiama per confermare l'orario; stanza da decidere"></label>
         <label>Giorno<br><input type="date" name="giorno"></label>
         <label>Ora<br><input type="time" name="ora" step="300"></label>
       </div>

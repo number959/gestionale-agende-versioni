@@ -165,8 +165,8 @@ def riassunto(stato, intestazioni, corpo, con_testo, dati=''):
         r['moduli'] = [(m['action'], m['method'], tuple(tuple(c) for c in m['campi'])) for m in p.moduli]
         r['collegamenti'] = p.collegamenti
         r['segni'] = p.segni
-        if con_testo:
-            r['testo'] = p.testo
+        if con_testo:                          # la grandezza del database cambia di poco fra i due programmi
+            r['testo'] = [re.sub(r'\b\d+([.,]\d+)? (MB|KB|kB)\b', 'N \\2', x) for x in p.testo]
         return r, p.collegamenti
     if tipo == 'application/json':
         try:
@@ -232,6 +232,47 @@ def differenze(a, b):
     return out
 
 
+def leggi_approvati(percorso):
+    """Le regole di strumenti/cambiamenti_approvati.txt: [(tipo, chiave, espressione compilata, al posto o None)]."""
+    regole = []
+    if not os.path.exists(percorso):
+        return regole
+    with open(percorso, encoding='utf-8') as f:
+        for n, riga in enumerate(f, 1):
+            if not riga.strip() or riga.startswith('#'):
+                continue
+            parti = riga.rstrip('\n').split('\t')
+            if parti[0] == 'aggiunto' and len(parti) >= 4:
+                regole.append(('aggiunto', parti[1], re.compile(parti[2]), None))
+            elif parti[0] == 'sostituisci' and len(parti) >= 5:
+                regole.append(('sostituisci', parti[1], re.compile(parti[2]), parti[3]))
+            else:
+                sys.exit('cambiamenti_approvati.txt, riga %d: non la capisco: %r' % (n, riga))
+    return regole
+
+
+def _sostituisci(x, rx, al_posto):
+    if isinstance(x, str):
+        return rx.sub(al_posto, x)
+    if isinstance(x, (list, tuple)):
+        return type(x)(_sostituisci(y, rx, al_posto) for y in x)
+    return x
+
+
+def applica_approvati(ra, rb, regole):
+    """Le due pagine con i cambiamenti approvati tolti (copie): (principale, qui)."""
+    if not regole:
+        return ra, rb
+    ra, rb = dict(ra), dict(rb)
+    for tipo, chiave, rx, al_posto in regole:
+        if tipo == 'sostituisci' and chiave in ra:
+            ra[chiave] = _sostituisci(ra[chiave], rx, al_posto)
+        elif tipo == 'aggiunto' and isinstance(rb.get(chiave), list):
+            nel_principale = ra.get(chiave) or []
+            rb[chiave] = [x for x in rb[chiave] if x in nel_principale or not (isinstance(x, str) and rx.search(x))]
+    return ra, rb
+
+
 def forma(percorso):
     """Il tipo di pagina: l'indirizzo con le cifre scritte N e i soli nomi dei parametri (/giorno/N-N-N?struttura)."""
     u = urlsplit(percorso)
@@ -257,6 +298,7 @@ def main():
     par.add_argument('--qui', default=QUI, help='la cartella da confrontare (di solito questa)')
     par.add_argument('--senza-pdf', action='store_true', help='non confrontare i 9 fogli da stampare in PDF')
     par.add_argument('--fogli-per-tipo', type=int, default=3, help='quante pagine di ogni foglio da stampare')
+    par.add_argument('--senza-approvati', action='store_true', help='conta anche i cambiamenti approvati')
     arg = par.parse_args()
     tmp = tempfile.mkdtemp(prefix='confronta-rami-')
     processi, registri = [], []
@@ -306,6 +348,8 @@ def main():
         per_forma, saltati = {}, 0
         for x in coda:
             per_forma[forma(x)] = per_forma.get(forma(x), 0) + 1
+        regole = [] if arg.senza_approvati else leggi_approvati(os.path.join(QUI, 'strumenti', 'cambiamenti_approvati.txt'))
+        approvate = 0                       # pagine diverse solo per cambiamenti approvati
         n, viste = 0, []                    # viste: (percorso, modelli che l'hanno fatta, byte) delle pagine 200
         while coda and n < arg.massimo:
             percorso = coda.pop(0)
@@ -318,9 +362,12 @@ def main():
             ra, la, rb, (sa, modelli, byte) = due()
             if sa == 200:
                 viste.append((percorso, modelli, byte))
-            if not uguali(ra, rb):                                   # l'ora può scattare fra le due richieste: una volta ancora
+            if not uguali(*applica_approvati(ra, rb, regole)):        # l'ora può scattare fra le due richieste: una volta ancora
                 ra, la, rb, _ = due()
-            if not uguali(ra, rb):
+            if not uguali(ra, rb) and uguali(*applica_approvati(ra, rb, regole)):
+                approvate += 1
+            elif not uguali(ra, rb):
+                ra, rb = applica_approvati(ra, rb, regole)
                 diverse.append(percorso)
                 righe.append('DIVERSA %s\n  %s' % (percorso, '\n  '.join(differenze(ra, rb))))
             for nuovo in interni(percorso, la):
@@ -353,6 +400,9 @@ def main():
             print('(%d collegamenti non seguiti: dello stesso tipo di pagine già viste %d volte; --per-forma 0 per '
                   'seguirli tutti)' % (saltati, arg.per_forma))
         print('tipi di pagina: %d' % len(per_forma))
+        if regole:
+            print('pagine diverse solo per i cambiamenti approvati (strumenti/cambiamenti_approvati.txt, %d regole): %d'
+                  % (len(regole), approvate))
         print('resoconto: %s' % resoconto)
         if not arg.senza_pdf:
             print('%d fogli da stampare confrontati in PDF, %d diversi o mancanti%s' % (

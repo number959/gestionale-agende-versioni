@@ -150,7 +150,7 @@ def gu_menu():
     guide = json.loads(m.group(1).replace('&#34;', '"').replace('&quot;', '"').replace('&#39;', "'"))
     # (dalla 1.10 anche le fasce di ogni ambulatorio, ma solo dove un turno ha le sue fasce)
     assert {g['slug'] for g in guide} == {'fasce-turno', 'stampare-giornata', 'griglia'} and \
-        {g['condizione'] for g in guide if g['slug'] == 'fasce-turno'} == {'thead .fasce-turno'}, guide
+        {g['condizione'] for g in guide if g['slug'] == 'fasce-turno'} == {'[data-guida="giorno-fasce-turno"]'}, guide
     t = html(C.get('/appuntamento?data=%s' % date.today().isoformat()))
     m = re.search(r'data-guide="([^"]*)"', t)
     guide = json.loads(m.group(1).replace('&#34;', '"').replace('&quot;', '"').replace('&#39;', "'"))
@@ -158,9 +158,32 @@ def gu_menu():
         {g['condizione'] for g in guide if g['slug'] == 'prenotare'} == {'#cerca_paziente'}, guide
 
 
+def gu_selettori_stabili():
+    """I passi della guida indicano un punto della pagina solo con [data-guida="…"] o con un id (tappa 1 della base):
+    una classe o un tag cambiano con la veste nuova, un data-guida no. Ogni nome usato esiste in un modello."""
+    import glob
+    ammessi = re.compile(r'^(\[data-guida="[a-z0-9-]+"\]|#[A-Za-z0-9_-]+)$')
+    modelli = ''.join(open(f, encoding='utf-8').read() for f in glob.glob(os.path.join(CARTELLA, 'templates', '*.html')))
+    nomi = set(re.findall(r'data-guida="([a-z0-9-]+)"', modelli))
+    con_punto = 0
+    for a in guida.ARTICOLI:
+        for i, p in enumerate(a['passi'], 1):
+            if 'sel' in p:
+                con_punto += 1
+                assert ammessi.match(p['sel']), '%s passo %d: %s' % (a['slug'], i, p['sel'])
+                manca_nome = [n for n in re.findall(r'data-guida="([^"]+)"', p['sel']) if n not in nomi]
+                assert not manca_nome, '%s passo %d: data-guida che nessun modello ha: %s' % (a['slug'], i, manca_nome)
+        assert not a.get('condizione') or ammessi.match(a['condizione']), (a['slug'], a.get('condizione'))
+    # gemello: lo stesso controllo vede una classe e un nome inesistente
+    assert not ammessi.match('a.bottone.aggiungi') and not ammessi.match('nav.menu [data-guida="menu-oggi"]')
+    assert 'nome-che-non-esiste' not in nomi and con_punto >= 150, con_punto
+    return '%d passi con un punto' % con_punto
+
+
 prova('ogni articolo: pagina, immagine, passi per lo schermo, Mostrami che porta alla pagina giusta', gu_articoli)
 prova('indice, ricerca nella guida (anche sporca), pagine inesistenti, versione da stampare', gu_indice_ricerca_stampa)
 prova('menu a gruppi: tutte le pagine di prima, tasti rapidi, gruppo evidenziato, guide della pagina', gu_menu)
+prova('i passi indicano i punti solo con data-guida o un id, nomi che esistono', gu_selettori_stabili)
 
 if __name__ == '__main__':
     for e in esiti:

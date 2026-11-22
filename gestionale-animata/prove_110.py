@@ -1555,7 +1555,7 @@ def e_turno_modulo():
 
 def e_guida():
     a = guida.PER_SLUG['fasce-turno']
-    assert a['condizione'] == 'thead .fasce-turno' and a['endpoint'] == 'giorno'
+    assert a['condizione'] == '[data-guida="giorno-fasce-turno"]' and a['endpoint'] == 'giorno'
     voci = dict(novita.NOVITA)['1.10']
     assert len(voci) >= 3 and all(x.get('guida') == 'fasce-turno' for x in voci), voci
     S, I = mondo_15()
@@ -1582,11 +1582,12 @@ def e_guida():
     assert passi['slug'] == 'fasce-turno' and len(passi['passi']) >= 4, passi
     # e nella pagina c'e' ogni elemento che i passi illuminano
     for x in passi['passi']:
-        if x.get('sel') == 'thead .fasce-turno':
-            assert 'class="fasce-turno"' in p.split('</thead>')[0]
-        elif x.get('sel') == 'td.aperta a.con-ora':
-            assert re.search(r'<td class="aperta"[^>]*><a class="posa con-ora"', p)
-        elif x.get('sel') == 'td.occupata':
+        if x.get('sel') == '[data-guida="giorno-fasce-turno"]':
+            assert re.search(r'<span class="fasce-turno" data-guida="giorno-fasce-turno"', p.split('</thead>')[0])
+        elif x.get('sel') == '[data-guida="giorno-fascia-ora"]':
+            assert re.search(r'<td class="aperta"[^>]*><a class="posa con-ora" data-guida="giorno-fascia-ora"', p)
+        elif x.get('sel') == '[data-guida="giorno-occupata"]':
+            assert x.get('contiene') == 'Colonscopia' and re.search(r'<td class="occupata[^"]*" data-guida="giorno-occupata"', p)
             assert any('occupata' in c['classe'] and x.get('contiene', '') in c['testo'] for r_ in t.righe for c in r_)
         else:
             assert not x.get('sel'), x

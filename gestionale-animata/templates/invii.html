@@ -10,7 +10,7 @@
     <a href="#regole" class="spia {{ 'accesa' if regole|selectattr('attiva')|list else 'spenta' }}">Email automatiche: {{ regole|selectattr('attiva')|list|length }} attiv{{ 'a' if regole|selectattr('attiva')|list|length == 1 else 'e' }}</a>
     <a href="#promemoria" class="spia {{ 'accesa' if cfg.promemoria_attivo == '1' else 'spenta' }}">Promemoria: {{ ('ogni giorno alle ' ~ cfg.promemoria_ora) if cfg.promemoria_attivo == '1' else 'spenti' }}</a>
     <a href="#whatsapp" class="spia {{ 'accesa' if whatsapp_pronto else 'spenta' }}">WhatsApp automatico: {{ 'pronto' if whatsapp_pronto else 'da configurare' }}</a>
-    <a href="#registro" class="spia neutra">Registro</a>
+    <a href="#registro" class="spia neutra" data-guida="invii-registro">Registro</a>
   </div>
 
   {# ------------------------------------------------------------------ regole #}
@@ -25,7 +25,7 @@
   {% endif %}
   {% for medico, lista in gruppi %}
   <div class="gruppo-regole" id="regole-{{ medico.id if medico else 'tutti' }}">
-    <h3>{% if medico %}{{ medico.etichetta }}{% if medico.specialita %} <span class="senza">· {{ medico.specialita }}</span>{% endif %}{% if not medico.attivo %} <span class="senza">(non attivo)</span>{% endif %}{% else %}Per tutti i medici{% endif %}</h3>
+    <h3 data-guida="regole-medico">{% if medico %}{{ medico.etichetta }}{% if medico.specialita %} <span class="senza">· {{ medico.specialita }}</span>{% endif %}{% if not medico.attivo %} <span class="senza">(non attivo)</span>{% endif %}{% else %}Per tutti i medici{% endif %}</h3>
     {% if not medico %}<p class="aiuto">Partono per gli appuntamenti di qualunque medico, tranne dove il medico ha una sua email per la stessa prestazione.</p>{% endif %}
     <table class="elenco">
       <tr><th>Email</th><th>Prestazioni</th><th>Allegati</th><th>Stato</th></tr>
@@ -33,7 +33,7 @@
       <tr>
         <td><a href="{{ url_for('invii.regola', rid=r.id) }}"><b>{{ r.nome }}</b></a><div class="nota-riga">{{ r.oggetto }}</div>
           {%- if n %}
-          {%- for altra, dove in n.sostituisce %}<div class="nota-riga">Al posto di «{{ altra.nome }}» (per tutti i medici): {{ dove }}.</div>{% endfor %}
+          {%- for altra, dove in n.sostituisce %}<div class="nota-riga" data-guida="regole-al-posto-di">Al posto di «{{ altra.nome }}» (per tutti i medici): {{ dove }}.</div>{% endfor %}
           {%- for altra, dove in n.sostituita %}<div class="nota-riga">Non parte per {{ dove }}: lì c'è «{{ altra.nome }}».</div>{% endfor %}
           {%- for altra, dove in n.insieme %}<div class="nota-riga testo-avviso">Parte insieme a «{{ altra.nome }}» per {{ dove }}: il paziente riceve due email.</div>{% endfor %}
           {%- endif %}</td>
@@ -214,7 +214,7 @@
   </form>
   <form method="post" class="riquadro filtri" data-attesa="Invio in corso…">
     <input type="hidden" name="azione" value="prova_whatsapp">
-    <label class="largo">Manda una prova al cellulare <input type="tel" name="a" maxlength="30" required style="width:180px"></label>
+    <label class="largo">Manda una prova al cellulare <input type="tel" name="a" data-guida="whatsapp-prova" maxlength="30" required style="width:180px"></label>
     <button class="bottone" type="submit"{% if not whatsapp_pronto %} disabled title="Prima salvare token, ID del numero e nome del modello"{% endif %}>Manda la prova</button>
   </form>
 

@@ -1,6 +1,6 @@
 {#- nota del giorno della struttura: si legge sempre, si modifica aprendola -#}
 {% if nota %}<div class="nota-stampa solo-stampa">{{ nota }}</div>{% endif %}
-<details class="nota-giorno"{% if nota %} open{% endif %}>
+<details class="nota-giorno" data-guida="giorno-nota"{% if nota %} open{% endif %}>
   <summary>{% if nota %}Nota del giorno{% else %}Aggiungi una nota per questo giorno{% endif %}</summary>
   <form method="post" action="{{ url_for('segreteria.salva_nota') }}">
     <input type="hidden" name="struttura" value="{{ sid }}"><input type="hidden" name="data" value="{{ g.isoformat() }}">
