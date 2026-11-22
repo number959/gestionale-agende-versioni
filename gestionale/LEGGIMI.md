@@ -2447,6 +2447,40 @@ tabella *strutture* della 1.1, preso dal database che quella versione creava. Co
 `DETTAGLIO=1` stampa anche le note delle prove superate, e la campagna i motivi dei
 moduli rifiutati.
 
+### Il pacchetto di prova (dalla tappa 1 della base)
+
+Il gestionale di oggi, da provare sul PC di Giovanni prima che arrivi in clinica, senza toccare il programma della
+clinica: un file solo, `GestionaleProva-tappa1-<commit>-<giorno>.exe`, con accanto `LEGGIMI-PROVA.txt` (la mezza pagina
+su SmartScreen, come si riconosce, come si chiude). Il punto di partenza è `prova.py`, con una ricetta sua
+(`gestionale-prova.spec`): le pagine sono quelle del programma, con in più una cornice arancione «Versione di prova ·
+tappa · commit · giorno · dati inventati · Chiudi la prova» e «PROVA» davanti al titolo. I dati sono quelli di
+`strumenti/demo.py`, che ora stanno in `strumenti/dati_prova.py` (`fai_dati`), con nomi, indirizzo e logo della clinica
+e i due medici inventati (`nomi_inventati`: Clinica Esempio, Dr. Provetti e Dr. Saggiatori); si rifanno al primo avvio
+del giorno, con un pacchetto nuovo o se il database non è integro. La prova ha la sua cartella
+(`%LOCALAPPDATA%\GestionaleAgendeProva`, mai `...\GestionaleAgende`), la porta 5050 (5051-5059; la 5000-5009 si
+rifiuta), chiave e cookie suoi e un nome suo per `/salute`; email, WhatsApp, registrazione del numero, aggiornamenti,
+Setup, copie, ripristino, cartella dei backup, riavvio e custode dicono di no (`chiudi_le_porte`), e le importazioni
+lavorano nella sua cartella.
+
+```
+python prove_dati_prova.py        # i dati di prova con l'orologio fermo in quattro momenti, contro dati_prova_atteso.txt
+python prove_prova.py             # ogni sostituzione, la guardia sui sorgenti, le pagine identiche tolta la cornice, e la
+                                  # prova avviata davvero: nessuna connessione verso fuori, la cartella vera finta intatta
+CREA_PROVA.bat                    # nella cartella gestionale-animata: dist\GestionaleProva-…exe e LEGGIMI-PROVA.txt
+bash strumenti/wine/costruisci.sh --prova ../gestionale-animata          # lo stesso nel Windows finto, in dist/windows
+python3 strumenti/wine/prova_isolamento.py ../gestionale-animata/dist/windows/GestionaleProva-….exe
+                                  # accanto al programma installato: la sua cartella identica, niente invii, porte diverse
+```
+
+`demo.py` senza opzioni fa gli stessi dati di prima (confrontati riga per riga con l'orologio fermo in 11 momenti, il
+22/11/2026); con `--nomi-inventati` anche i nomi della prova. Un cambio voluto dei dati si scrive con
+`python prove_dati_prova.py --scrivi`, nello stesso commit. Una funzione nuova che va su internet o lancia un programma fa
+cadere `prove_prova.py` finché non la si sostituisce in `prova.chiudi_le_porte` (o la si ammette in `prove_prova.py` con
+il perché). Mai un Setup per la prova (`installer.iss` ha lo stesso AppId del programma della clinica e lo sostituirebbe)
+e mai il nome `Gestionale.exe` (`FERMA.bat` e il Setup chiudono per nome). Il primo giro in Wine ha trovato un difetto
+che su Linux non si vedeva: Python 3.14, quello di `CREA_PROVA.bat`, controlla gli aiuti delle opzioni già all'avvio, e
+il % di «%LOCALAPPDATA%» fermava il doppio clic con una finestra d'errore; ora `prove_prova.py` legge l'aiuto.
+
 ## Difetti trovati e corretti
 
 Primo giro:
