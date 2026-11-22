@@ -156,19 +156,52 @@ def nome_mese(primo):
     return '%s %d' % (servizi.MESI[primo.month - 1], primo.year)
 
 
-def testo_riepilogo(r, primo, st_nome):
+def togli_colonne(teste, larghezze, righe, via, formati=None, totali=None, a_capo=()):
+    """Le colonne di un foglio senza quelle con l'intestazione in «via»: intestazioni, larghezze, righe e (con le colonne
+    contate da 1) formati, totali e a capo rinumerati. Un totale scritto (non una somma) di una colonna tolta passa alla
+    prima colonna che resta dopo di lei. Senza niente da togliere tutto come prima."""
+    tenute = [i for i, x in enumerate(teste) if x not in via]
+    nuovo = {i + 1: n + 1 for n, i in enumerate(tenute)}
+    totali_ = {}
+    for k, v in (totali or {}).items():
+        if k in nuovo:
+            totali_[nuovo[k]] = v
+        elif v != 'somma':
+            dopo = next((nuovo[j] for j in sorted(nuovo) if j > k), None)
+            if dopo is not None and dopo not in totali_:
+                totali_[dopo] = v
+    return ([teste[i] for i in tenute], [larghezze[i] for i in tenute], [[r[i] for i in tenute] for r in righe],
+            {nuovo[k]: v for k, v in (formati or {}).items() if k in nuovo}, totali_,
+            tuple(nuovo[k] for k in a_capo if k in nuovo))
+
+
+def con_pazienti():
+    """Dagli altri PC (accessi.py, «Statistiche e report», predefinito del 22/11): nomi, telefoni ed email dei pazienti
+    solo a chi ha Pazienti o Agenda (importi e incassi solo con la Cassa: accessi.puo('cassa')). Sul PC sempre."""
+    import accessi
+    return accessi.puo('pazienti') or accessi.puo('agenda')
+
+
+def con_cassa():
+    import accessi
+    return accessi.puo('cassa')
+
+
+def testo_riepilogo(r, primo, st_nome, pazienti=True, cassa=True):
     o, c = r['operatore'], r['conteggio']
     righe = ['Riepilogo di %s — %s%s' % (o.etichetta, nome_mese(primo), (' — %s' % st_nome) if st_nome else ''), '',
              'Appuntamenti: %d (arrivati %d, prenotati o confermati %d, non presentati %d, disdetti %d)' % (
                  len(r['apps']), c.get('ARRIVATO', 0), c.get('PRENOTATO', 0) + c.get('CONFERMATO', 0),
                  c.get('NON_PRESENTATO', 0), c.get('DISDETTO', 0)),
              'Giorni: %d' % r['giorni']]
-    if r['previsto']:
+    if r['previsto'] and cassa:
         righe.append('Importi previsti: %s €' % importo_in_testo(r['previsto']))
-    if r['incassato']:
+    if r['incassato'] and cassa:
         righe.append('Incassato: %s €' % importo_in_testo(r['incassato']))
     if r['prestazioni']:
         righe += ['', 'Per prestazione:'] + ['  %s: %d' % x for x in r['prestazioni']]
+    if not pazienti:
+        return '\n'.join(righe)            # l'elenco ha i nomi dei pazienti
     righe += ['', 'Elenco:']
     for a in r['apps']:
         righe.append('%s %s  %s  %s%s' % (
@@ -184,7 +217,8 @@ def mail_riepilogo(r, primo, st_nome):
     if not (o.email and pazienti.email_valida(o.email)):
         return None
     # l'indirizzo mailto ha un limite: il resto e' nel foglio o nell'Excel
-    return indirizzo_mail(o.email, 'Riepilogo di %s' % nome_mese(primo), testo_riepilogo(r, primo, st_nome),
+    return indirizzo_mail(o.email, 'Riepilogo di %s' % nome_mese(primo),
+                          testo_riepilogo(r, primo, st_nome, pazienti=con_pazienti(), cassa=con_cassa()),
                           '… (l\'elenco completo è nel file Excel allegato)')
 
 
@@ -213,7 +247,7 @@ def riepilogo(aaaamm):
                            sid=st.id if st else None, medici=medici, strutture=strutture,
                            precedente=precedente, successivo=successivo, etichette=ETICHETTA_STATO,
                            pagamenti=ETICHETTA_PAGAMENTO, adesso=datetime.now(),
-                           piu_strutture=len(strutture) > 1)
+                           piu_strutture=len(strutture) > 1, con_pazienti=con_pazienti())
 
 
 @bp.route('/riepilogo-medici/<aaaamm>/excel')
@@ -234,6 +268,7 @@ def riepilogo_excel(aaaamm):
     wb = Workbook()
     ws = wb.active
     ws.title = 'Riepilogo'
+    cassa, pazienti_ = con_cassa(), con_pazienti()
     intestazione = ['Medico', 'Specialità', 'Appuntamenti', 'Arrivati', 'Prenotati o confermati',
                     'Non presentati', 'Disdetti', 'Giorni', 'Importi previsti', 'Incassato']
     righe = []
@@ -243,16 +278,23 @@ def riepilogo_excel(aaaamm):
                       c.get('ARRIVATO', 0), c.get('PRENOTATO', 0) + c.get('CONFERMATO', 0),
                       c.get('NON_PRESENTATO', 0), c.get('DISDETTO', 0), f['giorni'],
                       f['previsto'] / 100.0, f['incassato'] / 100.0])
+    via = set() if cassa else {'Importi previsti', 'Incassato'}
     riga = apri_foglio_excel(ws, 'Riepilogo per medico', '%s%s' % (nome_mese(primo).capitalize(),
                                                                    (' · tutte le strutture' if not st else '')),
-                             struttura if st else None, colonne=len(intestazione))
+                             struttura if st else None, colonne=len(intestazione) - len(via))
     totali = {1: 'Totale', 3: 'somma', 4: 'somma', 5: 'somma', 6: 'somma', 7: 'somma', 9: 'somma', 10: 'somma'}
-    tabella_excel(ws, riga, intestazione, (28, 18, 14, 11, 16, 14, 11, 9, 15, 13), righe,
-                  formati={9: FORMATO_EURO, 10: FORMATO_EURO}, totali=totali if fogli else None)
+    intestazione, larghezze, righe, formati, totali, _ = togli_colonne(
+        intestazione, (28, 18, 14, 11, 16, 14, 11, 9, 15, 13), righe, via, {9: FORMATO_EURO, 10: FORMATO_EURO}, totali)
+    tabella_excel(ws, riga, intestazione, larghezze, righe,
+                  formati=formati, totali=totali if fogli else None)
     imposta_stampa_excel(ws, True, '%d:%d' % (riga, riga), None, struttura if st else None, periodo)
     usati = {'riepilogo'}
     teste = ['Giorno', 'Ora', 'Fine', 'Stanza', 'Paziente', 'Telefono', 'Prestazione', 'Stato',
              'Convenzione', 'Importo', 'Pagato', 'Metodo', 'Note']
+    # senza Pazienti né Agenda niente nomi, telefoni e note (dove si scrivono nomi); senza la Cassa niente convenzioni,
+    # importi e pagamenti: le colonne non ci sono, non vuote (accessi.py)
+    via_m = (set() if pazienti_ else {'Paziente', 'Telefono', 'Note'}) | \
+        (set() if cassa else {'Convenzione', 'Importo', 'Pagato', 'Metodo'})
     for f in fogli:
         # un foglio per medico: il nome del foglio non puo' superare 31 caratteri ne' ripetersi
         base = re.sub(r'[\[\]:*?/\\]', ' ', f['operatore'].etichetta).strip()[:28] or 'Medico'
@@ -273,11 +315,12 @@ def riepilogo_excel(aaaamm):
         riga_m = apri_foglio_excel(w, '%s — %s' % (f['operatore'].etichetta, nome_mese(primo)),
                                    '%d appuntament%s in %d giorn%s' % (n_app, 'o' if n_app == 1 else 'i', f['giorni'],
                                                                       'o' if f['giorni'] == 1 else 'i'),
-                                   struttura if st else None, colonne=len(teste))
-        tabella_excel(w, riga_m, teste, (11, 7, 7, 14, 26, 15, 24, 14, 16, 11, 11, 11, 36), righe_m,
-                      formati={1: FORMATO_DATA, 2: FORMATO_ORA, 3: FORMATO_ORA, 10: FORMATO_EURO, 11: FORMATO_EURO},
-                      totali={1: 'Totale', 5: '%d appuntament%s' % (n_app, 'o' if n_app == 1 else 'i'), 10: 'somma',
-                              11: 'somma'}, a_capo=(13,))
+                                   struttura if st else None, colonne=len(teste) - len(via_m))
+        teste_m, larghezze_m, righe_m, formati_m, totali_m, a_capo_m = togli_colonne(
+            teste, (11, 7, 7, 14, 26, 15, 24, 14, 16, 11, 11, 11, 36), righe_m, via_m,
+            {1: FORMATO_DATA, 2: FORMATO_ORA, 3: FORMATO_ORA, 10: FORMATO_EURO, 11: FORMATO_EURO},
+            {1: 'Totale', 5: '%d appuntament%s' % (n_app, 'o' if n_app == 1 else 'i'), 10: 'somma', 11: 'somma'}, (13,))
+        tabella_excel(w, riga_m, teste_m, larghezze_m, righe_m, formati=formati_m, totali=totali_m, a_capo=a_capo_m)
         imposta_stampa_excel(w, True, '%d:%d' % (riga_m, riga_m), None, struttura if st else None,
                              '%s · %s' % (f['operatore'].etichetta, nome_mese(primo)))
     nome = 'riepilogo-medici-%s%s.xlsx' % (primo.strftime('%Y-%m'), '-%d' % scelto.id if scelto else '')

@@ -23,20 +23,22 @@
       <input id="porta-rete" name="porta" value="{{ cfg.porta }}" inputmode="numeric" maxlength="5" size="6"></div>
     <p class="nota-riga">5080 di partenza: si cambia solo se un altro programma la usa già. Questo PC continua ad aprire http://127.0.0.1:5000 come sempre.</p>
     <div class="campo spunta" data-guida="accessi-schermo"><label><input type="checkbox" id="schermo-libero" name="schermo_libero" value="1"{% if cfg.schermo_libero %} checked{% endif %}> Il Modo schermo della dashboard (solo numeri, mai nomi) si apre senza password</label></div>
-    <p class="nota-riga">Per gli schermi in sala d'attesa o negli studi: con la spunta aprono <code>{{ indirizzi[0] }}riepilogo-live?schermo=1</code> senza entrare. Senza la spunta anche lo schermo chiede nome e password. Con l'accesso spento il «portiere» (Caddy), se c'è, funziona come prima.</p>
+    <p class="nota-riga">Per gli schermi in sala d'attesa o negli studi: con la spunta aprono <code>{{ indirizzi[0] }}riepilogo-live?schermo=1</code> senza entrare. Senza la spunta anche lo schermo chiede nome e password.</p>
+    <details class="per-assistenza"{% if cfg.nomi %} open{% endif %}><summary>Per l'assistenza: altri nomi di questo PC</summary>
     <div class="campo"><label for="nomi-rete">Altri nomi di questo PC <small>(solo se gli altri PC lo chiamano con un nome diverso da quelli qui sotto; gli indirizzi in numeri vanno sempre bene)</small></label>
       <input id="nomi-rete" name="nomi" value="{{ cfg.nomi|join(' ') }}" maxlength="300"></div>
+    </details>
     <div class="azioni"><button class="bottone primario" type="submit">Salva</button></div>
   </form>
   <div class="riquadro" id="stato-rete" data-guida="accessi-indirizzi">
     <p>{% if acceso %}<b>Acceso</b>, sulla porta {{ porta_accesa }}. Sugli altri PC aprire, nel browser (Edge o Chrome):{% elif cfg.accesa %}<b>Acceso nelle impostazioni, ma non in ascolto.</b> Sugli altri PC si aprirà:{% else %}<b>Spento.</b> Una volta acceso, sugli altri PC si aprirà:{% endif %}</p>
     <ul>{% for x in indirizzi %}<li><code>{{ x }}</code></li>{% endfor %}</ul>
     <p class="nota-riga">Il primo indirizzo è il nome di questo PC; gli altri sono i suoi indirizzi nella rete (se uno cambia, il programma lo segue da solo). Meglio aggiungerlo ai Preferiti del browser di ogni PC.</p>
-    {% if errore_ascolto %}<div class="avviso errore">{{ errore_ascolto }}</div>{% endif %}
+    {% if acceso %}<p id="arrivi-rete">{% if ultimo_da_fuori %}Ultima richiesta da un altro PC: alle {{ ultimo_da_fuori[0].strftime('%H:%M') }}{% if ultimo_da_fuori[0].date() != ultimo_da_fuori[0].today().date() %} del {{ ultimo_da_fuori[0].strftime('%d/%m') }}{% endif %}, da {{ ultimo_da_fuori[1] }}.{% else %}<b>Ancora nessuna richiesta da un altro PC</b> da quando è acceso. Se sugli altri PC la pagina non si apre, quasi sempre è il firewall di Windows: vedere qui sotto.{% endif %}</p>{% endif %}
+    {% if errore_ascolto and cfg.accesa and not acceso %}<div class="avviso errore">{{ errore_ascolto }}</div>{% endif %}
   </div>
   <div class="riquadro avviso-in-chiaro" data-guida="accessi-in-chiaro">
     <p><b>Attenzione: il collegamento dagli altri PC è senza protezione</b> (http, non https). Nome, password e dati dei pazienti passano in chiaro nella rete della clinica: va bene solo per la rete interna del personale (via cavo, o Wi-Fi con password), mai per una rete Wi-Fi aperta ai pazienti o da fuori della clinica. La protezione https, con il portiere Caddy, è un passo successivo.</p>
-    <p class="nota-riga">Se oggi la dashboard arriva agli altri PC con Caddy: con l'accesso acceso gli schermi possono aprire direttamente l'indirizzo qui sopra con <code>riepilogo-live?schermo=1</code> (con la spunta del Modo schermo), senza Caddy. Se Caddy resta, nel suo file (Caddyfile) <code>127.0.0.1:5000</code> va cambiato in <code>127.0.0.1:{{ cfg.porta }}</code>.</p>
   </div>
 
   <h2 class="sezione" id="firewall">Il firewall di Windows</h2>
@@ -44,17 +46,25 @@
     <ol>
       <li>La prima volta che si accende l'accesso, Windows chiede se il programma può comunicare sulla rete (Windows Defender Firewall): spuntare <b>Reti private</b>, <b>togliere</b> la spunta da <b>Reti pubbliche</b> e premere «Consenti accesso». Serve la password di un amministratore di questo PC.</li>
       <li>La rete della clinica deve essere una rete «privata»: in Windows, Impostazioni → Rete e Internet → la rete in uso → Tipo di profilo di rete → <b>Privata</b>.</li>
-      <li>Se la domanda non è comparsa, o è stato premuto «Annulla», la regola si fa a mano: aprire il Prompt dei comandi come amministratore e scrivere
-        <pre style="white-space:pre-wrap;overflow-wrap:anywhere"><code>{{ firewall[0] }}</code></pre>
-        Se poi si cambia la porta, la regola va rifatta con il numero nuovo. Per toglierla:
-        <pre style="white-space:pre-wrap;overflow-wrap:anywhere"><code>{{ firewall[1] }}</code></pre></li>
+      <li>Se dagli altri PC la pagina non si apre, quasi sempre è il firewall. Se alla domanda di Windows è stato premuto «Annulla» o «No», o se chi usa questo PC non è amministratore, Windows ha messo delle regole che <b>bloccano</b> il programma, e una regola che blocca vince su quelle che lo permettono: rifare la domanda non basta. Le toglie l'assistenza, con i comandi qui sotto, in «Per l'assistenza».</li>
     </ol>
+    <details class="per-assistenza" id="firewall-assistenza"><summary>Per l'assistenza: i comandi del firewall</summary>
+      <p>Prompt dei comandi aperto come amministratore (Start, scrivere «cmd», tasto destro su Prompt dei comandi → Esegui come amministratore), un comando alla volta. Il primo toglie <b>tutte</b> le regole del firewall di questo programma, anche quelle che lo bloccano:</p>
+      <pre style="white-space:pre-wrap;overflow-wrap:anywhere"><code>{{ firewall.togli }}</code></pre>
+      <p>Il secondo lo lascia ricevere dagli altri PC solo sulla porta della rete ({{ porta_accesa or cfg.porta }}), solo nelle reti private e in quelle di dominio (le reti di un'azienda, gestite da un server), mai nelle pubbliche:</p>
+      <pre style="white-space:pre-wrap;overflow-wrap:anywhere"><code>{{ firewall.metti }}</code></pre>
+      <p>Se si cambia la porta, si rifanno tutti e due con il numero nuovo. Per vedere le regole: Pannello di controllo → Windows Defender Firewall → Impostazioni avanzate → Regole connessioni in entrata; quelle del programma ({{ firewall.programma }}) con il cerchio rosso lo bloccano. Per togliere solo la regola fatta qui:</p>
+      <pre style="white-space:pre-wrap;overflow-wrap:anywhere"><code>{{ firewall.togli_regola }}</code></pre>
+    </details>
+    <details class="per-assistenza"><summary>Per l'assistenza: il portiere Caddy</summary>
+      <p>Se oggi la dashboard arriva agli altri PC con Caddy (il «portiere»): con l'accesso spento funziona come prima. Con l'accesso acceso gli schermi possono aprire direttamente l'indirizzo qui sopra con <code>riepilogo-live?schermo=1</code> (con la spunta del Modo schermo), senza Caddy. Se Caddy resta, nel suo file (Caddyfile) <code>127.0.0.1:5000</code> va cambiato in <code>127.0.0.1:{{ cfg.porta }}</code>.</p>
+    </details>
   </div>
 
   <h2 class="sezione" id="utenti">Utenti</h2>
   {% for u in cfg.utenti %}
-  <section class="riquadro utente-accessi" id="utente-{{ u.id }}" aria-label="Utente {{ u.nome }}">
-    <h3>{{ u.nome }}{% if u.attivo is defined and not u.attivo %} <small>(spento: non entra)</small>{% endif %}{% if u.cambia %} <small>(al prossimo accesso sceglie la sua password)</small>{% endif %}{% if entrati(u.id) %} <small>· entrato da {{ entrati(u.id) }} PC</small>{% endif %}</h3>
+  <details class="riquadro utente-accessi" id="utente-{{ u.id }}" aria-label="Utente {{ u.nome }}"{% if aperto == u.id %} open{% endif %}>
+    <summary><b>{{ u.nome }}</b> · {{ riassunto(u.aree) }}{% if u.attivo is defined and not u.attivo %} <small>(spento: non entra)</small>{% endif %}{% if u.cambia %} <small>(al prossimo accesso sceglie la sua password)</small>{% endif %}{% if entrati(u.id) %} <small>· entrato da {{ entrati(u.id) }} PC</small>{% endif %}</summary>
     <form method="post" action="{{ url_for('accessi.pagina') }}">
       <input type="hidden" name="azione" value="salva"><input type="hidden" name="utente" value="{{ u.id }}">
       {{ tabella_aree(u.aree) }}
@@ -63,8 +73,8 @@
     </form>
     <form method="post" action="{{ url_for('accessi.pagina') }}">
       <input type="hidden" name="azione" value="password"><input type="hidden" name="utente" value="{{ u.id }}">
-      <div class="campo"><label for="password-{{ u.id }}">Password nuova per {{ u.nome }} <small>(se l'ha dimenticata: al prossimo accesso ne sceglie una sua)</small></label>
-        <input id="password-{{ u.id }}" type="password" name="password" autocomplete="new-password" minlength="{{ minimo }}" maxlength="200"></div>
+      <div class="campo"><label for="password-{{ u.id }}">Password nuova per {{ u.nome }} <small>(se l'ha dimenticata: si vede mentre la si scrive, per dirla alla persona; al prossimo accesso ne sceglie una sua)</small></label>
+        <input id="password-{{ u.id }}" type="text" name="password" autocomplete="off" spellcheck="false" minlength="{{ minimo }}" maxlength="200"></div>
       <div class="azioni"><button class="bottone" type="submit">Cambia la password di {{ u.nome }}</button></div>
     </form>
     {% if entrati(u.id) %}
@@ -77,19 +87,20 @@
       <input type="hidden" name="azione" value="elimina"><input type="hidden" name="utente" value="{{ u.id }}">
       <button class="bottone elimina" type="submit" onclick='return confirm({{ ("Togliere l’utente %s? Non potrà più entrare dagli altri PC." % u.nome)|tojson }})'>Togli {{ u.nome }}</button>
     </form>
-  </section>
+  </details>
   {% else %}
   <p class="vuoto">Nessun utente: dagli altri PC non entra nessuno.</p>
   {% endfor %}
 
   <h3 id="nuovo-utente">Nuovo utente</h3>
-  <form method="post" action="{{ url_for('accessi.pagina') }}" class="riquadro" data-guida="accessi-nuovo-utente" aria-labelledby="nuovo-utente">
+  <form method="post" action="{{ url_for('accessi.pagina') }}#nuovo-utente" class="riquadro" data-guida="accessi-nuovo-utente" aria-labelledby="nuovo-utente">
     <input type="hidden" name="azione" value="nuovo">
-    <div class="campo meta"><label for="nuovo-nome">Nome</label><input id="nuovo-nome" name="nome" maxlength="40" autocomplete="off"></div>
-    <div class="campo meta"><label for="nuovo-password">Password per il primo accesso</label><input id="nuovo-password" type="password" name="password" autocomplete="new-password" minlength="{{ minimo }}" maxlength="200"></div>
+    {% if errore_nuovo %}<div class="avviso errore" role="alert" id="errore-nuovo">L'utente non è stato aggiunto: {{ errore_nuovo }} Il resto è rimasto com'era scritto: correggere e premere di nuovo «Aggiungi l'utente».</div>{% endif %}
+    <div class="campo meta"><label for="nuovo-nome">Nome</label><input id="nuovo-nome" name="nome" maxlength="40" autocomplete="off" value="{{ nuovo.nome }}"></div>
+    <div class="campo meta"><label for="nuovo-password">Password per il primo accesso <small>(si vede mentre la si scrive: va detta alla persona)</small></label><input id="nuovo-password" type="text" name="password" autocomplete="off" spellcheck="false" minlength="{{ minimo }}" maxlength="200"{% if errore_nuovo %} autofocus{% endif %}></div>
     <p class="nota-riga">Meglio un utente per ogni persona. Al primo accesso la persona sceglie una password sua (almeno {{ minimo }} caratteri). {{ consiglio }}</p>
     <div data-guida="accessi-aree">
-      {{ tabella_aree({}) }}
+      {{ tabella_aree(nuovo.aree) }}
       <p class="nota-riga"><b>Solo guardare</b>: apre le pagine e scarica i file di quella parte, ma non salva niente. <b>Guardare e modificare</b>: come da questo PC. Le parti si cambiano quando si vuole, nel riquadro dell'utente.</p>
     </div>
     <div class="azioni"><button class="bottone" type="submit">Aggiungi l'utente</button></div>

@@ -669,6 +669,11 @@ def appunti_aperti(s, struttura_id=None):
 
 
 def appunti_del_giorno(s, g, struttura_id):
+    """Gli appunti da confermare del giorno, per la griglia e il giorno della settimana. Dagli altri PC (accessi.py) solo a
+    chi ha la Segreteria (revisione del 22/11: chi aveva solo l'Agenda leggeva nome, telefono e nota)."""
+    import accessi
+    if not accessi.puo('segreteria'):
+        return []
     return [x for x in appunti_aperti(s, struttura_id) if x.giorno == g]
 
 

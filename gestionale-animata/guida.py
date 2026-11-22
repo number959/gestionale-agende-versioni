@@ -584,29 +584,35 @@ ARTICOLI = [
                'è la 5080: si cambia solo se un altro programma la usa già.', '[data-guida="accessi-rete"]'),
              P('Il firewall di Windows', 'La prima volta Windows chiede se il programma può usare la rete: spuntare '
                '«Reti private», togliere «Reti pubbliche» e «Consenti accesso» (serve la password di un '
-               'amministratore). Se la domanda non compare, il riquadro dà il comando da scrivere a mano.',
+               'amministratore). Se si è premuto «Annulla» o «No», Windows blocca il programma e gli altri PC restano '
+               'fuori: le regole che bloccano le toglie l\'assistenza, con i comandi del riquadro «Per l\'assistenza».',
                '[data-guida="accessi-firewall"]'),
              P('L\'indirizzo per gli altri PC', 'Qui c\'è l\'indirizzo da aprire nel browser degli altri PC, con il nome '
-               'di questo PC o con i suoi numeri: meglio metterlo nei Preferiti.', '[data-guida="accessi-indirizzi"]'),
+               'di questo PC o con i suoi numeri: meglio metterlo nei Preferiti. Sotto, l\'ultima richiesta arrivata da '
+               'un altro PC: se non ne arriva nessuna, quasi sempre è il firewall.', '[data-guida="accessi-indirizzi"]'),
              P('Un utente per persona', 'Nome e una password per il primo accesso: la persona la cambia con una sua appena '
                'entra. Meglio un utente per ogni persona, così il registro dice chi ha fatto cosa.',
                '[data-guida="accessi-nuovo-utente"]'),
              P('Le parti del programma', 'Per ogni parte (Agenda, Pazienti, Cassa, Turni…): non disponibile, solo '
-               'guardare (si aprono le pagine e i file, non si salva niente) o guardare e modificare. Aggiornamenti, '
-               'copie, impostazioni e questa pagina restano sempre solo su questo PC.', '[data-guida="accessi-aree"]'),
+               'guardare (si aprono le pagine e i file; i bottoni per salvare sono spenti) o guardare e modificare. '
+               'Quello che è di un\'altra parte resta suo anche dentro le pagine: per esempio gli importi solo con la '
+               'Cassa, i nomi dei pazienti nelle statistiche solo con Pazienti o Agenda. Aggiornamenti, copie, '
+               'impostazioni e questa pagina restano sempre solo su questo PC.', '[data-guida="accessi-aree"]'),
              P('Dagli altri PC', 'Sull\'altro PC si apre l\'indirizzo, si scrivono nome e password ed «Entra». In alto '
                'si vede con quale nome si è entrati, con «La mia password» ed «Esci». Una parte non data risponde '
                '«non è fra le parti disponibili per questo utente».'),
              P('Gli schermi della dashboard', 'Per uno schermo in sala d\'attesa: con questa spunta il Modo schermo (solo '
                'numeri, mai nomi) si apre senza password, all\'indirizzo con riepilogo-live?schermo=1. Così il '
-               'portiere Caddy non serve più; se lo si tiene, va puntato alla porta della rete (lo dice il riquadro '
-               'dell\'avviso, poco sotto).', '[data-guida="accessi-schermo"]'),
+               'portiere Caddy non serve più; se lo si tiene, va puntato alla porta della rete (lo dice «Per '
+               'l\'assistenza: il portiere Caddy», nel riquadro del firewall).', '[data-guida="accessi-schermo"]'),
              P('Senza protezione', 'Nella rete della clinica tutto viaggia in chiaro (http): va bene solo nella rete '
                'interna del personale, mai in una Wi-Fi aperta ai pazienti o da fuori.',
                '[data-guida="accessi-in-chiaro"]'),
-             P('Chi è entrato', 'Gli ultimi accessi e salvataggi dagli altri PC. Nel riquadro di ogni utente: «Fai '
-               'uscire», la password nuova se l\'ha dimenticata, la spunta per spegnerlo; chi sbaglia troppe volte la '
-               'password si sblocca da «Tentativi sbagliati».', '[data-guida="accessi-registro"]'),
+             P('Chi è entrato', 'Gli ultimi accessi e salvataggi dagli altri PC. Nel riquadro di ogni utente (si apre con '
+               'un clic sul nome): «Fai uscire», la password nuova se l\'ha dimenticata, la spunta per spegnerlo; chi '
+               'sbaglia troppe volte la password si sblocca da «Tentativi sbagliati». Spegnendo l\'accesso dagli altri '
+               'PC escono tutti; una copia di sicurezza rimessa non riporta indietro utenti e password.',
+               '[data-guida="accessi-registro"]'),
          ]),
     dict(slug='aggiornare', gruppo='Configurazione', titolo='Aggiornare a una versione nuova',
          in_breve='Quando esce una versione nuova il programma lo dice: «Aggiorna adesso», e in un minuto si riapre '

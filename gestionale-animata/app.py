@@ -8,6 +8,12 @@ import re
 import secrets
 import socket
 import sys
+# Nell'eseguibile (e con «python app.py», come AVVIA.bat senza l'eseguibile) questo file gira come «__main__». Un
+# «import app» da un altro modulo ne caricherebbe una SECONDA copia, che rifà tutti i collega() con Sessione=None: da lì
+# ogni pagina risponderebbe 500 (revisione del 22/11, accessi.py). I moduli non importano mai app (ricevono quello che
+# serve con collega/installa; prove_accessi.py lo controlla), e in più, per sicurezza, «app» è questo stesso modulo.
+if __name__ == '__main__':
+    sys.modules.setdefault('app', sys.modules['__main__'])
 import threading
 import webbrowser
 from datetime import datetime, date, time, timedelta
@@ -920,7 +926,7 @@ def autoriparazione():
 
 
 # l'accesso dagli altri PC della rete (1.13): dopo tutte le pagine, perche' il censimento le trovi tutte
-accessi.installa(app)
+accessi.installa(app, ses, LUCCHETTO, lambda: Sessione)
 
 
 def porta_in_uso(porta):
@@ -1008,7 +1014,13 @@ def dopo_riparazione():
     finally:
         s.close()
     try:
-        accessi.applica(app, Sessione)      # gli accessi dalla rete come dicono le impostazioni rimesse
+        # una copia rimessa non riporta indietro gli accessi dagli altri PC (accessi.rimetti): quelli dell'ultimo cambio,
+        # dal file accanto al database (il database era rovinato); poi l'ascolto della rete come dicono
+        esito = accessi.rimetti(Sessione, accessi.dal_file())
+        if esito:
+            autoripara.annota(accessi.TESTO_RIMESSI if esito == 'rimessi' else
+                              accessi.TESTO_SPENTA % accessi.PERCORSO_PAGINA, 'ok' if esito == 'rimessi' else 'attenzione')
+        accessi.applica(app, Sessione)
     except Exception:
         logging.exception('accessi dopo la riparazione')
 
@@ -1102,7 +1114,7 @@ def principale():
         _lucchetto_istanza = ingresso['lucchetto']   # resta aperto finche' il programma gira
         porta = ingresso['porta']
         # il database si controlla (e se serve si ripara) prima di aprirlo
-        autoripara.all_avvio(percorso_db())
+        riparato = autoripara.all_avvio(percorso_db())
         Sessione = crea_sessione()
         if Sessione.versione_precedente is not None and Sessione.versione_precedente > VERSIONE_SCHEMA:
             # un database di una versione piu' nuova (il programma rimesso indietro): funziona, ma va detto
@@ -1148,7 +1160,8 @@ def principale():
 
         def pronto(p):
             try:
-                accessi.all_avvio(app, Sessione, cartella)
+                # una copia rimessa all'avvio non riporta indietro gli accessi dagli altri PC (accessi.rimetti)
+                accessi.all_avvio(app, Sessione, cartella, copia_rimessa=riparato is not None)
             except Exception:
                 logging.exception('accessi: avvio')
             autoripara.stato['porta'] = p

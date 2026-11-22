@@ -3,21 +3,26 @@
 prova (strumenti/demo.py), tutto il giro come lo fa la segreteria:
     python prove_accessi_browser.py http://127.0.0.1:5001
 - dal PC principale: Configura → Impostazioni → «Aree e accessi»; l'accesso dagli altri PC acceso su una porta libera
-  (mai la 5080 della clinica), con l'indirizzo da scrivere sugli altri PC e il firewall spiegato; un utente nuovo con
-  Agenda «guardare e modificare» e Cassa «solo guardare», scelte nello stesso modulo;
+  (mai la 5080 della clinica), con l'indirizzo da scrivere sugli altri PC, «nessuna richiesta da un altro PC» e il
+  firewall spiegato (i comandi in «Per l'assistenza»); un utente rifiutato (la password con il suo nome) torna con nome e
+  parti scritti; poi l'utente nuovo con Agenda «guardare e modificare», Cassa e Sala «solo guardare», riquadro aperto;
 - da un'altra scheda, sull'indirizzo della rete (quello di questo PC fuori da 127.*, come un altro PC): la pagina di
-  accesso, la password da cambiare al primo accesso, la barra «Entrato da un altro PC come…»; in Agenda la nota del
-  giorno si salva, in Cassa la pagina si apre ma «Salva il listino» risponde «Solo guardare», Pazienti risponde con la
-  pagina in italiano e «Torna alle pagine disponibili»; «Esci», e la pagina dopo chiede di nuovo l'accesso;
-- di nuovo dal PC principale: la pagina di accesso non c'è, il registro dice chi è entrato, uscito e cosa ha salvato;
-  «Togli» fa la domanda; l'accesso spento chiude davvero la porta.
+  accesso, la password da cambiare al primo accesso, la barra «Entrato da un altro PC come…» con il suo stile; in Agenda
+  la nota del giorno si salva, in Cassa la pagina si apre con «Salva il listino» spento e la riga «Solo guardare», in
+  Sala le caselle della checklist spente, Pazienti risponde con la pagina in italiano e «Torna alle pagine disponibili»;
+  «Esci», e la pagina dopo chiede di nuovo l'accesso;
+- di nuovo dal PC principale: la pagina di accesso non c'è, il registro dice chi è entrato, uscito e cosa ha salvato; il
+  riquadro chiuso dell'utente con le parti in una riga; «Togli» fa la domanda; l'accesso spento chiude davvero la porta;
+  la checklist con un rifiuto finto del programma dice il suo motivo (e senza risposta «il programma non risponde»).
 Alla fine il gestionale di prova torna come prima: utente tolto, nota tolta, accesso spento.
 La cornice (menu, messaggi, domande) si cerca per ruolo e nome con gli aiuti di aiuti_browser.py; ogni domanda passa
 da rispondi(), e una domanda che nessuno aspettava fa cadere la prova."""
+import json
 import os
 import re
 import socket
 import sys
+from datetime import date, timedelta
 
 from playwright.sync_api import sync_playwright
 
@@ -98,11 +103,14 @@ with sync_playwright() as p:
         principale(pg).get_by_role('link', name='Aree e accessi', exact=True).click()
     ok('da Impostazioni si arriva ad «Aree e accessi»', pg.url.endswith('/configura/accessi')
        and pg.get_by_role('heading', name='Aree e accessi', exact=True).count() == 1, pg.url)
-    if pg.get_by_role('region', name='Utente %s' % NOME).count():
-        # una prova di prima fermata a metà: si riparte da capo
+    if pg.get_by_role('group', name='Utente %s' % NOME).count():
+        # una prova di prima fermata a metà: si riparte da capo (il riquadro dell'utente si apre con un clic sul nome)
+        riquadro = pg.get_by_role('group', name='Utente %s' % NOME)
+        if riquadro.get_attribute('open') is None:
+            riquadro.locator('summary').click()
         with pg.expect_navigation():
             with rispondi(pg, si=True):
-                pg.get_by_role('region', name='Utente %s' % NOME).get_by_role('button', name='Togli %s' % NOME).click()
+                riquadro.get_by_role('button', name='Togli %s' % NOME).click()
     rete_ = pg.get_by_role('form', name='Accesso dagli altri PC')
     if rete_.get_by_label('Gli altri PC della rete possono aprire il programma').is_checked():
         rete_.get_by_label('Gli altri PC della rete possono aprire il programma').uncheck()
@@ -130,21 +138,49 @@ with sync_playwright() as p:
     ok('lo stato dice «Acceso» con la porta e gli indirizzi', ('Acceso, sulla porta %d' % PORTA) in stato
        and ('http://' in stato), stato[:200])
     testo_ = principale(pg).inner_text()
-    ok('il firewall spiegato (reti private sì, pubbliche no, il comando a mano) e il collegamento in chiaro',
-       all(x in testo_ for x in ('Reti private', 'Reti pubbliche', 'netsh advfirewall', 'localport=%d' % PORTA,
-                                 'senza protezione')), testo_[:200])
+    ok('il firewall spiegato (reti private sì, pubbliche no, le regole che bloccano) e il collegamento in chiaro; i '
+       'comandi chiusi in «Per l\'assistenza»',
+       all(x in testo_ for x in ('Reti private', 'Reti pubbliche', 'bloccano', 'senza protezione'))
+       and 'netsh' not in testo_, testo_[:200])
+    ok('l\'accesso acceso dice che dagli altri PC non è ancora arrivato niente',
+       'Ancora nessuna richiesta da un altro PC' in stato, stato[:300])
+    principale(pg).get_by_text('Per l\'assistenza: i comandi del firewall').click()
+    comandi = principale(pg).locator('#firewall-assistenza').inner_text()
+    ok('«Per l\'assistenza»: togliere tutte le regole del programma, poi quella per la porta (private e dominio)',
+       'delete rule name=all program="' in comandi and 'localport=%d' % PORTA in comandi
+       and 'profile=private,domain' in comandi, comandi[:300])
 
+    # un utente rifiutato (la password con il suo nome): la pagina torna con quello che si era scritto
     nuovo = pg.get_by_role('form', name='Nuovo utente')
     nuovo.get_by_label('Nome', exact=True).fill(NOME)
-    nuovo.get_by_label('Password per il primo accesso').fill(PRIMA)
+    nuovo.get_by_label('Password per il primo accesso').fill('Sportello di mare blu')
     nuovo.get_by_role('row', name=nome_voce('Agenda')).get_by_role('radio', name='guardare e modificare',
                                                                     exact=True).check()
     nuovo.get_by_role('row', name=nome_voce('Cassa')).get_by_role('radio', name='solo guardare', exact=True).check()
     with pg.expect_navigation():
         nuovo.get_by_role('button', name='Aggiungi l\'utente', exact=True).click()
+    nuovo = pg.get_by_role('form', name='Nuovo utente')
+    # il motivo e il modulo davanti agli occhi (il browser va a #nuovo-utente; il campo della password ha il fuoco)
+    alto = pg.evaluate("document.getElementById('errore-nuovo').getBoundingClientRect().top")
+    ok('rifiutato: il motivo accanto al modulo, il nome e le parti come scritti, la password no, il modulo davanti',
+       'nome dell\'utente' in nuovo.get_by_role('alert').inner_text()
+       and nuovo.get_by_label('Nome', exact=True).input_value() == NOME
+       and nuovo.get_by_label('Password per il primo accesso').input_value() == ''
+       and nuovo.get_by_role('row', name=nome_voce('Agenda')).get_by_role('radio', name='guardare e modificare',
+                                                                           exact=True).is_checked()
+       and nuovo.get_by_role('row', name=nome_voce('Cassa')).get_by_role('radio', name='solo guardare',
+                                                                         exact=True).is_checked()
+       and 0 <= alto < 900, (alto, nuovo.inner_text()[:200]))
+
+    nuovo.get_by_label('Password per il primo accesso').fill(PRIMA)
+    nuovo.get_by_role('row', name=nome_voce('Sala operatoria')).get_by_role('radio', name='solo guardare',
+                                                                             exact=True).check()
+    with pg.expect_navigation():
+        nuovo.get_by_role('button', name='Aggiungi l\'utente', exact=True).click()
     m = messaggi(pg)
-    riquadro = pg.get_by_role('region', name='Utente %s' % NOME)
-    ok('utente aggiunto, con il suo riquadro', 'Utente %s aggiunto' % NOME in m and riquadro.count() == 1, m)
+    riquadro = pg.get_by_role('group', name='Utente %s' % NOME)
+    ok('utente aggiunto, con il suo riquadro aperto', 'Utente %s aggiunto' % NOME in m and riquadro.count() == 1
+       and riquadro.get_attribute('open') is not None, m)
     ok('nel riquadro le aree scelte: Agenda da modificare, Cassa da guardare, Pazienti no',
        riquadro.get_by_role('row', name=nome_voce('Agenda')).get_by_role('radio', name='guardare e modificare',
                                                                           exact=True).is_checked()
@@ -195,6 +231,8 @@ with sync_playwright() as p:
        altro.url.endswith('/oggi') and barra.count() == 1 and NOME in barra.inner_text()
        and barra.get_by_role('button', name='Esci', exact=True).count() == 1, altro.url)
     ok('il messaggio «Password cambiata.»', 'Password cambiata.' in messaggi(altro), messaggi(altro))
+    stile = barra.evaluate("e => { const s = getComputedStyle(e); return [s.display, s.paddingLeft]; }")
+    ok('la barra «Entrato da un altro PC» ha il suo stile (in riga, allineata alla pagina)', stile == ['flex', '18px'], stile)
 
     # Agenda: guardare e modificare → la nota del giorno si salva
     vai_dal_menu(altro, 'Giorno')
@@ -207,19 +245,27 @@ with sync_playwright() as p:
     ok('Agenda da modificare: la nota del giorno si salva dall\'altro PC',
        altro.locator('[data-guida="giorno-nota"]').get_by_role('textbox').input_value() == NOTA, altro.url)
 
-    # Cassa: solo guardare → la pagina si apre, il salvataggio risponde «Solo guardare»
-    altro.goto(RETE + '/cassa/listino')
-    ok('Cassa da guardare: il listino si apre', altro.get_by_role('button', name='Salva il listino').count() == 1,
-       altro.url)
-    with altro.expect_navigation():
-        altro.get_by_role('button', name='Salva il listino').click()
-    titolo = altro.get_by_role('heading', level=1).inner_text()
-    ok('Cassa da guardare: «Salva il listino» risponde «Solo guardare», in italiano',
-       titolo == 'Solo guardare' and 'non si salva niente' in altro.content(), titolo)
+    ok('Agenda da modificare: nessuna riga «Solo guardare» e il «Salva» della nota acceso',
+       altro.locator('[data-solo-guardare-riga]').count() == 0
+       and altro.locator('[data-guida="giorno-nota"]').get_by_role('button', name='Salva', exact=True).is_enabled())
 
-    with altro.expect_navigation():
-        altro.get_by_role('link', name='Torna alle pagine disponibili').click()
-    ok('dal rifiuto, «Torna alle pagine disponibili» porta a Oggi', altro.url.endswith('/oggi'), altro.url)
+    # Cassa: solo guardare → la pagina si apre, ma «Salva il listino» è spento, con la riga che lo dice
+    altro.goto(RETE + '/cassa/listino')
+    salva = altro.get_by_role('button', name='Salva il listino')
+    riga = altro.locator('[data-solo-guardare-riga]')
+    ok('Cassa da guardare: il listino si apre, «Salva il listino» spento con la spiegazione, e la riga in cima',
+       salva.count() == 1 and salva.is_disabled() and 'Solo guardare' in (salva.get_attribute('title') or '')
+       and riga.count() == 1 and 'Solo guardare: per «Cassa»' in riga.inner_text(), altro.url)
+
+    # Sala da guardare: le caselle della checklist spente (cercate nei prossimi giorni della prova)
+    caselle = None
+    for settimana in range(5):
+        altro.goto(RETE + '/sala/%s?giorni=7' % (date.today() + timedelta(days=7 * settimana)).isoformat())
+        if altro.locator('form.checklist input[type="checkbox"]').count():
+            caselle = altro.locator('form.checklist input[type="checkbox"]')
+            break
+    ok('Sala da guardare: le caselle della checklist sono spente', caselle is not None and caselle.count()
+       and all(caselle.nth(i).is_disabled() for i in range(caselle.count())), caselle.count() if caselle else 'nessuna')
 
     # Pazienti: non disponibile → la pagina in italiano, con il ritorno e chi chiedere
     vai_dal_menu(altro, 'Pazienti')
@@ -248,9 +294,11 @@ with sync_playwright() as p:
        and pg.get_by_role('button', name='Entra', exact=True).count() == 0, pg.url)
     pg.goto(B + '/configura/accessi')
     registro = pg.locator('[data-guida="accessi-registro"]').inner_text()
-    ok('il registro: entrato, password cambiata, nota salvata, Cassa negata, uscito, dall\'indirizzo dell\'altro PC',
-       all(x in registro for x in ('entrato', 'password cambiata', 'POST /note-giorno', 'negato (solo guardare)',
-                                   'uscito', NOME)) and (IP in registro or IP == '127.0.0.1'), registro[:400])
+    ok('il registro: entrato, password cambiata, nota salvata, Pazienti negata, uscito, dall\'indirizzo dell\'altro PC '
+       '(la Cassa da salvare non c\'è più: il bottone è spento)',
+       all(x in registro for x in ('entrato', 'password cambiata', 'POST /note-giorno', 'negato GET /pazienti',
+                                   'uscito', NOME)) and 'negato (solo guardare)' not in registro
+       and (IP in registro or IP == '127.0.0.1'), registro[:400])
 
     # pulizia: la nota tolta dal PC, l'utente tolto (con la domanda), l'accesso spento
     vai_dal_menu(pg, 'Giorno')
@@ -261,11 +309,16 @@ with sync_playwright() as p:
     with pg.expect_navigation():
         nota.get_by_role('button', name='Salva', exact=True).click()
     pg.goto(B + '/configura/accessi')
+    riquadro = pg.get_by_role('group', name='Utente %s' % NOME)
+    ok('il riquadro dell\'utente, chiuso, dice le sue parti in una riga',
+       riquadro.get_attribute('open') is None and 'Agenda, Cassa (solo guardare), Sala operatoria (solo guardare)'
+       in riquadro.locator('summary').inner_text(), riquadro.locator('summary').inner_text())
+    riquadro.locator('summary').click()
     with pg.expect_navigation():
         with rispondi(pg, si=True) as d:
-            pg.get_by_role('region', name='Utente %s' % NOME).get_by_role('button', name='Togli %s' % NOME).click()
+            riquadro.get_by_role('button', name='Togli %s' % NOME).click()
     ok('«Togli» fa la domanda e toglie l\'utente', d.testo and NOME in d.testo and 'Utente %s tolto' % NOME in messaggi(pg)
-       and pg.get_by_role('region', name='Utente %s' % NOME).count() == 0, (d.testo, messaggi(pg)))
+       and pg.get_by_role('group', name='Utente %s' % NOME).count() == 0, (d.testo, messaggi(pg)))
     rete_ = pg.get_by_role('form', name='Accesso dagli altri PC')
     rete_.get_by_label('Gli altri PC della rete possono aprire il programma').uncheck()
     rete_.get_by_label('Porta', exact=True).fill(porta_di_prima)          # e la porta di prima
@@ -274,10 +327,35 @@ with sync_playwright() as p:
     ok('spento: il messaggio e la porta della rete chiusa davvero',
        'Accesso dagli altri PC spento' in messaggi(pg) and chiusa(IP, PORTA) and chiusa('127.0.0.1', PORTA),
        messaggi(pg))
-    ok('i soli rifiuti sono i due voluti (Cassa da salvare, Pazienti)', rifiuti == ['/cassa/listino', '/pazienti'],
+    ok('il solo rifiuto è quello voluto (Pazienti): «Salva il listino» spento non manda niente', rifiuti == ['/pazienti'],
        rifiuti)
     ok('rimessa la porta di prima', pg.get_by_role('form', name='Accesso dagli altri PC').get_by_label(
         'Porta', exact=True).input_value() == porta_di_prima, porta_di_prima)
+    # la checklist: se il programma rifiuta, il messaggio dice il suo motivo (prima: «il programma non risponde», falso)
+    for settimana in range(5):
+        pg.goto(B + '/sala/%s?giorni=7' % (date.today() + timedelta(days=7 * settimana)).isoformat())
+        if pg.locator('form.checklist input[type="checkbox"]').count():
+            break
+    casella = pg.locator('form.checklist input[type="checkbox"]').first
+    motivo = 'Per «Sala operatoria» questo utente può solo guardare: non si salva niente.'
+    pg.route('**/checklist', lambda r: r.fulfill(status=403, content_type='application/json',
+                                                  body=json.dumps({'errore': motivo})))
+    prima = casella.is_checked()
+    with rispondi(pg, si=True) as d:
+        casella.click()
+    pg.wait_for_timeout(300)
+    ok('checklist rifiutata: il messaggio dice il motivo del programma, e la casella torna com\'era',
+       d.testo == 'Checklist non salvata: ' + motivo and casella.is_checked() == prima, d.testo)
+    pg.unroute('**/checklist')
+    pg.route('**/checklist', lambda r: r.abort())
+    with rispondi(pg, si=True) as d:
+        casella.click()
+    pg.wait_for_timeout(300)
+    ok('gemello: senza risposta «il programma non risponde»', d.testo and 'il programma non risponde' in d.testo
+       and casella.is_checked() == prima, d.testo)
+    pg.unroute('**/checklist')
+    err[:] = [e for e in err if '403' not in e and 'Failed to load resource' not in e]   # i due finti, voluti
+
     ok('nessun errore JavaScript', not err, err[:3])
     ok('nessuna domanda del browser inattesa', not domande.inattese and not domande_altro.inattese,
        domande.inattese + domande_altro.inattese)

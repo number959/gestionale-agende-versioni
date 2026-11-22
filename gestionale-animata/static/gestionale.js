@@ -32,7 +32,8 @@
     function scegli(p) {
       campoId.value = p.id;
       cognome.value = p.cognome; nome.value = p.nome;
-      telefono.value = p.telefono; email.value = p.email;
+      // dagli altri PC, senza Pazienti né Agenda, la ricerca dà solo nome, nascita e telefono (accessi.py)
+      telefono.value = p.telefono || ''; email.value = p.email || '';
       if (nascita) { nascita.value = p.nascita_iso || ''; }
       if (codiceFiscale) { codiceFiscale.value = p.codice_fiscale || ''; }
       if (indirizzo) { indirizzo.value = p.indirizzo || ''; }
@@ -687,7 +688,15 @@
         dati.append('fatto', casella.checked ? '1' : '0');
         casella.disabled = true;
         fetch(modulo.action, { method: 'POST', body: dati, headers: { 'X-Richiesta': 'fetch' } })
-          .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
+          .then(function (r) {
+            if (r.ok) { return r.json(); }
+            // il motivo lo dice il programma (dagli altri PC: «solo guardare», da rientrare...), come in dove.js e turni.js
+            return r.json().catch(function () { return {}; }).then(function (d) {
+              var e = new Error(r.status);
+              e.motivo = d && d.errore;
+              throw e;
+            });
+          })
           .then(function (esito) {
             if (conto) {
               conto.textContent = esito.fatte + '/' + esito.totale;
@@ -696,9 +705,10 @@
             var etichetta = casella.closest('label');
             if (etichetta) { etichetta.title = casella.checked ? 'fatto il ' + esito.quando : 'da fare'; }
           })
-          .catch(function () {
+          .catch(function (e) {
             casella.checked = !casella.checked;
-            alert('Checklist non salvata: il programma non risponde. Riprovare.');
+            alert(e && e.motivo ? 'Checklist non salvata: ' + e.motivo
+                                : 'Checklist non salvata: il programma non risponde. Riprovare.');
           })
           .then(function () { casella.disabled = false; });
       });
@@ -770,4 +780,35 @@
   document.addEventListener('click', function (e) {
     if (!e.target.closest || !e.target.closest('.menu .gruppo, .gruppo-comandi')) { chiudiTutti(); }
   });
+})();
+
+/* ------------------------------------------- solo guardare (dagli altri PC, accessi.py)
+   Il programma segna con data-solo-guardare i moduli che chi è entrato da un altro PC non può salvare: qui i loro
+   campi e bottoni si spengono, con la spiegazione sopra (title), e una riga in cima alla pagina lo dice, prima di
+   scrivere qualcosa che non si salverebbe (revisione del 22/11). Sul PC della segreteria non ce ne sono mai. */
+(function () {
+  'use strict';
+  var moduli = document.querySelectorAll('form[data-solo-guardare]');
+  if (!moduli.length) { return; }
+  var spiegazioni = [];
+  moduli.forEach(function (modulo) {
+    var perche = modulo.getAttribute('data-solo-guardare');
+    if (spiegazioni.indexOf(perche) < 0) { spiegazioni.push(perche); }
+    Array.prototype.forEach.call(modulo.elements, function (campo) {
+      if (campo.type === 'hidden' || campo.tagName === 'FIELDSET' ||
+          (campo.tagName === 'BUTTON' && campo.type === 'button')) { return; }
+      campo.disabled = true;
+      campo.title = perche;
+    });
+    modulo.addEventListener('submit', function (ev) { ev.preventDefault(); }, true);
+  });
+  var principale = document.getElementById('principale');
+  if (principale) {
+    var riga = document.createElement('div');
+    riga.className = 'avviso avviso-giallo solo-guardare';
+    riga.setAttribute('role', 'note');
+    riga.setAttribute('data-solo-guardare-riga', '');
+    riga.textContent = spiegazioni.join(' ') + ' I campi e i bottoni per salvare sono spenti.';
+    principale.insertBefore(riga, principale.firstChild);
+  }
 })();

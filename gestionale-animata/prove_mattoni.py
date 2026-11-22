@@ -256,7 +256,9 @@ def gemello_strato():
 
 # ================================================================ prefisso: i nomi nuovi non pestano quelli vecchi
 TENUTE = {'primario', 'gruppo-comandi', 'apri-gruppo', 'tendina', 'aperto', 'numeri', 'allarme'}   # agganci del JavaScript di oggi
-NUOVI = {'veste.css', 'gettoni.css', '_pezzi.html'}
+NUOVI = {'veste.css', 'gettoni.css', '_pezzi.html',
+         # 1.13, accesso dagli altri PC: la riga di chi è entrato (v-utente-rete) è nuova, non una pagina di oggi
+         '_utente_rete.html'}
 
 
 def classi_vecchie():

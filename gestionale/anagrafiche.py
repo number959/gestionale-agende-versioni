@@ -299,9 +299,11 @@ def medico(oid=None):
 
 
 def riquadro_tariffario(s, o):
-    """Sotto la scheda del medico (1.12.6): il suo tariffario e se e' attivo."""
+    """Sotto la scheda del medico (1.12.6): il suo tariffario e se e' attivo. Dagli altri PC (accessi.py) solo a chi ha
+    la Cassa (revisione del 22/11: con le sole Anagrafiche si leggevano i tariffari)."""
+    import accessi
     import tariffari
-    return tariffari.del_medico(s, o)
+    return tariffari.del_medico(s, o) if accessi.puo('cassa') else None
 
 
 def email_del_medico(s, o):
@@ -434,12 +436,13 @@ def prestazione(pid=None):
             campo('preparazione', 'Indicazioni per il paziente', tipo='textarea', massimo=1000,
                   valore=dati.get('preparazione') if dati else (p.preparazione if p else ''),
                   aiuto='Finiscono sul promemoria stampato e nei messaggi. Esempio: digiuno da 6 ore.'),
-            # 1.12.6: il prezzo anche qui, dove lo si cerca (lo stesso della pagina Listino)
+            # 1.12.6: il prezzo anche qui, dove lo si cerca (lo stesso della pagina Listino). Dagli altri PC
+            # (accessi.py) solo a chi può cambiare la Cassa: il prezzo è suo (revisione del 22/11)
             campo('tariffa', 'Prezzo di listino (€)', massimo=12,
                   valore=dati.get('tariffa') if dati else (p.tariffa_testo if p else ''),
                   aiuto='Si propone da solo nella prenotazione, se il medico non ha un suo tariffario (Cassa → Tariffari). '
                         'Vuoto: nessun prezzo. Esempio: 80 o 1.250,50.'),
-        ]
+        ][:None if accessi_cassa() else -1]
 
     if request.method == 'POST':
         with _lucchetto:
@@ -466,7 +469,7 @@ def prestazione(pid=None):
             preparazione = m.testo('preparazione', 'Indicazioni per il paziente', 1000) \
                 if 'preparazione' in request.form else None
             tariffa = None
-            if 'tariffa' in request.form:
+            if 'tariffa' in request.form and accessi_cassa():
                 import tariffari
                 scritto = (request.form.get('tariffa') or '').strip()
                 tariffa = tariffari.leggi_importo(scritto) if scritto else ''
@@ -991,6 +994,12 @@ def elenco_da_spostare(apps):
 def accessi_agenda():
     import accessi
     return accessi.puo('agenda')
+
+
+def accessi_cassa():
+    """Il prezzo di listino nella scheda della prestazione: dagli altri PC solo a chi può cambiare la Cassa."""
+    import accessi
+    return accessi.puo_cambiare('cassa')
 
 
 def _leggi_periodo(m):

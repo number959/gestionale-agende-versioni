@@ -36,6 +36,7 @@ PROVVISORIA = tempfile.mkdtemp(prefix='prove-accessi-')
 
 import seed  # noqa: E402
 import app as A  # noqa: E402
+import prove_messaggi as PM  # noqa: E402
 import accessi  # noqa: E402
 import invii  # noqa: E402
 from modelli import (Appuntamento, Appunto, Attesa, Attivita, Invio, NotaGiorno, Operatore, Paziente, Prestazione,  # noqa: E402
@@ -43,6 +44,7 @@ from modelli import (Appuntamento, Appunto, Attesa, Attivita, Invio, NotaGiorno,
 from sqlalchemy import event, func, select  # noqa: E402
 
 A.app.config['TESTING'] = True
+PM.segui(A.app)
 A.Sessione = seed.popola('sqlite:///' + os.path.join(PROVVISORIA, 'prove.db'))
 accessi.prepara_registro(PROVVISORIA)
 accessi.sessioni.carica(PROVVISORIA)
@@ -1128,7 +1130,10 @@ def q_prese_vere():
             occupata.bind(('0.0.0.0', 0))
             occupata.listen(1)
             assert not accessi.ascolto.accendi(A.app, occupata.getsockname()[1])
-            assert 'già usata' in accessi.ascolto.errore, accessi.ascolto.errore
+            # revisione del 22/11: resta in ascolto la porta di prima, quindi l'errore va solo nel messaggio della volta,
+            # non nel riquadro rosso della pagina (che restava per sempre sotto «Acceso»). Il gemello è all'avvio, sotto
+            assert 'già usata' in accessi.ascolto.errore_cambio and not accessi.ascolto.errore, \
+                (accessi.ascolto.errore_cambio, accessi.ascolto.errore)
         assert accessi.ascolto.acceso() and get_vero(porta_r, '/oggi')[0] == 302, 'spento l\'ascolto di prima'
         porta_2 = porta_libera()
         assert accessi.ascolto.accendi(A.app, porta_2), accessi.ascolto.errore
@@ -1458,8 +1463,10 @@ import aggiornamenti
 aggiornamenti.INDIRIZZO_PREDEFINITO = ''               # nessuna prova va su internet
 import accessi
 accessi.PAUSA_AVVIO = 0.3                              # all'avvio, con la porta della rete occupata, si riprova subito
-import app
-app.principale()
+# app.py gira come «__main__», come nell'eseguibile e con «python app.py» (revisione del 22/11, grave: con «import app»
+# le prove non vedevano la seconda copia di app.py caricata dal primo «from app import» di accessi.py)
+import os, runpy
+runpy.run_path(os.path.join(%(cartella)r, 'app.py'), run_name='__main__')
 """
 
 
@@ -1553,6 +1560,96 @@ def ferma(p):
             p.wait(10)
 
 
+def y_come_l_eseguibile():
+    """Revisione del 22/11 (grave): nell'eseguibile app.py gira come «__main__», e il primo «from app import» di accessi.py
+    caricava una seconda copia di app.py, che rifaceva i collega() con Sessione=None: da lì TUTTO rispondeva 500, anche
+    sul PC della segreteria. Partiva in tre casi: la pagina Aree e accessi; con la rete spenta una richiesta del portiere
+    (X-Forwarded-For, il Modo schermo di Caddy); con la rete accesa una richiesta da un altro PC. Qui il programma vero
+    come «__main__» (come l'eseguibile e «python app.py»), i tre casi, e dopo ognuno Oggi, Pazienti, Cassa e Impostazioni
+    dal PC: 200. Il gemello è il primo giro di Oggi, prima di tutto."""
+    altro_pc = indirizzo_di_un_altro_pc()
+    assert altro_pc, 'nessun indirizzo di questo PC fuori da 127.*: non si può provare l\'arrivo da un altro PC'
+    base = os.path.join(PROVVISORIA, 'come-eseguibile')
+    os.makedirs(base)
+    porta_p, porta_r = porta_libera(), porta_libera()
+    p = avvia_vero(base, porta_p)
+    pc = Navigatore(porta_p)
+    giri = []
+
+    def tutto_risponde(dopo):
+        for percorso in ('/oggi', '/pazienti', '/cassa/listino', '/impostazioni'):
+            s = pc.chiedi('GET', percorso)[0]
+            assert s == 200, 'dopo %s: %s dal PC risponde %s' % (dopo, percorso, s)
+        giri.append(dopo)
+    try:
+        tutto_risponde('l\'avvio')                                   # il gemello: prima di tutto
+        s, _, t = pc.chiedi('GET', '/configura/accessi')
+        assert s == 200 and 'Accesso dagli altri PC' in t, ('la pagina Aree e accessi', s)
+        tutto_risponde('la pagina Aree e accessi')
+        s = get_vero(porta_p, '/riepilogo-live?schermo=1', {'X-Forwarded-For': '192.168.1.50'})[0]
+        assert s == 200, ('con la rete spenta il Modo schermo dietro il portiere', s)
+        tutto_risponde('una richiesta del portiere con la rete spenta')
+        for _ in range(3):
+            pc.chiedi('POST', '/configura/accessi', {'azione': 'rete', 'accesa': '1', 'porta': str(porta_r)})
+            if 'Acceso</b>, sulla porta %d' % porta_r in pc.chiedi('GET', '/configura/accessi')[2]:
+                break
+            porta_r = porta_libera()
+        # revisione del 22/11 (firewall): la pagina dice se dagli altri PC arriva qualcosa. Una richiesta da questo PC
+        # sulla porta della rete non conta (gemello); una dall'indirizzo di un altro PC sì
+        assert Navigatore(porta_r).chiedi('GET', '/oggi')[0] == 302
+        t = pc.chiedi('GET', '/configura/accessi')[2]
+        assert 'Ancora nessuna richiesta da un altro PC' in t, 'la pagina non dice che dagli altri PC non arriva niente'
+        s, dove_va, _ = Navigatore(porta_r, host=altro_pc, da=altro_pc).chiedi('GET', '/oggi')
+        assert s == 302 and '/accesso' in dove_va, ('dall\'altro PC si chiede l\'accesso', s, dove_va)
+        t = pc.chiedi('GET', '/configura/accessi')[2]
+        assert 'Ultima richiesta da un altro PC' in t and 'da %s.' % altro_pc in t and 'Ancora nessuna' not in t, \
+            'la pagina non dice l\'ultima richiesta da un altro PC'
+        s, _, t = Navigatore(porta_r, host=altro_pc, da=altro_pc).chiedi('GET', '/accesso')
+        assert s == 200 and 'name="password"' in t, ('la pagina di accesso dall\'altro PC', s)
+        tutto_risponde('le richieste da un altro PC')
+    finally:
+        ferma(p)
+    return 'app.py come «__main__»: Oggi, Pazienti, Cassa e Impostazioni 200 dopo %s' % ', '.join(giri)
+
+
+def a_nessun_modulo_importa_app():
+    """Revisione del 22/11 (grave): un modulo del programma che fa «from app import» o «import app» (anche dentro una
+    funzione) carica nell'eseguibile una seconda copia di app.py, che gira come «__main__». Qui i moduli raggiunti dagli
+    import di app.py, e lo stesso per prova.py (il programma di prova): nessuno importa il suo programma. Gemello: lo
+    stesso controllo trova gli «import app» di prova.py e di campagna.py, che sono programmi a sé."""
+    import ast
+    cartella = os.path.dirname(os.path.abspath(__file__))
+    locali = {n[:-3] for n in os.listdir(cartella) if n.endswith('.py')}
+
+    def importati(nome):
+        with open(os.path.join(cartella, nome + '.py'), encoding='utf-8') as f:
+            albero = ast.parse(f.read())
+        uscita = set()
+        for nodo in ast.walk(albero):
+            if isinstance(nodo, ast.Import):
+                uscita.update(a.name.split('.')[0] for a in nodo.names)
+            elif isinstance(nodo, ast.ImportFrom) and nodo.module and not nodo.level:
+                uscita.add(nodo.module.split('.')[0])
+        return uscita & locali
+
+    def raggiunti(inizio):
+        visti, da_fare = set(), [inizio]
+        while da_fare:
+            n = da_fare.pop()
+            for m in importati(n) - visti - {inizio}:
+                visti.add(m)
+                da_fare.append(m)
+        return visti
+    for principale in ('app', 'prova'):
+        moduli = raggiunti(principale)
+        assert 'accessi' in moduli and 'viste' in moduli and len(moduli) > 25, (principale, sorted(moduli))
+        colpevoli = sorted(m for m in moduli if principale in importati(m))
+        assert not colpevoli, 'importano %s (nell\'eseguibile ne caricano una seconda copia): %s' % (principale, colpevoli)
+    assert 'app' in importati('prova') and 'app' in importati('campagna'), 'gemello: il controllo non vede gli import'
+    return '%d moduli del programma e %d della prova: nessuno importa il suo programma' % (
+        len(raggiunti('app')), len(raggiunti('prova')))
+
+
 def y_programma_vero():
     """Il programma vero (app.principale) in un processo a parte, con le sue prese: dalla pagina un utente con Agenda
     da modificare e Cassa da guardare e la rete accesa; dall'indirizzo non di loopback di questo PC (come un altro PC)
@@ -1623,9 +1720,14 @@ def y_programma_vero():
         pc.chiedi('POST', '/configura/accessi', {'azione': 'rete', 'porta': str(porta_r)})
         assert chiusa(altro_pc, porta_r, da=altro_pc) and chiusa('127.0.0.1', porta_r), 'spenta, la porta risponde'
         assert pc.chiedi('GET', '/oggi')[0] == 200
-        # riaccesa, il programma chiuso e riaperto con la porta della rete occupata da un altro programma
+        # riaccesa: chi era entrato è uscito con lo spegnimento (revisione del 22/11) e rientra con nome e password; poi
+        # il programma chiuso e riaperto con la porta della rete occupata da un altro programma
         pc.chiedi('POST', '/configura/accessi', {'azione': 'rete', 'accesa': '1', 'porta': str(porta_r)})
-        assert rete_.chiedi('GET', '/oggi')[0] == 200, 'riaccesa: chi era entrato è ancora dentro'
+        s, dove_va, _ = rete_.chiedi('GET', '/oggi')
+        assert s == 302 and '/accesso' in dove_va, ('spenta e riaccesa: chi era entrato è ancora dentro', s, dove_va)
+        s, dove_va, _ = rete_.chiedi('POST', '/accesso', {'nome': 'Rete Esempietti', 'password': 'barca verde nel lago'})
+        assert s == 302 and dove_va.endswith('/oggi'), ('di nuovo dentro', s, dove_va)
+        assert rete_.chiedi('GET', '/oggi')[0] == 200
         time.sleep(accessi.SALVA_SESSIONI_OGNI + 1)  # le sessioni nuove si scrivono nel file al più qualche secondo dopo
         ferma(p)
         occupata = socket.socket()
@@ -1821,9 +1923,10 @@ def z_cassa_solo_con_la_cassa():
             assert (pezzo in t) == voluto, '%s: %s %s' % (nome, pezzo, 'manca' if voluto else 'c\'è')
     t = locale().get('/chiusura/%s?struttura=%d' % (ieri, a.sid)).get_data(as_text=True)
     assert 'non ancora incassati' in t and 'Cassa del giorno' in t, 'gemello: dal PC la chiusura ha la cassa'
-    # in Statistiche e report importi e pazienti restano (domanda per Giovanni): la pagina degli accessi lo dice
+    # in Statistiche e report (predefinito deciso dopo, z_nv_statistiche_e_report): la pagina degli accessi dice la regola
     pagina = locale().get('/configura/accessi').get_data(as_text=True)
-    assert 'nomi e telefoni dei pazienti, importi e incassi' in pagina, 'la pagina non dice cosa c\'è in Statistiche'
+    assert 'i nomi dei pazienti solo con Pazienti o Agenda, gli importi solo con la Cassa' in pagina, \
+        'la pagina non dice cosa resta in Statistiche'
     return 'stampa, elenco, Excel ed esportazione del giorno, chiusura: importi e convenzioni solo con la Cassa'
 
 
@@ -2359,6 +2462,524 @@ def z_excel_troppo_compresso():
         'le righe oltre il massimo non si contano'
     return 'la bomba (%d KB) rifiutata in %.2f s, anche da tariffari e strutture; %d Excel veri letti come prima' % (
         len(bomba) // 1024, durata, len(file))
+
+
+# ======================================== la revisione dei tre revisori, i 14 problemi del secondo giro (22/11, sera)
+def per(endpoint, **argomenti):
+    with A.app.test_request_context():
+        from flask import url_for
+        return url_for(endpoint, **argomenti)
+
+
+def moduli_post(t):
+    """[(tag, azione)] dei <form method="post"> della pagina."""
+    uscita = []
+    for m in re.finditer(r'<form\b[^>]*>', t, re.I):
+        tag = m.group(0)
+        if (accessi._attributo(tag, 'method') or 'get').lower() == 'post':
+            uscita.append((tag, accessi._attributo(tag, 'action')))
+    return uscita
+
+
+def z_nv_scheda_paziente_senza_segreteria():
+    """Problema 1: chi ha solo i Pazienti leggeva nella scheda le cose da fare e la lista d'attesa (dati della
+    Segreteria) e trovava «Ricordami di… Aggiungi» e «Metti in lista d'attesa», che rispondevano 403 perdendo il testo.
+    Ora niente; gemelli: con la Segreteria da modificare ci sono, e sul PC pure."""
+    valori = dati_per_le_pagine()
+    s = A.Sessione()
+    s.add(Attesa(paziente_id=valori['pid'], struttura_id=1, note='attesa di prova Fintini'))
+    s.commit()
+    s.close()
+    ospiti(('Pazienti Guarda', {'pazienti': 'guarda'}), ('Pazienti Modifica', {'pazienti': 'modifica'}),
+           ('Pazienti Segreteria', {'pazienti': 'modifica', 'segreteria': 'modifica'}))
+    pezzi = ('Richiamare per il referto', 'In lista d\'attesa dal', 'Metti in lista d\'attesa',
+             'action="%s"' % per('segreteria.cose_da_fare'))
+    url = '/pazienti/%d' % valori['pid']
+    for nome, ip in (('Pazienti Guarda', '192.168.1.201'), ('Pazienti Modifica', '192.168.1.202')):
+        t = testo(chiedi(dentro_come(nome, ip), 'GET', url))
+        assert 'Esempietti' in t, (nome, 'la scheda non si apre')
+        dentro = [x for x in pezzi if x in t]
+        assert not dentro, '%s legge o trova della Segreteria: %s' % (nome, dentro)
+    t = testo(chiedi(dentro_come('Pazienti Segreteria', '192.168.1.203'), 'GET', url))
+    assert all(x in t for x in pezzi), 'gemello: con la Segreteria ci sono'
+    t = locale().get(url).get_data(as_text=True)
+    assert all(x in t for x in pezzi), 'gemello: sul PC ci sono'
+    return 'cose da fare, lista d\'attesa, «Ricordami di…» e «Metti in lista d\'attesa» solo con la Segreteria'
+
+
+def z_nv_ricerca_dei_pazienti_ridotta():
+    """Problema 2: chi cercava i pazienti da Dove si fa (o dalla Segreteria) senza Pazienti né Agenda riceveva
+    l'anagrafica intera (codice fiscale, indirizzo, email, prossimo appuntamento). Ora solo nome, nascita e telefono.
+    Per tutte le aree e i due livelli: la ricerca risponde 403, oppure dà l'anagrafica intera solo con Pazienti o Agenda.
+    Gemelli: con l'Agenda e sul PC l'anagrafica intera."""
+    valori = dati_per_le_pagine()
+    s = A.Sessione()
+    p = s.get(Paziente, valori['pid'])
+    p.codice_fiscale, p.indirizzo = 'SMPCNR80A01F839X', 'Via Inventata 1, Napoli'
+    s.commit()
+    s.close()
+    ridotte = {'id', 'cognome', 'nome', 'telefono', 'nascita', 'nascita_iso'}
+    voci, n = [], 0
+    for a in accessi.CODICI_AREE:
+        for lv in accessi.LIVELLI_VALIDI:
+            voci.append(('Cerca %s %s' % (a, lv), {a: lv}))
+    voci.append(('Cerca dove e agenda', {'dove': 'modifica', 'agenda': 'modifica'}))
+    ospiti(*voci)
+    for nome, aree in voci:
+        n += 1
+        r = chiedi(dentro_come(nome, '192.168.2.%d' % n), 'GET', '/pazienti/cerca?q=Esempietti')
+        intera = 'pazienti' in aree or 'agenda' in aree and aree['agenda'] == 'modifica'
+        if r.status_code == 403:
+            assert not ('pazienti' in aree or aree.get('agenda') == 'modifica'), (nome, 'ricerca negata a chi la deve avere')
+            continue
+        assert r.status_code == 200 and r.json, (nome, r.status_code)
+        chiavi = set().union(*[set(x) for x in r.json])
+        if intera:
+            assert 'SMPCNR80A01F839X' in r.get_data(as_text=True), (nome, 'gemello: l\'anagrafica intera')
+        else:
+            assert chiavi == ridotte, '%s riceve dalla ricerca %s' % (nome, sorted(chiavi - ridotte))
+            assert 'SMPCNR' not in r.get_data(as_text=True) and 'Inventata' not in r.get_data(as_text=True)
+    r = locale().get('/pazienti/cerca?q=Esempietti')
+    assert 'SMPCNR80A01F839X' in r.get_data(as_text=True) and 'Inventata' in r.get_data(as_text=True), \
+        'gemello: sul PC l\'anagrafica intera'
+    return '%d utenti, ogni area nei due livelli: anagrafica intera solo con Pazienti o Agenda' % len(voci)
+
+
+def z_nv_listino_solo_con_la_cassa():
+    """Problema 3: con le sole Anagrafiche da modificare si leggeva e cambiava il prezzo di listino della prestazione, e
+    si vedeva il tariffario del medico (dati della Cassa). Ora il campo c'è solo a chi può cambiare la Cassa e il prezzo
+    non cambia; il tariffario solo con la Cassa. Gemelli: con Anagrafiche e Cassa da modificare, e sul PC."""
+    s = A.Sessione()
+    prest = s.scalars(select(Prestazione).order_by(Prestazione.id)).first()
+    prest.tariffa_cent = 8000
+    pid, nome_p, durata = prest.id, prest.nome, prest.durata_min
+    oid = s.scalars(select(Operatore).order_by(Operatore.id)).first().id
+    s.commit()
+    s.close()
+    ospiti(('Anagrafiche Sole', {'configura': 'modifica'}),
+           ('Anagrafiche Cassa Guarda', {'configura': 'modifica', 'cassa': 'guarda'}),
+           ('Anagrafiche Cassa', {'configura': 'modifica', 'cassa': 'modifica'}))
+    url = per('anagrafiche.prestazione', pid=pid)
+    medico = per('anagrafiche.medico', oid=oid)
+    tariffari = per('tariffari.elenco')
+
+    def prezzo():
+        s = A.Sessione()
+        try:
+            return s.get(Prestazione, pid).tariffa_cent
+        finally:
+            s.close()
+    for nome, ip in (('Anagrafiche Sole', '192.168.1.211'), ('Anagrafiche Cassa Guarda', '192.168.1.212')):
+        c = dentro_come(nome, ip)
+        t = testo(chiedi(c, 'GET', url))
+        assert nome_p in t and 'name="tariffa"' not in t and 'Prezzo di listino' not in t, (nome, 'il prezzo di listino')
+        # il tariffario del medico: solo con la Cassa (da guardare basta: si legge anche in Cassa → Tariffari)
+        assert (tariffari in testo(chiedi(c, 'GET', medico))) == (nome == 'Anagrafiche Cassa Guarda'), \
+            (nome, 'il tariffario del medico')
+        r = chiedi(c, 'POST', url, data={'nome': nome_p, 'durata': str(durata), 'tariffa': '1,00'})
+        assert r.status_code == 302 and prezzo() == 8000, (nome, r.status_code, prezzo())
+    c = dentro_come('Anagrafiche Cassa', '192.168.1.213')
+    t = testo(chiedi(c, 'GET', url))
+    assert 'name="tariffa"' in t and tariffari in testo(chiedi(c, 'GET', medico)), 'gemello: con la Cassa ci sono'
+    r = chiedi(c, 'POST', url, data={'nome': nome_p, 'durata': str(durata), 'tariffa': '90,00'})
+    assert r.status_code == 302 and prezzo() == 9000, ('gemello: con la Cassa il prezzo cambia', prezzo())
+    t = locale().get(url).get_data(as_text=True)
+    assert 'name="tariffa"' in t and tariffari in locale().get(medico).get_data(as_text=True), 'gemello: sul PC'
+    return 'prezzo di listino e tariffario solo con la Cassa; con le sole Anagrafiche il prezzo resta 80,00'
+
+
+def intervento_in_sala():
+    s = A.Sessione()
+    sala_ = s.scalars(select(Risorsa).where(Risorsa.tipo == 'SALA_OPERATORIA').order_by(Risorsa.id)).first()
+    medico = s.scalars(select(Operatore).order_by(Operatore.id)).first()
+    p = s.scalars(select(Paziente).order_by(Paziente.id)).first()
+    giorno = date.today() + timedelta(days=200 + conta(Appuntamento) % 100)
+    inizio = datetime.combine(giorno, datetime.min.time()).replace(hour=8)
+    a = Appuntamento(risorsa_id=sala_.id, operatore_id=medico.id, paziente_id=p.id, inizio=inizio,
+                     fine=inizio + timedelta(minutes=60), stato='PRENOTATO')
+    s.add(a)
+    s.commit()
+    aid, sid = a.id, sala_.struttura_id
+    s.close()
+    return aid, giorno, sid
+
+
+def z_nv_checklist_solo_guardare():
+    """Problema 4: con la Sala in «solo guardare» le caselle della checklist si spuntavano, e la pagina diceva «il
+    programma non risponde», che non è vero. Ora sono spente; e il 403 dice il suo motivo nel JSON (gestionale.js lo
+    mostra: si prova nel browser in prove_accessi_browser.py). Gemelli: con la Sala da modificare e sul PC si spuntano."""
+    aid, giorno, sid = intervento_in_sala()
+    ospiti(('Sala Guarda', {'sala': 'guarda'}), ('Sala Modifica', {'sala': 'modifica'}))
+    url = '/sala/%s?struttura=%d' % (giorno.isoformat(), sid)
+
+    def caselle(t):
+        return re.findall(r'<input type="checkbox" name="spunte"[^>]*>', t)
+    g = dentro_come('Sala Guarda', '192.168.1.221')
+    t = testo(chiedi(g, 'GET', url))
+    assert caselle(t) and all(' disabled' in x for x in caselle(t)), ('caselle spuntabili in solo guardare', caselle(t)[:2])
+    r = chiedi(g, 'POST', '/appuntamento/%d/checklist' % aid, data={'voce': 'x', 'fatto': '1'},
+               headers={'X-Richiesta': 'fetch', 'Origin': RETE})
+    assert r.status_code == 403 and 'solo guardare' in (r.json or {}).get('errore', ''), (r.status_code, r.data[:200])
+    for t in (testo(chiedi(dentro_come('Sala Modifica', '192.168.1.222'), 'GET', url)), locale().get(url).get_data(as_text=True)):
+        assert caselle(t) and not [x for x in caselle(t) if ' disabled' in x], 'gemello: le caselle si spuntano'
+    return '%d caselle spente in solo guardare; il 403 dice «solo guardare» nel JSON' % len(caselle(testo(chiedi(g, 'GET', url))))
+
+
+def z_nv_scarica_degli_ambulatori():
+    """Problema 5: chi ha solo Ambulatori trovava nelle tendine «La sala operatoria in Excel», «Ambulatori e sala in
+    Excel» e «Tutte le esportazioni», che rispondevano 403 (sono di Statistiche e report). Ora non ci sono; gemelli: con
+    Statistiche e report e sul PC ci sono. Le voci degli Ambulatori restano."""
+    _, _, sid = intervento_in_sala()
+    ospiti(('Ambulatori Soli', {'ambulatori': 'guarda'}), ('Ambulatori Statistiche', {'ambulatori': 'guarda', 'statistiche': 'guarda'}))
+    lunedi = date.today() - timedelta(days=date.today().weekday())
+    pagine = ('/ambulatori/settimana/%s?struttura=%d' % (lunedi.isoformat(), sid),
+              '/ambulatori/mese/%s?struttura=%d' % (OGGI[:7], sid))
+
+    def corpo(t):                           # il menu (_menu.html) non si tocca fino alla tappa 2: solo la pagina
+        return t[t.index('<main id="principale">'):]
+    soli = dentro_come('Ambulatori Soli', '192.168.1.231')
+    stat = dentro_come('Ambulatori Statistiche', '192.168.1.232')
+    for url in pagine:
+        t = corpo(testo(chiedi(soli, 'GET', url)))
+        assert chiedi(soli, 'GET', url).status_code == 200 and '/esportazioni' not in t, (url, 'voci che portano al 403')
+        assert '.xlsx' in t, (url, 'le voci degli Ambulatori sono sparite')
+        for t2 in (testo(chiedi(stat, 'GET', url)), locale().get(url).get_data(as_text=True)):
+            assert '/esportazioni' in corpo(t2), (url, 'gemello: con Statistiche e report le voci ci sono')
+    for x in re.findall(r'href="(/[^"]+\.xlsx[^"]*)"', corpo(testo(chiedi(soli, 'GET', pagine[0])))):
+        assert chiedi(soli, 'GET', x.replace('&amp;', '&')).status_code == 200, x
+    return 'settimana e mese: niente esportazioni di Statistiche e report a chi ha solo Ambulatori; i suoi Excel si scaricano'
+
+
+def z_nv_moduli_spenti_a_chi_guarda():
+    """Problema 6: con «solo guardare» i bottoni per salvare restavano, e il clic portava al 403 perdendo quello che si
+    era scritto. Ora ogni <form method="post"> che l'utente non può salvare porta data-solo-guardare (gestionale.js ne
+    spegne campi e bottoni: nel browser in prove_accessi_browser.py). Oracolo: per ogni area, in «solo guardare» e in
+    «modificare», ogni modulo di ogni sua pagina è segnato se e solo se la guardia rifiuterebbe il suo salvataggio
+    (decisione(), senza far girare la pagina). Sul PC nessun modulo è mai segnato."""
+    valori = dati_per_le_pagine()
+    intervento_in_sala()
+    voci = [('Moduli %s %s' % (a, lv), {a: lv}) for a in accessi.CODICI_AREE for lv in accessi.LIVELLI_VALIDI]
+    ospiti(*voci)
+    segnati, liberi, sbagliati, n = 0, 0, [], 0
+    for nome, aree in voci:
+        n += 1
+        ip = '192.168.3.%d' % n
+        c = dentro_come(nome, ip)
+        cookie = cookie_di(nome)
+        area = next(iter(aree))
+        for regola in A.app.url_map.iter_rules():
+            cens = accessi.CENSIMENTO[regola.endpoint]
+            if 'GET' not in regola.methods or cens != area:
+                continue
+            url = indirizzo(regola, valori)
+            r = chiedi(c, 'GET', url)
+            if r.status_code != 200 or r.mimetype != 'text/html':
+                continue
+            for tag, azione in moduli_post(testo(r)):
+                azione = azione or url
+                try:
+                    endpoint, _ = A.app.url_map.bind('x').match(azione.split('?')[0], method='POST')
+                except Exception:
+                    continue
+                if endpoint in accessi.ANCHE_PER or endpoint in accessi.SISTEMA_DENTRO:
+                    continue                            # la guardia guarda anche i campi
+                d = decisione('POST', azione, cookie)
+                negato = d is not None and d[0] == 403
+                segnato = 'data-solo-guardare=' in tag
+                segnati += segnato
+                liberi += not segnato
+                if segnato != negato:
+                    sbagliati.append((nome, url, azione, segnato, d[0] if d else None))
+    assert not sbagliati, '%d moduli segnati male: %s' % (len(sbagliati), sbagliati[:5])
+    assert segnati >= 30 and liberi >= 30, (segnati, liberi)
+    pc = 0
+    for url in ('/appuntamento/%d' % valori['aid'], '/pazienti/%d' % valori['pid'], '/cassa/listino', '/conferme',
+                '/giorno/%s' % OGGI, '/anagrafiche/prestazioni/1'):
+        t = locale().get(url).get_data(as_text=True)
+        pc += len(moduli_post(t))
+        assert 'data-solo-guardare' not in t, ('sul PC un modulo segnato', url)
+    assert pc >= 5, pc
+    return '%d moduli segnati e %d liberi, tutti come la guardia; sul PC %d moduli, nessuno segnato' % (segnati, liberi, pc)
+
+
+def z_nv_appunti_solo_con_la_segreteria():
+    """Problema 7: chi ha solo l'Agenda vedeva nella griglia del giorno (e nell'elenco) gli appunti da confermare della
+    Segreteria, con nome, telefono e nota. Ora no; gemelli: con la Segreteria e sul PC sì."""
+    s = A.Sessione()
+    s.add(Appunto(testo='Appunto di prova Fintini', giorno=date.today(), cognome='Appuntati', nome='Prova',
+                  telefono='3331110099', struttura_id=1))
+    s.commit()
+    s.close()
+    ospiti(('Agenda Sola', {'agenda': 'guarda'}), ('Agenda Segreteria', {'agenda': 'guarda', 'segreteria': 'guarda'}))
+    sola = dentro_come('Agenda Sola', '192.168.1.241')
+    con = dentro_come('Agenda Segreteria', '192.168.1.242')
+    for url in ('/giorno/%s' % OGGI, '/giorno/%s/elenco' % OGGI):
+        t = testo(chiedi(sola, 'GET', url))
+        assert 'Agenda' and 'Da confermare per questo giorno' not in t and '3331110099' not in t, (url, 'appunti a chi ha solo l\'Agenda')
+        for t2 in (testo(chiedi(con, 'GET', url)), locale().get(url).get_data(as_text=True)):
+            assert 'Da confermare per questo giorno' in t2 and '3331110099' in t2, (url, 'gemello: gli appunti ci sono')
+    return 'griglia ed elenco del giorno: appunti da confermare solo con la Segreteria'
+
+
+def z_nv_copia_rimessa():
+    """Problema 9 (medio): una copia di ieri rimessa riportava indietro utenti, password, aree e accensione della rete,
+    senza dirlo (chi era stato spento rientrava con la password di ieri). Decisione (piano/ESECUZIONE.md): gli accessi
+    non tornano indietro con la copia. Dalle Impostazioni (ripristino) e dopo una riparazione (app.dopo_riparazione,
+    dal file accessi-rete.json) e all'avvio (copia_rimessa). Gemelli: i dati della clinica tornano indietro davvero (la
+    nota del giorno scritta dopo la copia sparisce); senza il file la rete resta spenta."""
+    import backup
+    ospiti(('Copia Esempietti', {'agenda': 'modifica'}))
+    imposta(rete_accesa='1')
+    c = locale()
+    s = A.Sessione()
+    s.add(NotaGiorno(struttura_id=1, data=date.today() + timedelta(days=300), testo='nota dopo la copia Fintini'))
+    s.commit()
+    s.close()
+    percorso_db = A.Sessione.motore.url.database
+    copia = backup.esegui(percorso_db, os.path.join(PROVVISORIA, 'copie'))
+    # dopo la copia: la nota (dato della clinica) e gli accessi cambiano
+    s = A.Sessione()
+    s.add(NotaGiorno(struttura_id=1, data=date.today() + timedelta(days=301), testo='nota scritta dopo Fintini'))
+    s.commit()
+    s.close()
+    utenti = utenti_salvati()
+    u = accessi.trova(utenti, 'Copia Esempietti')
+    u['attivo'] = False
+    u['hash'] = accessi.generate_password_hash('password di oggi lunga')
+    imposta(rete_utenti=json.dumps(utenti), rete_accesa='')
+    s = A.Sessione()
+    accessi.ricorda(s)
+    prima = accessi.istantanea(s)
+    s.close()
+    imposta(backup_cartella=os.path.join(PROVVISORIA, 'copie'))
+    PM.segna(c)
+    r = c.post('/impostazioni/ripristina', data={'nome': os.path.basename(copia), 'conferma': '1'},
+               headers={'Origin': PC}, base_url=PC)
+    assert r.status_code == 302, r.status_code
+    s = A.Sessione()
+    dopo = accessi.istantanea(s)
+    note = [n.testo for n in s.scalars(select(NotaGiorno))]
+    s.close()
+    assert 'nota scritta dopo Fintini' not in note and 'nota dopo la copia Fintini' in note, 'gemello: la copia non è tornata'
+    assert dopo == prima, 'il ripristino ha riportato indietro gli accessi: %s' % [k for k in prima if prima[k] != dopo[k]]
+    testi = PM.avvisi(c)
+    assert 'Ripristinata la copia' in testi and 'non tornano indietro con la copia' in testi, testi
+    u = accessi.trova(utenti_salvati(), 'Copia Esempietti')
+    assert u['attivo'] is False and leggi('rete_accesa') == '', 'spento oggi: con la copia di ieri rientrerebbe'
+    # la riparazione (il custode): la copia rimessa sopra il database, poi dopo_riparazione, dal file
+    backup.metti_al_posto(copia, percorso_db, A.Sessione.motore)
+    assert leggi('rete_accesa') == '1', 'gemello: la copia aveva la rete accesa'
+    A.dopo_riparazione()
+    s = A.Sessione()
+    assert accessi.istantanea(s) == prima, 'la riparazione ha riportato indietro gli accessi'
+    s.close()
+    # senza il file (non si sa com'erano): la rete resta spenta
+    backup.metti_al_posto(copia, percorso_db, A.Sessione.motore)
+    os.remove(os.path.join(PROVVISORIA, accessi.FILE_RETE))
+    assert accessi.rimetti(A.Sessione, accessi.dal_file()) == 'spenta' and leggi('rete_accesa') == ''
+    # all'avvio con una copia rimessa (autoripara.all_avvio): dal file, scritto con gli accessi di oggi
+    imposta(**prima)
+    s = A.Sessione()
+    accessi.ricorda(s)
+    s.close()
+    backup.metti_al_posto(copia, percorso_db, A.Sessione.motore)
+    accessi.all_avvio(A.app, A.Sessione, PROVVISORIA, prove=0, copia_rimessa=True)
+    s = A.Sessione()
+    try:
+        assert accessi.istantanea(s)['rete_accesa'] == '' and accessi.trova(json.loads(
+            accessi.istantanea(s)['rete_utenti']), 'Copia Esempietti')['attivo'] is False, 'all\'avvio la copia ha vinto'
+    finally:
+        s.close()
+    accessi.ascolto.spegni()
+    return 'ripristino, riparazione e avvio: gli accessi restano quelli di adesso; la nota torna indietro; senza file rete spenta'
+
+
+def z_nv_firewall():
+    """Problema 10 (medio): dopo «Annulla» o «No» Windows crea regole che BLOCCANO il programma, e una regola che blocca
+    vince su quelle che permettono (documentazione di Microsoft): il comando «add rule ... action=allow» da solo non apriva
+    niente. Ora la pagina spiega il blocco e, per l'assistenza, dà il comando che toglie tutte le regole del programma
+    (con il suo percorso vero) e quello che lo lascia ricevere solo sulla porta della rete, reti private e di dominio.
+    Gemello: senza Annulla non serve niente (punto 1 della pagina)."""
+    cmd = accessi.comandi_firewall(5123, r'C:\Program Files\Gestionale Agende\Gestionale.exe')
+    assert cmd['togli'] == r'netsh advfirewall firewall delete rule name=all program="C:\Program Files\Gestionale Agende\Gestionale.exe"'
+    assert cmd['metti'] == (r'netsh advfirewall firewall add rule name="Gestionale Agende (rete della clinica)" dir=in '
+                            r'action=allow program="C:\Program Files\Gestionale Agende\Gestionale.exe" protocol=TCP '
+                            r'localport=5123 profile=private,domain'), cmd['metti']
+    assert accessi.percorso_programma() == os.path.abspath(sys.executable)
+    t = locale().get('/configura/accessi').get_data(as_text=True)
+    assert 'bloccano</b> il programma' in t and '«Annulla» o «No»' in t, 'la pagina non spiega il blocco'
+    assistenza = t[t.index('id="firewall-assistenza"'):]
+    assistenza = assistenza[:assistenza.index('</details>')]
+    assert 'delete rule name=all program=&#34;' in assistenza or 'delete rule name=all program=&quot;' in assistenza or \
+        'delete rule name=all program="' in assistenza, assistenza[:300]
+    assert 'profile=private,domain' in assistenza and 'Esegui come amministratore' in assistenza
+    assert 'action=allow protocol=TCP localport' not in t, 'il comando di prima, che con le regole di blocco non basta'
+    return 'il blocco spiegato; togli (name=all program=…) e metti (program, porta, private,domain) per l\'assistenza'
+
+
+def z_nv_spegnere_fa_uscire():
+    """Problema 11: spegnere l'accesso dalla pagina non faceva uscire chi era dentro; riacceso entro 4 ore, era di nuovo
+    dentro senza password. Ora spegnere fa uscire tutti (e lo dice). Gemello: senza spegnere chi è dentro resta dentro;
+    un riavvio del programma (sessioni.carica) non fa uscire nessuno."""
+    ospiti(('Dentro Esempietti', {'agenda': 'guarda'}))
+    c = dentro_come('Dentro Esempietti', '192.168.1.251')
+    assert chiedi(c, 'GET', '/oggi').status_code == 200
+    time.sleep(0.1)
+    accessi.sessioni._salva(forza=True)
+    accessi.sessioni.carica(PROVVISORIA)          # come un riavvio
+    assert chiedi(c, 'GET', '/oggi').status_code == 200, 'gemello: dopo un riavvio chi era dentro resta dentro'
+    pc = PM.segna(locale())
+    pc.post('/configura/accessi', data={'azione': 'rete', 'porta': '5080'}, headers={'Origin': PC}, base_url=PC)
+    testi = PM.avvisi(pc)
+    assert 'Chi era entrato è uscito' in testi, testi
+    imposta(rete_accesa='1')
+    r = chiedi(c, 'GET', '/oggi')
+    assert r.status_code == 302 and '/accesso' in r.headers['Location'], ('spenta e riaccesa: ancora dentro', r.status_code)
+    return 'spenta: tutti fuori, e il messaggio lo dice; un riavvio no'
+
+
+def z_nv_porta_occupata_e_riquadro():
+    """Problema 12: con la rete accesa sulla porta A e la B occupata, il riquadro rosso «La porta B è già usata» restava
+    per sempre sotto «Acceso». Ora il riquadro rosso solo se la rete deve essere accesa e non è in ascolto (gemello: lì
+    c'è). L'errore della volta va nel messaggio (q_prese_vere: errore_cambio)."""
+    ascolto = accessi.ascolto
+    salvato = ascolto.errore
+    try:
+        ascolto.errore = 'La porta 5999 è già usata da un altro programma: sceglierne un\'altra.'
+        imposta(rete_accesa='1')
+        t = locale().get('/configura/accessi').get_data(as_text=True)
+        assert 'non in ascolto' in t and 'La porta 5999 è già usata' in t, 'gemello: acceso nelle impostazioni, non in ascolto'
+        imposta(rete_accesa='')
+        t = locale().get('/configura/accessi').get_data(as_text=True)
+        assert 'La porta 5999 è già usata' not in t, 'spenta: il riquadro rosso resta'
+    finally:
+        ascolto.errore = salvato
+    return 'il riquadro rosso solo con la rete accesa e non in ascolto'
+
+
+def z_nv_nuovo_utente_rifiutato():
+    """Problema 13: un nuovo utente rifiutato (password con il nome, nome doppio o non valido) faceva tornare la pagina
+    in cima con il modulo vuoto: nome e 12 scelte da rifare. Ora la pagina torna con quello che si era scritto (tranne la
+    password) e il motivo accanto al modulo; la password del primo accesso si vede mentre la si scrive. Gemello: con una
+    password buona l'utente c'è."""
+    pc = locale()
+    dati = {'azione': 'nuovo', 'nome': 'Ornella Fantasia', 'password': 'Fantasia del mare', 'area_agenda': 'modifica',
+            'area_pazienti': 'modifica', 'area_segreteria': 'modifica', 'area_cassa': 'guarda'}
+    r = pc.post('/configura/accessi', data=dati, headers={'Origin': PC}, base_url=PC)
+    t = testo(r)
+    assert r.status_code == 200 and 'id="errore-nuovo"' in t and 'nome dell&#39;utente' in t, r.status_code
+    modulo = t[t.index('id="nuovo-utente"'):]
+    assert 'value="Ornella Fantasia"' in modulo and 'Fantasia del mare' not in t, 'il nome perso, o la password ripetuta'
+    for area, lv in (('agenda', 'modifica'), ('pazienti', 'modifica'), ('segreteria', 'modifica'), ('cassa', 'guarda')):
+        assert re.search(r'name="area_%s" value="%s" checked' % (area, lv), modulo), (area, 'scelta persa')
+    assert 'action="/configura/accessi#nuovo-utente"' in t and 'id="nuovo-password" type="text"' in t
+    assert accessi.trova(utenti_salvati(), 'Ornella Fantasia') is None
+    dati['password'] = 'conchiglia rossa sul molo'
+    r = pc.post('/configura/accessi', data=dati, headers={'Origin': PC}, base_url=PC)
+    u = accessi.trova(utenti_salvati(), 'Ornella Fantasia')
+    assert r.status_code == 302 and u and u['aree'] == {'agenda': 'modifica', 'pazienti': 'modifica',
+                                                       'segreteria': 'modifica', 'cassa': 'guarda'}, (r.status_code, u)
+    assert ('aperto=%s' % u['id']) in r.headers['Location'], 'il riquadro dell\'utente nuovo non resta aperto'
+    t = pc.get(r.headers['Location'], base_url=PC).get_data(as_text=True)
+    assert re.search(r'<details class="riquadro utente-accessi" id="utente-%s"[^>]* open>' % u['id'], t)
+    return 'rifiutato: nome e quattro parti rimasti, password no, motivo accanto al modulo; buono: aggiunto e aperto'
+
+
+def z_nv_rifiuto_e_pagina_per_la_segreteria():
+    """Problema 14: la pagina 403 mandava a «Configura → Aree e accessi», che nel menu non c'è; nella pagina, in mezzo
+    alle scelte di tutti i giorni, c'erano Caddy, Caddyfile, netsh e «Altri nomi»; ogni utente era una tabella aperta di 13
+    righe; la barra «Entrato da un altro PC» non aveva stile. Ora: il percorso vero (gemello: in Impostazioni c'è il
+    bottone «Aree e accessi»), le cose da tecnico in riquadri chiusi «Per l'assistenza», gli utenti chiusi con le parti in
+    una riga, la barra con il suo stile in veste.css."""
+    ospiti(('Rifiuto Esempietti', {'agenda': 'guarda'}))
+    c = dentro_come('Rifiuto Esempietti', '192.168.1.252')
+    assert re.search(r'<details class="per-assistenza" open', locale().get('/configura/accessi').get_data(as_text=True)), \
+        'gemello: con altri nomi scritti il loro riquadro resta aperto'
+    imposta(rete_nomi='')
+    t = testo(chiedi(c, 'GET', '/pazienti'))
+    assert 'Configura → Impostazioni → Aree e accessi' in t, 'il percorso della pagina nel rifiuto'
+    assert 'href="%s"' % per('accessi.pagina') in locale().get('/impostazioni').get_data(as_text=True), \
+        'gemello: il percorso è vero (Impostazioni ha il bottone)'
+    assert 'v-utente-rete' in testo(chiedi(c, 'GET', '/oggi'))
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'veste.css'), encoding='utf-8') as f:
+        assert '.v-utente-rete {' in f.read()
+    t = locale().get('/configura/accessi').get_data(as_text=True)
+    chiusi = re.findall(r'<details class="per-assistenza"[^>]*>(.*?)</details>', t, re.S)
+    for parola in ('Caddyfile', 'netsh', 'Altri nomi di questo PC'):
+        fuori = t
+        for x in chiusi:
+            fuori = fuori.replace(x, '')
+        assert parola in t and parola not in fuori, (parola, 'fuori da «Per l\'assistenza»')
+    assert not re.search(r'<details class="per-assistenza" open', t), 'di partenza «Per l\'assistenza» è chiuso'
+    u = accessi.trova(utenti_salvati(), 'Rifiuto Esempietti')
+    m = re.search(r'<details class="riquadro utente-accessi" id="utente-%s"([^>]*)>\s*<summary>(.*?)</summary>' % u['id'], t, re.S)
+    assert m and ' open' not in m.group(1) and 'Agenda (solo guardare)' in m.group(2), m.group(0)[:300] if m else None
+    return 'il percorso vero nel rifiuto; Caddy, netsh e nomi in «Per l\'assistenza»; utenti chiusi; la barra con lo stile'
+
+
+def z_nv_statistiche_e_report():
+    """Decisione rimandata nel primo giro, ora il predefinito (piano/ESECUZIONE.md, Giovanni può cambiarlo): in
+    «Statistiche e report» dagli altri PC nomi, telefoni ed email dei pazienti solo a chi ha anche Pazienti o Agenda,
+    importi e incassi solo a chi ha anche la Cassa, nelle pagine e negli Excel, con le colonne tolte (non vuote). Gemelli:
+    con le aree in più ci sono, sul PC tutto (il PC uguale al ramo principale lo dice confronta_rami)."""
+    import io as _io
+    from openpyxl import load_workbook
+    s = A.Sessione()
+    p = Paziente(cognome='Statistici', nome='Canarino', telefono='3337770011', email='statistici@example.com')
+    s.add(p)
+    s.flush()
+    stanza = s.scalars(select(Risorsa).where(Risorsa.tipo == 'AMBULATORIO').order_by(Risorsa.id)).first()
+    medico = s.scalars(select(Operatore).order_by(Operatore.id)).first()
+    medico.email = medico.email or 'medico.prova@example.com'
+    prest = s.scalars(select(Prestazione).order_by(Prestazione.id)).first()
+    inizio = datetime.combine(date.today(), datetime.min.time()).replace(hour=6, minute=5)
+    while s.scalars(select(Appuntamento.id).where(Appuntamento.risorsa_id == stanza.id, Appuntamento.inizio == inizio)).first():
+        inizio += timedelta(minutes=5)
+    s.add(Appuntamento(risorsa_id=stanza.id, operatore_id=medico.id, prestazione_id=prest.id, paziente_id=p.id,
+                       inizio=inizio, fine=inizio + timedelta(minutes=5), stato='ARRIVATO', importo_cent=12345,
+                       convenzione='Convenzione Inventata', note='richiamare Statistici'))
+    sid = stanza.struttura_id
+    s.commit()
+    s.close()
+    ospiti(('Statistiche Sole', {'statistiche': 'guarda'}),
+           ('Statistiche Cassa', {'statistiche': 'guarda', 'cassa': 'guarda'}),
+           ('Statistiche Pazienti', {'statistiche': 'guarda', 'pazienti': 'guarda'}),
+           ('Statistiche Agenda', {'statistiche': 'guarda', 'agenda': 'guarda'}))
+    def celle(dati):
+        wb = load_workbook(_io.BytesIO(dati))
+        return ' | '.join(str(c.value) for ws in wb.worksheets for r in ws.iter_rows() for c in r if c.value is not None)
+    # per ogni pagina: (indirizzo, cosa dice che ci sono i pazienti, cosa dice che ci sono gli importi); le statistiche
+    # non hanno pazienti (solo numeri)
+    pagine = {
+        'statistiche': ('/statistiche?struttura=%d&dal=%s&al=%s' % (sid, OGGI, OGGI), (),
+                        ('euro indicati', '<th>Importi</th>')),
+        'statistiche.xlsx': ('/statistiche/excel?struttura=%d&dal=%s&al=%s' % (sid, OGGI, OGGI), (),
+                             ('Importi indicati (EUR)', 'Incassati (EUR)', 'Importi (EUR)')),
+        'riepilogo': ('/riepilogo-medici/%s?struttura=%d' % (MESE, sid), ('Statistici',),
+                      ('123,45', 'Convenzione Inventata', 'Importo</th>', 'importi previsti')),
+        'riepilogo.xlsx': ('/riepilogo-medici/%s/excel?struttura=%d' % (MESE, sid),
+                           ('Statistici', '3337770011', 'richiamare Statistici', 'Paziente | Telefono'),
+                           ('123.45', 'Convenzione Inventata', 'Importi previsti', 'Convenzione | Importo')),
+        'giorno.xlsx': ('/esportazioni/giorno/tutto/%s.xlsx?struttura=%d' % (OGGI, sid),
+                        ('Statistici', '3337770011', 'statistici@example.com', 'richiamare Statistici', 'PAZIENTE | TELEFONO'),
+                        ('123.45', 'Convenzione Inventata', 'IMPORTO')),
+    }
+    n = 0
+    for nome, con_paz, con_soldi in (('Statistiche Sole', False, False), ('Statistiche Cassa', False, True),
+                                     ('Statistiche Pazienti', True, False), ('Statistiche Agenda', True, False),
+                                     (None, True, True)):
+        c = locale() if nome is None else dentro_come(nome, '192.168.4.%d' % (n + 1))
+        n += 1
+        for chiave, (url, di_pazienti, di_soldi) in pagine.items():
+            r = chiedi(c, 'GET', url)
+            assert r.status_code == 200, (nome, url, r.status_code)
+            testi = celle(r.data) if chiave.endswith('.xlsx') else testo(r)
+            for x in di_pazienti:
+                assert (x in testi) == con_paz, (nome or 'PC', chiave, x, 'gemello: ci sono' if con_paz else 'pazienti')
+            for x in di_soldi:
+                assert (x in testi) == con_soldi, (nome or 'PC', chiave, x, 'gemello: ci sono' if con_soldi else 'importi')
+    return 'pagine ed Excel di Statistiche e report: pazienti con Pazienti o Agenda, importi con la Cassa, colonne tolte'
+
 
 if __name__ == '__main__':
     for nome, f in sorted((k, v) for k, v in dict(globals()).items() if re.match(r'[a-z]_', k) and callable(v)):

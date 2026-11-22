@@ -414,6 +414,10 @@ def statistiche_excel():
     dal, al = periodo_statistiche()
     d = servizi.statistiche(s, st.id, dal, al)
     from comune import apri_foglio_excel, imposta_stampa_excel, tabella_excel, FORMATO_DATA, FORMATO_EURO
+    import accessi
+    # dagli altri PC (accessi.py, «Statistiche e report», predefinito del 22/11) importi e incassi solo a chi ha la Cassa:
+    # le loro righe e colonne non ci sono (non vuote). Sul PC il file di sempre
+    con_cassa = accessi.puo('cassa')
     wb = Workbook()
     periodo = 'dal %s al %s' % (dal.strftime('%d/%m/%Y'), al.strftime('%d/%m/%Y'))
     CON_TOTALI = ('Stanze', 'Medici', 'Prestazioni', 'Giorni', 'Indirizzati')
@@ -446,20 +450,22 @@ def statistiche_excel():
         ['Struttura', st.nome], ['Dal', dal], ['Al', al],
         ['Appuntamenti', d['appuntamenti']], ['Disdetti', d['disdetti']],
         ['Non presentati', d['non_presentati']],
-        ['Ore di turno', ore(d['capacita'])], ['Ore prenotate', ore(d['prenotati'])],
-        ['Importi indicati (EUR)', d['importo_cent'] / 100.0], ['Incassati (EUR)', d['incassato_cent'] / 100.0],
+        ['Ore di turno', ore(d['capacita'])], ['Ore prenotate', ore(d['prenotati'])]] +
+        ([['Importi indicati (EUR)', d['importo_cent'] / 100.0], ['Incassati (EUR)', d['incassato_cent'] / 100.0]]
+         if con_cassa else []) + [
         ['Pazienti nuovi', d['pazienti_nuovi']],
     ], primo=True)
+    cassa = (lambda x: x) if con_cassa else (lambda x: x[:-1])       # l'ultima colonna, gli importi
     foglio('Stanze', ['Stanza', 'Ore di turno', 'Ore prenotate', 'Saturazione %', 'Appuntamenti'],
            [[x['risorsa'].nome, ore(x['capacita']), ore(x['prenotati']),
              round(x['saturazione'], 1) if x['saturazione'] is not None else None, x['appuntamenti']]
             for x in d['per_stanza']])
-    foglio('Medici', ['Medico', 'Appuntamenti', 'Ore prenotate', 'Ore di turno', 'Disdetti',
-                      'Non presentati', 'Importi (EUR)'],
-           [[m['operatore'].etichetta, m['appuntamenti'], ore(m['minuti']), ore(m['turno_minuti']),
-             m['disdetti'], m['assenti'], m['importo_cent'] / 100.0] for m in d['per_medico']])
-    foglio('Prestazioni', ['Prestazione', 'Appuntamenti', 'Ore', 'Importi (EUR)'],
-           [[p['nome'], p['appuntamenti'], ore(p['minuti']), p['importo_cent'] / 100.0]
+    foglio('Medici', cassa(['Medico', 'Appuntamenti', 'Ore prenotate', 'Ore di turno', 'Disdetti',
+                            'Non presentati', 'Importi (EUR)']),
+           [cassa([m['operatore'].etichetta, m['appuntamenti'], ore(m['minuti']), ore(m['turno_minuti']),
+                   m['disdetti'], m['assenti'], m['importo_cent'] / 100.0]) for m in d['per_medico']])
+    foglio('Prestazioni', cassa(['Prestazione', 'Appuntamenti', 'Ore', 'Importi (EUR)']),
+           [cassa([p['nome'], p['appuntamenti'], ore(p['minuti']), p['importo_cent'] / 100.0])
             for p in d['per_prestazione']])
     foglio('Giorni', ['Giorno', 'Appuntamenti'],
            [[servizi.GIORNI[i], n] for i, n in enumerate(d['per_giorno_settimana'])])
@@ -638,7 +644,15 @@ def ripristina():
     if copia is None:
         flash('Copia non trovata.', 'errore')
         return redirect(url_for('viste.impostazioni'))
+    import accessi
+    # gli accessi dagli altri PC di adesso (1.13): la copia rimessa non li riporta indietro (accessi.rimetti)
+    try:
+        accessi_prima = accessi.istantanea(s)
+    except Exception:
+        logging.exception('accessi prima del ripristino')
+        accessi_prima = accessi.dal_file()        # il database di adesso non si legge: quelli dell'ultimo cambio
     s.close()
+    esito_accessi = None
     with _lucchetto:
         try:
             sicurezza = backup.ripristina(percorso_db, copia['percorso'], motore, cartella)
@@ -652,13 +666,18 @@ def ripristina():
         except Exception as e:
             flash('Ripristino non riuscito: %s' % e, 'errore')
             return redirect(url_for('viste.impostazioni'))
+        try:
+            esito_accessi = accessi.rimetti(fabbrica, accessi_prima)
+        except Exception:
+            logging.exception('accessi dopo il ripristino')
     try:
-        # la copia rimessa puo' avere l'accesso dagli altri PC acceso o spento in un altro modo (1.13)
-        import accessi
         if not current_app.config.get('TESTING'):
             accessi.applica(current_app._get_current_object(), _sessionmaker())
     except Exception:
         logging.exception('accessi dopo il ripristino')
     flash('Ripristinata la copia del %s. Il database di prima è stato salvato come %s.' % (
         copia['quando'].strftime('%d/%m/%Y %H:%M'), os.path.basename(sicurezza)), 'ok')
+    if esito_accessi:
+        flash(accessi.TESTO_RIMESSI if esito_accessi == 'rimessi' else accessi.TESTO_SPENTA % accessi.PERCORSO_PAGINA,
+              'ok' if esito_accessi == 'rimessi' else 'avviso')
     return redirect(url_for('viste.impostazioni'))

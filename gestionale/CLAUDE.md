@@ -201,6 +201,15 @@ temporanea.
 
 ## Regole tecniche da non rompere
 
+- Mai `import app` o `from app import …` da un modulo del programma, nemmeno dentro una funzione (revisione del 22/11,
+  grave): nell'eseguibile, e con `python app.py`, app.py gira come «__main__», e quell'import carica una SECONDA copia di
+  app.py che rifà i `collega()` con `Sessione=None`: da lì tutto risponde 500, anche sul PC della segreteria. Quello che
+  serve del programma (sessione, `LUCCHETTO`, fabbrica delle sessioni, funzioni) arriva con `collega(...)`/`installa(...)`
+  da app.py, come in `viste.collega` e `accessi.installa(app, ses, LUCCHETTO, lambda: Sessione)`. In più app.py, se gira
+  come «__main__», si scrive in `sys.modules['app']` (solo una rete di sicurezza). `prove_accessi.py` lo controlla sui
+  sorgenti (`a_nessun_modulo_importa_app`, anche per prova.py) e avvia il programma vero come «__main__»
+  (`y_come_l_eseguibile`); `strumenti/prove_installato.py` apre «Aree e accessi» sull'eseguibile e poi le pagine di sempre.
+  Le prove e gli strumenti (demo.py, confronta_rami.py…) importano app: loro sono il «__main__».
 - Ogni salvataggio usa il lucchetto condiviso (`LUCCHETTO`); in `invii.py` il lucchetto
   si tiene solo per scrivere nella coda, mai durante l'invio, e la sessione non deve avere
   modifiche in sospeso fuori dal lucchetto.
@@ -371,6 +380,25 @@ temporanea.
   se cambiano server, porta, sicurezza o nome utente senza riscriverla (`invii.casella_cambiata`). Nella prova
   (`prova.py`) l'accesso dalla rete si prova sulla 5085, mai sulla 5080 della clinica né sulle 5000-5009 e 5050-5059,
   con un cookie suo (`prove_prova.py` lo controlla, anche con la prova avviata davvero).
+  Secondo giro della revisione (22/11): una copia rimessa non riporta indietro gli accessi (`CHIAVI_RETE` lette prima del
+  ripristino, o da `accessi-rete.json` accanto al database dopo una riparazione e all'avvio: `istantanea`, `ricorda`,
+  `dal_file`, `rimetti`; ogni salvataggio degli accessi chiama `ricorda`); senza il file la rete resta spenta. Spegnere
+  l'accesso dalla pagina fa uscire tutti (`sessioni.svuota`). Il riquadro rosso della porta solo con la rete accesa e non in
+  ascolto (`AscoltoRete.errore`; l'errore della volta è `errore_cambio`). Firewall: `comandi_firewall` toglie tutte le
+  regole del programma (Windows crea regole di BLOCCO dopo «Annulla»/«No») e mette quella per programma e porta,
+  `profile=private,domain`; la pagina dice l'ultima richiesta arrivata da un altro PC (`ultimo_da_fuori`). «Solo
+  guardare»: `segna_moduli` (in `dopo_la_risposta`, solo dalla rete) mette `data-solo-guardare` su ogni `<form
+  method="post">` che l'utente non può salvare, e `gestionale.js` lo spegne; una pagina nuova non deve fare niente, ma un
+  modulo che salva con `fetch` deve mostrare il motivo del 403 (il JSON `errore`). Pezzi di un'altra parte: cose da fare
+  e lista d'attesa nella scheda del paziente con la Segreteria, appunti del giorno con la Segreteria
+  (`segreteria.appunti_del_giorno`), ricerca dei pazienti intera solo con Pazienti o Agenda (agli altri nome, nascita e
+  telefono), prezzo di listino con `puo_cambiare('cassa')`, tariffario del medico con la Cassa. Statistiche e report
+  (predefinito deciso, piano/ESECUZIONE.md): nomi, telefoni, email e note dei pazienti solo con Pazienti o Agenda
+  (`cruscotto.con_pazienti`, `servizi.esporta_giorno(con_pazienti=)`), importi e incassi solo con la Cassa, colonne tolte
+  (`cruscotto.togli_colonne`), sul PC tutto come prima. Il rifiuto e la pagina d'attesa dicono `PERCORSO_PAGINA`
+  («Configura → Impostazioni → Aree e accessi»: all'unione con la tappa 2 la linguetta). Nella pagina le cose da
+  tecnico stanno in `<details class="per-assistenza">`, gli utenti in `<details>` chiusi (aperto quello appena salvato,
+  `?aperto=`).
 - Popup dell'aggiornamento (dalla 1.12.6): `aggiornamenti.popup_aggiornamento` decide, `_popup_aggiornamento.html` lo
   mostra (incluso in `base.html`); solo con `installato()`, mai nella dashboard (`live.*`), nelle stampe, nella
   guida e nella pagina degli aggiornamenti. Il pulsante è il POST di «Aggiorna adesso», nient'altro.

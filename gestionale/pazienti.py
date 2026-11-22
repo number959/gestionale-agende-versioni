@@ -20,6 +20,7 @@ from sqlalchemy import select, func, update
 from modelli import (Paziente, Appuntamento, Attivita, Attesa, Documento, Appunto, Invio, Indirizzato, STATI_ATTIVI,
                      CANALI, PROVENIENZE, ETICHETTA_PROVENIENZA)
 import servizi
+import accessi
 import codice_fiscale as CF
 from comune import json_sicuro
 
@@ -577,6 +578,14 @@ def cerca_json():
         return json_sicuro([])
     uscita = []
     adesso = datetime.now()
+    # dagli altri PC (accessi.py) l'anagrafica intera solo a chi ha Pazienti o Agenda (la prenotazione la mostra);
+    # a chi la chiede da Dove si fa o dalla Segreteria bastano nome, nascita e telefono (revisione del 22/11: con due
+    # lettere alla volta si leggevano codici fiscali, indirizzi, email e appuntamenti di tutti)
+    if not (accessi.puo('pazienti') or accessi.puo('agenda')):
+        return json_sicuro([{'id': p.id, 'cognome': p.cognome or '', 'nome': p.nome or '', 'telefono': p.telefono or '',
+                             'nascita': p.data_nascita.strftime('%d/%m/%Y') if p.data_nascita else '',
+                             'nascita_iso': p.data_nascita.isoformat() if p.data_nascita else ''}
+                            for p in cerca(s, q, limite=8)])
     for p in cerca(s, q, limite=8):
         prossimo = s.scalars(select(Appuntamento).where(
             Appuntamento.paziente_id == p.id, Appuntamento.inizio >= adesso,
@@ -852,9 +861,12 @@ def _mostra(s, p, campi, possibili):
     if p is not None:
         documenti = s.scalars(select(Documento).where(Documento.paziente_id == p.id)
                               .order_by(Documento.caricato_il.desc(), Documento.id.desc())).all()
-        cose = s.scalars(select(Attivita).where(Attivita.paziente_id == p.id, Attivita.fatto_il == None)
-                         .order_by(Attivita.per_il)).all()
-        attese = s.scalars(select(Attesa).where(Attesa.paziente_id == p.id, Attesa.chiusa_il == None)).all()
+        # dagli altri PC (accessi.py) cose da fare e lista d'attesa sono della Segreteria (revisione del 22/11: chi
+        # aveva solo i Pazienti le leggeva nella scheda)
+        if accessi.puo('segreteria'):
+            cose = s.scalars(select(Attivita).where(Attivita.paziente_id == p.id, Attivita.fatto_il == None)
+                             .order_by(Attivita.per_il)).all()
+            attese = s.scalars(select(Attesa).where(Attesa.paziente_id == p.id, Attesa.chiusa_il == None)).all()
     return render_template('paziente.html', p=p, campi=campi, possibili=possibili,
                            appuntamenti=apps, riepilogo=riepilogo(apps), canali=CANALI,
                            provenienze=PROVENIENZE, documenti=documenti, cose=cose, attese=attese,

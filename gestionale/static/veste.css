@@ -292,3 +292,13 @@ table.v-tabella td small, table.v-tabella .v-testo-piccolo { display: block; }
   .v-barra-comandi, .v-linguette, .v-stampa { display: none; }
   .v-scheda, .v-striscia, .v-tabella-contenitore { box-shadow: none; }
 }
+
+/* ------------------------------------------------------------------ chi è entrato da un altro PC (1.13, accessi.py)
+   La riga sotto il menu, solo dagli altri PC (templates/_utente_rete.html): allineata alla pagina e ai messaggi
+   (.avvisi: 18px di lato), con «Esci» sulla stessa riga. */
+.v-utente-rete {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--v-spazio-3) var(--v-spazio-4);
+  margin: 0; padding: var(--v-spazio-4) 18px 0;
+  font-size: var(--v-car-m); line-height: var(--v-int-m);
+}
+.v-utente-rete form { display: inline; margin: 0; }

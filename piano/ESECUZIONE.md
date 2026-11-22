@@ -93,3 +93,36 @@ letto dal fondo), Excel troppo compressi (`controlla_excel_compresso`, Importa i
 rete, cookie legato al PC, 5 sessioni per utente, password più severe. Domanda per Giovanni (predefinito: come oggi, ma la
 pagina lo dice accanto alla parte): Statistiche e report contiene nomi, telefoni, importi e incassi; togliere i pazienti a
 chi non ha Pazienti o Agenda, e gli importi a chi non ha la Cassa? prenota_appunti resta della Segreteria (è il suo giro).
+Secondo giro della revisione (22/11, sera; ramo `accessi`): i 14 problemi che al primo giro erano arrivati tagliati, ognuno
+riprodotto prima, con la sua prova (`y_come_l_eseguibile`, `a_nessun_modulo_importa_app`, `z_nv_…` in prove_accessi.py), il
+gemello e un mutante su una copia. Il grave: nell'eseguibile (e con «python app.py») app.py gira come «__main__» e il
+primo «from app import» di accessi.py caricava una seconda copia del programma con Sessione=None: tutto 500, anche sul
+PC. Corretto alla causa (`accessi.installa(app, ses, LUCCHETTO, fabbrica)`, nessun modulo importa app) e con la rete di
+sicurezza in app.py (`sys.modules['app']`); regola in gestionale/CLAUDE.md.
+Decisioni di questo giro (predefiniti decisi, Giovanni può cambiarli):
+- *Copia rimessa*: gli accessi dagli altri PC (utenti, password, parti, accensione, porta, schermo, altri nomi) NON tornano
+  indietro con una copia di sicurezza, né con il ripristino dalle Impostazioni né con una riparazione (custode, Controllo
+  del programma, avvio): sono impostazioni di sicurezza, come la chiave dei cookie. Il ripristino lo dice nel messaggio,
+  la riparazione nel diario e nella campanella. Restano quelle di prima del ripristino, o (riparazioni) quelle del file
+  accessi-rete.json accanto al database, fuori dalle copie; se il file non c'è, la rete resta spenta finché la segreteria
+  non controlla. Così chi è stato spento o ha cambiato password oggi non rientra con la copia di ieri. Con una copia di
+  prima della 1.13 gli utenti non spariscono più.
+- *Firewall*: dopo «Annulla»/«No» (o se chi usa il PC non è amministratore) Windows crea regole di BLOCCO per il programma,
+  che vincono sulle regole che permettono (documentazione Microsoft «Windows Firewall rules»). La pagina lo spiega; in «Per
+  l'assistenza» i due comandi: togliere tutte le regole del programma (`delete rule name=all program="…"`, il percorso
+  vero da sys.executable) e mettere quella per programma, TCP e porta, reti private e di dominio. La pagina dice l'ultima
+  richiesta arrivata da un altro PC, o che non ne è arrivata nessuna. Rimandato: il bottone con il consenso di Windows
+  (UAC, ShellExecute «runas») e la lettura del tipo di rete e delle regole di blocco (PowerShell): non si possono provare
+  senza un Windows vero (in Wine netsh e PowerShell non fanno niente).
+- *Spegnere l'accesso* dalla pagina fa uscire tutti; le sessioni restano solo nei riavvii (per esempio «Aggiorna adesso»).
+- *Solo guardare*: i moduli che l'utente non può salvare hanno campi e bottoni spenti, con la spiegazione e una riga in cima
+  alla pagina (per tutte le pagine, dal programma: accessi.segna_moduli + gestionale.js); la guardia resta.
+- *Statistiche e report*: predefinito deciso, Giovanni può cambiarlo. Dagli altri PC i nomi, telefoni ed email dei pazienti
+  (e le note, dove si scrivono nomi) solo a chi ha anche Pazienti o Agenda; importi e incassi solo a chi ha anche la Cassa;
+  nelle pagine e negli Excel (statistiche, riepilogo dei medici con la sua email già scritta, esportazione del giorno), con
+  le colonne tolte, non vuote. Sul PC principale tutto identico. Tolto dalla pagina l'avviso provvisorio: la descrizione
+  della parte dice la regola.
+- *Ricerca dei pazienti*: l'anagrafica intera solo a chi ha Pazienti o Agenda; a chi la usa da Dove si fa o dalla Segreteria
+  bastano nome, nascita e telefono.
+- *Menu*: la voce «Ambulatori → Esportazioni in Excel» del menu porta ancora al 403 a chi non ha Statistiche e report (il menu
+  non si tocca finché la tappa 2 non lo rifà, come deciso nel nucleo); le voci dentro le pagine degli Ambulatori sono tolte.

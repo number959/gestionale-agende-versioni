@@ -1945,7 +1945,8 @@ password» aprono `http://NOME-DEL-PC:5080/riepilogo-live?schermo=1` senza Caddy
   al minuto, `bloccati()` fa un passaggio solo; a un PC bloccato si risponde subito, senza leggere il database.
 - *Accendere e spegnere*: la porta si salva solo se l'ascolto parte (una porta occupata lascia quella di prima e lo
   dice: «già usata da un altro programma», o per Windows «riservata»); mai la 5000 né le 5001-5009. Dopo un ripristino
-  e dopo una riparazione `applica` rimette l'ascolto come dicono le impostazioni rimesse. All'avvio (`all_avvio`, da
+  e dopo una riparazione gli accessi restano quelli di prima (sotto, «Una copia rimessa…») e `applica` rimette l'ascolto
+  come dicono. All'avvio (`all_avvio`, da
   `app.principale` dopo che il PC principale è in ascolto, dentro un try) con la porta ancora occupata si riprova ogni
   mezzo minuto per cinque minuti in un filo a parte, poi lo scrive in *Controllo del programma*: la rete non ferma mai
   l'avvio del PC principale.
@@ -1965,6 +1966,49 @@ password» aprono `http://NOME-DEL-PC:5080/riepilogo-live?schermo=1` senza Caddy
   milioni di celle portava il programma, uno solo anche per il PC della segreteria, oltre 1 GB di memoria.
 - *Nella prova* (`prova.py`) l'accesso dagli altri PC si prova sulla 5085, mai sulla 5080 della clinica né sulle porte
   del programma vero e della prova, con un cookie suo; non si accende da solo all'avvio.
+- *Mai «import app» da un modulo del programma* (revisione del 22/11, grave): nell'eseguibile, e con «python app.py»,
+  app.py gira come «__main__». Il primo «from app import …» dentro accessi.py caricava una seconda copia di app.py, che
+  rifaceva tutti i collega() con Sessione=None: da quel momento ogni pagina rispondeva 500, anche sul PC della
+  segreteria (dopo la pagina «Aree e accessi», una richiesta del portiere o una da un altro PC). Le prove non lo vedevano
+  perché avviavano il programma con «import app». Ora `accessi.installa(app, ses, LUCCHETTO, lambda: Sessione)` riceve
+  quello che serve, come `viste.collega`; in più app.py, se gira come «__main__», si registra anche come «app»
+  (`sys.modules`). `prove_accessi.py` controlla i sorgenti (`a_nessun_modulo_importa_app`: nessun modulo raggiunto
+  dagli import di app.py, o di prova.py, importa il suo programma) e avvia il programma vero come «__main__»
+  (`y_come_l_eseguibile`, e `AVVIO_VERO` con `runpy.run_path(..., run_name='__main__')`).
+- *Una copia rimessa non riporta indietro gli accessi* (decisione del 22/11, piano/ESECUZIONE.md): utenti, password,
+  parti, accensione e porta sono impostazioni di sicurezza, non dati della clinica. Dopo il ripristino dalle
+  Impostazioni restano quelle di prima (`accessi.istantanea` prima, `accessi.rimetti` dopo, e il messaggio lo dice);
+  dopo una riparazione (il custode, *Controllo del programma*, l'avvio) quelle del file `accessi-rete.json` accanto al
+  database, fuori dalle copie, riscritto a ogni cambio (`accessi.ricorda`); senza il file la rete resta spenta finché la
+  segreteria non controlla. In ogni altro momento vale il database (all'avvio il file si riscrive da lì).
+- *Il firewall*: con «Annulla» o «No» alla domanda di Windows (e sempre se chi usa il PC non è amministratore) Windows
+  crea regole che bloccano il programma, e una regola che blocca vince su quelle che permettono (documentazione di
+  Microsoft): il solo «add rule … action=allow» non apriva niente. La pagina lo spiega e, in «Per l'assistenza», dà
+  `netsh advfirewall firewall delete rule name=all program="<percorso del programma>"` (toglie tutte le sue regole, anche
+  quelle che bloccano) e la regola per programma e porta, `profile=private,domain` (`accessi.comandi_firewall`, il
+  percorso da `sys.executable`). Sotto «Acceso» la pagina dice l'ultima richiesta arrivata da un altro PC, o che non ne è
+  arrivata nessuna (`AscoltoRete.ultimo_da_fuori`): con il firewall che blocca, prima diceva solo «Acceso». Il bottone che
+  fa la regola con il consenso di Windows (UAC) non c'è ancora: si fa quando si può provare su un Windows vero.
+- *Solo guardare*: nelle pagine che vanno alla rete ogni `<form method="post">` che l'utente non può salvare prende
+  `data-solo-guardare` (`accessi.segna_moduli`, in `dopo_la_risposta`), e `gestionale.js` ne spegne campi e bottoni con
+  la spiegazione e una riga in cima alla pagina; la guardia resta. Le caselle della checklist della Sala sono spente
+  con `not puo_cambiare('sala')`, e un 403 di uno script mostra il motivo che dà il programma.
+- *Le altre parti dentro le pagine (secondo giro)*: nella scheda del paziente cose da fare e lista d'attesa solo con la
+  Segreteria; la ricerca dei pazienti dà l'anagrafica intera solo a chi ha Pazienti o Agenda (agli altri nome, nascita
+  e telefono); prezzo di listino nella scheda della prestazione solo a chi può cambiare la Cassa, il tariffario del
+  medico solo con la Cassa; gli appunti da confermare nella griglia e nell'elenco del giorno solo con la Segreteria; nelle
+  tendine degli Ambulatori le esportazioni di Statistiche e report solo con quella parte. *Statistiche e report*
+  (predefinito deciso, Giovanni può cambiarlo): nomi, telefoni ed email dei pazienti solo a chi ha anche Pazienti o
+  Agenda, importi e incassi solo con la Cassa, nelle pagine e negli Excel (statistiche, riepilogo dei medici con la sua
+  email già scritta, esportazione del giorno: `servizi.esporta_giorno(con_pazienti=)`, `cruscotto.togli_colonne`), con
+  le colonne tolte e non vuote; sul PC tutto come prima.
+- *La pagina*: spegnere l'accesso fa uscire tutti (le sessioni restano solo nei riavvii); il riquadro rosso di una porta
+  solo se la rete deve essere accesa e non è in ascolto (l'errore della volta va nel messaggio); un nuovo utente
+  rifiutato torna con quello che si era scritto, tranne la password, e il motivo accanto al modulo; le password date
+  dalla segreteria si vedono mentre si scrivono; il rifiuto manda a *Configura → Impostazioni → Aree e accessi*
+  (`PERCORSO_PAGINA`: dopo l'unione con la tappa 2 diventa la linguetta); Caddy, i comandi del firewall e gli altri nomi
+  del PC stanno in riquadri chiusi «Per l'assistenza»; gli utenti sono chiusi, con le parti in una riga; la barra
+  «Entrato da un altro PC» ha il suo stile (`.v-utente-rete` in `veste.css`).
 
 ## Dove stanno i dati
 
@@ -2759,11 +2803,22 @@ la porta, il riavvio con la porta della rete occupata (il PC principale parte, l
 era entrato è ancora dentro). Ogni prova ha il suo gemello, e ogni controllo nuovo è stato provato con un mutante su
 una copia del programma.
 
+Le prove del secondo giro della revisione (22/11, i 14 problemi che il primo giro non aveva visto): `y_come_l_eseguibile`
+(il programma vero come «__main__»: dopo la pagina Aree e accessi, il portiere con la rete spenta e le richieste da un
+altro PC, Oggi, Pazienti, Cassa e Impostazioni rispondono 200; e la pagina dice l'ultima richiesta da un altro PC),
+`a_nessun_modulo_importa_app` e le `z_nv_…`: la scheda del paziente senza la Segreteria, la ricerca ridotta per ogni area
+e livello, prezzo e tariffario con la Cassa, la checklist spenta, le tendine degli Ambulatori, i moduli segnati
+confrontati con la guardia su tutte le pagine di ogni area, gli appunti del giorno, la copia rimessa (ripristino,
+riparazione, avvio), il firewall, lo spegnimento che fa uscire, il riquadro della porta, il nuovo utente rifiutato, il
+rifiuto e la pagina, e Statistiche e report (pagine ed Excel per quattro utenti e il PC).
+
 `prove_accessi_browser.py` (nel browser, sul gestionale di prova): il giro della segreteria, da Impostazioni ad *Aree e
 accessi*, l'accesso acceso su una porta libera, un utente con Agenda da modificare e Cassa da guardare; da un'altra
 scheda sull'indirizzo della rete: password sbagliata, primo accesso, password nuova, la nota del giorno salvata, «Salva il
-listino» che risponde «Solo guardare», Pazienti negata con «Torna alle pagine disponibili», «Esci»; dal PC il registro, «Togli»
-con la domanda, l'accesso spento e la porta chiusa. Alla fine il gestionale di prova torna com'era.
+listino» spento con la riga «Solo guardare», le caselle della checklist della Sala spente, Pazienti negata con «Torna alle
+pagine disponibili», «Esci»; dal PC il registro, «Togli» con la domanda, l'accesso spento e la porta chiusa; prima, un
+utente rifiutato che torna con il nome e le parti scritte, e il motivo di un 403 della checklist nel messaggio. Alla fine il
+gestionale di prova torna com'era.
 
 ## Difetti trovati e corretti
 
@@ -3192,7 +3247,8 @@ falliscono, cioè il difetto c'era davvero.
 | Tre prove nel browser senza `CHROMIUM` (21/11/2026) | `prove_sicurezza_browser.py`, `prove_animazioni.py` (solo nell'animata) e `strumenti/prova_aggiorna_adesso.py` aprivano Chromium senza `executable_path=os.environ.get('CHROMIUM')`, a differenza di tutte le altre prove e degli strumenti delle guide: in una sessione nel cloud dove la libreria Playwright di Python cerca un Chromium più nuovo di quello installato si fermavano dopo un secondo | Aprono Chromium come le altre; senza `CHROMIUM` (su Windows e in `prove.yml`) tutto resta come prima |
 | La «cornice» di `prove_sicurezza_browser.py` che falliva a caso (21/11/2026) | Con le due cartelle provate insieme la prova a volte non vedeva la risposta 403 alla richiesta della cornice da un altro sito: il testo restava giusto, ma Playwright non vedeva né la richiesta né la risposta (6 giri su 14 sotto carico, con una copia della prova che registrava anche le richieste fallite). Chrome fa girare la cornice chiusa in una sandbox in un processo suo, e il modulo partiva appena la cornice era pronta, prima che Playwright la seguisse. Aspettare di più non bastava; e il primo modo di riprovare non serviva, perché riapriva lo stesso indirizzo con la stessa ancora e il browser restava nella stessa pagina, senza rifare l'attacco (lo ha trovato la revisione della 1.12.7). Un difetto della prova, non del programma | Il modulo della cornice parte dopo un secondo (14 giri su 14 sotto lo stesso carico), e senza il 403 visto la prova riprova fino a tre volte, ogni volta da un indirizzo nuovo, con lo stesso criterio di prima (testo uguale e risposta 403; se il testo cambia fallisce subito): con il primo tentativo perso apposta, il secondo rifà l'attacco e vede il 403. Con il controllo della provenienza tolto dal gestionale la prova è rossa, cornice compresa |
 | La prova del thread di `prove_15.py` che falliva a caso (22/11/2026) | `i_thread` aspettava che l'email arrivasse al finto server di posta e subito controllava che nel database fosse «INVIATO»; il thread scrive lo stato un attimo dopo l'invio, e con il computer carico (le due cartelle provate insieme, più altri lavori) l'ha trovata ancora «IN_CORSO» una volta. Un difetto della prova, non del programma | La prova aspetta, fino a 10 secondi, sia l'email sia lo stato scritto; 5 giri di fila con sei processi che occupano il computer, tutti verdi |
-| Accesso dagli altri PC, revisione dei tre revisori (22/11/2026, prima di consegnarlo) | Riprodotti uno per uno, prima di correggerli. Con le sole Anagrafiche, un'assenza o una chiusura mostravano nomi e telefoni degli appuntamenti da spostare (con una chiusura di un anno, tutti); con Agenda, Segreteria o Dove si fa anche solo da guardare la ricerca dei pazienti dava tutta l'anagrafica; senza la Cassa la stampa e l'Excel del giorno, l'elenco e la chiusura mostravano importi e convenzioni; dalla lista d'attesa e dagli appunti la Segreteria cambiava la scheda di un paziente; le Conferme davano 403 alla Segreteria; con la sola Cassa non si incassava con bonifico; chiunque sulla rete, provando nomi sempre nuovi, rendeva lenta per minuti la pagina «Aree e accessi» e riempiva il registro; un .xlsx di 189 KB portava il programma oltre 1 GB di memoria; un PC solo teneva occupati tutti i collegamenti della rete; il cookie valeva da qualsiasi PC; passavano password come «1234567890a» o «clinicaposillipo1»; 40 tentativi insieme ne facevano provare 8; le sessioni di un utente non avevano limite | Ognuna con la sua prova e il suo gemello in `prove_accessi.py` (le prove `z_…`) e un mutante che la fa cadere: lista solo con l'Agenda; ricerca senza i Pazienti solo a chi può prenotare (`RICERCA_PAZIENTI`); importi e convenzioni solo con la Cassa (`con_cassa` nell'Excel del giorno); `aggiorna=puo_cambiare('pazienti')` anche in lista d'attesa e appunti; stato per Agenda o Segreteria, promemoria anche per la Segreteria (`ANCHE_PER`); il modulo di incasso nella cassa del giorno; `Tentativi` con il limite per PC, il tetto alle voci, `bloccati()` in un passaggio, `prenota` sotto il lucchetto, la risposta subito a un PC bloccato; registro raggruppato e letto dal fondo; `controlla_excel_compresso` e Importa da Excel in sola lettura; 12 collegamenti per PC sulla rete; sessione legata al PC, al massimo 5 per utente; password con almeno 6 lettere, 4 diverse, non fatte solo di parole vietate. Statistiche e report: per ora la pagina dice che ci sono pazienti e importi (cosa togliere lo decide Giovanni) |
+| Accesso dagli altri PC, revisione dei tre revisori (22/11/2026, prima di consegnarlo) | Riprodotti uno per uno, prima di correggerli. Con le sole Anagrafiche, un'assenza o una chiusura mostravano nomi e telefoni degli appuntamenti da spostare (con una chiusura di un anno, tutti); con Agenda, Segreteria o Dove si fa anche solo da guardare la ricerca dei pazienti dava tutta l'anagrafica; senza la Cassa la stampa e l'Excel del giorno, l'elenco e la chiusura mostravano importi e convenzioni; dalla lista d'attesa e dagli appunti la Segreteria cambiava la scheda di un paziente; le Conferme davano 403 alla Segreteria; con la sola Cassa non si incassava con bonifico; chiunque sulla rete, provando nomi sempre nuovi, rendeva lenta per minuti la pagina «Aree e accessi» e riempiva il registro; un .xlsx di 189 KB portava il programma oltre 1 GB di memoria; un PC solo teneva occupati tutti i collegamenti della rete; il cookie valeva da qualsiasi PC; passavano password come «1234567890a» o «clinicaposillipo1»; 40 tentativi insieme ne facevano provare 8; le sessioni di un utente non avevano limite | Ognuna con la sua prova e il suo gemello in `prove_accessi.py` (le prove `z_…`) e un mutante che la fa cadere: lista solo con l'Agenda; ricerca senza i Pazienti solo a chi può prenotare (`RICERCA_PAZIENTI`); importi e convenzioni solo con la Cassa (`con_cassa` nell'Excel del giorno); `aggiorna=puo_cambiare('pazienti')` anche in lista d'attesa e appunti; stato per Agenda o Segreteria, promemoria anche per la Segreteria (`ANCHE_PER`); il modulo di incasso nella cassa del giorno; `Tentativi` con il limite per PC, il tetto alle voci, `bloccati()` in un passaggio, `prenota` sotto il lucchetto, la risposta subito a un PC bloccato; registro raggruppato e letto dal fondo; `controlla_excel_compresso` e Importa da Excel in sola lettura; 12 collegamenti per PC sulla rete; sessione legata al PC, al massimo 5 per utente; password con almeno 6 lettere, 4 diverse, non fatte solo di parole vietate. Statistiche e report: deciso nel secondo giro (riga sotto) |
+| Accesso dagli altri PC, secondo giro della revisione (22/11/2026, i 14 problemi che il primo giro non aveva visto) | Nell'eseguibile, e con «python app.py», dopo la pagina «Aree e accessi», una richiesta del portiere o una da un altro PC ogni pagina rispondeva 500, anche sul PC della segreteria (il primo «from app import» di accessi.py caricava una seconda copia di app.py). Poi: la copia di ieri rimessa riportava indietro utenti, password e rete senza dirlo; le istruzioni del firewall dopo «Annulla» non aprivano niente (Windows crea regole di blocco); chi aveva solo i Pazienti vedeva cose da fare e lista d'attesa; da Dove si fa la ricerca dava l'anagrafica intera; con le sole Anagrafiche si cambiava il prezzo di listino; la checklist si spuntava in «solo guardare» con un messaggio falso; voci di «Scarica» e bottoni per salvare che portavano al 403 perdendo quello che si era scritto; gli appunti della Segreteria nella griglia di chi ha solo l'Agenda; spegnere la rete non faceva uscire; l'errore rosso della porta occupata restava per sempre; un utente rifiutato faceva rifare tutto il modulo; il rifiuto mandava a un percorso che nel menu non c'è | `accessi.installa(app, ses, LUCCHETTO, fabbrica)` e app.py registrato come «app» quando gira come «__main__»; prova sui sorgenti e programma vero come «__main__»; gli accessi non tornano indietro con una copia (`accessi-rete.json`, `rimetti`); comandi del firewall per programma (togli tutte le sue regole, poi la regola per la porta) e l'ultima richiesta da un altro PC; ogni pezzo di un'altra parte dietro la sua (`puo`, `puo_cambiare`, ricerca ridotta); i moduli che non si possono salvare segnati e spenti (`segna_moduli`, `gestionale.js`); spegnere = tutti fuori; pagina con quello che si era scritto, «Per l'assistenza», utenti chiusi. Statistiche e report: pazienti con Pazienti o Agenda, importi con la Cassa (predefinito deciso). Ognuna con la sua prova `z_nv_…` (o `y_come_l_eseguibile`) e il suo gemello, e un mutante su una copia |
 | Il clic su «Stampa e scarica» coperto dalla tendina del menu (21/11/2026) | In `prove_112_browser.py`, nell'animata, una volta sola in tutti i giri del 21 novembre, la tendina «Ambulatori» del menu era aperta sopra il pulsante e il clic non arrivava (30 secondi e poi rosso). La causa l'ha trovata la revisione della 1.12.7, ed è della prova: nell'animata la tendina «Stampa e scarica» entra con un'animazione di 0,18 secondi, Playwright vede la voce «non ferma», fa scorrere la pagina per mostrarla e lascia il mouse in cima alla finestra; al clic dopo riporta la pagina in cima, il gruppo «Ambulatori» del menu finisce sotto il mouse fermo e apre la sua tendina sopra il pulsante. Nella normale, senza animazione, non succede | Prima di aprire «Stampa e scarica» la prova porta il mouse in un punto neutro della pagina, dove il menu non può finire, e controlla che nessuna tendina del menu sia aperta; se lo è, lo dice, con la tendina e il perché (mouse sopra, focus dentro o classe «aperto») |
 | Wine non partiva più nelle sessioni nel cloud (21/11/2026) | Wine 9.0 di Ubuntu si chiudeva appena partito, con «free(): invalid pointer», se la variabile `TMPDIR` era impostata, anche a `/tmp`: nella sessione del 21 novembre lo era, il 1° novembre no. `strumenti/wine/costruisci.sh` finiva con un `crea_exe.log` vuoto | `strumenti/wine/ambiente.sh` toglie `TMPDIR` prima di usare Wine, che allora usa `/tmp` da solo |
 

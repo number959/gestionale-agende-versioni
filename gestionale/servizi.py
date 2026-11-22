@@ -1102,7 +1102,7 @@ def di_sala(risorsa):
     return risorsa is not None and risorsa.tipo == SALA
 
 
-def esporta_giorno(ses, g, struttura_id, percorso, parte=None, in_piu=None, con_cassa=True):
+def esporta_giorno(ses, g, struttura_id, percorso, parte=None, in_piu=None, con_cassa=True, con_pazienti=True):
     """Esporta la giornata nel formato dei fogli che l'accettazione usa oggi
     (una colonna doppia per stanza, una riga per fascia), piu' un secondo
     foglio con l'elenco completo, recapiti compresi. Dalla 1.12 con lo stile
@@ -1116,7 +1116,9 @@ def esporta_giorno(ses, g, struttura_id, percorso, parte=None, in_piu=None, con_
     loro appuntamenti); 'tutto' due fogli, Ambulatori e Sala operatoria, piu'
     l'elenco di tutto.
 
-    con_cassa=False (dagli altri PC, chi non ha la Cassa: accessi.py): l'elenco senza convenzione e importo."""
+    con_cassa=False (dagli altri PC, chi non ha la Cassa: accessi.py): l'elenco senza convenzione e importo.
+    con_pazienti=False (dagli altri PC, le esportazioni di Statistiche e report a chi non ha Pazienti né Agenda): il
+    planning senza i nomi dei pazienti, l'elenco senza paziente, telefono, email e note (dove si scrivono nomi)."""
     from openpyxl import Workbook
     vista = griglia(ses, g, struttura_id)
     st = ses.get(Struttura, struttura_id)
@@ -1147,9 +1149,10 @@ def esporta_giorno(ses, g, struttura_id, percorso, parte=None, in_piu=None, con_
     for n, (nome_foglio, colonne_scelte, cosa, mie) in enumerate(fogli):
         ws = wb.active if n == 0 else wb.create_sheet()
         ws.title = nome_foglio
-        _foglio_planning(ws, ses, g, st, vista_sala if cosa == 'sala operatoria' else vista, colonne_scelte, cosa, mie)
+        _foglio_planning(ws, ses, g, st, vista_sala if cosa == 'sala operatoria' else vista, colonne_scelte, cosa, mie,
+                         con_pazienti=con_pazienti)
     _foglio_elenco(wb, ses, g, struttura_id, elenco, titolo_elenco, 'intervent' if parte == 'sala' else 'appuntament',
-                   con_cassa=con_cassa)
+                   con_cassa=con_cassa, con_pazienti=con_pazienti)
     if in_piu is not None:
         in_piu(wb)          # altri fogli dopo l'elenco (le esportazioni: «Per medico», 1.12.5)
     wb.active = 0
@@ -1157,7 +1160,7 @@ def esporta_giorno(ses, g, struttura_id, percorso, parte=None, in_piu=None, con_
     return percorso
 
 
-def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps):
+def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps, con_pazienti=True):
     """Un foglio di planning del giorno per le colonne scelte (tutte, le stanze o le sale): titolo, intestazioni
     con i turni, una riga per fascia, legenda e nota degli appuntamenti nelle stanze disattivate."""
     from openpyxl.styles import Font, PatternFill, Alignment
@@ -1253,7 +1256,7 @@ def _foglio_planning(ws, ses, g, st, vista, colonne_scelte, cosa, apps):
                                     '' if a.inizio.time() == cella['ora']
                                     else ' (%s)' % a.inizio.strftime('%H:%M')),
                           '%s%s' % (a.prestazione.nome if a.prestazione else '',
-                                    ' - ' + a.paziente.etichetta if a.paziente else ''))
+                                    ' - ' + a.paziente.etichetta if a.paziente and con_pazienti else ''))
                          for a in cella['apps']]
                 m = ws.cell(r, c, testo_excel('\n'.join(x[0] for x in righe)))
                 d = ws.cell(r, c + 1, testo_excel('\n'.join(x[1] for x in righe)))
@@ -1346,14 +1349,16 @@ def _righe_testo(testo, larghezza, per_carattere):
     return max(1, math.ceil(len(testo or '') * per_carattere / max(1, larghezza)))
 
 
-def _foglio_elenco(wb, ses, g, struttura_id, apps=None, titolo=None, parola='appuntament', con_cassa=True):
+def _foglio_elenco(wb, ses, g, struttura_id, apps=None, titolo=None, parola='appuntament', con_cassa=True,
+                   con_pazienti=True):
     """Secondo foglio: una riga per appuntamento, con le colonne delle agende
     Excel dell'accettazione. Anche disdetti e non presentati (in grigio, i
     disdetti barrati), con lo stato; la riga dei totali conta e somma solo gli
     appuntamenti attivi. Ci sono anche gli appuntamenti nelle stanze
     disattivate, che il planning non puo' mostrare (non hanno una colonna):
     l'elenco e' il foglio completo, il planning lo dice. Senza con_cassa niente convenzione, importo e totale
-    degli importi (le colonne si contano dai nomi delle intestazioni)."""
+    degli importi; senza con_pazienti niente paziente, telefono, email e note (le colonne si contano dai nomi delle
+    intestazioni)."""
     from openpyxl.styles import Font, PatternFill
     from comune import apri_foglio_excel, imposta_stampa_excel, tabella_excel, EXCEL_GRIGIO, FORMATO_ORA, FORMATO_EURO
     ws = wb.create_sheet('Elenco')
@@ -1380,12 +1385,16 @@ def _foglio_elenco(wb, ses, g, struttura_id, apps=None, titolo=None, parola='app
                       a.convenzione or '',
                       (a.importo_cent / 100.0) if a.importo_cent is not None else None,
                       a.etichetta_stato, a.note or ''] + [a.valori_extra.get(e, '') for e in extra])
-    if not con_cassa:
-        via = [intestazioni.index('CONVENZIONE / ASSICURAZIONE'), intestazioni.index('IMPORTO')]
+    via = ({'CONVENZIONE / ASSICURAZIONE', 'IMPORTO'} if not con_cassa else set()) | \
+        ({'PAZIENTE', 'TELEFONO', 'EMAIL', 'NOTE'} if not con_pazienti else set())
+    if via:
+        via = [i for i, x in enumerate(intestazioni[:len(intestazioni) - len(extra)]) if x in via]
         intestazioni, larghezze = [x for i, x in enumerate(intestazioni) if i not in via], \
             [x for i, x in enumerate(larghezze) if i not in via]
         righe = [[x for i, x in enumerate(r) if i not in via] for r in righe]
-    n_stato, n_note = intestazioni.index('STATO'), intestazioni.index('NOTE')
+    n_stato = intestazioni.index('STATO')
+    n_note = intestazioni.index('NOTE') if 'NOTE' in intestazioni[:len(intestazioni) - len(extra)] else None
+    primo_extra = len(intestazioni) - len(extra)
     attivi = [a for a in apps if a.stato in STATI_ATTIVI]
     n_disdetti = sum(1 for a in apps if a.stato == 'DISDETTO')
     n_non = sum(1 for a in apps if a.stato == 'NON_PRESENTATO')
@@ -1409,13 +1418,16 @@ def _foglio_elenco(wb, ses, g, struttura_id, apps=None, titolo=None, parola='app
         return None
 
     somma = sum(a.importo_cent for a in attivi if a.importo_cent is not None) / 100.0
-    totali = {1: 'Totale (solo attivi)', 5: '%d %s%s' % (len(attivi), parola, 'o' if len(attivi) == 1 else 'i')}
+    # il numero degli appuntamenti sotto la colonna del paziente (senza: sotto la prestazione)
+    sotto_n = (intestazioni.index('PAZIENTE') if con_pazienti else intestazioni.index('PRESTAZIONE')) + 1
+    totali = {1: 'Totale (solo attivi)', sotto_n: '%d %s%s' % (len(attivi), parola, 'o' if len(attivi) == 1 else 'i')}
     formati = {1: FORMATO_ORA, 2: FORMATO_ORA}
     if con_cassa:
-        totali[11] = somma
-        formati[11] = FORMATO_EURO
+        totali[intestazioni.index('IMPORTO') + 1] = somma
+        formati[intestazioni.index('IMPORTO') + 1] = FORMATO_EURO
     tabella_excel(ws, riga, intestazioni, larghezze, righe, formati=formati, totali=totali,
-                  a_capo=(n_note + 1,) + tuple(range(n_note + 2, n_note + 2 + len(extra))), stile_riga=stile_riga)
+                  a_capo=((n_note + 1,) if n_note is not None else ()) + tuple(range(primo_extra + 1, len(intestazioni) + 1)),
+                  stile_riga=stile_riga)
     imposta_stampa_excel(ws, True, '%d:%d' % (riga, riga), None, st, titolo)
 
 

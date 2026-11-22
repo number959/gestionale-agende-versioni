@@ -41,6 +41,7 @@ import os
 import re
 import secrets
 import socket
+import sys
 import threading
 import time
 import unicodedata
@@ -67,11 +68,11 @@ AREE = (
     ('sala', 'Sala operatoria', 'sala, lista operatoria, posti letto, checklist'),
     ('turni', 'Turni', 'turni del personale'),
     ('ambulatori', 'Ambulatori e dashboard', 'pianificazione, programmazione, riepiloghi, dashboard'),
-    # revisione: dentro il riepilogo dei medici e le esportazioni ci sono nomi e telefoni dei pazienti, importi e incassi
-    # (che cosa togliere a chi non ha Pazienti o Cassa è una domanda per Giovanni): intanto la pagina lo dice
-    ('statistiche', 'Statistiche e report', 'statistiche, riepilogo dei medici, esportazioni in Excel; nel riepilogo e '
-                                            'nelle esportazioni ci sono anche nomi e telefoni dei pazienti, importi e '
-                                            'incassi'),
+    # dentro il riepilogo dei medici e le esportazioni ci sono nomi e telefoni dei pazienti, importi e incassi: dagli
+    # altri PC i pazienti solo a chi ha anche Pazienti o Agenda, gli importi solo a chi ha anche la Cassa (predefinito
+    # deciso il 22/11, Giovanni può cambiarlo: piano/ESECUZIONE.md; viste.statistiche_excel, cruscotto, esportazioni)
+    ('statistiche', 'Statistiche e report', 'statistiche, riepilogo dei medici, esportazioni in Excel; i nomi dei '
+                                            'pazienti solo con Pazienti o Agenda, gli importi solo con la Cassa'),
     ('dove', 'Dove si fa', 'ricerca delle prestazioni, registro, strutture del gruppo'),
     ('comunicazioni', 'Email e WhatsApp', 'regole delle email, promemoria, registro dei messaggi'),
     ('configura', 'Anagrafiche', 'stanze, medici, turni dei medici, prestazioni, strutture, importa, moduli da stampare'),
@@ -309,6 +310,89 @@ def configurazione(s):
 def salva_utenti(s, utenti):
     from modelli import scrivi_impostazione
     scrivi_impostazione(s, 'rete_utenti', json.dumps(utenti, ensure_ascii=False))
+
+
+# Una copia di sicurezza rimessa (ripristino dalle Impostazioni, riparazione del custode o di Controllo del programma,
+# riparazione all'avvio) NON riporta indietro gli accessi dagli altri PC (revisione del 22/11, decisione in
+# piano/ESECUZIONE.md): utenti, password, aree, accensione e porta sono impostazioni di sicurezza, non dati della
+# clinica, come la chiave dei cookie. Con la copia di ieri una persona spenta oggi, o che ha cambiato la password,
+# rientrava con quella di ieri, e la rete spenta si riaccendeva da sola, senza dirlo. Restano quelle di adesso: lette dal
+# database prima del ripristino, oppure (riparazioni: il database era rovinato) dal file accessi-rete.json accanto al
+# database, fuori dalle copie, riscritto a ogni cambio. Se non si sa com'erano, la rete resta spenta finché la segreteria
+# non controlla. In ogni altro momento vale il database (all'avvio il file si riscrive da lì).
+CHIAVI_RETE = ('rete_accesa', 'rete_porta', 'rete_schermo_libero', 'rete_nomi', 'rete_utenti')
+FILE_RETE = 'accessi-rete.json'
+_cartella_dati = [None]         # la cartella dei dati (prepara_registro); senza (demo.py, la prova) nessun file
+
+
+def istantanea(s):
+    """Le impostazioni degli accessi così come sono scritte nel database (testi, '' se mancano)."""
+    from modelli import leggi_impostazione
+    return {k: leggi_impostazione(s, k, '') or '' for k in CHIAVI_RETE}
+
+
+def ricorda(s):
+    """Riscrive accessi-rete.json dal database: dopo ogni cambio degli accessi e all'avvio."""
+    cartella = _cartella_dati[0]
+    if not cartella:
+        return
+    percorso = os.path.join(cartella, FILE_RETE)
+    try:
+        provvisorio = percorso + '.nuovo'
+        with open(provvisorio, 'w', encoding='utf-8') as f:
+            json.dump(istantanea(s), f, ensure_ascii=False)
+        os.replace(provvisorio, percorso)
+    except OSError:
+        logging.exception('accessi: %s non scritto', FILE_RETE)
+
+
+def dal_file():
+    """Le impostazioni degli accessi dell'ultimo cambio (accessi-rete.json), o None se non ci sono o non si leggono."""
+    cartella = _cartella_dati[0]
+    if not cartella:
+        return None
+    try:
+        with open(os.path.join(cartella, FILE_RETE), encoding='utf-8') as f:
+            dati = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(dati, dict) or not all(isinstance(dati.get(k), str) for k in CHIAVI_RETE):
+        return None
+    return {k: dati[k] for k in CHIAVI_RETE}
+
+
+def rimetti(fabbrica, prima):
+    """Dopo una copia rimessa (chi chiama tiene già il lucchetto dei salvataggi): gli accessi tornano quelli di «prima»
+    (istantanea() o dal_file()). Restituisce None se la copia li aveva uguali, 'rimessi' se li ha rimessi, 'spenta' se
+    non si sapeva com'erano e la copia aveva la rete accesa: spenta, e chi era entrato rientra."""
+    from modelli import scrivi_impostazione
+    s = fabbrica()
+    try:
+        adesso = istantanea(s)
+        if prima is None:
+            if adesso['rete_accesa'] != '1':
+                return None
+            scrivi_impostazione(s, 'rete_accesa', '')
+            s.commit()
+            sessioni.svuota()
+            annota('copia rimessa: accesso dagli altri PC spento per sicurezza')
+            return 'spenta'
+        if adesso == prima:
+            return None
+        for k in CHIAVI_RETE:
+            if adesso[k] != prima[k]:
+                scrivi_impostazione(s, k, prima[k])
+        s.commit()
+        annota('copia rimessa: accessi dagli altri PC rimasti quelli di prima')
+        return 'rimessi'
+    finally:
+        s.close()
+
+
+TESTO_RIMESSI = ('Gli accessi dagli altri PC (utenti, password, parti e accensione) non tornano indietro con la copia: '
+                 'sono rimasti quelli di prima.')
+TESTO_SPENTA = ('La copia rimessa aveva l\'accesso dagli altri PC acceso: per sicurezza è stato spento. Controllare '
+                'utenti e password in %s, poi riaccenderlo.')
 
 
 def chiave_nome(nome):
@@ -982,7 +1066,9 @@ _cartella_registro = [None]
 
 
 def prepara_registro(cartella):
-    """Il registro accanto al database, nella cartella accessi; via i file più vecchi di GIORNI_REGISTRO."""
+    """Il registro accanto al database, nella cartella accessi; via i file più vecchi di GIORNI_REGISTRO. La cartella dei
+    dati vale anche per accessi-rete.json."""
+    _cartella_dati[0] = cartella          # anche accessi-rete.json (ricorda, dal_file)
     cartella = os.path.join(cartella, 'accessi')
     _cartella_registro[0] = cartella
     for h in list(registro.handlers):
@@ -1005,13 +1091,17 @@ def prepara_registro(cartella):
 
 
 # ============================================================= il controllo
+# Dove si trova la pagina degli accessi nel menu di oggi (revisione del 22/11: il rifiuto diceva «Configura → Aree e
+# accessi», che nel menu non c'è). Quando la tappa 2 la mette fra le linguette di Configura, all'unione diventa
+# «Configura → Aree e accessi».
+PERCORSO_PAGINA = 'Configura → Impostazioni → Aree e accessi'
 PAGINA_NO = '''<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ titolo }}</title><link rel="stylesheet" href="/static/stile.css"><link rel="icon" type="image/png" href="/static/icona.png"></head><body>
 <main class="pagina" style="max-width:40em;margin:4em auto"><h1>{{ titolo }}</h1><p>{{ motivo }}</p>
 {% if sistema %}<p>Aggiornamenti, copie di sicurezza, impostazioni, controllo del programma e la scelta degli accessi si
 fanno solo dal PC della segreteria, anche per chi dagli altri PC ha tutte le parti.</p>
 {% else %}<p>{% if utente %}Si è entrati come <b>{{ utente }}</b>. {% endif %}Quali parti del programma si aprono dagli
-altri PC, e per chi, lo sceglie chi usa il PC della segreteria (<i>Configura → Aree e accessi</i>): per avere anche
+altri PC, e per chi, lo sceglie chi usa il PC della segreteria (<i>{{ percorso }}</i>): per avere anche
 questa parte, chiedere a lei.</p>{% endif %}
 <p>{% if torna %}<a class="bottone" href="{{ torna }}">Torna alle pagine disponibili</a>{% endif %}
 {% if utente %}<form method="post" action="/esci" style="display:inline"><button class="bottone" type="submit">Esci</button></form>{% endif %}</p>
@@ -1021,8 +1111,8 @@ questa parte, chiedere a lei.</p>{% endif %}
 PAGINA_ATTESA = ('<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Troppi tentativi</title>'
                  '<link rel="stylesheet" href="/static/stile.css"></head><body><main class="pagina" style="max-width:40em;'
                  'margin:4em auto"><h1>Troppi tentativi</h1><p>Troppi tentativi sbagliati da questo PC: riprovare fra %d '
-                 'minut%s. Se serve prima, chiedere a chi usa il PC della segreteria di sbloccarlo (<i>Configura → Aree e '
-                 'accessi</i>).</p><p><a class="bottone" href="/accesso">Torna all\'accesso</a></p></main></body></html>')
+                 'minut%s. Se serve prima, chiedere a chi usa il PC della segreteria di sbloccarlo (<i>' +
+                 PERCORSO_PAGINA + '</i>).</p><p><a class="bottone" href="/accesso">Torna all\'accesso</a></p></main></body></html>')
 
 
 def vuole_json():
@@ -1036,7 +1126,7 @@ def rifiuta(motivo, titolo='Questa parte non è disponibile', utente=None, codic
     if vuole_json():
         return Response(json.dumps({'errore': motivo}, ensure_ascii=False), status=codice,
                         mimetype='application/json')
-    return Response(render_template_string(PAGINA_NO, titolo=titolo, motivo=motivo, sistema=sistema,
+    return Response(render_template_string(PAGINA_NO, titolo=titolo, motivo=motivo, sistema=sistema, percorso=PERCORSO_PAGINA,
                                            utente=utente['nome'] if utente else '',
                                            torna=prima_pagina(utente) if utente else ''),
                     status=codice, mimetype='text/html')
@@ -1086,8 +1176,7 @@ def controlla_accesso():
             annota_sbagliato('bloccato: troppi tentativi da questo PC', (request.form.get('nome') or '')[:40], da)
             minuti = max(1, (attesa + 59) // 60)
             return Response(PAGINA_ATTESA % (minuti, 'o' if minuti == 1 else 'i'), status=429, mimetype='text/html')
-    from app import ses
-    cfg = configurazione(ses())
+    cfg = configurazione(_programma['ses']())
     contesto.accessi_cfg = cfg
     if not host_valido_dalla_rete(request.host, cfg['nomi'], cfg['porta']):
         # come NOMI_LOCALI per il PC principale: un nome di un altro sito che punta qui (DNS rebinding) non passa
@@ -1180,6 +1269,67 @@ def _filtra_ricerca(dati, utente):
     return uscita
 
 
+# I moduli che chi è entrato da un altro PC non può salvare (revisione del 22/11): con «solo guardare» i bottoni per
+# salvare restavano, e il clic portava alla pagina «Solo guardare» perdendo quello che si era scritto. Nelle pagine che
+# arrivano alla rete ogni <form method="post"> verso una parte che l'utente non può modificare prende
+# data-solo-guardare="perché"; gestionale.js ne spegne campi e bottoni, con la spiegazione, e lo dice in cima alla pagina.
+# La guardia (controlla_accesso) resta: questo è solo per non far scrivere invano. Sul PC principale non si tocca niente.
+MODULO_HTML = re.compile(r'<form\b[^>]*>', re.I)
+
+
+def _attributo(tag, nome):
+    import html
+    m = re.search(r'\s%s\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s"\'>]+))' % nome, tag, re.I)
+    return html.unescape(next(x for x in m.groups() if x is not None)) if m else None
+
+
+def livello_modulo(utente, azione):
+    """(livello, nome della parte) di un salvataggio verso «azione» per questo utente: come lo deciderebbe la guardia
+    (senza guardare i campi: con ANCHE_PER vale la migliore delle due parti)."""
+    parti = urlsplit(azione or '')
+    if parti.netloc and parti.netloc.lower() != (request.host or '').lower():
+        return 'modifica', ''
+    try:
+        endpoint, _ = current_app.url_map.bind('x').match(parti.path or request.path, method='POST')
+    except HTTPException:
+        return 'modifica', ''                   # decide la guardia
+    area = area_di(endpoint)
+    if area in (LIBERO, UTENTE, TRASVERSALE):
+        return 'modifica', ''
+    if area == SISTEMA:
+        return 'no', 'Sistema'
+    if area == SCHERMO:
+        area = 'ambulatori'
+    nome = NOMI_AREE.get(area if isinstance(area, str) else area[0], '')
+    if endpoint == RICERCA_PAZIENTI:
+        return livello_ricerca_pazienti(utente), nome
+    in_piu = ANCHE_PER.get(endpoint)
+    if in_piu is not None:
+        area = (area, in_piu[0]) if isinstance(area, str) else area + (in_piu[0],)
+    return livello(utente, area), nome
+
+
+def segna_moduli(testo, utente):
+    """L'HTML con data-solo-guardare sui moduli che l'utente non può salvare."""
+    from markupsafe import escape
+
+    def segna(m):
+        tag = m.group(0)
+        if (_attributo(tag, 'method') or 'get').lower() != 'post' or 'data-solo-guardare' in tag:
+            return tag
+        lv, nome = livello_modulo(utente, _attributo(tag, 'action') or request.path)
+        if lv == 'modifica':
+            return tag
+        if nome == 'Sistema':
+            perche = 'Questa parte si salva solo dal PC della segreteria.'
+        elif lv == 'guarda':
+            perche = 'Solo guardare: per «%s» questo utente non salva niente.' % nome
+        else:
+            perche = '«%s» non è fra le parti disponibili per questo utente: qui non si salva niente.' % nome
+        return tag[:-1].rstrip().rstrip('/') + ' data-solo-guardare="%s">' % escape(perche)
+    return MODULO_HTML.sub(segna, testo)
+
+
 def dopo_la_risposta(risposta):
     if not dalla_rete():
         return risposta
@@ -1199,6 +1349,13 @@ def dopo_la_risposta(risposta):
         testo = json.dumps(dati, ensure_ascii=False).replace('<', '\\u003c').replace('>', '\\u003e') \
             .replace('&', '\\u0026')
         risposta.set_data(testo)
+    elif utente is not None and risposta.status_code == 200 and risposta.mimetype == 'text/html' \
+            and not risposta.direct_passthrough and not risposta.is_streamed:
+        testo = risposta.get_data(as_text=True)
+        if '<form' in testo:
+            segnato = segna_moduli(testo, utente)
+            if segnato != testo:
+                risposta.set_data(segnato)
     return risposta
 
 
@@ -1255,13 +1412,19 @@ def host_valido_dalla_rete(host, cfg_nomi, porta):
 # ============================================================ secondo ascolto
 class MarcaRete:
     """Avvolge l'applicazione per la presa della rete: ogni richiesta arrivata di qui è «dalla rete», qualunque
-    indirizzo abbia (anche chi apre http://NOME:5080 dal PC della segreteria)."""
+    indirizzo abbia (anche chi apre http://NOME:5080 dal PC della segreteria). Segna anche l'ultima arrivata da un
+    altro PC (non 127.*): la pagina dice se dagli altri PC arriva qualcosa (revisione del 22/11: con il firewall che
+    blocca, la pagina diceva solo «Acceso»)."""
 
-    def __init__(self, app):
+    def __init__(self, app, segna=None):
         self.app = app
+        self.segna = segna
 
     def __call__(self, environ, start_response):
         environ['gestionale.presa_rete'] = True
+        da = str(environ.get('REMOTE_ADDR') or '')
+        if self.segna is not None and da and not da.startswith(LOOPBACK):
+            self.segna(da)
         return self.app(environ, start_response)
 
 
@@ -1330,8 +1493,13 @@ class AscoltoRete:
         self.server = None
         self.filo = None
         self.porta = None
-        self.errore = ''
+        self.errore = ''                # perché la rete non è in ascolto (il riquadro rosso della pagina)
+        self.errore_cambio = ''         # perché l'ultima accensione non è riuscita (il messaggio della volta)
+        self.ultimo_da_fuori = None     # (istante, indirizzo) dell'ultima richiesta da un altro PC da quando è accesa
         self._lucchetto = threading.Lock()
+
+    def _segna(self, da):
+        self.ultimo_da_fuori = (datetime.now(), pulito(da, 64))
 
     def acceso(self):
         return self.server is not None and self.filo is not None and self.filo.is_alive()
@@ -1340,26 +1508,27 @@ class AscoltoRete:
         from waitress import create_server
         with self._lucchetto:
             if not chiave_buona(app.secret_key):
-                self.errore = ('La chiave che protegge gli accessi non è pronta: chiudere e riaprire il programma, '
-                               'poi riprovare.')
+                self._non_riuscito('La chiave che protegge gli accessi non è pronta: chiudere e riaprire il '
+                                   'programma, poi riprovare.')
                 logging.error('accessi: presa della rete non accesa, chiave corta o fissa')
                 return False
             if self.acceso() and self.porta == porta:
+                self.errore = self.errore_cambio = ''
                 return True
             try:
                 presa = presa_della_rete(porta)        # prima la presa nuova: se non si può, resta quella di prima
             except OSError as e:
-                self.errore = spiega_errore_porta(porta, e)
+                self._non_riuscito(spiega_errore_porta(porta, e))
                 logging.warning('accessi: porta %d della rete non utilizzabile: %s', porta, e)
                 return False
             self._spegni()
             # i portieri non si fidano (le loro intestazioni restano: dalla rete comunque), con i limiti della rete e
             # al massimo COLLEGAMENTI_PER_PC collegamenti aperti dallo stesso indirizzo
-            self.server = create_server(MarcaRete(app), sockets=[presa], threads=FILI_RETE,
+            self.server = create_server(MarcaRete(app, self._segna), sockets=[presa], threads=FILI_RETE,
                                         clear_untrusted_proxy_headers=False, ident='Gestionale Agende',
                                         **LIMITI_RETE)
             self.server.channel_class = canale_con_limite(self.server.channel_class)
-            self.porta, self.errore = porta, ''
+            self.porta, self.errore, self.errore_cambio, self.ultimo_da_fuori = porta, '', '', None
             server = self.server
 
             def gira():
@@ -1377,9 +1546,17 @@ class AscoltoRete:
             logging.info('accessi: in ascolto anche sulla rete, porta %d', porta)
             return True
 
+    def _non_riuscito(self, testo):
+        """Un'accensione non riuscita: il messaggio della volta sempre; il riquadro rosso della pagina solo se la rete
+        non è in ascolto. Se resta accesa quella di prima (la porta nuova era occupata), la pagina dice «Acceso» e
+        basta (revisione del 22/11: l'errore della porta provata restava in rosso per sempre sotto «Acceso»)."""
+        self.errore_cambio = testo
+        self.errore = '' if self.acceso() else testo
+
     def spegni(self):
         with self._lucchetto:
             self._spegni()
+            self.errore = self.errore_cambio = ''
 
     def _spegni(self):
         server, filo = self.server, self.filo
@@ -1401,7 +1578,7 @@ def applica(app, sessione_fabbrica=None):
     """Accende o spegne l'ascolto della rete come dicono le impostazioni: all'avvio, dopo un ripristino o una
     riparazione (le impostazioni possono essere cambiate con la copia rimessa). True se è come deve essere."""
     if sessione_fabbrica is None:
-        from app import Sessione as sessione_fabbrica
+        sessione_fabbrica = _programma['fabbrica']()
     s = sessione_fabbrica()
     try:
         cfg = configurazione(s)
@@ -1417,15 +1594,30 @@ RIPROVE_AVVIO = 10              # all'avvio, con la porta della rete occupata: 1
 PAUSA_AVVIO = 30                # ...ogni mezzo minuto (cinque minuti in tutto)
 
 
-def all_avvio(app, sessione_fabbrica, cartella, prove=None, pausa=None):
-    """Dall'avvio del programma (app.principale), dopo che il server principale è in ascolto: registro, sessioni
-    e, se è acceso, l'ascolto della rete. Se la porta non è ancora libera (il programma di prima si sta chiudendo,
+def all_avvio(app, sessione_fabbrica, cartella, prove=None, pausa=None, copia_rimessa=False):
+    """Dall'avvio del programma (app.principale), dopo che il server principale è in ascolto: registro, sessioni,
+    gli accessi di prima se all'avvio è stata rimessa una copia del database (copia_rimessa: rimetti, dal file), il file
+    accessi-rete.json riscritto dal database e, se è acceso, l'ascolto della rete. Se la porta non è ancora libera (il programma di prima si sta chiudendo,
     la rete di Windows non è pronta) si riprova per qualche minuto, in un filo a parte. Il PC principale intanto
     funziona già: la rete non ferma mai il suo avvio (app.principale la chiama dentro un try)."""
     prove = RIPROVE_AVVIO if prove is None else prove
     pausa = PAUSA_AVVIO if pausa is None else pausa
     prepara_registro(cartella)
     sessioni.carica(cartella)
+    try:
+        if copia_rimessa:
+            esito = rimetti(sessione_fabbrica, dal_file())
+            if esito:
+                import autoripara
+                autoripara.annota(TESTO_RIMESSI if esito == 'rimessi' else TESTO_SPENTA % PERCORSO_PAGINA,
+                                  'ok' if esito == 'rimessi' else 'attenzione')
+        s = sessione_fabbrica()
+        try:
+            ricorda(s)
+        finally:
+            s.close()
+    except Exception:
+        logging.exception('accessi: impostazioni all\'avvio')
     try:
         if applica(app, sessione_fabbrica):
             return
@@ -1505,7 +1697,7 @@ def password():
     """La propria password, dagli altri PC (la prima volta è obbligatorio cambiarla)."""
     if not dalla_rete():
         return redirect(url_for('home'))
-    from app import ses, LUCCHETTO
+    ses, LUCCHETTO = _programma['ses'], _programma['lucchetto']
     utente = contesto.utente_rete
     errore = ''
     if request.method == 'POST':
@@ -1540,6 +1732,7 @@ def password():
                 u['hash'], u['cambia'] = impronta, False
                 salva_utenti(s, cfg['utenti'])
                 s.commit()
+                ricorda(s)
             sessioni.togli_utente(u['id'], tranne=session.get('sid'))       # gli altri PC dove era entrato: fuori
             annota('password cambiata', u['nome'])
             flash('Password cambiata.', 'ok')
@@ -1548,135 +1741,207 @@ def password():
                            minimo=MINIMO_PASSWORD, sid=None)
 
 
-def _modulo_aree(u):
+def _modulo_aree(u=None):
     return {a: request.form.get('area_' + a) for a in CODICI_AREE if request.form.get('area_' + a) in LIVELLI_VALIDI}
+
+
+def _mostra_pagina(s, codice=200, **in_piu):
+    """La pagina «Aree e accessi» (anche dopo un nuovo utente rifiutato: con quello che si era scritto)."""
+    cfg = configurazione(s)
+    tentativi.scrivi_rimasti()
+    porta = ascolto.porta or cfg['porta']
+    valori = dict(cfg=cfg, aree=AREE, livelli=LIVELLI, acceso=ascolto.acceso(), porta_accesa=ascolto.porta,
+                  errore_ascolto=ascolto.errore, ultimo_da_fuori=ascolto.ultimo_da_fuori,
+                  indirizzi=indirizzi_da_usare(porta), eventi=ultimi_accessi(), giorni_registro=7,
+                  bloccati=tentativi.bloccati(), entrati=sessioni.quante, firewall=comandi_firewall(porta),
+                  consiglio=CONSIGLIO_PASSWORD, minimo=MINIMO_PASSWORD, aperto=request.args.get('aperto') or '',
+                  nuovo={'nome': '', 'aree': {}}, errore_nuovo='', riassunto=riassunto_aree, sezione='impostazioni',
+                  sid=None)
+    valori.update(in_piu)
+    return render_template('accessi.html', **valori), codice
+
+
+def riassunto_aree(aree):
+    """Le parti di un utente in una riga, per il riquadro chiuso: «Agenda, Pazienti (solo guardare)»."""
+    parti = ['%s%s' % (nome, '' if (aree or {}).get(codice) == 'modifica' else ' (solo guardare)')
+             for codice, nome, _ in AREE if (aree or {}).get(codice) in LIVELLI_VALIDI]
+    return ', '.join(parti) or 'nessuna parte'
 
 
 @bp.route('/configura/accessi', methods=['GET', 'POST'])
 def pagina():
-    """Configura → Aree e accessi, la parte «Accesso dagli altri PC». Solo dal PC principale (Sistema)."""
-    from app import ses, LUCCHETTO
+    """Configura → Impostazioni → Aree e accessi (PERCORSO_PAGINA), la parte «Accesso dagli altri PC». Solo dal PC
+    principale (Sistema)."""
     from modelli import scrivi_impostazione
+    ses, LUCCHETTO = _programma['ses'], _programma['lucchetto']
     s = ses()
-    if request.method == 'POST':
-        azione = request.form.get('azione')
-        password_nuova = request.form.get('password') or ''
-        # l'impronta della password (lenta) prima del lucchetto, che ferma i salvataggi di tutti
-        impronta = generate_password_hash(password_nuova) if azione in ('nuovo', 'password') and \
-            not problema_password(password_nuova) else None
-        with LUCCHETTO:
-            cfg = configurazione(s)
-            utenti = cfg['utenti']
-            if azione == 'rete':
-                accesa = request.form.get('accesa') == '1'
-                testo_porta = (request.form.get('porta') or '').strip()
-                porta = int(testo_porta) if testo_porta.isdigit() and len(testo_porta) < 6 else 0
-                if not porta_ammessa(porta):
-                    flash('Porta non valida: un numero fra 1024 e 65535, non la 5000 né quelle di riserva 5001–5009.',
-                          'errore')
-                    return redirect(url_for('accessi.pagina'))
-                nomi = ' '.join(x for x in (request.form.get('nomi') or '').lower().split()
-                                if re.fullmatch(r'[a-z0-9][a-z0-9.-]{0,62}', x))[:300]
-                scrivi_impostazione(s, 'rete_schermo_libero', '1' if request.form.get('schermo_libero') else '')
-                scrivi_impostazione(s, 'rete_nomi', nomi)
-                if accesa and not current_app.config.get('TESTING') and not ascolto.accendi(current_app._get_current_object(), porta):
-                    # la porta si salva solo se l'ascolto è partito: altrimenti resta quella di prima
-                    s.commit()
-                    flash('L\'accesso dagli altri PC non è partito: %s' % ascolto.errore, 'errore')
-                    return redirect(url_for('accessi.pagina'))
-                scrivi_impostazione(s, 'rete_porta', str(porta))
-                scrivi_impostazione(s, 'rete_accesa', '1' if accesa else '')
+    if request.method != 'POST':
+        return _mostra_pagina(s)
+    azione = request.form.get('azione')
+    password_nuova = request.form.get('password') or ''
+    aperto = None                   # il riquadro dell'utente da lasciare aperto dopo il salvataggio
+    rifiutato = None                # un nuovo utente rifiutato: la pagina con quello che si era scritto
+    # l'impronta della password (lenta) prima del lucchetto, che ferma i salvataggi di tutti
+    impronta = generate_password_hash(password_nuova) if azione in ('nuovo', 'password') and \
+        not problema_password(password_nuova) else None
+    with LUCCHETTO:
+        cfg = configurazione(s)
+        utenti = cfg['utenti']
+        if azione == 'rete':
+            accesa = request.form.get('accesa') == '1'
+            testo_porta = (request.form.get('porta') or '').strip()
+            porta = int(testo_porta) if testo_porta.isdigit() and len(testo_porta) < 6 else 0
+            if not porta_ammessa(porta):
+                flash('Porta non valida: un numero fra 1024 e 65535, non la 5000 né quelle di riserva 5001–5009.',
+                      'errore')
+                return redirect(url_for('accessi.pagina'))
+            nomi = ' '.join(x for x in (request.form.get('nomi') or '').lower().split()
+                            if re.fullmatch(r'[a-z0-9][a-z0-9.-]{0,62}', x))[:300]
+            scrivi_impostazione(s, 'rete_schermo_libero', '1' if request.form.get('schermo_libero') else '')
+            scrivi_impostazione(s, 'rete_nomi', nomi)
+            if accesa and not current_app.config.get('TESTING') and \
+                    not ascolto.accendi(current_app._get_current_object(), porta):
+                # la porta si salva solo se l'ascolto è partito: altrimenti resta quella di prima
                 s.commit()
-                if accesa:
-                    flash('Accesso dagli altri PC acceso: sugli altri PC aprire %s' % ' oppure '.join(
-                        indirizzi_da_usare(porta)[:3]), 'ok')
-                    if not [u for u in utenti if u.get('attivo', True)]:
-                        flash('Nessun utente ancora: dagli altri PC non entra nessuno finché non se ne aggiunge uno qui '
-                              'sotto.', 'avviso')
-                else:
-                    ascolto.spegni()
-                    flash('Accesso dagli altri PC spento.', 'ok')
-            elif azione == 'nuovo':
-                nome = ' '.join((request.form.get('nome') or '').split())
-                problema = problema_password(password_nuova, nome)
-                if not NOME_VALIDO.fullmatch(nome):
-                    flash('Nome non valido: da 2 a 40 fra lettere, cifre, spazi, punti, apostrofi e trattini.', 'errore')
-                elif trova(utenti, nome):
-                    flash('C\'è già un utente con questo nome.', 'errore')
-                elif problema:
+                ricorda(s)
+                flash('L\'accesso dagli altri PC non è partito: %s%s' % (
+                    ascolto.errore_cambio, ' Resta acceso sulla porta %d.' % ascolto.porta if ascolto.acceso() else ''),
+                    'errore')
+                return redirect(url_for('accessi.pagina'))
+            era_accesa = cfg['accesa']
+            scrivi_impostazione(s, 'rete_porta', str(porta))
+            scrivi_impostazione(s, 'rete_accesa', '1' if accesa else '')
+            s.commit()
+            ricorda(s)
+            if accesa:
+                flash('Accesso dagli altri PC acceso: sugli altri PC aprire %s' % ' oppure '.join(
+                    indirizzi_da_usare(porta)[:3]), 'ok')
+                if not [u for u in utenti if u.get('attivo', True)]:
+                    flash('Nessun utente ancora: dagli altri PC non entra nessuno finché non se ne aggiunge uno qui '
+                          'sotto.', 'avviso')
+            else:
+                ascolto.spegni()
+                # revisione del 22/11: spegnere per un problema deve far uscire tutti, anche se poi si riaccende subito
+                # (le sessioni restano solo nei riavvii del programma, per esempio dopo «Aggiorna adesso»)
+                dentro = len(sessioni.dati)
+                sessioni.svuota()
+                if era_accesa or dentro:
+                    annota('accesso dagli altri PC spento dal PC principale: tutti fuori')
+                flash('Accesso dagli altri PC spento.%s' % (' Chi era entrato è uscito: dovrà rientrare con nome e '
+                                                             'password.' if dentro else ''), 'ok')
+        elif azione == 'nuovo':
+            nome = ' '.join((request.form.get('nome') or '').split())
+            problema = problema_password(password_nuova, nome)
+            if not NOME_VALIDO.fullmatch(nome):
+                problema = 'Nome non valido: da 2 a 40 fra lettere, cifre, spazi, punti, apostrofi e trattini.'
+            elif trova(utenti, nome):
+                problema = 'C\'è già un utente con questo nome.'
+            if problema:
+                rifiutato = {'nuovo': {'nome': nome[:40], 'aree': _modulo_aree()}, 'errore_nuovo': problema}
+            else:
+                u = nuovo_utente(nome, password_nuova, impronta)
+                u['aree'] = _modulo_aree(u)
+                utenti.append(u)
+                salva_utenti(s, utenti)
+                s.commit()
+                ricorda(s)
+                aperto = u['id']
+                annota('utente aggiunto dal PC principale', nome)
+                flash('Utente %s aggiunto: al primo accesso sceglierà la sua password.' % nome, 'ok')
+        elif azione in ('salva', 'password', 'elimina', 'fai-uscire'):
+            u = trova_id(utenti, request.form.get('utente'))
+            if u is None:
+                flash('Utente non trovato.', 'errore')
+            elif azione == 'salva':
+                u['aree'] = _modulo_aree(u)
+                attivo = request.form.get('attivo') == '1'
+                u['attivo'] = attivo
+                salva_utenti(s, utenti)
+                s.commit()
+                ricorda(s)
+                aperto = u['id']
+                n = 0 if attivo else sessioni.togli_utente(u['id'])         # spento: esce subito
+                annota('aree salvate dal PC principale%s' % ('' if attivo else ' (utente spento)'), u['nome'])
+                flash('Aree di %s salvate.%s' % (u['nome'], ' Utente spento: è uscito.' if n else ''), 'ok')
+            elif azione == 'password':
+                aperto = u['id']
+                problema = problema_password(password_nuova, u['nome'])
+                if problema:
                     flash(problema, 'errore')
                 else:
-                    u = nuovo_utente(nome, password_nuova, impronta)
-                    u['aree'] = _modulo_aree(u)
-                    utenti.append(u)
+                    u['hash'] = impronta
+                    u['cambia'] = True
                     salva_utenti(s, utenti)
                     s.commit()
-                    annota('utente aggiunto dal PC principale', nome)
-                    flash('Utente %s aggiunto: al primo accesso sceglierà la sua password.' % nome, 'ok')
-            elif azione in ('salva', 'password', 'elimina', 'fai-uscire'):
-                u = trova_id(utenti, request.form.get('utente'))
-                if u is None:
-                    flash('Utente non trovato.', 'errore')
-                elif azione == 'salva':
-                    u['aree'] = _modulo_aree(u)
-                    attivo = request.form.get('attivo') == '1'
-                    u['attivo'] = attivo
-                    salva_utenti(s, utenti)
-                    s.commit()
-                    n = 0 if attivo else sessioni.togli_utente(u['id'])         # spento: esce subito
-                    annota('aree salvate dal PC principale%s' % ('' if attivo else ' (utente spento)'), u['nome'])
-                    flash('Aree di %s salvate.%s' % (u['nome'], ' Utente spento: è uscito.' if n else ''), 'ok')
-                elif azione == 'password':
-                    problema = problema_password(password_nuova, u['nome'])
-                    if problema:
-                        flash(problema, 'errore')
-                    else:
-                        u['hash'] = impronta
-                        u['cambia'] = True
-                        salva_utenti(s, utenti)
-                        s.commit()
-                        sessioni.togli_utente(u['id'])                         # chi era entrato rientra
-                        tentativi.sblocca(u['nome'])
-                        annota('password data dal PC principale', u['nome'])
-                        flash('Password di %s cambiata: al prossimo accesso sceglierà la sua.' % u['nome'], 'ok')
-                elif azione == 'fai-uscire':
-                    n = sessioni.togli_utente(u['id'])
-                    annota('fatto uscire dal PC principale', u['nome'])
-                    flash('%s è uscito da %d PC.' % (u['nome'], n) if n else '%s non era entrato.' % u['nome'], 'ok')
-                else:
-                    utenti.remove(u)
-                    salva_utenti(s, utenti)
-                    s.commit()
-                    sessioni.togli_utente(u['id'])
-                    annota('utente tolto dal PC principale', u['nome'])
-                    flash('Utente %s tolto.' % u['nome'], 'ok')
-            elif azione == 'sblocca':
-                pc = pulito(request.form.get('pc'), 64)
-                tentativi.sblocca(request.form.get('nome'), pc=pc)
-                annota('sbloccato dal PC principale%s' % (' il PC %s' % pc if pc else ''), request.form.get('nome'))
-                flash('Sbloccato: si può riprovare subito.', 'ok')
-        return redirect(url_for('accessi.pagina'))
-    cfg = configurazione(s)
-    tentativi.scrivi_rimasti()
-    return render_template('accessi.html', cfg=cfg, aree=AREE, livelli=LIVELLI, acceso=ascolto.acceso(),
-                           porta_accesa=ascolto.porta, errore_ascolto=ascolto.errore,
-                           indirizzi=indirizzi_da_usare(ascolto.porta or cfg['porta']),
-                           eventi=ultimi_accessi(), giorni_registro=7, bloccati=tentativi.bloccati(),
-                           entrati=sessioni.quante, firewall=comandi_firewall(ascolto.porta or cfg['porta']),
-                           consiglio=CONSIGLIO_PASSWORD, minimo=MINIMO_PASSWORD, sezione='impostazioni', sid=None)
+                    ricorda(s)
+                    sessioni.togli_utente(u['id'])                         # chi era entrato rientra
+                    tentativi.sblocca(u['nome'])
+                    annota('password data dal PC principale', u['nome'])
+                    flash('Password di %s cambiata: al prossimo accesso sceglierà la sua.' % u['nome'], 'ok')
+            elif azione == 'fai-uscire':
+                aperto = u['id']
+                n = sessioni.togli_utente(u['id'])
+                annota('fatto uscire dal PC principale', u['nome'])
+                flash('%s è uscito da %d PC.' % (u['nome'], n) if n else '%s non era entrato.' % u['nome'], 'ok')
+            else:
+                utenti.remove(u)
+                salva_utenti(s, utenti)
+                s.commit()
+                ricorda(s)
+                sessioni.togli_utente(u['id'])
+                annota('utente tolto dal PC principale', u['nome'])
+                flash('Utente %s tolto.' % u['nome'], 'ok')
+        elif azione == 'sblocca':
+            pc = pulito(request.form.get('pc'), 64)
+            tentativi.sblocca(request.form.get('nome'), pc=pc)
+            annota('sbloccato dal PC principale%s' % (' il PC %s' % pc if pc else ''), request.form.get('nome'))
+            flash('Sbloccato: si può riprovare subito.', 'ok')
+    if rifiutato is not None:
+        # revisione del 22/11: la pagina tornava in cima con il modulo vuoto (nome e 12 parti da rifare). Ora torna con
+        # quello che si era scritto, tranne la password, e il motivo accanto al modulo (fuori dal lucchetto)
+        return _mostra_pagina(s, 200, **rifiutato)
+    if aperto:
+        return redirect(url_for('accessi.pagina', aperto=aperto) + '#utente-%s' % aperto)
+    return redirect(url_for('accessi.pagina'))
 
 
-def comandi_firewall(porta):
-    """Per chi fa la regola del firewall di Windows a mano (prompt dei comandi aperto come amministratore): la
-    regola solo per le reti private, e il comando che la toglie."""
-    return ('netsh advfirewall firewall add rule name="%s" dir=in action=allow protocol=TCP localport=%d '
-            'profile=private' % (NOME_REGOLA_FIREWALL, porta),
-            'netsh advfirewall firewall delete rule name="%s"' % NOME_REGOLA_FIREWALL)
+def percorso_programma():
+    """Il programma che riceve dalla rete, come lo vede il firewall di Windows: Gestionale.exe (sys.executable
+    nell'eseguibile, anche a un file solo), oppure python.exe con «python app.py»."""
+    return os.path.abspath(sys.executable or 'Gestionale.exe')
+
+
+def comandi_firewall(porta, programma=None):
+    """I comandi per il firewall di Windows (Prompt dei comandi aperto come amministratore), dalla documentazione di
+    Microsoft (netsh advfirewall firewall). Revisione del 22/11: con «Annulla» o «No» alla domanda di Windows, e sempre
+    se chi usa il PC non è amministratore, Windows crea regole che BLOCCANO il programma, e una regola che blocca vince su
+    quelle che permettono: aggiungere solo la regola «allow» non apriva niente. Quindi:
+    togli -- toglie tutte le regole del firewall di questo programma (anche quelle che lo bloccano);
+    metti -- la regola che lo lascia ricevere, solo per questo programma, solo TCP sulla porta della rete, solo nelle
+             reti private e di dominio (le reti di un'azienda; mai le pubbliche);
+    togli_regola -- per toglierla, quando non serve più."""
+    programma = programma or percorso_programma()
+    return {'togli': 'netsh advfirewall firewall delete rule name=all program="%s"' % programma,
+            'metti': 'netsh advfirewall firewall add rule name="%s" dir=in action=allow program="%s" protocol=TCP '
+                     'localport=%d profile=private,domain' % (NOME_REGOLA_FIREWALL, programma, porta),
+            'togli_regola': 'netsh advfirewall firewall delete rule name="%s"' % NOME_REGOLA_FIREWALL,
+            'programma': programma}
 
 
 # ================================================================= aggancio
-def installa(app):
-    """Da app.py, dopo aver dichiarato tutte le pagine."""
+# Quello che serve del programma (la sessione per filo, il lucchetto dei salvataggi, la fabbrica delle sessioni): lo
+# passa app.py con installa(), come fa con viste.collega. MAI «from app import ...» o «import app» da qui o da un altro
+# modulo del programma (revisione del 22/11, grave): nell'eseguibile app.py gira come «__main__», e il primo «from app
+# import» caricava una SECONDA copia di app.py, che rifaceva i collega() con Sessione=None. Da lì ogni pagina rispondeva
+# 500, anche sul PC della segreteria. prove_accessi.py lo controlla sui sorgenti e con il programma avviato come
+# «__main__».
+_programma = {'ses': None, 'lucchetto': None, 'fabbrica': None}
+
+
+def installa(app, ses, lucchetto, fabbrica):
+    """Da app.py, dopo aver dichiarato tutte le pagine: ses() la sessione del filo, lucchetto quello dei salvataggi,
+    fabbrica() la fabbrica delle sessioni di adesso (app.Sessione cambia all'avvio)."""
+    _programma.update(ses=ses, lucchetto=lucchetto, fabbrica=fabbrica)
     app.register_blueprint(bp)
     app.session_interface = SessioniDueNomi()
     app.before_request(controlla_accesso)
