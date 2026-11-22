@@ -31,6 +31,7 @@ from openpyxl import Workbook
 import ambulatori
 import calendario
 import servizi
+import accessi
 from comune import data_da, scarica_excel, struttura_scelta
 
 bp = Blueprint('esportazioni', __name__)
@@ -113,7 +114,7 @@ def libro(s, st, periodo, parte, g, adesso=None):
                                      parti_medico, titolo_periodo(periodo, g), adesso)
     if periodo == 'giorno':
         dati = BytesIO()
-        servizi.esporta_giorno(s, g, st.id, dati, parte=parte, in_piu=per_medico)
+        servizi.esporta_giorno(s, g, st.id, dati, parte=parte, in_piu=per_medico, con_cassa=accessi.puo('cassa'))
         return dati
     wb = Workbook()
     if periodo == 'settimana':

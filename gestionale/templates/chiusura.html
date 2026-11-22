@@ -17,7 +17,7 @@
     {% endif %}
     <span class="separa"></span>
     <a class="bottone" href="{{ url_for('viste.elenco_giorno', iso=g.isoformat(), struttura=sid) }}">Elenco</a>
-    <a class="bottone" href="{{ url_for('cassa.cassa_giorno', iso=g.isoformat(), struttura=sid) }}">Cassa del giorno</a>
+    {% if puo('cassa') %}<a class="bottone" href="{{ url_for('cassa.cassa_giorno', iso=g.isoformat(), struttura=sid) }}">Cassa del giorno</a>{% endif %}
   </div>
 </div>
 <div class="contenuto">

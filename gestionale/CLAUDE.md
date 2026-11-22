@@ -143,7 +143,9 @@ casella email e WhatsApp nel Sistema, la password della casella tolta quando cam
 la pagina e il registro letto dai file, e il programma vero (`app.principale`) in un processo a parte: rete accesa dalla
 pagina, richieste dall'indirizzo di questo PC fuori da 127.* (come un altro PC) e da 127.0.0.1, porta principale non
 raggiungibile, «solo guardare» che non salva, rete spenta che chiude davvero la porta, riavvio con la porta della rete
-occupata (il PC principale parte lo stesso); ogni prova ha il suo gemello.
+occupata (il PC principale parte lo stesso); ogni prova ha il suo gemello. Le prove `z_…` sono quelle della revisione del
+22/11 (assenze e chiusure, ricerca dei pazienti, Cassa, lista d'attesa, Conferme, incasso, tentativi con tanti nomi e
+mandati insieme, collegamenti per PC, cookie da un altro PC, sessioni per utente, Excel troppo compressi).
 `prove_canarino.py` è la guardia del Modo schermo: un paziente inventato apposta (il «canarino»), con appuntamenti
 di oggi in ogni stato, un intervento, la lista d'attesa e il nome scritto in note, cose da fare e appunti, non deve
 comparire in nessuna pagina sotto `/riepilogo-live*`, con e senza schermo, per ogni struttura e periodo; i suoi gemelli
@@ -331,20 +333,37 @@ temporanea.
   `accessi.CENSIMENTO`, uno solo: una pagina nuova va scritta lì (una che manca dalla rete è rifiutata come il
   Sistema, e `prove_accessi.py` cade). Il Sistema (aggiornamenti, copie e ripristino, controllo del programma,
   impostazioni, la pagina degli accessi) mai dalla rete. Ricerca dei pazienti, luoghi e codice fiscale servono a più
-  aree (`SERVIZIO_PAZIENTI`). Una notifica nuova ha una chiave che comincia con un prefisso di `AREA_NOTIFICHE`; un
+  aree (`SERVIZIO_PAZIENTI`); la ricerca dei pazienti (`RICERCA_PAZIENTI`, dà tutta l'anagrafica) senza i Pazienti solo
+  con Agenda, Segreteria o Dove si fa da modificare (`livello_ricerca_pazienti`; nei modelli `puo_cercare_pazienti()`
+  intorno al campo «Cerca in anagrafica», e `dovesifa._paziente` non dà il paziente dell'indirizzo). Un modulo che vale
+  anche per un'altra area si scrive in `ANCHE_PER` (oggi: «Manda» il promemoria delle Conferme per la Segreteria). Una notifica nuova ha una chiave che comincia con un prefisso di `AREA_NOTIFICHE`; un
   Excel o un documento nuovo va in `REGISTRA_LETTURE`. Nei modelli e nelle pagine `puo('area')` e
   `puo_cambiare('area')` (sul PC sempre vero): la prenotazione cambia la scheda di un paziente che c'è già solo con
   `puo_cambiare('pazienti')` (`pazienti.trova_o_crea(aggiorna=)`), importo e convenzione solo con la Cassa, lista
   d'attesa e appunti solo con la Segreteria. I `{% if puo(...) %}` si scrivono al posto di una riga vuota, così
-  sul PC l'HTML resta identico. Sessioni della rete sul server (`Sessioni`, `sessioni-rete.json` accanto a
+  sul PC l'HTML resta identico (o dentro una riga, come `{% if puo('cassa') %}<a …>…</a>{% endif %}`). Quello che è di
+  un'altra area resta di quella anche dentro le pagine e i file (revisione del 22/11): importi, convenzioni e incassi
+  solo con la Cassa (stampa del giorno senza la colonna Importo, `servizi.esporta_giorno(con_cassa=)` senza CONVENZIONE
+  e IMPORTO, elenco del giorno, «da incassare» della chiusura); nomi e telefoni degli appuntamenti da spostare di
+  un'assenza o di una chiusura solo con l'Agenda (`anagrafiche.elenco_da_spostare`); lista d'attesa e appunti cambiano la
+  scheda di un paziente solo con `puo_cambiare('pazienti')`, come la prenotazione. Sessioni della rete sul server (`Sessioni`, `sessioni-rete.json` accanto a
   `chiave-sessione`, nella cartella dei dati), chiave dei cookie casuale (mai più `gestionale-locale`), tentativi
-  bloccati per PC e nome e per nome (`Tentativi`), password con `problema_password`, registro per giorno in
-  `accessi/` (la pagina mostra gli ultimi 7 giorni, letti dai file). Regole da non rompere: ogni pagina nuova (funzione
+  bloccati per PC e nome, per PC con nomi qualsiasi (`TENTATIVI_PC`) e per nome (`Tentativi`: il tentativo si conta prima
+  di provare la password con `prenota`; voci con un tetto, sfoltite al più una volta al minuto; `bloccati()` in un
+  passaggio; a un PC bloccato `controlla_accesso` risponde senza leggere il database), sessioni legate al PC da cui si è
+  entrati e al massimo `MASSIMO_SESSIONI` per utente, password con `problema_password` (anche almeno 6 lettere, 4 diverse,
+  non fatte solo di parole di `VIETATE`), registro per giorno in `accessi/` (i tentativi sbagliati dallo stesso PC al
+  massimo una riga al minuto, `annota_sbagliato`; la pagina mostra gli ultimi 7 giorni, letti dalla coda dei file). Regole da non rompere: ogni pagina nuova (funzione
   di Flask) ha la sua area nel censimento; il Sistema mai dalla rete, anche le sue parti dentro le pagine di un'area
   (`SISTEMA_DENTRO`: la casella email e il token WhatsApp di `/invii`, con prove e registrazione del numero; nella
   pagina dietro `{% if puo('sistema') %}`); il PC principale senza accesso e con le pagine di prima. I due server di
-  waitress hanno gli stessi limiti (`accessi.LIMITI_SERVER`: 13 MB, 20 collegamenti, 30 secondi) e non tolgono le
-  intestazioni dei portieri; la porta della rete si salva solo dopo un'accensione riuscita, `accessi.applica` si
+  waitress: sul PC `accessi.LIMITI_SERVER` (13 MB, 20 collegamenti, 30 secondi), sulla rete `LIMITI_RETE` (13 MB, 100
+  collegamenti, 10 secondi) con al massimo `COLLEGAMENTI_PER_PC` (12) aperti insieme dallo stesso indirizzo
+  (`canale_con_limite`; non contano gli indirizzi 127.*, cioè i portieri), e tutti e due non tolgono le intestazioni dei
+  portieri. Un file Excel caricato (Importa da Excel, tariffari, strutture del gruppo) passa prima da
+  `comune.controlla_excel_compresso` (troppo grande scompattato, o troppo compresso: rifiutato), e Importa da Excel lo
+  legge in sola lettura (`importa._leggi_foglio`, con il lettore dei fogli di openpyxl: attenzione aggiornando openpyxl;
+  `prove_accessi.py` confronta le righe con la lettura di prima, copiata nella prova); la porta della rete si salva solo dopo un'accensione riuscita, `accessi.applica` si
   richiama dopo un ripristino o una riparazione, all'avvio con la porta occupata si riprova (`RIPROVE_AVVIO`,
   `PAUSA_AVVIO`) in un filo a parte: la rete non deve mai fermare l'avvio del PC principale. Dagli altri PC un
   indirizzo in numeri va sempre bene sulla porta della rete (il DNS rebinding passa da un nome), un nome solo se è del

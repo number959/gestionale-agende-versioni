@@ -9,7 +9,7 @@
     nella pagina intera e nei pezzi che static/dove.js chiede mentre si scrive. -#}
 <div class="pagina larga pagina-dove" id="pagina-dove"
      data-risultati="{{ url_for('dovesifa.risultati') }}" data-scheda="{{ url_for('dovesifa.scheda', gid=0) }}"
-     data-indirizza="{{ url_for('dovesifa.indirizza', struttura=sid if strutture|length > 1 and sid else none) }}" data-pazienti="{{ url_for('pazienti.cerca_json') }}"
+     data-indirizza="{{ url_for('dovesifa.indirizza', struttura=sid if strutture|length > 1 and sid else none) }}"{% if puo_cercare_pazienti() %} data-pazienti="{{ url_for('pazienti.cerca_json') }}"{% endif %}
      data-pagina="{{ url_for('dovesifa.pagina') }}" data-paziente="{{ paziente.id if paziente else '' }}"
      data-struttura="{{ sid if strutture|length > 1 and sid else '' }}">
   <p class="marchio" style="border:0;margin-bottom:16px">{% include "_marchio.html" %}</p>
@@ -53,7 +53,7 @@
     <span>Per <a href="{{ url_for('pazienti.scheda', pid=paziente.id) }}"><b>{{ paziente.etichetta }}</b></a>{% if paziente.telefono %} · {{ paziente.telefono }}{% endif %}:
       il messaggio porta il suo nome, WhatsApp ed email partono verso i suoi recapiti.</span>
     <a class="togli-paziente" href="{{ url_for('dovesifa.pagina', q=q or none, branca=branca or none, struttura=sid if strutture|length > 1 else none) }}">Togli</a>
-    {% else %}
+    {% elif puo_cercare_pazienti() %}
     <label for="paziente-dove">Per un paziente in anagrafica?</label>
     <div class="scegli-paziente">
       <input type="search" id="paziente-dove" placeholder="cognome, telefono…" autocomplete="off" maxlength="60"

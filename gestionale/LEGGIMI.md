@@ -1830,8 +1830,17 @@ accessi) resta sempre e solo sul PC della segreteria. Dall'altro PC si entra con
 quale nome si è entrati, con «La mia password» ed «Esci». Una parte non data risponde con una pagina in italiano che
 dice a chi chiedere. Nel riquadro di ogni utente: le parti, «Può entrare» (togliendo la spunta esce subito da tutti i
 PC), la password nuova se l'ha dimenticata, «Fai uscire», «Togli» (con la domanda). Chi sbaglia la password 5 volte da un
-PC aspetta un quarto d'ora; «Sblocca» in *Tentativi sbagliati*. In fondo gli ultimi accessi e salvataggi dagli altri PC
-degli ultimi 7 giorni.
+PC aspetta un quarto d'ora; un PC che sbaglia 30 volte con nomi qualsiasi aspetta un quarto d'ora per tutti i nomi;
+«Sblocca» in *Tentativi sbagliati* (anche il PC). In fondo gli ultimi accessi e salvataggi dagli altri PC degli ultimi 7
+giorni. Un utente ha al massimo 5 sessioni aperte (entrando la sesta, si chiude la più vecchia) e la sessione vale solo
+dal PC da cui si è entrati: da un altro PC si rientra con nome e password. Dentro le parti, quello che è di un'altra
+parte resta di quella: senza la Cassa niente importi, convenzioni e incassi (stampa e Excel del giorno, elenco,
+chiusura); senza l'Agenda, in un'assenza o una chiusura solo il numero degli appuntamenti da spostare, senza nomi; la
+ricerca dei pazienti (con telefono, email, codice fiscale) a chi ha i Pazienti o può prenotare (Agenda, Segreteria o Dove
+si fa da modificare); con la sola Cassa si incassa anche con bonifico o con un importo scritto, dalla cassa del giorno;
+con la Segreteria da modificare, nelle Conferme, «Confermato», «Disdetto» e «Manda» il promemoria. In *Statistiche e
+report* ci sono anche nomi e telefoni dei pazienti, importi e incassi (riepilogo dei medici ed esportazioni): la pagina
+lo dice accanto alla parte.
 
 Il collegamento è in chiaro (http, non https): nome, password e dati passano senza protezione nella rete della clinica.
 Va bene solo nella rete interna del personale, mai in una Wi-Fi aperta ai pazienti o da fuori; la protezione https,
@@ -1843,20 +1852,34 @@ password» aprono `http://NOME-DEL-PC:5080/riepilogo-live?schermo=1` senza Caddy
 - *Dalla rete* è una richiesta arrivata dalla presa della rete (`AscoltoRete`, un secondo server di waitress con fili
   suoi, acceso e spento a programma aperto: `MarcaRete` segna ogni richiesta), con un'intestazione di un portiere
   (X-Forwarded-For, Forwarded, X-Real-Ip, X-Forwarded-Host) o da un indirizzo non del PC. Per le intestazioni il server
-  principale non le toglie più (`clear_untrusted_proxy_headers=False`). I due server hanno gli stessi limiti
-  (`LIMITI_SERVER`: moduli fino a 13 MB, oltre 413 da waitress; 20 collegamenti; un collegamento fermo da 30 secondi si
-  chiude, mai uno con una richiesta in corso).
+  principale non le toglie più (`clear_untrusted_proxy_headers=False`). I limiti di waitress: moduli fino a 13 MB (oltre
+  413 da waitress) su tutti e due i server; sul PC principale (`LIMITI_SERVER`) 20 collegamenti e un collegamento fermo
+  da 30 secondi si chiude (mai uno con una richiesta in corso); sulla presa della rete (`LIMITI_RETE`) 100 collegamenti,
+  10 secondi, e al massimo 12 aperti insieme dallo stesso indirizzo (`COLLEGAMENTI_PER_PC`, `canale_con_limite`: il
+  tredicesimo si chiude subito; gli indirizzi del PC stesso, cioè un portiere, non contano). Così un PC solo, senza
+  password, non tiene più occupati tutti i collegamenti con richieste mai finite.
 - *La guardia* (`controlla_accesso`, prima di ogni richiesta): ogni pagina ha la sua area in `CENSIMENTO` (una che manca è
   rifiutata come il Sistema, e la prova cade); il Sistema mai; le parti del Sistema dentro le pagine di un'area
   (`SISTEMA_DENTRO`: i moduli della casella email e di WhatsApp di `/invii`) rispondono 403, e la pagina le nasconde
-  (`{% if puo('sistema') %}`); «solo guardare» lascia passare solo GET e HEAD. Il nome con cui si chiama il PC (Host):
+  (`{% if puo('sistema') %}`); «solo guardare» lascia passare solo GET e HEAD. Un modulo di una pagina può valere anche
+  per un'altra area (`ANCHE_PER`: «Manda» il promemoria di `/invii/appuntamento` anche per la Segreteria, solo quello), e
+  cambiare lo stato di un appuntamento vale per Agenda o Segreteria. La ricerca dei pazienti (`RICERCA_PAZIENTI`) senza i
+  Pazienti vuole Agenda, Segreteria o Dove si fa da modificare (`livello_ricerca_pazienti`); le pagine di chi guarda non
+  hanno il campo (`puo_cercare_pazienti()` nei modelli), e Dove si fa non mostra il paziente dell'indirizzo. Il nome con
+  cui si chiama il PC (Host):
   uno dei suoi nomi (`nomi_del_pc`, rifatti ogni minuto), uno scritto in «Altri nomi», o un indirizzo in numeri sulla
   porta della rete (il DNS rebinding passa sempre da un nome); l'origine dei moduli come sul PC.
 - *Utenti e sessioni*: fra le impostazioni (`rete_utenti`, JSON con l'impronta della password di werkzeug: nessuna
   tabella nuova, lo schema resta il 12); le sessioni sul server (`sessioni-rete.json` accanto a `chiave-sessione`), così
   «Esci», «Fai uscire», la password cambiata e l'utente spento chiudono davvero, e dopo un riavvio chi era entrato
-  resta dentro. La chiave dei cookie è casuale, una per installazione; la presa della rete non si accende con una
-  chiave corta o con quella fissa di prima.
+  resta dentro. Al massimo 5 sessioni per utente (`MASSIMO_SESSIONI`), il file riscritto al più ogni 3 secondi entrando
+  (`SALVA_SESSIONI_OGNI`, poi un filo a parte lo scrive); la sessione ricorda da quale PC si è entrati e da un altro si
+  chiude (nel registro «sessione usata da un altro PC»). La chiave dei cookie è casuale, una per installazione; la presa
+  della rete non si accende con una chiave corta o con quella fissa di prima.
+- *I tentativi* (`Tentativi`): 5 sbagliati per PC e nome, 30 per PC con nomi qualsiasi (`TENTATIVI_PC`), 20 per nome da
+  qualsiasi PC con l'attesa che raddoppia. Il tentativo si conta prima di provare la password, sotto un lucchetto
+  (`prenota`: tanti mandati insieme non ne fanno provare di più), le voci hanno un tetto e si sfoltiscono al più una volta
+  al minuto, `bloccati()` fa un passaggio solo; a un PC bloccato si risponde subito, senza leggere il database.
 - *Accendere e spegnere*: la porta si salva solo se l'ascolto parte (una porta occupata lascia quella di prima e lo
   dice: «già usata da un altro programma», o per Windows «riservata»); mai la 5000 né le 5001-5009. Dopo un ripristino
   e dopo una riparazione `applica` rimette l'ascolto come dicono le impostazioni rimesse. All'avvio (`all_avvio`, da
@@ -1868,7 +1891,15 @@ password» aprono `http://NOME-DEL-PC:5080/riepilogo-live?schermo=1` senza Caddy
   nessuno, nemmeno dal PC, la può mandare a un altro server cambiando solo il server.
 - *Il registro*: `accessi/accessi-AAAA-MM-GG.log` accanto al database, un file per giorno (più vecchi di 400 giorni si
   cancellano all'avvio), senza caratteri di controllo e senza « | » nei nomi; entrate, uscite, errori di password,
-  ogni salvataggio, ogni rifiuto, e le schede, i documenti e gli Excel aperti.
+  ogni salvataggio, ogni rifiuto, e le schede, i documenti e gli Excel aperti. I tentativi sbagliati dallo stesso PC: al
+  massimo una riga al minuto, con quanti erano (`annota_sbagliato`); la pagina legge solo la coda dei file
+  (`coda_del_file`).
+- *I file Excel caricati* (Importa da Excel, tariffari, strutture del gruppo): prima di aprirli si guarda quanto diventano
+  scompattati (`comune.controlla_excel_compresso`: oltre 60 MB, o un pezzo grande compresso più di 100 volte, «file
+  troppo grande» o «non sembra un foglio normale»); Importa da Excel legge in sola lettura, tenendo solo le righe che
+  servono (`importa._leggi_foglio`, con il lettore dei fogli di openpyxl anche per le celle unite: dà le stesse righe di
+  prima, e `prove_accessi.py` le confronta con la lettura di prima, copiata nella prova). Prima un file di 189 KB con
+  milioni di celle portava il programma, uno solo anche per il PC della segreteria, oltre 1 GB di memoria.
 - *Nella prova* (`prova.py`) l'accesso dagli altri PC si prova sulla 5085, mai sulla 5080 della clinica né sulle porte
   del programma vero e della prova, con un cookie suo; non si accende da solo all'avvio.
 
@@ -3092,6 +3123,7 @@ falliscono, cioè il difetto c'era davvero.
 | Tre prove nel browser senza `CHROMIUM` (21/11/2026) | `prove_sicurezza_browser.py`, `prove_animazioni.py` (solo nell'animata) e `strumenti/prova_aggiorna_adesso.py` aprivano Chromium senza `executable_path=os.environ.get('CHROMIUM')`, a differenza di tutte le altre prove e degli strumenti delle guide: in una sessione nel cloud dove la libreria Playwright di Python cerca un Chromium più nuovo di quello installato si fermavano dopo un secondo | Aprono Chromium come le altre; senza `CHROMIUM` (su Windows e in `prove.yml`) tutto resta come prima |
 | La «cornice» di `prove_sicurezza_browser.py` che falliva a caso (21/11/2026) | Con le due cartelle provate insieme la prova a volte non vedeva la risposta 403 alla richiesta della cornice da un altro sito: il testo restava giusto, ma Playwright non vedeva né la richiesta né la risposta (6 giri su 14 sotto carico, con una copia della prova che registrava anche le richieste fallite). Chrome fa girare la cornice chiusa in una sandbox in un processo suo, e il modulo partiva appena la cornice era pronta, prima che Playwright la seguisse. Aspettare di più non bastava; e il primo modo di riprovare non serviva, perché riapriva lo stesso indirizzo con la stessa ancora e il browser restava nella stessa pagina, senza rifare l'attacco (lo ha trovato la revisione della 1.12.7). Un difetto della prova, non del programma | Il modulo della cornice parte dopo un secondo (14 giri su 14 sotto lo stesso carico), e senza il 403 visto la prova riprova fino a tre volte, ogni volta da un indirizzo nuovo, con lo stesso criterio di prima (testo uguale e risposta 403; se il testo cambia fallisce subito): con il primo tentativo perso apposta, il secondo rifà l'attacco e vede il 403. Con il controllo della provenienza tolto dal gestionale la prova è rossa, cornice compresa |
 | La prova del thread di `prove_15.py` che falliva a caso (22/11/2026) | `i_thread` aspettava che l'email arrivasse al finto server di posta e subito controllava che nel database fosse «INVIATO»; il thread scrive lo stato un attimo dopo l'invio, e con il computer carico (le due cartelle provate insieme, più altri lavori) l'ha trovata ancora «IN_CORSO» una volta. Un difetto della prova, non del programma | La prova aspetta, fino a 10 secondi, sia l'email sia lo stato scritto; 5 giri di fila con sei processi che occupano il computer, tutti verdi |
+| Accesso dagli altri PC, revisione dei tre revisori (22/11/2026, prima di consegnarlo) | Riprodotti uno per uno, prima di correggerli. Con le sole Anagrafiche, un'assenza o una chiusura mostravano nomi e telefoni degli appuntamenti da spostare (con una chiusura di un anno, tutti); con Agenda, Segreteria o Dove si fa anche solo da guardare la ricerca dei pazienti dava tutta l'anagrafica; senza la Cassa la stampa e l'Excel del giorno, l'elenco e la chiusura mostravano importi e convenzioni; dalla lista d'attesa e dagli appunti la Segreteria cambiava la scheda di un paziente; le Conferme davano 403 alla Segreteria; con la sola Cassa non si incassava con bonifico; chiunque sulla rete, provando nomi sempre nuovi, rendeva lenta per minuti la pagina «Aree e accessi» e riempiva il registro; un .xlsx di 189 KB portava il programma oltre 1 GB di memoria; un PC solo teneva occupati tutti i collegamenti della rete; il cookie valeva da qualsiasi PC; passavano password come «1234567890a» o «clinicaposillipo1»; 40 tentativi insieme ne facevano provare 8; le sessioni di un utente non avevano limite | Ognuna con la sua prova e il suo gemello in `prove_accessi.py` (le prove `z_…`) e un mutante che la fa cadere: lista solo con l'Agenda; ricerca senza i Pazienti solo a chi può prenotare (`RICERCA_PAZIENTI`); importi e convenzioni solo con la Cassa (`con_cassa` nell'Excel del giorno); `aggiorna=puo_cambiare('pazienti')` anche in lista d'attesa e appunti; stato per Agenda o Segreteria, promemoria anche per la Segreteria (`ANCHE_PER`); il modulo di incasso nella cassa del giorno; `Tentativi` con il limite per PC, il tetto alle voci, `bloccati()` in un passaggio, `prenota` sotto il lucchetto, la risposta subito a un PC bloccato; registro raggruppato e letto dal fondo; `controlla_excel_compresso` e Importa da Excel in sola lettura; 12 collegamenti per PC sulla rete; sessione legata al PC, al massimo 5 per utente; password con almeno 6 lettere, 4 diverse, non fatte solo di parole vietate. Statistiche e report: per ora la pagina dice che ci sono pazienti e importi (cosa togliere lo decide Giovanni) |
 | Il clic su «Stampa e scarica» coperto dalla tendina del menu (21/11/2026) | In `prove_112_browser.py`, nell'animata, una volta sola in tutti i giri del 21 novembre, la tendina «Ambulatori» del menu era aperta sopra il pulsante e il clic non arrivava (30 secondi e poi rosso). La causa l'ha trovata la revisione della 1.12.7, ed è della prova: nell'animata la tendina «Stampa e scarica» entra con un'animazione di 0,18 secondi, Playwright vede la voce «non ferma», fa scorrere la pagina per mostrarla e lascia il mouse in cima alla finestra; al clic dopo riporta la pagina in cima, il gruppo «Ambulatori» del menu finisce sotto il mouse fermo e apre la sua tendina sopra il pulsante. Nella normale, senza animazione, non succede | Prima di aprire «Stampa e scarica» la prova porta il mouse in un punto neutro della pagina, dove il menu non può finire, e controlla che nessuna tendina del menu sia aperta; se lo è, lo dice, con la tendina e il perché (mouse sopra, focus dentro o classe «aperto») |
 | Wine non partiva più nelle sessioni nel cloud (21/11/2026) | Wine 9.0 di Ubuntu si chiudeva appena partito, con «free(): invalid pointer», se la variabile `TMPDIR` era impostata, anche a `/tmp`: nella sessione del 21 novembre lo era, il 1° novembre no. `strumenti/wine/costruisci.sh` finiva con un `crea_exe.log` vuoto | `strumenti/wine/ambiente.sh` toglie `TMPDIR` prima di usare Wine, che allora usa `/tmp` da solo |
 

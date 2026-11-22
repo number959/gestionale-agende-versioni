@@ -28,9 +28,10 @@ Tutto in un posto solo:
 - la chiave che firma i cookie: casuale già all'avvio del modulo (app.py) e poi, all'avvio vero, quella di
   chiave-sessione accanto al database (mai nelle copie di sicurezza); la presa della rete non si accende con una
   chiave corta o fissa;
-- i tentativi sbagliati: bloccati per PC e nome (5 in un quarto d'ora) e per nome da qualsiasi PC (dopo 20 l'attesa
-  raddoppia a ogni errore, fino a un'ora); «Sblocca» nella pagina;
-- il registro: accessi/accessi-AAAA-MM-GG.log, un file per giorno, senza caratteri di controllo.
+- i tentativi sbagliati: bloccati per PC e nome (5 in un quarto d'ora), per PC con qualsiasi nome (30 in un quarto
+  d'ora) e per nome da qualsiasi PC (dopo 20 l'attesa raddoppia a ogni errore, fino a un'ora); «Sblocca» nella pagina;
+- il registro: accessi/accessi-AAAA-MM-GG.log, un file per giorno, senza caratteri di controllo (i tentativi sbagliati
+  dallo stesso PC: al massimo una riga al minuto, con quanti erano).
 """
 import collections
 import hashlib
@@ -66,7 +67,11 @@ AREE = (
     ('sala', 'Sala operatoria', 'sala, lista operatoria, posti letto, checklist'),
     ('turni', 'Turni', 'turni del personale'),
     ('ambulatori', 'Ambulatori e dashboard', 'pianificazione, programmazione, riepiloghi, dashboard'),
-    ('statistiche', 'Statistiche e report', 'statistiche, riepilogo dei medici, esportazioni in Excel'),
+    # revisione: dentro il riepilogo dei medici e le esportazioni ci sono nomi e telefoni dei pazienti, importi e incassi
+    # (che cosa togliere a chi non ha Pazienti o Cassa è una domanda per Giovanni): intanto la pagina lo dice
+    ('statistiche', 'Statistiche e report', 'statistiche, riepilogo dei medici, esportazioni in Excel; nel riepilogo e '
+                                            'nelle esportazioni ci sono anche nomi e telefoni dei pazienti, importi e '
+                                            'incassi'),
     ('dove', 'Dove si fa', 'ricerca delle prestazioni, registro, strutture del gruppo'),
     ('comunicazioni', 'Email e WhatsApp', 'regole delle email, promemoria, registro dei messaggi'),
     ('configura', 'Anagrafiche', 'stanze, medici, turni dei medici, prestazioni, strutture, importa, moduli da stampare'),
@@ -89,6 +94,11 @@ CATEGORIE = (LIBERO, UTENTE, SISTEMA, SCHERMO, TRASVERSALE)
 # scrivono un paziente: chi ha una di queste aree li può chiedere (prove_accessi.py apre le pagine di ogni area e
 # chiede tutti gli indirizzi che quelle pagine usano)
 SERVIZIO_PAZIENTI = ('pazienti', 'agenda', 'segreteria', 'dove')
+# ...ma la ricerca dei pazienti dà l'anagrafica (telefono, email, codice fiscale, indirizzo, di tutto l'archivio): senza
+# i Pazienti la chiede solo chi può prenotare o scrivere un paziente, cioè chi ha una delle altre tre in «modificare».
+# Con «solo guardare» non si prenota niente, e la ricerca non serve (revisione: con la sola Agenda da guardare si
+# scaricava tutta l'anagrafica). Luoghi e codice fiscale non leggono l'archivio: bastano le aree del servizio.
+RICERCA_PAZIENTI = 'pazienti.cerca_json'
 
 # L'area di ogni pagina (funzione di Flask): una tupla vuol dire «una qualsiasi di queste». Una pagina nuova va
 # scritta qui (prove_accessi.py cade finché manca: intanto dalla rete è rifiutata come il Sistema).
@@ -109,7 +119,7 @@ CENSIMENTO = {
     # Agenda
     'cruscotto.oggi': 'agenda', 'giorno': 'agenda', 'viste.settimana': 'agenda', 'viste.mese': 'agenda',
     'viste.elenco_giorno': 'agenda', 'viste.stampa': 'agenda', 'esporta': 'agenda', 'appuntamento': 'agenda',
-    'cambia_stato': 'agenda', 'segreteria.sposta': 'agenda', 'segreteria.sposta_blocco': 'agenda',
+    'cambia_stato': ('agenda', 'segreteria'), 'segreteria.sposta': 'agenda', 'segreteria.sposta_blocco': 'agenda',
     'segreteria.avvisa_spostati': 'agenda', 'segreteria.serie': 'agenda', 'segreteria.salva_nota': 'agenda',
     'segreteria.agenda_medico': 'agenda', 'viste.disponibilita': 'agenda', 'viste.promemoria': 'agenda',
     'documenti.stampa_modulo': 'agenda',
@@ -170,6 +180,11 @@ CENSIMENTO = {
 SISTEMA_DENTRO = {'invii.pagina': lambda f: f.get('azione') in ('prova_email', 'prova_whatsapp', 'registra_whatsapp')
                   or (f.get('azione') == 'salva' and f.get('sezione') in ('email', 'whatsapp'))}
 
+# Un salvataggio di una pagina che vale anche per un'altra area, ma solo per quel modulo (revisione: le Conferme, la
+# prima pagina della Segreteria, hanno «Manda» il promemoria, che è di Email e WhatsApp; il resto di quella pagina, le
+# email delle regole, resta solo di Email e WhatsApp). endpoint -> (area in più, quali moduli).
+ANCHE_PER = {'invii.appuntamento': ('segreteria', lambda f: f.get('azione') == 'promemoria')}
+
 # la prima pagina da aprire dopo l'accesso (nell'ordine di AREE: la prima area che l'utente ha)
 PRIMA_PAGINA = {'agenda': 'cruscotto.oggi', 'pazienti': 'pazienti.elenco', 'segreteria': 'viste.conferme',
                 'cassa': 'cassa.listino', 'sala': 'sala.posti_letto', 'turni': 'personale.turni',
@@ -202,15 +217,26 @@ FILI_RETE = 4                   # le richieste dalla rete servite insieme: fili 
 # massimo 20 collegamenti aperti insieme (gli altri aspettano il loro turno), e un collegamento fermo da 30 secondi si
 # chiude (solo se non ha una richiesta in corso: un Excel lungo da preparare non si taglia)
 LIMITI_SERVER = {'max_request_body_size': 13 * 1024 * 1024, 'connection_limit': 20, 'channel_timeout': 30}
+# La presa della rete (revisione dell'attaccante): un solo PC, senza password, apriva i 20 collegamenti e li teneva
+# occupati mandando un carattere ogni tanto, e nessun altro PC entrava più. Qui: 100 collegamenti in tutto, al massimo
+# COLLEGAMENTI_PER_PC aperti insieme dallo stesso indirizzo (gli altri si chiudono subito: un browser ne apre 6, due
+# browser sullo stesso PC 12), e un collegamento fermo si chiude dopo 10 secondi. Non contano gli indirizzi del PC
+# stesso (127.*): un portiere come Caddy porta lì tutti gli schermi, e chi è sul PC non è un altro PC.
+LIMITI_RETE = dict(LIMITI_SERVER, connection_limit=100, channel_timeout=10)
+COLLEGAMENTI_PER_PC = 12
 NOME_REGOLA_FIREWALL = 'Gestionale Agende (rete della clinica)'
 TENTATIVI_COPPIA = 5            # password sbagliate dallo stesso PC per lo stesso nome...
 FINESTRA = 15 * 60              # ...in un quarto d'ora: poi si aspetta un quarto d'ora dall'ultima
+TENTATIVI_PC = 30               # dallo stesso PC con nomi qualsiasi, in un quarto d'ora: poi quel PC aspetta
 SOGLIA_NOME = 20                # per un nome, da qualsiasi PC: dopo 20 sbagliate di fila si aspetta...
 ATTESA_NOME = 60                # ...un minuto, poi 2, 4, 8... a ogni altra sbagliata
 ATTESA_MASSIMA = 3600           # al massimo un'ora
 INATTIVITA = 4 * 3600           # dopo 4 ore senza usarlo si rientra
 DURATA_MASSIMA = 12 * 3600      # e comunque dopo 12 ore
+MASSIMO_SESSIONI = 5            # sessioni aperte di un utente: entrando la sesta, la più vecchia si chiude
+SALVA_SESSIONI_OGNI = 3         # secondi: entrando, il file delle sessioni si riscrive al più una volta ogni tanto
 MINIMO_PASSWORD = 10
+MINIMO_LETTERE = 6              # lettere in una password (le cifre da sole si indovinano)
 COOKIE_RETE = 'gestionale_rete'
 CHIAVI_FISSE = (b'gestionale-locale', 'gestionale-locale')     # la chiave di prima della 1.13, uguale per tutti
 GIORNI_REGISTRO = 400           # i file del registro più vecchi si cancellano all'avvio
@@ -371,6 +397,23 @@ def puo_cambiare(area):
     return livello(utente_attuale(), area) == 'modifica'
 
 
+def livello_ricerca_pazienti(utente):
+    """La ricerca dei pazienti (RICERCA_PAZIENTI): con i Pazienti come loro; senza, solo a chi ha Agenda, Segreteria
+    o Dove si fa in «modificare» (chi può prenotare o scrivere un paziente)."""
+    lv = livello(utente, 'pazienti')
+    if lv != 'no':
+        return lv
+    altre = [livello(utente, a) for a in SERVIZIO_PAZIENTI if a != 'pazienti']
+    return 'modifica' if 'modifica' in altre else 'no'
+
+
+def puo_cercare_pazienti():
+    """Per le pagine: c'è la ricerca dei pazienti (il campo «Cerca in anagrafica»)? Sul PC principale sempre."""
+    if not dalla_rete():
+        return True
+    return livello_ricerca_pazienti(utente_attuale()) != 'no'
+
+
 def ricorda_spostati(ids):
     """Dopo «Sposta gli appuntamenti di un medico»: dalla rete la pagina di chi avvisare mostra solo questi."""
     if dalla_rete():
@@ -445,6 +488,7 @@ class Sessioni:
         self._lucchetto = threading.Lock()
         self._salvato = 0.0
         self._da_salvare = False
+        self._rimandato = None          # (istante, Timer) del salvataggio rimandato
 
     def carica(self, cartella):
         self.file = os.path.join(cartella, 'sessioni-rete.json')
@@ -464,9 +508,23 @@ class Sessioni:
     def _scaduta(r, adesso):
         return adesso - r.get('ultimo', 0) > INATTIVITA or adesso - r.get('dal', 0) > DURATA_MASSIMA
 
-    def _salva(self, forza=False):
+    def _salva(self, forza=False, dopo=60):
+        """Riscrive il file (sotto il lucchetto): subito con forza (un'uscita non deve tornare dopo un riavvio),
+        altrimenti se l'ultima volta è di più di «dopo» secondi fa; se no lo riscrive un filo a parte entro «dopo»
+        secondi, una volta sola per tutti i cambiamenti di quel tempo."""
         self._da_salvare = True
-        if not self.file or (not forza and time.time() - self._salvato < 60):
+        if not self.file:
+            return
+        adesso = time.time()
+        if not forza and adesso - self._salvato < dopo:
+            quando = self._salvato + dopo
+            if self._rimandato is None or self._rimandato[0] > quando:
+                if self._rimandato is not None:
+                    self._rimandato[1].cancel()
+                filo = threading.Timer(max(0.1, quando - adesso), self._salva_rimandato)
+                filo.daemon = True
+                self._rimandato = (quando, filo)
+                filo.start()
             return
         try:
             provvisorio = self.file + '.nuovo'
@@ -477,12 +535,24 @@ class Sessioni:
         except OSError:
             logging.exception('accessi: sessioni non salvate')
 
+    def _salva_rimandato(self):
+        with self._lucchetto:
+            self._rimandato = None
+            if self._da_salvare:
+                self._salva(forza=True)
+
     def nuova(self, utente_id, da=''):
+        """Una sessione nuova. Al massimo MASSIMO_SESSIONI per utente (entrando la sesta si chiude quella usata
+        meno di recente) e il file riscritto al più ogni pochi secondi (revisione: chi entrava di continuo senza
+        uscire lasciava migliaia di sessioni, e il file riscritto per intero a ogni accesso)."""
         sid = secrets.token_urlsafe(32)
         adesso = time.time()
         with self._lucchetto:
+            sue = sorted((r.get('ultimo', 0), k) for k, r in self.dati.items() if r.get('utente') == utente_id)
+            for _, k in sue[:max(0, len(sue) - MASSIMO_SESSIONI + 1)]:
+                del self.dati[k]
             self.dati[impronta_id(sid)] = {'utente': utente_id, 'dal': adesso, 'ultimo': adesso, 'da': da}
-            self._salva(forza=True)
+            self._salva(dopo=SALVA_SESSIONI_OGNI)
         return sid
 
     def leggi(self, sid):
@@ -544,93 +614,216 @@ sessioni = Sessioni()
 
 
 def utente_di_sessione(cfg):
-    """L'utente entrato con questo cookie, o None (e il cookie si svuota)."""
+    """L'utente entrato con questo cookie, o None (e il cookie si svuota). Il cookie vale solo dal PC da cui si è
+    entrati (revisione: viaggia in chiaro, e chi lo leggeva entrava da un altro PC): da un altro indirizzo la
+    sessione si chiude e si rientra con nome e password (con il DHCP, chi cambia indirizzo rientra una volta)."""
     sid = session.get('sid')
     if not sid:
         return None
     r = sessioni.leggi(sid)
     u = trova_id(cfg['utenti'], r['utente']) if r else None
-    if u is None or not u.get('attivo', True):
+    altro_pc = r is not None and (r.get('da') or '') != indirizzo_chi_chiama()
+    if u is None or not u.get('attivo', True) or altro_pc:
         sessioni.togli(sid)
         session.pop('sid', None)
+        if altro_pc and u is not None:
+            annota('sessione usata da un altro PC (entrato da %s): chiusa' % pulito(r.get('da'), 64), u['nome'],
+                   logging.WARNING)
         return None
     return u
 
 
 # ================================================================ tentativi
 class Tentativi:
-    """Password sbagliate: per coppia (PC, nome) 5 in un quarto d'ora, poi si aspetta un quarto d'ora; per nome
-    da qualsiasi PC, dopo 20 di fila l'attesa raddoppia a ogni altra sbagliata (1, 2, 4... minuti, fino a un'ora).
-    Così un PC dove entrano in tanti non si blocca per uno che sbaglia, e chi prova da più PC si ferma lo stesso.
-    I nomi che non esistono contano come gli altri (non si capisce dal blocco se un nome c'è)."""
+    """Password sbagliate: per coppia (PC, nome) 5 in un quarto d'ora, poi si aspetta un quarto d'ora; per PC, con
+    qualsiasi nome, 30 in un quarto d'ora, poi quel PC aspetta un quarto d'ora; per nome da qualsiasi PC, dopo 20 di
+    fila l'attesa raddoppia a ogni altra sbagliata (1, 2, 4... minuti, fino a un'ora). Così un PC dove entrano in tanti
+    non si blocca per uno che sbaglia, chi prova da più PC si ferma lo stesso, e chi prova nomi sempre nuovi dallo
+    stesso PC si ferma al trentesimo. I nomi che non esistono contano come gli altri (non si capisce dal blocco se un
+    nome c'è).
+
+    Revisione dell'attaccante: con nomi sempre nuovi le voci crescevano senza fine e la pagina «Aree e accessi»
+    (bloccati) ci metteva minuti, perché confrontava ogni nome con ogni coppia. Ora le voci per PC sono al massimo
+    TENTATIVI_PC per quarto d'ora, si sfoltiscono al più una volta al minuto (anche leggendo, non solo sbagliando),
+    c'è un tetto (MASSIMO_VOCI: oltre, via le più vecchie) e bloccati() fa un passaggio solo. «prenota» conta il
+    tentativo prima di provare la password, sotto il lucchetto: tanti tentativi mandati insieme non passano in più."""
 
     MASSIMO_VOCI = 5000
+    SFOLTISCI_OGNI = 60
 
     def __init__(self):
         self.coppie = {}                # (indirizzo, nome) -> [istanti]
         self.nomi = {}                  # nome -> {'n': sbagliate di fila, 'ultimo': istante}
+        self.pc = {}                    # indirizzo -> [istanti] (con qualsiasi nome)
+        self.da_scrivere = {}           # indirizzo -> [inizio del minuto, sbagliate non scritte nel registro]
+        self._sfoltito = 0.0
         self._lucchetto = threading.Lock()
 
+    # ------------------------------------------------------------ sotto il lucchetto
+    def _attesa(self, indirizzo, nome, adesso):
+        attesa = 0
+        coda = [t for t in self.coppie.get((indirizzo, nome), ()) if adesso - t < FINESTRA]
+        if len(coda) >= TENTATIVI_COPPIA:
+            attesa = int(FINESTRA - (adesso - coda[-1])) + 1
+        coda = [t for t in self.pc.get(indirizzo, ()) if adesso - t < FINESTRA]
+        if len(coda) >= TENTATIVI_PC:
+            attesa = max(attesa, int(FINESTRA - (adesso - coda[-1])) + 1)
+        v = self.nomi.get(nome)
+        if v and v['n'] >= SOGLIA_NOME:
+            attesa = max(attesa, self._attesa_nome(v, adesso))
+        return max(attesa, 0)
+
+    @staticmethod
+    def _attesa_nome(v, adesso):
+        durata = min(ATTESA_NOME * 2 ** min(v['n'] - SOGLIA_NOME, 20), ATTESA_MASSIMA)
+        return max(int(durata - (adesso - v['ultimo'])) + 1, 0)
+
+    def _sbagliata(self, indirizzo, nome, adesso):
+        self._sfoltisci(adesso)
+        coda = [t for t in self.coppie.get((indirizzo, nome), ()) if adesso - t < FINESTRA]
+        self.coppie[(indirizzo, nome)] = (coda + [adesso])[-TENTATIVI_COPPIA:]
+        coda = [t for t in self.pc.get(indirizzo, ()) if adesso - t < FINESTRA]
+        self.pc[indirizzo] = (coda + [adesso])[-TENTATIVI_PC:]
+        v = self.nomi.setdefault(nome, {'n': 0, 'ultimo': adesso})
+        v['n'] += 1
+        v['ultimo'] = adesso
+
+    def _sfoltisci(self, adesso, forza=False):
+        """Via le voci scadute: al più una volta al minuto, o subito oltre il tetto; se dopo restano più di
+        MASSIMO_VOCI, via le più vecchie (fino a tre quarti del tetto). Costa quanto le voci: mai a ogni tentativo."""
+        troppe = len(self.coppie) > self.MASSIMO_VOCI or len(self.nomi) > self.MASSIMO_VOCI or \
+            len(self.pc) > self.MASSIMO_VOCI
+        if not forza and not troppe and adesso - self._sfoltito < self.SFOLTISCI_OGNI:
+            return
+        self._sfoltito = adesso
+        self.coppie = {k: v for k, v in self.coppie.items() if v and adesso - v[-1] < FINESTRA}
+        self.pc = {k: v for k, v in self.pc.items() if v and adesso - v[-1] < FINESTRA}
+        self.nomi = {k: v for k, v in self.nomi.items() if adesso - v['ultimo'] < ATTESA_MASSIMA * 2}
+        resta = self.MASSIMO_VOCI * 3 // 4
+        if len(self.coppie) > self.MASSIMO_VOCI:
+            self.coppie = dict(sorted(self.coppie.items(), key=lambda kv: kv[1][-1])[-resta:])
+        if len(self.pc) > self.MASSIMO_VOCI:
+            self.pc = dict(sorted(self.pc.items(), key=lambda kv: kv[1][-1])[-resta:])
+        if len(self.nomi) > self.MASSIMO_VOCI:
+            self.nomi = dict(sorted(self.nomi.items(), key=lambda kv: kv[1]['ultimo'])[-resta:])
+
+    # ------------------------------------------------------------ per le pagine
     def attesa(self, indirizzo, nome, adesso=None):
         """Secondi da aspettare prima di poter provare (0: si può)."""
         adesso = time.time() if adesso is None else adesso
         nome = chiave_nome(nome)
         with self._lucchetto:
-            attesa = 0
-            coda = [t for t in self.coppie.get((indirizzo, nome), ()) if adesso - t < FINESTRA]
-            if len(coda) >= TENTATIVI_COPPIA:
-                attesa = int(FINESTRA - (adesso - coda[-1])) + 1
-            v = self.nomi.get(nome)
-            if v and v['n'] >= SOGLIA_NOME:
-                durata = min(ATTESA_NOME * 2 ** (v['n'] - SOGLIA_NOME), ATTESA_MASSIMA)
-                attesa = max(attesa, int(durata - (adesso - v['ultimo'])) + 1)
-            return max(attesa, 0)
+            self._sfoltisci(adesso)
+            return self._attesa(indirizzo, nome, adesso)
 
-    def sbagliata(self, indirizzo, nome, adesso=None):
+    def prenota(self, indirizzo, nome, adesso=None):
+        """Controlla e segna in un colpo solo: i secondi da aspettare (niente segnato), oppure 0 e il tentativo è
+        già contato come sbagliato; se la password è giusta, riuscita() lo toglie."""
         adesso = time.time() if adesso is None else adesso
         nome = chiave_nome(nome)
         with self._lucchetto:
-            if len(self.coppie) > self.MASSIMO_VOCI or len(self.nomi) > self.MASSIMO_VOCI:
-                self._sfoltisci(adesso)
-            coda = [t for t in self.coppie.get((indirizzo, nome), ()) if adesso - t < FINESTRA]
-            self.coppie[(indirizzo, nome)] = (coda + [adesso])[-TENTATIVI_COPPIA:]
-            v = self.nomi.setdefault(nome, {'n': 0, 'ultimo': adesso})
-            v['n'] += 1
-            v['ultimo'] = adesso
+            self._sfoltisci(adesso)
+            attesa = self._attesa(indirizzo, nome, adesso)
+            if not attesa:
+                self._sbagliata(indirizzo, nome, adesso)
+            return attesa
+
+    def attesa_pc(self, indirizzo, adesso=None):
+        """Secondi che il PC deve aspettare per i troppi tentativi con nomi qualsiasi (0: nessuna attesa)."""
+        adesso = time.time() if adesso is None else adesso
+        with self._lucchetto:
+            coda = [t for t in self.pc.get(indirizzo, ()) if adesso - t < FINESTRA]
+            return max(int(FINESTRA - (adesso - coda[-1])) + 1, 0) if len(coda) >= TENTATIVI_PC else 0
+
+    def sbagliata(self, indirizzo, nome, adesso=None):
+        adesso = time.time() if adesso is None else adesso
+        with self._lucchetto:
+            self._sbagliata(indirizzo, chiave_nome(nome), adesso)
 
     def riuscita(self, indirizzo, nome):
+        """Password giusta: la coppia e il nome ripartono da zero; il conto del PC toglie solo questo tentativo."""
         nome = chiave_nome(nome)
         with self._lucchetto:
             self.coppie.pop((indirizzo, nome), None)
             self.nomi.pop(nome, None)
+            coda = self.pc.get(indirizzo)
+            if coda:
+                coda.pop()
 
-    def sblocca(self, nome):
+    def sblocca(self, nome, pc=None):
+        """«Sblocca» della pagina: un nome (da tutti i PC), oppure un PC bloccato per i tanti nomi."""
         nome = chiave_nome(nome)
         with self._lucchetto:
-            for k in [k for k in self.coppie if k[1] == nome]:
-                del self.coppie[k]
-            self.nomi.pop(nome, None)
+            if pc:
+                self.pc.pop(pc, None)
+            if nome:
+                for k in [k for k in self.coppie if k[1] == nome]:
+                    del self.coppie[k]
+                self.nomi.pop(nome, None)
 
-    def bloccati(self, adesso=None):
-        """[(nome, da quali PC, minuti di attesa)] dei nomi che adesso devono aspettare, per la pagina."""
+    def bloccati(self, adesso=None, massimo=100):
+        """[(nome, da quali PC, minuti di attesa)] di chi adesso deve aspettare, per la pagina, in un passaggio solo;
+        un PC bloccato per i tanti nomi ha il nome vuoto. Al massimo «massimo» righe, le attese più lunghe prima."""
         adesso = time.time() if adesso is None else adesso
-        nomi = {n for _, n in self.coppie} | set(self.nomi)
-        uscita = []
-        for n in sorted(nomi):
-            per_pc = [i for (i, x) in list(self.coppie) if x == n and self.attesa(i, n, adesso)]
-            attesa = max([self.attesa(i, n, adesso) for i in per_pc] + [self.attesa('', n, adesso)])
-            if attesa:
-                uscita.append((n, per_pc, max(1, (attesa + 59) // 60)))
-        return uscita
+        with self._lucchetto:
+            self._sfoltisci(adesso)
+            per_nome = {}
+            for (i, n), coda in self.coppie.items():
+                recenti = [t for t in coda if adesso - t < FINESTRA]
+                if len(recenti) >= TENTATIVI_COPPIA:
+                    attesa = int(FINESTRA - (adesso - recenti[-1])) + 1
+                    if attesa > 0:
+                        voce = per_nome.setdefault(n, [[], 0])
+                        voce[0].append(i)
+                        voce[1] = max(voce[1], attesa)
+            for n, v in self.nomi.items():
+                if v['n'] >= SOGLIA_NOME:
+                    attesa = self._attesa_nome(v, adesso)
+                    if attesa:
+                        voce = per_nome.setdefault(n, [[], 0])
+                        voce[1] = max(voce[1], attesa)
+            uscita = [(n, sorted(da), attesa) for n, (da, attesa) in per_nome.items()]
+            for i, coda in self.pc.items():
+                recenti = [t for t in coda if adesso - t < FINESTRA]
+                if len(recenti) >= TENTATIVI_PC:
+                    attesa = int(FINESTRA - (adesso - recenti[-1])) + 1
+                    if attesa > 0:
+                        uscita.append(('', [i], attesa))
+        uscita.sort(key=lambda x: (-x[2], x[0]))
+        return [(n, da, max(1, (attesa + 59) // 60)) for n, da, attesa in uscita[:massimo]]
 
-    def _sfoltisci(self, adesso):
-        self.coppie = {k: v for k, v in self.coppie.items() if v and adesso - v[-1] < FINESTRA}
-        self.nomi = {k: v for k, v in self.nomi.items() if adesso - v['ultimo'] < ATTESA_MASSIMA * 2}
+    # ------------------------------------------------------------ il registro
+    def da_annotare(self, indirizzo, adesso=None):
+        """Per il registro: (si scrive adesso?, quante sbagliate dallo stesso PC non scritte prima). Una riga al
+        minuto per PC: le altre si contano e si dicono nella riga dopo (o con scrivi_rimasti)."""
+        adesso = time.time() if adesso is None else adesso
+        with self._lucchetto:
+            r = self.da_scrivere.get(indirizzo)
+            if r is not None and adesso - r[0] < 60:
+                r[1] += 1
+                return False, 0
+            if len(self.da_scrivere) > self.MASSIMO_VOCI:
+                self.da_scrivere = {k: v for k, v in self.da_scrivere.items() if adesso - v[0] < 60}
+            self.da_scrivere[indirizzo] = [adesso, 0]
+            return True, (r[1] if r else 0)
+
+    def scrivi_rimasti(self, adesso=None):
+        """Le sbagliate non ancora scritte, di minuti finiti: una riga per PC (dalla pagina «Aree e accessi»)."""
+        adesso = time.time() if adesso is None else adesso
+        with self._lucchetto:
+            finiti = [(k, v[1]) for k, v in self.da_scrivere.items() if adesso - v[0] >= 60]
+            for k, _ in finiti:
+                del self.da_scrivere[k]
+        for indirizzo, n in finiti:
+            if n:
+                annota('altri %d tentativi sbagliati (non scritti uno per uno)' % n, '', logging.WARNING, da=indirizzo)
 
     def svuota(self):
         with self._lucchetto:
             self.coppie.clear()
             self.nomi.clear()
+            self.pc.clear()
+            self.da_scrivere.clear()
 
 
 tentativi = Tentativi()
@@ -651,6 +844,7 @@ pazienti ospedale sanita salute studio studiomedico ambulatorio ambulatori cassa
 lunedi martedi mercoledi giovedi venerdi sabato domenica gennaio febbraio marzo aprile maggio giugno luglio
 agosto settembre ottobre novembre dicembre primavera estate autunno inverno computer pc windows internet
 '''.split())
+VIETATE_DALLA_PIU_LUNGA = tuple(sorted(VIETATE, key=lambda v: (-len(v), v)))
 SEQUENZE = ('0123456789', '9876543210', 'abcdefghijklmnopqrstuvwxyz', 'zyxwvutsrqponmlkjihgfedcba',
             'qwertyuiop', 'asdfghjkl', 'zxcvbnm', 'poiuytrewq')
 CONSIGLIO_PASSWORD = ('Meglio una frase di tre o quattro parole che non c\'entrano fra loro, con gli spazi: è lunga, '
@@ -679,6 +873,18 @@ def problema_password(password, nome=''):
     for v in VIETATE:
         if lettere == v or (len(lettere) % len(v) == 0 and lettere == v * (len(lettere) // len(v))):
             return 'Questa password è fra quelle che si indovinano subito: sceglierne un\'altra.'
+    # revisione: passavano cifre in fila con una lettera (1234567890a), parole vietate attaccate o con una lettera in
+    # più (clinicaposillipo1, Password1!a, amoremio123) e poche lettere ripetute (aa11bb22cc33)
+    if len(lettere) < MINIMO_LETTERE:
+        return ('La password deve avere almeno %d lettere: numeri e segni da soli si indovinano subito. Meglio una '
+                'frase.' % MINIMO_LETTERE)
+    if len(set(lettere)) < 4:
+        return 'La password ha troppe lettere uguali: si indovina subito.'
+    resto = lettere
+    for v in VIETATE_DALLA_PIU_LUNGA:
+        resto = resto.replace(v, '')
+    if len(resto) < 4:
+        return 'Questa password è fatta di parole che si indovinano subito: sceglierne un\'altra.'
     semplice = re.sub(r'[\s\W_]', '', password.casefold())
     if any(semplice in s for s in SEQUENZE) or any(semplice in s * 3 for s in SEQUENZE):
         return 'Questa password è una sequenza della tastiera: si indovina subito.'
@@ -710,15 +916,41 @@ class FilePerGiorno(logging.Handler):
 eventi = collections.deque(maxlen=200)       # gli ultimi, per la pagina (tutti nel registro)
 
 
-def annota(testo, nome='', livello_log=logging.INFO):
+def annota(testo, nome='', livello_log=logging.INFO, da=None):
     # nel file i campi sono separati da « | »: un nome scritto con | non deve poter spostare gli altri campi
-    riga = (datetime.now().strftime('%d/%m %H:%M:%S'), pulito(nome, 60).replace('|', '/'), indirizzo_chi_chiama(),
-            pulito(testo, 200).replace('|', '/'))
+    riga = (datetime.now().strftime('%d/%m %H:%M:%S'), pulito(nome, 60).replace('|', '/'),
+            pulito(indirizzo_chi_chiama() if da is None else da, 64), pulito(testo, 200).replace('|', '/'))
     eventi.appendleft(riga + (livello_log >= logging.WARNING,))
     registro.log(livello_log, '%s | utente=%s | da=%s', riga[3], riga[1] or '-', riga[2] or '-')
 
 
+def annota_sbagliato(testo, nome, da):
+    """Un tentativo sbagliato (o bloccato) nel registro: al massimo una riga al minuto per PC, con quanti non sono
+    stati scritti prima (revisione: a 30 tentativi al secondo il registro cresceva di centinaia di MB al giorno)."""
+    scrivi, altri = tentativi.da_annotare(da)
+    if scrivi:
+        annota(testo + (' (e altri %d tentativi sbagliati da questo PC nel minuto prima)' % altri if altri else ''),
+               nome, logging.WARNING, da=da)
+
+
 RIGA_REGISTRO = re.compile(r'(\d{4})-(\d\d)-(\d\d) (\d\d:\d\d:\d\d)[,.]\d+ (\w+) (.*) \| utente=(.*) \| da=(.*)')
+
+
+def coda_del_file(percorso, quante, blocco=64 * 1024, massimo=4 * 1024 * 1024):
+    """Le ultime «quante» righe di un file, lette dal fondo a pezzi (al più «massimo» byte): un registro grande non
+    si legge per intero a ogni apertura della pagina (revisione dell'attaccante)."""
+    with open(percorso, 'rb') as f:
+        f.seek(0, os.SEEK_END)
+        fine = f.tell()
+        pos, dati = fine, b''
+        while pos > 0 and dati.count(b'\n') <= quante and fine - pos < massimo:
+            pos = max(0, pos - blocco)
+            f.seek(pos)
+            dati = f.read(min(blocco, fine - pos)) + dati
+    righe = dati.decode('utf-8', 'replace').splitlines()
+    if pos > 0 and righe:
+        righe = righe[1:]           # la prima può essere a metà
+    return righe[-quante:]
 
 
 def ultimi_accessi(giorni=7, quanti=150):
@@ -732,8 +964,7 @@ def ultimi_accessi(giorni=7, quanti=150):
     for n in range(giorni):
         percorso = os.path.join(cartella, 'accessi-%s.log' % (oggi - timedelta(days=n)).isoformat())
         try:
-            with open(percorso, encoding='utf-8', errors='replace') as f:
-                del_giorno = f.read().splitlines()
+            del_giorno = coda_del_file(percorso, quanti - len(righe))
         except OSError:
             continue
         for testo in reversed(del_giorno):
@@ -785,6 +1016,13 @@ questa parte, chiedere a lei.</p>{% endif %}
 <p>{% if torna %}<a class="bottone" href="{{ torna }}">Torna alle pagine disponibili</a>{% endif %}
 {% if utente %}<form method="post" action="/esci" style="display:inline"><button class="bottone" type="submit">Esci</button></form>{% endif %}</p>
 </main></body></html>'''
+
+
+PAGINA_ATTESA = ('<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Troppi tentativi</title>'
+                 '<link rel="stylesheet" href="/static/stile.css"></head><body><main class="pagina" style="max-width:40em;'
+                 'margin:4em auto"><h1>Troppi tentativi</h1><p>Troppi tentativi sbagliati da questo PC: riprovare fra %d '
+                 'minut%s. Se serve prima, chiedere a chi usa il PC della segreteria di sbloccarlo (<i>Configura → Aree e '
+                 'accessi</i>).</p><p><a class="bottone" href="/accesso">Torna all\'accesso</a></p></main></body></html>')
 
 
 def vuole_json():
@@ -839,6 +1077,15 @@ def controlla_accesso():
                        sistema=True)
     if endpoint == 'static':
         return None                 # i file del programma: nessun dato
+    if endpoint == 'accessi.accesso' and request.method == 'POST':
+        # un PC bloccato per i tanti tentativi con nomi qualsiasi: la risposta subito, senza leggere il database né
+        # fare la pagina (revisione: i tentativi bloccati, centinaia al secondo, rallentavano il PC della segreteria)
+        da = indirizzo_chi_chiama()
+        attesa = tentativi.attesa_pc(da)
+        if attesa:
+            annota_sbagliato('bloccato: troppi tentativi da questo PC', (request.form.get('nome') or '')[:40], da)
+            minuti = max(1, (attesa + 59) // 60)
+            return Response(PAGINA_ATTESA % (minuti, 'o' if minuti == 1 else 'i'), status=429, mimetype='text/html')
     from app import ses
     cfg = configurazione(ses())
     contesto.accessi_cfg = cfg
@@ -876,7 +1123,11 @@ def controlla_accesso():
         annota('negato (Sistema) %s %s' % (request.method, request.path), utente['nome'], logging.WARNING)
         return rifiuta('Questa parte si configura solo dal PC della segreteria.', titolo='Solo dal PC della segreteria',
                        utente=utente, sistema=True)
-    lv = livello(utente, area)
+    lv = livello_ricerca_pazienti(utente) if endpoint == RICERCA_PAZIENTI else livello(utente, area)
+    in_piu = ANCHE_PER.get(endpoint)
+    if in_piu is not None and lv != 'modifica' and request.method not in ('GET', 'HEAD', 'OPTIONS') \
+            and in_piu[1](request.form):
+        lv = livello(utente, (area, in_piu[0]) if isinstance(area, str) else area + (in_piu[0],))
     nome_area = NOMI_AREE.get(area if isinstance(area, str) else area[0], '')
     if lv == 'no':
         annota('negato %s %s' % (request.method, request.path), utente['nome'], logging.WARNING)
@@ -1048,6 +1299,29 @@ def spiega_errore_porta(porta, e):
     return 'La porta %d non si può usare: %s' % (porta, e)
 
 
+def canale_con_limite(classe, per_pc=None):
+    """Il «canale» di waitress per ogni collegamento accettato, ma al massimo per_pc (COLLEGAMENTI_PER_PC) aperti
+    dallo stesso indirizzo (non del PC stesso): gli altri si chiudono subito. waitress conta solo i collegamenti di
+    tutti (revisione: un PC solo, senza password, li occupava tutti con richieste mai finite). Gira nel filo del server:
+    niente lucchetti."""
+    def crea(server, conn, addr, adj, map=None):
+        limite = per_pc or COLLEGAMENTI_PER_PC
+        ip = str(addr[0]) if isinstance(addr, (tuple, list)) and addr else ''
+        if ip.startswith(LOOPBACK):
+            return classe(server, conn, addr, adj, map=map)
+        aperti = sum(1 for c in list((map or {}).values()) if isinstance(c, classe) and not getattr(c, 'will_close', False)
+                     and isinstance(getattr(c, 'addr', None), (tuple, list)) and c.addr and c.addr[0] == ip)
+        if aperti >= limite:
+            try:
+                conn.close()
+            except OSError:
+                pass
+            logging.warning('accessi: troppi collegamenti insieme da %s: uno chiuso', pulito(ip, 64))
+            return None
+        return classe(server, conn, addr, adj, map=map)
+    return crea
+
+
 class AscoltoRete:
     """Il secondo server di waitress, con fili e mappa sue: si accende e si spegne a programma aperto, e una pagina
     lenta chiesta da un altro PC non ferma mai il PC della segreteria."""
@@ -1079,10 +1353,12 @@ class AscoltoRete:
                 logging.warning('accessi: porta %d della rete non utilizzabile: %s', porta, e)
                 return False
             self._spegni()
-            # i portieri non si fidano (le loro intestazioni restano: dalla rete comunque), con i limiti di sempre
+            # i portieri non si fidano (le loro intestazioni restano: dalla rete comunque), con i limiti della rete e
+            # al massimo COLLEGAMENTI_PER_PC collegamenti aperti dallo stesso indirizzo
             self.server = create_server(MarcaRete(app), sockets=[presa], threads=FILI_RETE,
                                         clear_untrusted_proxy_headers=False, ident='Gestionale Agende',
-                                        **LIMITI_SERVER)
+                                        **LIMITI_RETE)
+            self.server.channel_class = canale_con_limite(self.server.channel_class)
             self.porta, self.errore = porta, ''
             server = self.server
 
@@ -1184,9 +1460,10 @@ def accesso():
         nome = ' '.join((request.form.get('nome') or '').split())[:40]
         password = (request.form.get('password') or '')[:200]
         da = indirizzo_chi_chiama()
-        attesa = tentativi.attesa(da, nome)
+        # il tentativo si conta prima di provare la password (lenta): mandandone tanti insieme non se ne fanno di più
+        attesa = tentativi.prenota(da, nome)
         if attesa:
-            annota('bloccato: troppi tentativi', nome, logging.WARNING)
+            annota_sbagliato('bloccato: troppi tentativi', nome, da)
             errore = 'Troppi tentativi sbagliati: riprovare fra %d minut%s.' % (
                 max(1, (attesa + 59) // 60), 'o' if attesa <= 60 else 'i')
             codice = 429
@@ -1205,9 +1482,8 @@ def accesso():
                 if u.get('cambia'):
                     return redirect(url_for('accessi.password'))
                 return redirect(dopo or prima_pagina(u))
-            tentativi.sbagliata(da, nome)
-            annota('password sbagliata' if u is not None and not giusta else 'non entrato (nome sconosciuto o '
-                   'utente spento)', nome, logging.WARNING)
+            annota_sbagliato('password sbagliata' if u is not None and not giusta else 'non entrato (nome sconosciuto '
+                             'o utente spento)', nome, da)
             errore = MESSAGGIO_SBAGLIATO          # sempre lo stesso: non si capisce se il nome c'è
     return render_template('accesso.html', errore=errore, nome=nome, dopo=dopo,
                            nessuna=bool(request.args.get('nessuna')), sid=None), codice
@@ -1239,18 +1515,20 @@ def password():
         da = indirizzo_chi_chiama()
         # i controlli (lenti: l'impronta della password) fuori dal lucchetto; poi si salva, con il lucchetto, solo se
         # nel frattempo nessuno ha cambiato quella password
-        if tentativi.attesa(da, utente['nome']):
+        # la password attuale si prova come all'accesso: il tentativo contato prima, tolto se è giusta
+        if tentativi.prenota(da, utente['nome']):
             errore = 'Troppi tentativi sbagliati: riprovare più tardi.'
         elif not check_password_hash(utente['hash'], attuale):
-            tentativi.sbagliata(da, utente['nome'])
-            annota('cambio della password: password attuale sbagliata', utente['nome'], logging.WARNING)
+            annota_sbagliato('cambio della password: password attuale sbagliata', utente['nome'], da)
             errore = 'La password attuale non è giusta.'
-        elif nuova != ancora:
-            errore = 'Le due password nuove non sono uguali.'
-        elif nuova == attuale:
-            errore = 'La password nuova deve essere diversa da quella di prima.'
         else:
-            errore = problema_password(nuova, utente['nome']) or ''
+            tentativi.riuscita(da, utente['nome'])
+            if nuova != ancora:
+                errore = 'Le due password nuove non sono uguali.'
+            elif nuova == attuale:
+                errore = 'La password nuova deve essere diversa da quella di prima.'
+            else:
+                errore = problema_password(nuova, utente['nome']) or ''
         if not errore:
             impronta = generate_password_hash(nuova)
             with LUCCHETTO:
@@ -1373,11 +1651,13 @@ def pagina():
                     annota('utente tolto dal PC principale', u['nome'])
                     flash('Utente %s tolto.' % u['nome'], 'ok')
             elif azione == 'sblocca':
-                tentativi.sblocca(request.form.get('nome'))
-                annota('sbloccato dal PC principale', request.form.get('nome'))
+                pc = pulito(request.form.get('pc'), 64)
+                tentativi.sblocca(request.form.get('nome'), pc=pc)
+                annota('sbloccato dal PC principale%s' % (' il PC %s' % pc if pc else ''), request.form.get('nome'))
                 flash('Sbloccato: si può riprovare subito.', 'ok')
         return redirect(url_for('accessi.pagina'))
     cfg = configurazione(s)
+    tentativi.scrivi_rimasti()
     return render_template('accessi.html', cfg=cfg, aree=AREE, livelli=LIVELLI, acceso=ascolto.acceso(),
                            porta_accesa=ascolto.porta, errore_ascolto=ascolto.errore,
                            indirizzi=indirizzi_da_usare(ascolto.porta or cfg['porta']),
@@ -1404,7 +1684,8 @@ def installa(app):
 
     @app.context_processor
     def per_i_modelli():
-        valori = {'puo': puo, 'puo_cambiare': puo_cambiare, 'utente_rete': utente_attuale()}
+        valori = {'puo': puo, 'puo_cambiare': puo_cambiare, 'puo_cercare_pazienti': puo_cercare_pazienti,
+                  'utente_rete': utente_attuale()}
         if dalla_rete():
             valori['popup_aggiornamento'] = lambda: None     # l'aggiornamento si fa solo dal PC principale
         return valori

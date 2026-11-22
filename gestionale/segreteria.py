@@ -123,7 +123,10 @@ def chiusura(iso):
     tutti = servizi.elenco_giorno(s, g, st.id)
     conteggi = {k: sum(1 for a in tutti if a.stato == k) for k in ETICHETTA_STATO}
     arretrati = {k: v for k, v in giorni_da_chiudere(s, st.id).items() if k != g}
-    da_incassare = [a for a in tutti if a.stato == 'ARRIVATO' and a.importo_cent and not a.pagato]
+    # importi e incassi solo a chi ha la Cassa (dagli altri PC, accessi.py; revisione: con la sola Segreteria si
+    # vedevano nomi ed euro degli arrivati non pagati)
+    da_incassare = [a for a in tutti if a.stato == 'ARRIVATO' and a.importo_cent and not a.pagato] \
+        if accessi.puo('cassa') else []
     ancora_da_venire = sum(1 for a in tutti if a.stato in STATI_ATTIVI and a.fine > datetime.now())
     return render_template('chiusura.html', g=g, st=st, sid=st.id, strutture=strutture,
                            aperti=aperti, conteggi=conteggi, arretrati=arretrati,
@@ -266,8 +269,11 @@ def attesa_scheda(xid=None):
                     flash(e, 'errore')
                 return _mostra_attesa(s, x, st, request.form)
             if x is None:
+                # dagli altri PC la scheda di un paziente che c'e' gia' cambia solo a chi puo' modificare i Pazienti
+                # (come la prenotazione, correzione 5; revisione: dalla lista d'attesa si cambiavano telefono ed email)
                 paz = pazienti.trova_o_crea(s, intero(request.form.get('paziente_id')), nuovi['cognome'],
-                                            nuovi['nome'], nuovi['telefono'], nuovi['email'])
+                                            nuovi['nome'], nuovi['telefono'], nuovi['email'],
+                                            aggiorna=accessi.puo_cambiare('pazienti'))
                 if paz is None:
                     flash('Paziente: serve almeno il cognome.', 'errore')
                     return _mostra_attesa(s, x, st, request.form)
@@ -807,7 +813,8 @@ def prenota_appunti():
                 if motivi:
                     rimasti.append('%s alle %s: %s' % (x.chi or x.testo[:40], x.ora.strftime('%H:%M'), motivi[0]))
                     continue
-                paz = x.paziente or pazienti.trova_o_crea(s, None, x.cognome, x.nome, x.telefono)
+                paz = x.paziente or pazienti.trova_o_crea(s, None, x.cognome, x.nome, x.telefono,
+                                                          aggiorna=accessi.puo_cambiare('pazienti'))
                 a = Appuntamento(risorsa_id=r.id, operatore_id=medico.id, paziente_id=paz.id if paz else None,
                                  prestazione_id=prest.id if prest else None, inizio=inizio, fine=fine,
                                  stato='PRENOTATO', note=x.note or '')

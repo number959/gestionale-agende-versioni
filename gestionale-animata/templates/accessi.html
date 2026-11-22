@@ -100,12 +100,12 @@
   <table class="elenco">
     <tr><th>Nome scritto</th><th>Da quali PC</th><th>Attesa</th><th></th></tr>
     {% for nome, da, minuti in bloccati %}
-    <tr><td>{{ nome }}</td><td>{{ da|join(', ') or 'da più PC' }}</td><td>ancora {{ minuti }} minut{{ 'o' if minuti == 1 else 'i' }}</td>
-      <td class="azione"><form method="post" action="{{ url_for('accessi.pagina') }}" class="in-linea"><input type="hidden" name="azione" value="sblocca"><input type="hidden" name="nome" value="{{ nome }}"><button class="bottone piccolo" type="submit">Sblocca {{ nome }}</button></form></td></tr>
+    <tr><td>{% if nome %}{{ nome }}{% else %}<i>qualsiasi nome</i>{% endif %}</td><td>{{ da|join(', ') or 'da più PC' }}</td><td>ancora {{ minuti }} minut{{ 'o' if minuti == 1 else 'i' }}</td>
+      <td class="azione"><form method="post" action="{{ url_for('accessi.pagina') }}" class="in-linea"><input type="hidden" name="azione" value="sblocca"><input type="hidden" name="nome" value="{{ nome }}">{% if not nome %}<input type="hidden" name="pc" value="{{ da[0] }}">{% endif %}<button class="bottone piccolo" type="submit">{% if nome %}Sblocca {{ nome }}{% else %}Sblocca il PC {{ da[0] }}{% endif %}</button></form></td></tr>
     {% endfor %}
   </table>
   {% else %}
-  <p class="vuoto">Nessun nome bloccato. Dopo 5 password sbagliate dallo stesso PC si aspetta un quarto d'ora; dopo 20 da qualsiasi PC l'attesa cresce a ogni errore.</p>
+  <p class="vuoto">Nessun nome bloccato. Dopo 5 password sbagliate dallo stesso PC si aspetta un quarto d'ora; dopo 30 dallo stesso PC con nomi qualsiasi, quel PC aspetta un quarto d'ora; dopo 20 da qualsiasi PC l'attesa per quel nome cresce a ogni errore.</p>
   {% endif %}
 
   <h2 class="sezione" id="registro">Ultimi accessi</h2>

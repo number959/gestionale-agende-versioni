@@ -46,6 +46,31 @@ FILE_CERTIFICATI = 'certificati.pem'
 # contati sull'indirizzo codificato (uno spazio diventa %20, una "è" %C3%A8)
 MASSIMO_MAILTO = 1900
 
+# Un .xlsx è uno zip: prima di aprirlo si guarda quanto diventa scompattato (revisione dell'attaccante: un file di 189 KB
+# con 3 milioni di celle portava il programma, uno solo per il PC della segreteria e per la rete, a 1,4 GB di memoria).
+EXCEL_MASSIMO_APERTO = 60 * 1024 * 1024       # tutti i pezzi del file, scompattati
+EXCEL_MASSIMA_COMPRESSIONE = 100              # un pezzo grande (oltre 10 MB) compresso più di 100 volte non è un foglio vero
+
+
+def controlla_excel_compresso(dati, massimo=EXCEL_MASSIMO_APERTO):
+    """ValueError, con il motivo in parole semplici, se il file Excel scompattato è troppo grande o ha un pezzo
+    compresso troppo. Le dimensioni scritte nello zip valgono anche leggendo: Python non dà di un pezzo più byte di
+    quelli dichiarati (e se il file mente, il controllo del CRC lo ferma). Un file che non è uno zip passa: lo dice
+    chi lo apre, con il suo messaggio."""
+    import zipfile
+    try:
+        voci = zipfile.ZipFile(BytesIO(dati)).infolist()
+    except (zipfile.BadZipFile, ValueError, OSError, EOFError):
+        return
+    totale = sum(v.file_size for v in voci)
+    if len(voci) > 10000 or totale > massimo:
+        raise ValueError('Il file Excel è troppo grande da leggere (aperto diventa di %d MB, al massimo se ne leggono %d): '
+                         'dividerlo in più file più piccoli.' % (totale // (1024 * 1024), massimo // (1024 * 1024)))
+    for v in voci:
+        if v.file_size > 10 * 1024 * 1024 and v.file_size > EXCEL_MASSIMA_COMPRESSIONE * max(v.compress_size, 1):
+            raise ValueError('Il file Excel non sembra un foglio normale (è compresso troppo per essere vero): aprirlo '
+                             'in Excel e salvarlo di nuovo, poi riprovare.')
+
 
 # i caratteri di controllo che openpyxl rifiuta (resta solo quello che un testo puo' avere: a
 # capo, ritorno e tabulazione). \x0b e \x0c sono gli «a capo manuali» di Word, che un Ctrl+V

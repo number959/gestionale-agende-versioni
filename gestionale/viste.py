@@ -238,6 +238,10 @@ def stampa(iso):
     tutti = request.args.get('tutti') == '1' if request.args.get('tutti') in ('0', '1') else preferenze['tutti']
     apps = servizi.elenco_giorno(s, g, st.id, None if tutti else STATI_ATTIVI)
     colonne = set(preferenze['colonne'])
+    import accessi
+    if not accessi.puo('cassa'):
+        # dagli altri PC importi e totali solo a chi ha la Cassa (la convenzione la toglie il modello); revisione
+        colonne.discard('importo')
     regole = servizi.Regole(s, g, g)
     info = regole.giorno(g, st)
     nomi = {o.id: o for o in s.scalars(select(Operatore))}

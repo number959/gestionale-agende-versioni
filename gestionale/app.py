@@ -857,7 +857,8 @@ def esporta(iso):
     # altrimenti bastano un byte nullo o 500 lettere per far cadere il server
     nome = 'planning-%s.xlsx' % g.isoformat()
     dati = BytesIO()
-    servizi.esporta_giorno(s, g, sid, dati)
+    # dagli altri PC (accessi.py) convenzione e importo solo a chi ha la Cassa
+    servizi.esporta_giorno(s, g, sid, dati, con_cassa=accessi.puo('cassa'))
     return scarica_excel(dati, nome)
 
 

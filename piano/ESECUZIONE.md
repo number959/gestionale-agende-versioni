@@ -83,3 +83,13 @@ riquadri delle aree che l'utente non ha; menu (_menu.html) non toccato: le voci 
 Domande lasciate a Giovanni (decido io il predefinito e lo scrivo): Importa da Excel → Configura «modificare» (no Sistema);
 Riepilogo medici → Statistiche e report; Oggi: spariscono i riquadri senza area; utenti personali consigliati;
 firewall: il programma propone la regola con il consenso di Windows (UAC) + comando netsh nella guida.
+Revisione dei tre revisori (22/11, dopo la presa della rete; ramo `accessi`): ogni problema riprodotto prima di correggerlo,
+ognuno con la sua prova `z_…` in prove_accessi.py, il gemello e un mutante (38 mutanti, tutti presi). Corretti: assenze e
+chiusure senza l'Agenda (solo il numero), ricerca dei pazienti senza i Pazienti solo a chi prenota (anche il paziente di
+Dove si fa), importi e convenzioni solo con la Cassa (stampa, Excel ed elenco del giorno, esportazione, chiusura), lista
+d'attesa e appunti con `aggiorna=`, Conferme della Segreteria (stato e promemoria, `ANCHE_PER`), incasso con la sola Cassa,
+tentativi (limite per PC 30, tetto, `bloccati()` in un passaggio, `prenota`, risposta senza database, registro raggruppato e
+letto dal fondo), Excel troppo compressi (`controlla_excel_compresso`, Importa in sola lettura), 12 collegamenti per PC sulla
+rete, cookie legato al PC, 5 sessioni per utente, password più severe. Domanda per Giovanni (predefinito: come oggi, ma la
+pagina lo dice accanto alla parte): Statistiche e report contiene nomi, telefoni, importi e incassi; togliere i pazienti a
+chi non ha Pazienti o Agenda, e gli importi a chi non ha la Cassa? prenota_appunti resta della Segreteria (è il suo giro).

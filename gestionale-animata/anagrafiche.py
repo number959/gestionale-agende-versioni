@@ -967,8 +967,16 @@ def appuntamenti_da_spostare(s, dal, al, operatore_id=None, struttura_id=None):
 
 
 def elenco_da_spostare(apps):
+    """Il riquadro «Appuntamenti da spostare» di un'assenza o di una chiusura. Dagli altri PC (accessi.py) nomi,
+    telefoni e collegamenti solo a chi ha l'Agenda: con le sole Anagrafiche resta il numero (revisione: con una
+    chiusura di un anno si leggevano nomi e telefoni di tutti gli appuntamenti futuri)."""
     if not apps:
         return None
+    import accessi
+    if not accessi.puo('agenda'):
+        return {'titolo': 'Appuntamenti da spostare (%d)' % len(apps), 'righe': [],
+                'nota': '%d appuntament%s ancora in agenda in questi giorni: li vede e li sposta chi ha l\'Agenda.'
+                        % (len(apps), 'o è' if len(apps) == 1 else 'i sono')}
     righe = []
     for a in apps:
         testo = '%s %s - %s - %s' % (a.inizio.strftime('%d/%m %H:%M'), a.risorsa.nome,
@@ -978,6 +986,11 @@ def elenco_da_spostare(apps):
                       'telefono': a.paziente.telefono if a.paziente else ''})
     return {'titolo': 'Appuntamenti da spostare (%d)' % len(apps), 'righe': righe,
             'nota': 'Sono ancora in agenda: vanno avvisati i pazienti e spostati o disdetti.'}
+
+
+def accessi_agenda():
+    import accessi
+    return accessi.puo('agenda')
 
 
 def _leggi_periodo(m):
@@ -1023,7 +1036,7 @@ def assenza(xid=None):
     def mostra(errori=None):
         extra = elenco_da_spostare(appuntamenti_da_spostare(s, x.dal, x.al, operatore_id=x.operatore_id)) \
             if x is not None and not errori else None
-        if extra:
+        if extra and extra['righe']:
             extra['azione'] = {'testo': 'Spostali tutti insieme',
                                'url': url_for('segreteria.sposta_blocco', medico=x.operatore_id,
                                               dal=x.dal.isoformat(), al=x.al.isoformat())}
@@ -1055,8 +1068,8 @@ def assenza(xid=None):
             s.commit()
             apps = appuntamenti_da_spostare(s, dal, al, operatore_id=x.operatore_id)
             if apps:
-                flash('Assenza salvata. Ci sono %d appuntamenti di %s da spostare: sono elencati qui sotto.'
-                      % (len(apps), medico.etichetta), 'avviso')
+                flash('Assenza salvata. Ci sono %d appuntamenti di %s da spostare%s.'
+                      % (len(apps), medico.etichetta, ': sono elencati qui sotto' if accessi_agenda() else ''), 'avviso')
                 return redirect(url_for('anagrafiche.assenza', xid=x.id))
             flash('Assenza salvata: %s.' % medico.etichetta, 'ok')
             return redirect(url_for('anagrafiche.elenco'))
@@ -1117,8 +1130,8 @@ def chiusura(xid=None):
             s.commit()
             apps = appuntamenti_da_spostare(s, dal, al, struttura_id=x.struttura_id)
             if apps:
-                flash('Chiusura salvata. Ci sono %d appuntamenti in quei giorni: sono elencati qui sotto.'
-                      % len(apps), 'avviso')
+                flash('Chiusura salvata. Ci sono %d appuntamenti in quei giorni%s.'
+                      % (len(apps), ': sono elencati qui sotto' if accessi_agenda() else ''), 'avviso')
                 return redirect(url_for('anagrafiche.chiusura', xid=x.id))
             flash('Chiusura salvata.', 'ok')
             return redirect(url_for('anagrafiche.elenco'))

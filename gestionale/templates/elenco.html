@@ -34,7 +34,7 @@
     <td>{% if a.paziente %}<a href="{{ url_for('pazienti.scheda', pid=a.paziente.id) }}">{{ a.paziente.etichetta }}</a>{% else %}<span class="senza">senza paziente</span>{% endif %}
       {%- if a.note %}<div class="nota-riga">{{ a.note }}</div>{% endif %}</td>
     <td>{% if a.paziente %}{{ a.paziente.telefono or '' }}{% if a.paziente.telefono2 %}<br>{{ a.paziente.telefono2 }}{% endif %}<br>{{ link_contatti(contatti[a.id]) }}{% endif %}</td>
-    <td>{{ a.prestazione.nome if a.prestazione else '' }}{% if a.tipo %}<div class="nota-riga">{{ a.etichetta_tipo }}{% if a.convenzione %} · {{ a.convenzione }}{% endif %}</div>{% elif a.convenzione %}<div class="nota-riga">{{ a.convenzione }}</div>{% endif %}
+    <td>{{ a.prestazione.nome if a.prestazione else '' }}{% if a.tipo %}<div class="nota-riga">{{ a.etichetta_tipo }}{% if a.convenzione and puo('cassa') %} · {{ a.convenzione }}{% endif %}</div>{% elif a.convenzione and puo('cassa') %}<div class="nota-riga">{{ a.convenzione }}</div>{% endif %}
       {%- for k, v in a.valori_extra.items() %}<div class="nota-riga">{{ k }}: {{ v }}</div>{% endfor %}</td>
     <td>{{ a.operatore.etichetta }}<div class="nota-riga">{{ a.risorsa.nome }}</div></td>
     <td><b>{{ a.etichetta_stato }}</b>{% if a.id in chi_chiamare %}<div class="nota-riga"><a href="{{ url_for('segreteria.attesa_per', aid=a.id) }}">{{ chi_chiamare[a.id] }} in lista d'attesa</a></div>{% endif %}{% if a.id in attesa %}<div class="nota-riga">in attesa da {{ attesa[a.id] }} min</div>{% elif a.stato == 'ARRIVATO' and a.arrivato_alle %}<div class="nota-riga">alle {{ a.arrivato_alle.strftime('%H:%M') }}</div>{% endif %}</td>
