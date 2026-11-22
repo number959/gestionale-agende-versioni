@@ -43,12 +43,15 @@ NEL_BROWSER = ['prove_guida_browser.py', 'prove_sicurezza_browser.py', 'prove_ma
 
 
 def senza_porta_vera(nome):
-    """Una raccolta nel browser prende l'indirizzo solo da aiuti_browser.indirizzo_di_prova(sys.argv), che si ferma
+    """Una raccolta nel browser che legge l'indirizzo lo prende solo da aiuti_browser.indirizzo_di_prova(sys.argv), che si ferma
     senza indirizzo o con la porta 5000: fino alla tappa 1 della base, lanciate senza argomento, andavano sulla 5000,
     cioè sul programma vero, e ci salvavano dati."""
     with open(os.path.join(QUI, nome), encoding='utf-8') as f:
         testo = f.read()
-    return 'indirizzo_di_prova(sys.argv)' in testo and not re.search(r"['\"]https?://[^'\"]*:5000", testo)
+    if re.search(r"['\"]https?://[^'\"]*:5000", testo):
+        return False
+    # chi non legge l'indirizzo (prove_mattoni_browser.py avvia da sé il catalogo su una porta libera) va bene così
+    return 'indirizzo_di_prova(sys.argv)' in testo or not re.search(r'sys\.argv\[1', testo)
 
 
 def giudica(nome, codice, uscita):
